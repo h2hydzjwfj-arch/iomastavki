@@ -1,74 +1,117 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>China → Russia Logistics</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b1828">
+  <title>LOGISTICS — China → Russia</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div id="weatherBg" class="weather-bg weather-clear"><div class="stars"></div><div class="sun"></div><div class="rain"></div><div class="waves"></div></div>
+  <div id="weatherBg" class="weather-bg weather-night" aria-hidden="true">
+    <div class="sky-glow"></div><div class="stars"></div><div class="moon"></div><div class="sun"></div>
+    <div class="clouds"></div><div class="rain"></div><div class="snow"></div>
+    <div class="wave wave-a"></div><div class="wave wave-b"></div><div class="wave wave-c"></div>
+  </div>
 
   <div id="loginScreen" class="screen login-screen">
     <div class="login-card glass">
-      <div class="brand">LOGISTICS</div><h1>Калькулятор доставки</h1><p class="muted">Китай → Россия</p>
-      <form id="loginForm"><label>Пароль</label><input id="password" type="password" autocomplete="current-password" autofocus><button>Войти</button><div id="loginError" class="error"></div></form>
+      <div class="eyebrow">LOGISTICS</div>
+      <h1>China → Russia</h1>
+      <p>Расчёт заявки и подбор экспедитора</p>
+      <form id="loginForm">
+        <label for="password">Пароль</label>
+        <input id="password" type="password" autocomplete="current-password" autofocus>
+        <button class="primary" type="submit">Войти</button>
+        <div id="loginError" class="error"></div>
+      </form>
     </div>
   </div>
 
   <div id="appScreen" class="hidden app-shell">
-    <header class="topbar glass">
-      <div><div class="brand">LOGISTICS</div><div class="subtitle">China → Russia · расчёт заявки</div></div>
-      <div class="top-actions"><span id="weatherLabel" class="weather-label">Погода</span><button id="logoutBtn" class="ghost">Выйти</button></div>
+    <header class="topbar">
+      <div class="brand-lockup"><div class="brand">LOGISTICS</div><div class="subtitle">China → Russia · freight calculator</div></div>
+      <div class="top-actions"><span id="weatherLabel" class="weather-label">Погода</span><button id="logoutBtn" class="text-button">Выйти</button></div>
     </header>
 
     <main class="main">
       <section class="calculator glass">
-        <div class="title-row"><div><h1>Калькулятор доставки Китай → Россия</h1><p>Выберите экспедитора и введите параметры груза</p></div></div>
+        <div class="title-block">
+          <div class="eyebrow">FREIGHT CALCULATOR</div>
+          <h1>Рассчитать параметры груза</h1>
+          <p>Выберите экспедитора, маршрут и параметры отправления.</p>
+        </div>
 
-        <div class="form-grid">
-          <div class="field wide"><label>Перевозчик / экспедитор</label><select id="carrier"><option value="">Выберите экспедитора</option></select></div>
-          <div class="field"><label>Откуда (город, Китай)</label><input id="from" placeholder="Qingdao, Yiwu..."></div>
-          <div class="field"><label>Куда (город, Россия)</label><input id="to" placeholder="Москва, Казань..."></div>
-          <div class="field"><label>Расстояние, км</label><input id="distance" type="number" min="0" step="1" placeholder="7500"></div>
-          <div class="field"><label>Вес груза, кг</label><input id="actualWeight" type="number" min="0" step="0.1" placeholder="280"></div>
-          <div class="field"><label>Количество мест</label><input id="places" type="number" min="1" step="1" value="1"></div>
+        <div class="route-grid">
+          <div class="field autocomplete-field">
+            <label for="from">Откуда</label>
+            <input id="from" autocomplete="off" placeholder="Город в Китае">
+            <div id="fromSuggestions" class="suggestions"></div>
+          </div>
+          <div class="route-arrow">→</div>
+          <div class="field autocomplete-field">
+            <label for="to">Куда</label>
+            <input id="to" autocomplete="off" placeholder="Город в России">
+            <div id="toSuggestions" class="suggestions"></div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="section-label">ГРУЗ</div>
+        <div class="form-grid three">
+          <div class="field"><label for="actualWeight">Вес, кг</label><input id="actualWeight" type="number" min="0" step="0.1" placeholder="280"></div>
+          <div class="field"><label for="places">Количество мест</label><input id="places" type="number" min="1" step="1" value="1"></div>
+          <div class="field"><label for="distance">Расстояние, км</label><input id="distance" type="number" min="0" step="1" placeholder="Автоматически"></div>
         </div>
 
         <div class="dimensions">
-          <div class="section-title">📐 Габариты одного места, мм</div>
+          <div class="dimensions-head"><span class="section-label">ГАБАРИТЫ ОДНОГО МЕСТА, ММ</span><span class="micro">Объём считается по всем местам</span></div>
           <div class="dims-grid">
-            <div class="field"><label>Длина</label><input id="length" type="number" min="1" step="1" placeholder="1950"></div>
-            <div class="multiply">×</div>
-            <div class="field"><label>Ширина</label><input id="width" type="number" min="1" step="1" placeholder="1400"></div>
-            <div class="multiply">×</div>
-            <div class="field"><label>Высота</label><input id="height" type="number" min="1" step="1" placeholder="1850"></div>
+            <div class="field"><label for="length">Длина</label><input id="length" type="number" min="1" step="1" placeholder="1950"></div>
+            <span class="multiply">×</span>
+            <div class="field"><label for="width">Ширина</label><input id="width" type="number" min="1" step="1" placeholder="1400"></div>
+            <span class="multiply">×</span>
+            <div class="field"><label for="height">Высота</label><input id="height" type="number" min="1" step="1" placeholder="1850"></div>
           </div>
         </div>
 
-        <div class="bottom-grid">
-          <div class="field"><label>Условия поставки (Incoterms)</label><select id="incoterm"><option>EXW</option><option>FCA</option><option>FOB</option><option>CIF</option><option>DAP</option><option>DDP</option></select></div>
-          <div class="field"><label>Вид транспорта</label><select id="transport"><option value="">Сначала выберите экспедитора</option></select></div>
-          <div class="field"><label>Коэффициент объёмного веса</label><select id="divisor"><option value="6000">1 м³ = 166.7 кг (6000)</option><option value="5000">1 м³ = 200 кг (5000)</option><option value="4000">1 м³ = 250 кг (4000)</option><option value="3333">1 м³ = 300 кг (3333)</option></select></div>
+        <div class="form-grid three lower">
+          <div class="field"><label for="incoterm">Условия поставки</label><select id="incoterm"><option>EXW</option><option>FCA</option><option>FOB</option><option>CIF</option><option>DAP</option><option>DDP</option></select></div>
+          <div class="field"><label for="transport">Вид транспорта</label><select id="transport"><option value="">Сначала выберите экспедитора</option></select></div>
+          <div class="field"><label for="divisor">Расчёт объёмного веса</label><select id="divisor"><option value="6000">1 м³ = 166,7 кг</option><option value="5000">1 м³ = 200 кг</option><option value="4000">1 м³ = 250 кг</option><option value="3333">1 м³ = 300 кг</option></select></div>
         </div>
 
+        <div class="selected-carrier-row">
+          <div><span class="micro">ЭКСПЕДИТОР</span><strong id="selectedCarrierName">Не выбран</strong></div>
+          <button id="openCarrierSelect" type="button" class="outline-button">Выбрать экспедитора</button>
+        </div>
         <div id="carrierInfo" class="carrier-info hidden"></div>
-        <button id="calculateBtn" class="calculate">Рассчитать параметры груза</button>
-        <div class="hint">Объёмный вес рассчитывается по выбранному коэффициенту. Правила тарификации конкретного экспедитора могут отличаться.</div>
+
+        <button id="calculateBtn" class="calculate primary" type="button">Рассчитать</button>
+        <div class="hint">Объёмный вес сравнивается с фактическим. К расчёту берётся большее значение.</div>
 
         <section id="result" class="result hidden">
-          <div class="result-main"><div class="result-label">К расчёту принимается</div><div id="chargeableWeight" class="chargeable">—</div><div id="weightText" class="weight-text"></div></div>
+          <div class="result-head"><div><div class="section-label">ИТОГ</div><div class="result-title">Вес к расчёту</div></div><div id="weightText" class="result-note"></div></div>
+          <div id="chargeableWeight" class="chargeable">—</div>
           <div class="result-stats">
-            <div><span>Фактический вес</span><b id="actualResult">—</b></div>
-            <div><span>Объёмный вес</span><b id="volumetricResult">—</b></div>
+            <div><span>Фактический</span><b id="actualResult">—</b></div>
+            <div><span>Объёмный</span><b id="volumetricResult">—</b></div>
             <div><span>Объём</span><b id="volumeResult">—</b></div>
             <div><span>Маршрут</span><b id="distanceResult">—</b></div>
           </div>
-          <div class="transport-result"><span>Доступный транспорт выбранного экспедитора</span><div id="transportTags"></div></div>
+          <div class="transport-result"><span>Транспорт экспедитора</span><div id="transportTags"></div></div>
         </section>
       </section>
-
-      <section class="carriers glass"><div class="section-head"><div><h2>Экспедиторы</h2><p>Выберите компанию выше — здесь покажутся её контакты и доступные направления.</p></div><input id="search" class="search" placeholder="Поиск экспедитора..."></div><div id="agents" class="agents"></div></section>
     </main>
+
+    <div id="carrierDock" class="carrier-dock">
+      <button id="carrierDockButton" class="carrier-dock-button" type="button"><span class="dock-dot"></span><span>Экспедиторы</span><span class="dock-chevron">⌃</span></button>
+      <div id="carrierPanel" class="carrier-panel glass">
+        <div class="panel-head"><div><div class="eyebrow">CARRIERS</div><h2>Экспедиторы</h2></div><input id="search" class="search" placeholder="Поиск"></div>
+        <div id="carrierGroups" class="carrier-groups"></div>
+      </div>
+    </div>
   </div>
   <script src="/app.js"></script>
 </body>
