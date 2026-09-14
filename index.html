@@ -3,26 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#edf4f1">
+  <meta name="theme-color" content="#dfefff">
   <title>iomastavka</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <div id="weatherBg" class="weather-bg weather-clear" aria-hidden="true">
-    <div class="weather-light"></div><div class="stars"></div><div class="sun"></div><div class="moon"></div>
-    <div class="cloud cloud-1"></div><div class="cloud cloud-2"></div><div class="rain"></div><div class="snow"></div>
-    <div class="wave wave-1"></div><div class="wave wave-2"></div><div class="wave wave-3"></div>
+    <div class="weather-glow"></div>
+    <div class="weather-stars"></div>
+    <div class="weather-sun"></div>
+    <div class="weather-moon"></div>
+    <div class="weather-cloud cloud-a"></div>
+    <div class="weather-cloud cloud-b"></div>
+    <div class="rain-layer"></div>
+    <div class="snow-layer"></div>
+    <div class="weather-wave wave-a"></div>
+    <div class="weather-wave wave-b"></div>
+    <div class="weather-wave wave-c"></div>
   </div>
 
   <div id="loginScreen" class="screen login-screen">
-    <div class="login-card">
-      <div class="brand">iomastavka</div>
-      <h1>Расчёт доставки</h1>
-      <p>Китай → Россия</p>
+    <div class="login-card glass-card">
+      <div class="brand brand-login" aria-label="iomastavka"><span>i</span><span>o</span><span>m</span><span>a</span><span>s</span><span>t</span><span>a</span><span>v</span><span>k</span><span>a</span></div>
+      <h1 data-i18n="loginTitle">Расчёт доставки</h1>
+      <p data-i18n="loginSubtitle">Китай → Россия</p>
       <form id="loginForm">
-        <label for="password">Пароль</label>
+        <label for="password" data-i18n="password">Пароль</label>
         <input id="password" type="password" autocomplete="current-password" autofocus>
-        <button class="primary" type="submit">Войти</button>
+        <button class="action-button primary" type="submit" data-i18n="login">Войти</button>
         <div id="loginError" class="error"></div>
       </form>
     </div>
@@ -30,66 +38,85 @@
 
   <div id="appScreen" class="hidden app-shell">
     <header class="topbar">
-      <div class="brand">iomastavka</div>
-      <button id="logoutBtn" class="text-button" type="button">Выйти</button>
+      <div class="brand brand-main" aria-label="iomastavka"><span>i</span><span>o</span><span>m</span><span>a</span><span>s</span><span>t</span><span>a</span><span>v</span><span>k</span><span>a</span></div>
+      <div class="top-actions">
+        <div class="language-switcher" id="languageSwitcher">
+          <button class="lang-button" data-lang="ru" type="button" aria-label="Русский">🇷🇺</button>
+          <button class="lang-button" data-lang="en" type="button" aria-label="English">🇬🇧</button>
+          <button class="lang-button" data-lang="zh" type="button" aria-label="中文">🇨🇳</button>
+        </div>
+        <button id="logoutBtn" class="text-button" type="button" data-i18n="logout">Выйти</button>
+      </div>
     </header>
 
     <main class="main">
-      <section class="calculator">
-        <div class="title-block"><h1>Рассчитать параметры груза</h1></div>
+      <section class="calculator glass-card">
+        <div class="title-block"><h1 data-i18n="title">Рассчитать параметры груза</h1></div>
 
         <div class="route-grid">
           <div class="field autocomplete-field">
-            <label for="from">Откуда</label>
-            <input id="from" autocomplete="off" placeholder="Город в Китае" spellcheck="false">
+            <label for="from" data-i18n="from">Откуда</label>
+            <input id="from" autocomplete="off" placeholder="Город в Китае" data-i18n-placeholder="fromPlaceholder" spellcheck="false">
             <div id="fromSuggestions" class="suggestions"></div>
           </div>
           <div class="route-arrow" aria-hidden="true">→</div>
           <div class="field autocomplete-field">
-            <label for="to">Куда</label>
-            <input id="to" autocomplete="off" placeholder="Город в России" spellcheck="false">
+            <label for="to" data-i18n="to">Куда</label>
+            <input id="to" autocomplete="off" placeholder="Город в России" data-i18n-placeholder="toPlaceholder" spellcheck="false">
             <div id="toSuggestions" class="suggestions"></div>
           </div>
         </div>
 
-        <div class="section-line"><span>Груз</span></div>
+        <div class="section-line"><span data-i18n="cargo">Груз</span></div>
         <div class="form-grid three">
-          <div class="field"><label for="actualWeight">Вес, кг</label><input id="actualWeight" type="number" min="0" step="0.1" placeholder="280"></div>
-          <div class="field"><label for="places">Количество мест</label><input id="places" type="number" min="1" step="1" value="1"></div>
-          <div class="field"><label for="distance">Расстояние, км</label><input id="distance" type="number" min="0" step="1" placeholder="Автоматически"></div>
+          <div class="field"><label for="actualWeight" data-i18n="weight">Вес, кг</label><input id="actualWeight" type="number" min="0" step="0.1" placeholder="280"></div>
+          <div class="field"><label for="places" data-i18n="places">Количество мест</label><input id="places" type="number" min="1" step="1" value="1"></div>
+          <div class="field"><label for="distance" data-i18n="distance">Расстояние, км</label><input id="distance" type="number" min="0" step="1" placeholder="Автоматически" data-i18n-placeholder="auto"></div>
         </div>
 
         <div class="dimensions">
-          <div class="dimensions-head"><span>Габариты одного места, мм</span><small>Объём — по всем местам</small></div>
+          <div class="dimensions-head"><span data-i18n="dimensions">Габариты одного места, мм</span><small data-i18n="allPlaces">Объём — по всем местам</small></div>
           <div class="dims-grid">
-            <div class="field"><label for="length">Длина</label><input id="length" type="number" min="1" step="1" placeholder="1950"></div>
+            <div class="field"><label for="length" data-i18n="length">Длина</label><input id="length" type="number" min="1" step="1" placeholder="1950"></div>
             <span class="multiply">×</span>
-            <div class="field"><label for="width">Ширина</label><input id="width" type="number" min="1" step="1" placeholder="1400"></div>
+            <div class="field"><label for="width" data-i18n="width">Ширина</label><input id="width" type="number" min="1" step="1" placeholder="1400"></div>
             <span class="multiply">×</span>
-            <div class="field"><label for="height">Высота</label><input id="height" type="number" min="1" step="1" placeholder="1850"></div>
+            <div class="field"><label for="height" data-i18n="height">Высота</label><input id="height" type="number" min="1" step="1" placeholder="1850"></div>
           </div>
         </div>
 
         <div class="form-grid three lower">
-          <div class="field"><label for="incoterm">Условия поставки</label><select id="incoterm"><option>EXW</option><option>FCA</option><option>FOB</option><option>CIF</option><option>DAP</option><option>DDP</option></select></div>
-          <div class="field"><label for="transport">Вид транспорта</label><select id="transport"><option value="">Выберите экспедитора</option></select></div>
-          <div class="field"><label for="divisor">Объёмный вес</label><select id="divisor"><option value="6000">1 м³ = 166,7 кг</option><option value="5000">1 м³ = 200 кг</option><option value="4000">1 м³ = 250 кг</option><option value="3333">1 м³ = 300 кг</option></select></div>
+          <div class="field hover-select" data-select="incoterm">
+            <label data-i18n="incoterm">Условия поставки</label>
+            <button class="select-trigger" type="button" aria-expanded="false"><span id="incotermValue">EXW</span><span class="select-chevron">⌄</span></button>
+            <div class="hover-menu" id="incotermMenu"></div>
+          </div>
+          <div class="field hover-select" data-select="transport">
+            <label data-i18n="transport">Вид транспорта</label>
+            <button class="select-trigger" type="button" aria-expanded="false"><span id="transportValue" data-i18n="chooseCarrier">Выберите экспедитора</span><span class="select-chevron">⌄</span></button>
+            <div class="hover-menu" id="transportMenu"></div>
+          </div>
+          <div class="field hover-select" data-select="divisor">
+            <label data-i18n="volumetric">Объёмный вес</label>
+            <button class="select-trigger" type="button" aria-expanded="false"><span id="divisorValue">1 м³ = 166,7 кг</span><span class="select-chevron">⌄</span></button>
+            <div class="hover-menu" id="divisorMenu"></div>
+          </div>
         </div>
 
         <div class="selected-carrier">
-          <div><span>Экспедитор</span><strong id="selectedCarrierName">Не выбран</strong></div>
+          <div><span data-i18n="forwarder">Экспедитор</span><strong id="selectedCarrierName">Не выбран</strong></div>
           <div id="selectedCarrierTransport" class="selected-carrier-transport">—</div>
         </div>
 
-        <button id="calculateBtn" class="calculate primary" type="button">Рассчитать</button>
+        <button id="calculateBtn" class="action-button calculate" type="button" data-i18n="calculate">Рассчитать</button>
 
         <section id="result" class="result hidden">
-          <div class="result-head"><div><span>К расчёту</span><strong id="chargeableWeight">—</strong></div><em id="weightText"></em></div>
+          <div class="result-head"><div><span data-i18n="chargeable">К расчёту</span><strong id="chargeableWeight">—</strong></div><em id="weightText"></em></div>
           <div class="result-stats">
-            <div><span>Фактический</span><b id="actualResult">—</b></div>
-            <div><span>Объёмный</span><b id="volumetricResult">—</b></div>
-            <div><span>Объём</span><b id="volumeResult">—</b></div>
-            <div><span>Маршрут</span><b id="distanceResult">—</b></div>
+            <div><span data-i18n="actual">Фактический</span><b id="actualResult">—</b></div>
+            <div><span data-i18n="volumetricResult">Объёмный</span><b id="volumetricResult">—</b></div>
+            <div><span data-i18n="volume">Объём</span><b id="volumeResult">—</b></div>
+            <div><span data-i18n="route">Маршрут</span><b id="distanceResult">—</b></div>
           </div>
         </section>
       </section>
@@ -97,10 +124,10 @@
 
     <div id="carrierDock" class="carrier-dock">
       <button id="carrierDockButton" class="carrier-orb" type="button" aria-label="Экспедиторы" aria-expanded="false">
-        <span class="orb-icon">↗</span><span class="orb-label">Экспедиторы</span>
+        <span class="orb-dot"></span><span class="orb-arrow">↗</span>
       </button>
-      <div id="carrierPanel" class="carrier-panel">
-        <div class="panel-head"><div><span class="panel-kicker">ПЕРЕВОЗЧИКИ</span><h2>Кто повезёт?</h2></div><button id="closeCarrier" class="close-panel" type="button" aria-label="Закрыть">×</button></div>
+      <div id="carrierPanel" class="carrier-panel glass-card">
+        <div class="panel-head"><div><span class="panel-kicker" data-i18n="forwarders">ЭКСПЕДИТОРЫ</span><h2 data-i18n="whoWillCarry">Кто повезёт?</h2></div><button id="closeCarrier" class="close-panel" type="button" aria-label="Закрыть">×</button></div>
         <div id="transportFilters" class="transport-filters"></div>
         <div id="carrierGroups" class="carrier-groups"></div>
       </div>
