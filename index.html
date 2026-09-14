@@ -2,23 +2,23 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0b1828">
-  <title>LOGISTICS — China → Russia</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#edf4f1">
+  <title>iomastavka</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div id="weatherBg" class="weather-bg weather-night" aria-hidden="true">
-    <div class="sky-glow"></div><div class="stars"></div><div class="moon"></div><div class="sun"></div>
-    <div class="clouds"></div><div class="rain"></div><div class="snow"></div>
-    <div class="wave wave-a"></div><div class="wave wave-b"></div><div class="wave wave-c"></div>
+  <div id="weatherBg" class="weather-bg weather-clear" aria-hidden="true">
+    <div class="weather-light"></div><div class="stars"></div><div class="sun"></div><div class="moon"></div>
+    <div class="cloud cloud-1"></div><div class="cloud cloud-2"></div><div class="rain"></div><div class="snow"></div>
+    <div class="wave wave-1"></div><div class="wave wave-2"></div><div class="wave wave-3"></div>
   </div>
 
   <div id="loginScreen" class="screen login-screen">
-    <div class="login-card glass">
-      <div class="eyebrow">LOGISTICS</div>
-      <h1>China → Russia</h1>
-      <p>Расчёт заявки и подбор экспедитора</p>
+    <div class="login-card">
+      <div class="brand">iomastavka</div>
+      <h1>Расчёт доставки</h1>
+      <p>Китай → Россия</p>
       <form id="loginForm">
         <label for="password">Пароль</label>
         <input id="password" type="password" autocomplete="current-password" autofocus>
@@ -30,35 +30,29 @@
 
   <div id="appScreen" class="hidden app-shell">
     <header class="topbar">
-      <div class="brand-lockup"><div class="brand">LOGISTICS</div><div class="subtitle">China → Russia · freight calculator</div></div>
-      <div class="top-actions"><span id="weatherLabel" class="weather-label">Погода</span><button id="logoutBtn" class="text-button">Выйти</button></div>
+      <div class="brand">iomastavka</div>
+      <button id="logoutBtn" class="text-button" type="button">Выйти</button>
     </header>
 
     <main class="main">
-      <section class="calculator glass">
-        <div class="title-block">
-          <div class="eyebrow">FREIGHT CALCULATOR</div>
-          <h1>Рассчитать параметры груза</h1>
-          <p>Выберите экспедитора, маршрут и параметры отправления.</p>
-        </div>
+      <section class="calculator">
+        <div class="title-block"><h1>Рассчитать параметры груза</h1></div>
 
         <div class="route-grid">
           <div class="field autocomplete-field">
             <label for="from">Откуда</label>
-            <input id="from" autocomplete="off" placeholder="Город в Китае">
+            <input id="from" autocomplete="off" placeholder="Город в Китае" spellcheck="false">
             <div id="fromSuggestions" class="suggestions"></div>
           </div>
-          <div class="route-arrow">→</div>
+          <div class="route-arrow" aria-hidden="true">→</div>
           <div class="field autocomplete-field">
             <label for="to">Куда</label>
-            <input id="to" autocomplete="off" placeholder="Город в России">
+            <input id="to" autocomplete="off" placeholder="Город в России" spellcheck="false">
             <div id="toSuggestions" class="suggestions"></div>
           </div>
         </div>
 
-        <div class="divider"></div>
-
-        <div class="section-label">ГРУЗ</div>
+        <div class="section-line"><span>Груз</span></div>
         <div class="form-grid three">
           <div class="field"><label for="actualWeight">Вес, кг</label><input id="actualWeight" type="number" min="0" step="0.1" placeholder="280"></div>
           <div class="field"><label for="places">Количество мест</label><input id="places" type="number" min="1" step="1" value="1"></div>
@@ -66,7 +60,7 @@
         </div>
 
         <div class="dimensions">
-          <div class="dimensions-head"><span class="section-label">ГАБАРИТЫ ОДНОГО МЕСТА, ММ</span><span class="micro">Объём считается по всем местам</span></div>
+          <div class="dimensions-head"><span>Габариты одного места, мм</span><small>Объём — по всем местам</small></div>
           <div class="dims-grid">
             <div class="field"><label for="length">Длина</label><input id="length" type="number" min="1" step="1" placeholder="1950"></div>
             <span class="multiply">×</span>
@@ -78,37 +72,36 @@
 
         <div class="form-grid three lower">
           <div class="field"><label for="incoterm">Условия поставки</label><select id="incoterm"><option>EXW</option><option>FCA</option><option>FOB</option><option>CIF</option><option>DAP</option><option>DDP</option></select></div>
-          <div class="field"><label for="transport">Вид транспорта</label><select id="transport"><option value="">Сначала выберите экспедитора</option></select></div>
-          <div class="field"><label for="divisor">Расчёт объёмного веса</label><select id="divisor"><option value="6000">1 м³ = 166,7 кг</option><option value="5000">1 м³ = 200 кг</option><option value="4000">1 м³ = 250 кг</option><option value="3333">1 м³ = 300 кг</option></select></div>
+          <div class="field"><label for="transport">Вид транспорта</label><select id="transport"><option value="">Выберите экспедитора</option></select></div>
+          <div class="field"><label for="divisor">Объёмный вес</label><select id="divisor"><option value="6000">1 м³ = 166,7 кг</option><option value="5000">1 м³ = 200 кг</option><option value="4000">1 м³ = 250 кг</option><option value="3333">1 м³ = 300 кг</option></select></div>
         </div>
 
-        <div class="selected-carrier-row">
-          <div><span class="micro">ЭКСПЕДИТОР</span><strong id="selectedCarrierName">Не выбран</strong></div>
-          <button id="openCarrierSelect" type="button" class="outline-button">Выбрать экспедитора</button>
+        <div class="selected-carrier">
+          <div><span>Экспедитор</span><strong id="selectedCarrierName">Не выбран</strong></div>
+          <div id="selectedCarrierTransport" class="selected-carrier-transport">—</div>
         </div>
-        <div id="carrierInfo" class="carrier-info hidden"></div>
 
         <button id="calculateBtn" class="calculate primary" type="button">Рассчитать</button>
-        <div class="hint">Объёмный вес сравнивается с фактическим. К расчёту берётся большее значение.</div>
 
         <section id="result" class="result hidden">
-          <div class="result-head"><div><div class="section-label">ИТОГ</div><div class="result-title">Вес к расчёту</div></div><div id="weightText" class="result-note"></div></div>
-          <div id="chargeableWeight" class="chargeable">—</div>
+          <div class="result-head"><div><span>К расчёту</span><strong id="chargeableWeight">—</strong></div><em id="weightText"></em></div>
           <div class="result-stats">
             <div><span>Фактический</span><b id="actualResult">—</b></div>
             <div><span>Объёмный</span><b id="volumetricResult">—</b></div>
             <div><span>Объём</span><b id="volumeResult">—</b></div>
             <div><span>Маршрут</span><b id="distanceResult">—</b></div>
           </div>
-          <div class="transport-result"><span>Транспорт экспедитора</span><div id="transportTags"></div></div>
         </section>
       </section>
     </main>
 
     <div id="carrierDock" class="carrier-dock">
-      <button id="carrierDockButton" class="carrier-dock-button" type="button"><span class="dock-dot"></span><span>Экспедиторы</span><span class="dock-chevron">⌃</span></button>
-      <div id="carrierPanel" class="carrier-panel glass">
-        <div class="panel-head"><div><div class="eyebrow">CARRIERS</div><h2>Экспедиторы</h2></div><input id="search" class="search" placeholder="Поиск"></div>
+      <button id="carrierDockButton" class="carrier-orb" type="button" aria-label="Экспедиторы" aria-expanded="false">
+        <span class="orb-icon">↗</span><span class="orb-label">Экспедиторы</span>
+      </button>
+      <div id="carrierPanel" class="carrier-panel">
+        <div class="panel-head"><div><span class="panel-kicker">ПЕРЕВОЗЧИКИ</span><h2>Кто повезёт?</h2></div><button id="closeCarrier" class="close-panel" type="button" aria-label="Закрыть">×</button></div>
+        <div id="transportFilters" class="transport-filters"></div>
         <div id="carrierGroups" class="carrier-groups"></div>
       </div>
     </div>
