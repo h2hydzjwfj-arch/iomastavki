@@ -1,1 +1,34 @@
-{}
+{
+  "MultiWell": {
+    "modes": [
+      "air",
+      "rail",
+      "road",
+      "sea"
+    ],
+    "notes": "Сильное направление Китай → Россия; проверять актуальную ставку перед расчётом."
+  },
+  "Шатл Логистик / Shuttle-Logistic": {
+    "modes": [
+      "rail",
+      "road",
+      "sea",
+      "air"
+    ],
+    "notes": "Прямое ЖД, авто, море, море + ЖД."
+  },
+  "Asia Cargo": {
+    "modes": [
+      "air",
+      "road",
+      "sea"
+    ],
+    "notes": "Авиа, авто, море."
+  },
+  "China Rail": {
+    "modes": [
+      "rail"
+    ],
+    "notes": "ЖД."
+  }
+}

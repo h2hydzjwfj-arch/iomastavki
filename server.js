@@ -1,73 +1,88 @@
-const express=require('express');const helmet=require('helmet');const rateLimit=require('express-rate-limit');const cookieParser=require('cookie-parser');const crypto=require('crypto');
-const app=express();app.set('trust proxy',1);const PORT=Number(process.env.PORT||10000);const SESSION_SECRET=process.env.SESSION_SECRET||crypto.randomBytes(32).toString('hex');const PASSWORD_HASH=process.env.ADMIN_PASSWORD_HASH||'scrypt$16384$8$1$bd186dac2105a3d050c5f769e28d25a2$51e731def6ff02e823b43cb8cfce55adcad745c5c72935ce68d875f583096288';
-function timingSafe(a,b){const aa=Buffer.from(a),bb=Buffer.from(b);return aa.length===bb.length&&crypto.timingSafeEqual(aa,bb)}
-function verifyPassword(password){const p=String(PASSWORD_HASH).split('$');if(p[0]!=='scrypt'||p.length!==6)return false;const[,N,r,pp,salt,hash]=p;try{const d=crypto.scryptSync(password,salt,Buffer.from(hash,'hex').length,{N:Number(N),r:Number(r),p:Number(pp)}).toString('hex');return timingSafe(d,hash)}catch{return false}}
-function sign(x){return crypto.createHmac('sha256',SESSION_SECRET).update(x).digest('base64url')}function token(){const body=Buffer.from(JSON.stringify({exp:Date.now()+8*60*60*1000})).toString('base64url');return body+'.'+sign(body)}
-function auth(req,res,next){const t=req.cookies.auth;if(!t)return res.status(401).json({error:'Требуется вход'});const[b,s]=t.split('.');if(!b||!s||!timingSafe(sign(b),s))return res.status(401).json({error:'Недействительная сессия'});try{const d=JSON.parse(Buffer.from(b,'base64url').toString());if(!d||d.exp<Date.now())throw 0;next()}catch{return res.status(401).json({error:'Сессия истекла'})}}
-const raw=[
-['Multiwell','Kane','8 616 608 738 886','sales344@multiwell.net','www.multiwell.net',['Прямое Ж/Д','Авто','Море'],'Сборные груза'],['Multiwell','Sakiya','8 619 860 070 462','sales242@multiwell.net','www.multiwell.net',['Прямое Ж/Д','Авто','Море'],'Сборные груза'],['CR FREIGHT','Ирина Андреева','8 911 195 62 31','andreeva@crfreight.cn','',['Авиа'],'Опасный'],['CR FREIGHT','Ella и другие','','cs19@crfreight.cn, ella@crfreight.cn, sr16@crfreight.cn','',['Авиа'],'Опасный'],['TRANSIT, LLC','Konstantin Leonov','8 914 791 87 81','k.leonov@transitllc.ru','www.transitllc.ru',['Прямое Ж/Д','Авто','Море','Море + Ж/Д'],'Сборные груза, Ж/Д по России'],['TRANSIT, LLC','Tatyana Iskaleeva','8 908 450 11 98','t.iskaleeva@transitllc.ru','www.transitllc.ru',['Прямое Ж/Д','Авто','Море','Море + Ж/Д'],'Сборные груза, Ж/Д по России'],['TRANSIT, LLC','','','directrail@transitllc.ru','www.transitllc.ru',['Прямое Ж/Д','Авто','Море','Море + Ж/Д'],'Сборные груза, Ж/Д по России'],['Русмарин','Евгений Ермоленко','8 921 401 61 29','evermolenko@rusmarine.ru','www.rusmarine.ru',['Прямое Ж/Д','Авто','Авиа','Море','Море + Ж/Д'],'Сборные груза'],['Qtavia','Anastasiia Snatkina','86 131 499 21 667','a.snatkina@qtavia.com','https://qtavia.com/',['Авиа'],''],['Qtavia','Linara Iliazova','8 936 131 23 25','linara.iliazova@qtavia.com','https://qtavia.com/',['Авиа'],''],['Qtavia','Naida Azadova','8 986 749 55 92','naida.azadova@qtavia.com','https://qtavia.com/',['Авиа'],''],['ФЛГ','Александр Токарев','8 906 238 85 17','sales@flgrussia.com','https://flgrussia.com/',['Прямое Ж/Д','Авто'],'Сборные груза'],['РусКарго','Alina Karpova','8 981 930 24 66','kas@r-cargo.com','https://r-cargo.com/',['Прямое Ж/Д','Авто','Море','Море + Ж/Д'],''],['YM Trans Group','Милена Никитина','8 925 988 65 99','982@ymtrans.ru','www.ymtrans.ru',['Прямое Ж/Д','Авто','Море','Море + Ж/Д'],''],['JENTY','Marina Kostukovich','375 29 192 46 69','m.kostukovich@jenty-spedition.com','https://jenty-spedition.ru/',['Авто'],'Сборные груза'],['Consolidator-DV LLC','Timofei Bakanovich','8 964 432 57 95','import5@consolidator-dv.ru','http://consolidator-dv.ru/',['Море'],'Сборные груза'],['ТАМГА','Осипов Николай','8 985 279 69 39','n.osipov@tamga80.ru','https://tamga80.ru/ru',['Авто'],'Сборные груза, Негабарит'],['Green Avia','Kuzmina Maria','8 936 506 11 15','sales3@avia-dostavka.com','https://avia-dostavka.com/',['Авиа'],''],['Sky Cargo Service','Ekaterina Ivanova','8 913 061 71 56','sales10@scs-aero.ru','www.scs-aero.ru',['Авиа'],''],['Альфа Транзит','Щепина Виктория','8 916 894 05 20','v.shchepina@alfa-transit.com','www.alfa-transit.com',['Прямое Ж/Д','Авто','Море','Море + Ж/Д'],'Сборные груза, Ж/Д по России, Негабарит, Опасный'],['Шатл Логистик / Shuttle-Logistic','Братасенко Михаил','8 999 614 64 92','mb@shuttle-logistic.ru','www.shuttle-logistic.ru',['Прямое Ж/Д','Авто','Море','Море + Ж/Д'],'Сборные груза, Ж/Д по России, Негабарит, Опасный'],['Chengdu Tiechi Silk Road Supply Chain Management','Lily','8 619 115 959 752','lily@tsrscm.com','http://tsrscm.com/ru/',['Прямое Ж/Д'],'Сборные груза'],['GUANGZHOU ETY TRANS INTERNATIONAL FREIGHT FORWARDING','Vera Yao','8 615 999 941 607','vera@cnetytrans.com','www.cnetytrans.com',['Прямое Ж/Д','Море','Море + Ж/Д'],''],['A2','Микулин Владимир','8 913 061 71 56','v.mikulin@a2-express.com','a2-express.com',['Авиа'],''],['RUTENSIL Logistics','Алина','8 906 351 17 33','108@rutensil.com','http://rutensil.com/',['Прямое Ж/Д','Авто','Море','Море + Ж/Д'],'Сборные груза, Европа'],['ВТХ','Станислав','8 914 077 79 26','vthopr4@vostoktransholding.ru','http://vostoktransholding.ru/',['Море','Море + Ж/Д'],'Сборные груза, США, Европа'],['ВТХ','Алексей','8 914 704 43 41','sales4@vostoktransholding.ru','http://vostoktransholding.ru/',['Море','Море + Ж/Д'],'Сборные груза, США, Европа'],['Chongqing Gudali Supply Chain Management','Logan','8 613 827 428 296','logan@gdl-rail.com','logan@gdl-rail.com',['Прямое Ж/Д','Авто'],'Сборные груза'],['Вэй Трейд','Рукосуева Евгения Олеговна','8 902 981 11 04','e.rukosueva@way-trade.ru','https://way-trade.ru/',['Прямое Ж/Д','Авто','Море + Ж/Д'],''],['WAY GROUP','Общий','8 800 600 04 30','info@wayg.ru','https://www.wayg.ru/',['Прямое Ж/Д','Авто','Море','Море + Ж/Д'],'Сборные груза, Негабарит'],['ФИТ, Владивосток','Маргарита','8-800-23-444-99 ext. 41501; +7-914-794-20-89','NNKuznetsova@fesco.com','https://www.fesco.ru/ru/',['Прямое Ж/Д','Море','Море + Ж/Д'],'Сборные груза, Ж/Д по России, Негабарит'],['Нью Вэй Лоджистик','Боев Сергей','8 914 320 65 95','310@newwaylogistic.ru','https://newwaylogistic.ru/',['Море','Море + Ж/Д'],'Ж/Д по России, Опасный'],['ВЕЛЕС','Венера Рашидова','8 918 418 69 82','operative2@velesforwarding.ru','www.velesforwarding.ru',['Море'],'Новороссийск, Негабарит, Опасный'],['ГАЛЕАС','Роман','8 961 520 31 25','r.kuznetsov@galeasgroup.ru','https://galeasgroup.ru/',['Море'],'Новороссийск'],['Znylogistics','Maya','','operator01@znylogistics.com','',['Авто'],'Турция'],['РТТК','Алексей Веслополов (Чита)','8 3022 21 18 18; 8 914 464 23 32','rttk888@mail.ru','https://www.rttk.net/',['Ж/Д','Авто'],'Негабарит, Россия, Китай'],['Tu-Tell','Вадим','375 33 3071468','t14@tutell.com','https://www.tutell.com/',['Авто'],'Сборные груза, Турция, Европа'],['СДЕК','Палащук Владислав Сергеевич','8 924 697 72 73','v.palashchuk@cdek.ru','www.cdek.ru',['Мелкие груза'],'Китай'],['ИП Полчанинов Кирилл Александрович','Кирилл','7 925 991 25 75','pka666@yandex.ru','',['Автовывоз с СВХ, машина 42-43 куб.м.'],'Россия, Москва, МО'],['ИП Диана Куркина','Евгений','7 962 936 27 08','yevgeniy-kurkin@mail.ru','',['Автовывоз с СВХ, машина до 18 куб.м.'],'Россия, Москва, МО'],['','Алексей','7 985 227 06 67','','',['Автовывоз с СВХ, более 20 куб.м.'],'Россия, Москва, МО']];
-function slug(s){return String(s).toLowerCase().replace(/[^a-zа-я0-9]+/gi,'-').replace(/^-|-$/g,'').slice(0,40)||'agent'}
-const agents=raw.map((a,i)=>({id:`${slug(a[0]||'agent')}-${i+1}`,name:a[0]||'Без названия',contact:a[1],phone:a[2],email:a[3],site:a[4],transport:a[5],notes:a[6]}));
-app.use(helmet({contentSecurityPolicy:false}));
-app.use(express.static(__dirname));
-app.get('/',(req,res)=>res.sendFile(__dirname + '/index.html'));app.use(express.json({limit:'50kb'}));app.use(cookieParser());app.use('/api/login',rateLimit({windowMs:15*60*1000,max:10,standardHeaders:true,legacyHeaders:false}));
-app.post('/api/login',(req,res)=>{const p=typeof req.body?.password==='string'?req.body.password:'';if(!verifyPassword(p))return res.status(401).json({error:'Неверный пароль'});res.cookie('auth',token(),{httpOnly:true,secure:true,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});return res.json({ok:true})});
-app.post('/api/logout',(req,res)=>{res.clearCookie('auth',{httpOnly:true,secure:true,sameSite:'lax',path:'/'});res.json({ok:true})});app.get('/api/me',(req,res)=>{if(!req.cookies.auth)return res.json({authenticated:false});auth(req,res,()=>res.json({authenticated:true}))});app.get('/api/agents',auth,(req,res)=>res.json(agents));app.get('/api/health',(req,res)=>res.json({ok:true}));
-let weatherCache={data:null,at:0};
-app.get('/api/weather',auth,async(req,res)=>{
-  const key=process.env.OPENWEATHER_API_KEY;
-  try{
-    const nowMoscow=new Date().toLocaleString('en-US',{timeZone:'Europe/Moscow'});
-    const moscowDate=new Date(nowMoscow);
-    const hour=moscowDate.getHours();
-    const isNight=hour>=21||hour<6;
-    if(weatherCache.data&&Date.now()-weatherCache.at<5*60*1000){
-      const cached={...weatherCache.data,type:isNight ? (weatherCache.data.dayType==='clear' ? 'night' : `night ${weatherCache.data.dayType}`) : weatherCache.data.dayType};
-      return res.json(cached);
-    }
-    if(!key){
-      const data={ok:true,city:'Москва и область',temp:null,description:'',type:isNight?'night':'clear',dayType:isNight?'night':'clear'};
-      weatherCache={data,at:Date.now()};return res.json(data);
-    }
-    const u=`https://api.openweathermap.org/data/2.5/weather?lat=55.7558&lon=37.6173&appid=${encodeURIComponent(key)}&units=metric&lang=ru`;
-    const r=await fetch(u);
-    if(!r.ok)throw new Error('OpenWeather error');
-    const d=await r.json();
-    const id=d.weather?.[0]?.id||800;
-    let dayType='clear';
-    if(id>=200&&id<600)dayType='rain';
-    else if(id>=600&&id<700)dayType='snow';
-    else if(id>=700&&id<800)dayType='clouds';
-    else if(id>=800)dayType=id===800?'clear':'clouds';
-    const type=isNight ? (dayType==='clear' ? 'night' : `night ${dayType}`) : dayType;
-    const data={ok:true,city:'Москва и область',temp:Math.round(d.main.temp),description:d.weather?.[0]?.description||'',type,dayType};
-    weatherCache={data,at:Date.now()};return res.json(data);
-  }catch{
-    const nowMoscow=new Date().toLocaleString('en-US',{timeZone:'Europe/Moscow'});
-    const hour=new Date(nowMoscow).getHours();
-    const night=hour>=21||hour<6;
-    const type=night?'night':'clear';
-    return res.json({ok:true,city:'Москва и область',temp:null,description:'',type,dayType:type});
+
+const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+const cookieParser = require('cookie-parser');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
+const app = express();
+const PORT = process.env.PORT || 10000;
+const ROOT = __dirname;
+const DATA_DIR = path.join(ROOT, 'data');
+const RATES_FILE = path.join(DATA_DIR, 'rates.json');
+
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(express.json({ limit: '1mb' }));
+app.use(cookieParser());
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }));
+
+const fallbackHash = 'scrypt$16384$8$1$bd186dac2105a3d050c5f769e28d25a2$51e731def6ff02e823b43cb8cfce55adcad745c5c72935ce68d875f583096288';
+
+function safeReadRates() {
+  try {
+    return JSON.parse(fs.readFileSync(RATES_FILE, 'utf8'));
+  } catch {
+    return {};
   }
+}
+function saveRates(data) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(RATES_FILE, JSON.stringify(data, null, 2), 'utf8');
+}
+function makeToken() {
+  const secret = process.env.SESSION_SECRET || 'change-this-session-secret';
+  return crypto.createHmac('sha256', secret).update(crypto.randomBytes(32)).digest('hex');
+}
+function verifyPassword(password) {
+  const raw = process.env.ADMIN_PASSWORD_HASH || fallbackHash;
+  const p = raw.split('$');
+  if (p.length !== 6 || p[0] !== 'scrypt') return false;
+  const N = Number(p[1]), r = Number(p[2]), salt = Buffer.from(p[4], 'hex'), expected = p[5];
+  try {
+    const actual = crypto.scryptSync(String(password), salt, 32, { N, r, p: Number(p[3]), maxmem: 64 * 1024 * 1024 }).toString('hex');
+    return crypto.timingSafeEqual(Buffer.from(actual, 'hex'), Buffer.from(expected, 'hex'));
+  } catch { return false; }
+}
+function auth(req, res, next) {
+  if (req.cookies?.auth === '1') return next();
+  return res.status(401).json({ ok: false, error: 'Unauthorized' });
+}
+
+app.get('/', (req,res) => res.sendFile(path.join(ROOT, 'index.html')));
+app.get('/app.js', (req,res) => res.sendFile(path.join(ROOT, 'app.js')));
+app.get('/styles.css', (req,res) => res.sendFile(path.join(ROOT, 'styles.css')));
+app.get('/api/health', (req,res) => res.json({ ok: true }));
+app.get('/api/config', (req,res) => res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY) }));
+app.get('/api/weather', async (req,res) => {
+  const key = process.env.OPENWEATHER_API_KEY;
+  if (!key) return res.status(503).json({ok:false,error:'Weather key not configured'});
+  try {
+    const u = `https://api.openweathermap.org/data/2.5/weather?lat=55.7558&lon=37.6173&appid=${encodeURIComponent(key)}&units=metric`;
+    const r = await fetch(u);
+    const d = await r.json();
+    if (!r.ok) return res.status(r.status).json({ok:false,error:d.message||'weather error'});
+    res.json({ok:true, main:d.weather?.[0]?.main || 'Clear', description:d.weather?.[0]?.description || ''});
+  } catch(e) { res.status(502).json({ok:false,error:'weather unavailable'}); }
 });
-app.get('/api/cities',auth,async(req,res)=>{
-  const q=String(req.query.q||'').trim();
-  const country=String(req.query.country||'').toUpperCase();
-  const language=['ru','en','zh'].includes(String(req.query.language||'').toLowerCase())?String(req.query.language).toLowerCase():'ru';
-  if(!q)return res.json({results:[]});
-  try{
-    const u=new URL('https://geocoding-api.open-meteo.com/v1/search');
-    u.searchParams.set('name',q);
-    u.searchParams.set('count','8');
-    u.searchParams.set('language',language);
-    u.searchParams.set('format','json');
-    if(country)u.searchParams.set('countryCode',country);
-    const r=await fetch(u);
-    if(!r.ok)return res.json({results:[]});
-    const d=await r.json();
-    const results=(d.results||[]).map(x=>({name:x.name,admin:[x.admin1,x.admin2].filter(Boolean).join(', '),country:x.country||'',label:[x.name,x.admin1,x.country].filter(Boolean).join(', '),lat:x.latitude,lon:x.longitude}));
-    res.json({results});
-  }catch{res.json({results:[]})}
+
+app.post('/api/login', (req,res) => {
+  if (!verifyPassword(req.body?.password || '')) return res.status(401).json({ ok:false, error:'Неверный пароль' });
+  res.cookie('auth', '1', { httpOnly:true, secure:true, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
+  res.json({ ok:true });
 });
-app.get('/api/route-distance',auth,async(req,res)=>{const {fromLat,fromLon,toLat,toLon}=req.query;const nums=[fromLat,fromLon,toLat,toLon].map(Number);if(nums.some(Number.isNaN))return res.status(400).json({error:'Некорректные координаты'});try{const [a,b,c,d]=nums;const u=`https://router.project-osrm.org/route/v1/driving/${encodeURIComponent(b)},${encodeURIComponent(a)};${encodeURIComponent(d)},${encodeURIComponent(c)}?overview=false`;const r=await fetch(u,{headers:{'User-Agent':'iomastavka/1.0'}});if(!r.ok)return res.json({ok:false});const x=await r.json();const meters=x.routes?.[0]?.distance;if(!meters)return res.json({ok:false});res.json({ok:true,distanceKm:Math.round(meters/100)/10})}catch{res.json({ok:false})}});
-app.listen(PORT,()=>console.log(`iomastavka listening on ${PORT}`));
+app.post('/api/logout', (req,res) => {
+  res.clearCookie('auth', { httpOnly:true, secure:true, sameSite:'lax', path:'/' });
+  res.json({ ok:true });
+});
+app.get('/api/me', auth, (req,res) => res.json({ ok:true }));
+app.get('/api/rates', auth, (req,res) => res.json(safeReadRates()));
+app.put('/api/rates', auth, (req,res) => {
+  const data = req.body;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return res.status(400).json({ok:false,error:'Некорректные данные'});
+  saveRates(data);
+  res.json({ok:true});
+});
+
+app.listen(PORT, () => console.log(`iomastavka listening on ${PORT}`));

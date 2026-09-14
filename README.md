@@ -1,15 +1,9 @@
 # iomastavka
+Render-ready freight calculator.
 
-Render-ready freight calculator for China → Russia.
+Environment variables:
+- `OPENWEATHER_API_KEY` — OpenWeather key (keep it only in Render Environment Variables)
+- `SESSION_SECRET` — random session secret
+- `ADMIN_PASSWORD_HASH` — optional scrypt hash; default demo password is `123UUn456TT78*`
 
-## Render environment variables
-Set these in Render → Environment:
-
-- `OPENWEATHER_API_KEY` — your OpenWeather API key. Keep it in Render, not in frontend code or GitHub.
-- `SESSION_SECRET` — any long random string.
-- `ADMIN_PASSWORD_HASH` — optional; the project contains a working fallback hash for the current password.
-
-The weather background uses Moscow coordinates and Moscow local time. At night the moon/stars appear; weather effects (rain/snow/clouds) can remain visible at night too.
-
-## Start command
-`npm start`
+Start command: `npm start`

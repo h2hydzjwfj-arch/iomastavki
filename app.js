@@ -1,71 +1,233 @@
-let agents=[];
-const $=id=>document.getElementById(id);
-let cityTimers={from:null,to:null};
-let cityRequest={from:0,to:0};
-let selectedCoords={from:null,to:null};
-let suggestionsState={from:[],to:[]};
-let carrierFilter='Все';
-let currentLang=localStorage.getItem('iomastavka_lang')||'ru';
 
-const I18N={
- ru:{loginTitle:'Расчёт доставки',loginSubtitle:'Китай → Россия',password:'Пароль',login:'Войти',logout:'Выйти',title:'Рассчитать параметры груза',from:'Откуда',to:'Куда',fromPlaceholder:'Город в Китае',toPlaceholder:'Город в России',cargo:'Груз',weight:'Вес, кг',places:'Количество мест',distance:'Расстояние, км',auto:'Автоматически',dimensions:'Габариты одного места, мм',allPlaces:'Объём — по всем местам',length:'Длина',width:'Ширина',height:'Высота',incoterm:'Условия поставки',transport:'Вид транспорта',volumetric:'Объёмный вес',chooseCarrier:'Выберите экспедитора',forwarder:'Экспедитор',calculate:'Рассчитать',chargeable:'К расчёту',actual:'Фактический',volumetricResult:'Объёмный',volume:'Объём',route:'Маршрут',forwarders:'Экспедиторы',whoWillCarry:'Кто повезёт?',all:'Все',rail:'Ж/Д',road:'Авто',sea:'Море',air:'Авиа',multi:'Мультимодальные',noAgents:'Для этого вида транспорта экспедиторов пока нет',actualHigher:'Фактический вес больше объёмного',volumeHigher:'Объёмный вес больше фактического',fill:'Заполните вес и все три габарита одного места.',notSelected:'Не выбран',transportChoose:'Выберите транспорт',selectCarrier:'Выбрать экспедитора',quickMenu:'Меню'},
- en:{loginTitle:'Freight calculator',loginSubtitle:'China → Russia',password:'Password',login:'Sign in',logout:'Log out',title:'Calculate cargo parameters',from:'From',to:'To',fromPlaceholder:'City in China',toPlaceholder:'City in Russia',cargo:'Cargo',weight:'Weight, kg',places:'Packages',distance:'Distance, km',auto:'Automatic',dimensions:'Dimensions per package, mm',allPlaces:'Volume — all packages',length:'Length',width:'Width',height:'Height',incoterm:'Incoterms',transport:'Transport mode',volumetric:'Volumetric weight',chooseCarrier:'Choose forwarder',forwarder:'Forwarder',calculate:'Calculate',chargeable:'Chargeable weight',actual:'Actual',volumetricResult:'Volumetric',volume:'Volume',route:'Route',forwarders:'Forwarders',whoWillCarry:'Who will carry it?',all:'All',rail:'Rail',road:'Road',sea:'Sea',air:'Air',multi:'Multimodal',noAgents:'No forwarders for this mode yet',actualHigher:'Actual weight is higher',volumeHigher:'Volumetric weight is higher',fill:'Enter weight and all three dimensions.',notSelected:'Not selected',transportChoose:'Choose transport',selectCarrier:'Choose forwarder',quickMenu:'Menu'},
- zh:{loginTitle:'货运计算器',loginSubtitle:'中国 → 俄罗斯',password:'密码',login:'登录',logout:'退出',title:'计算货物参数',from:'起运地',to:'目的地',fromPlaceholder:'中国城市',toPlaceholder:'俄罗斯城市',cargo:'货物',weight:'重量，公斤',places:'件数',distance:'距离，公里',auto:'自动',dimensions:'单件尺寸，毫米',allPlaces:'体积 — 所有货物',length:'长度',width:'宽度',height:'高度',incoterm:'贸易术语',transport:'运输方式',volumetric:'体积重量',chooseCarrier:'选择货代',forwarder:'货代',calculate:'计算',chargeable:'计费重量',actual:'实际重量',volumetricResult:'体积重量',volume:'体积',route:'路线',forwarders:'货代',whoWillCarry:'谁来运输？',all:'全部',rail:'铁路',road:'公路',sea:'海运',air:'空运',multi:'多式联运',noAgents:'暂无符合该运输方式的货代',actualHigher:'实际重量更大',volumeHigher:'体积重量更大',fill:'请输入重量和单件的三个尺寸。',notSelected:'未选择',transportChoose:'选择运输方式',selectCarrier:'选择货代',quickMenu:'菜单'}
-};
-const t=k=>I18N[currentLang][k]||I18N.ru[k]||k;
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
 
-const COMMON_CITIES={
- CN:[
-  ['北京','Beijing','北京','China',39.9042,116.4074],['上海','Shanghai','上海','China',31.2304,121.4737],['广州','Guangzhou','广东省','China',23.1291,113.2644],['深圳','Shenzhen','广东省','China',22.5431,114.0579],['青岛','Qingdao','山东省','China',36.0671,120.3826],['义乌','Yiwu','浙江省','China',29.3069,120.0758],['宁波','Ningbo','浙江省','China',29.8683,121.5440],['天津','Tianjin','天津','China',39.3434,117.3616],['苏州','Suzhou','江苏省','China',31.2989,120.5853],['厦门','Xiamen','福建省','China',24.4798,118.0894],['杭州','Hangzhou','浙江省','China',30.2741,120.1551],['东莞','Dongguan','广东省','China',23.0207,113.7518],['成都','Chengdu','四川省','China',30.5728,104.0668],['重庆','Chongqing','重庆','China',29.5630,106.5516],['武汉','Wuhan','湖北省','China',30.5928,114.3055]
- ],
- RU:[
-  ['Москва','Moscow','Москва','Russia',55.7558,37.6173],['Санкт-Петербург','Saint Petersburg','Ленинградская область','Russia',59.9343,30.3351],['Казань','Kazan','Республика Татарстан','Russia',55.7879,49.1233],['Екатеринбург','Yekaterinburg','Свердловская область','Russia',56.8389,60.6057],['Новосибирск','Novosibirsk','Новосибирская область','Russia',55.0084,82.9357],['Нижний Новгород','Nizhny Novgorod','Нижегородская область','Russia',56.2965,43.9361],['Самара','Samara','Самарская область','Russia',53.1959,50.1002],['Уфа','Ufa','Республика Башкортостан','Russia',54.7388,55.9721],['Ростов-на-Дону','Rostov-on-Don','Ростовская область','Russia',47.2357,39.7015],['Краснодар','Krasnodar','Краснодарский край','Russia',45.0355,38.9753],['Владивосток','Vladivostok','Приморский край','Russia',43.1155,131.8855],['Воронеж','Voronezh','Воронежская область','Russia',51.6608,39.2003],['Пермь','Perm','Пермский край','Russia',58.0105,56.2502],['Омск','Omsk','Омская область','Russia',54.9885,73.3242],['Челябинск','Chelyabinsk','Челябинская область','Russia',55.1644,61.4368]
- ]
+const I18N = {
+  ru:{title:"Рассчитать параметры груза",from:"Откуда",to:"Куда",cargo:"ГРУЗ",weight:"Вес, кг",pieces:"Количество мест",distance:"Расстояние, км",dimensions:"ГАБАРИТЫ ОДНОГО МЕСТА, ММ",volumeAll:"Объём — по всем местам",length:"Длина",width:"Ширина",height:"Высота",forwarder:"Экспедитор",transport:"Вид транспорта",incoterms:"Условия поставки",dimWeight:"Объёмный вес",chooseForwarder:"Выберите экспедитора",chooseTransport:"Выберите транспорт",selected:"ЭКСПЕДИТОР",none:"Не выбран",calculate:"Рассчитать",agents:"Экспедиторы",assistant:"ИИ-ассистент",assistantSub:"Обновление ставок",assistantHelp:"Передай ставку обычным текстом. Например: «MultiWell Китай Москва ЖД 1800 USD за тонну».",updateRates:"Обновить ставки",logout:"Выйти"},
+  en:{title:"Calculate cargo parameters",from:"From",to:"To",cargo:"CARGO",weight:"Weight, kg",pieces:"Pieces",distance:"Distance, km",dimensions:"DIMENSIONS OF ONE PIECE, MM",volumeAll:"Volume — all pieces",length:"Length",width:"Width",height:"Height",forwarder:"Forwarder",transport:"Transport",incoterms:"Incoterms",dimWeight:"Volumetric weight",chooseForwarder:"Choose forwarder",chooseTransport:"Choose transport",selected:"FORWARDER",none:"Not selected",calculate:"Calculate",agents:"Forwarders",assistant:"AI assistant",assistantSub:"Rate updates",assistantHelp:"Send a rate in plain text. Example: “MultiWell China Moscow rail 1800 USD per ton”.",updateRates:"Update rates",logout:"Log out"},
+  zh:{title:"计算货物参数",from:"起运地",to:"目的地",cargo:"货物",weight:"重量，公斤",pieces:"件数",distance:"距离，公里",dimensions:"单件尺寸，毫米",volumeAll:"体积 — 所有件",length:"长度",width:"宽度",height:"高度",forwarder:"货运代理",transport:"运输方式",incoterms:"贸易术语",dimWeight:"体积重量",chooseForwarder:"选择货运代理",chooseTransport:"选择运输方式",selected:"货运代理",none:"未选择",calculate:"计算",agents:"货运代理",assistant:"AI 助手",assistantSub:"更新运价",assistantHelp:"用自然语言输入运价。例如：“MultiWell 中国 莫斯科 铁路 1800 USD/吨”。",updateRates:"更新运价",logout:"退出"}
 };
 
-async function api(url,options={}){const r=await fetch(url,{...options,credentials:'same-origin',headers:{'Content-Type':'application/json',...(options.headers||{})}});let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.error||`Ошибка ${r.status}`);return d}
-function showLogin(){$('loginScreen').classList.remove('hidden');$('appScreen').classList.add('hidden');$('password').focus()}
-function showApp(){$('loginScreen').classList.add('hidden');$('appScreen').classList.remove('hidden')}
-function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
-function normalizedTransport(a){return (a.transport||[]).map(x=>String(x).toLowerCase())}
-function hasMode(a,mode){const t=normalizedTransport(a);if(mode==='Ж/Д')return t.some(x=>x.includes('ж/д')||x.includes('жд')||x.includes('rail')||x.includes('желез'));if(mode==='Авто')return t.some(x=>x.includes('авто')||x.includes('road'));if(mode==='Море')return t.some(x=>x.includes('море')||x.includes('sea'));if(mode==='Авиа')return t.some(x=>x.includes('авиа')||x.includes('air'));return false}
-function carrierSupports(a,filter){if(filter==='Все')return true;if(filter==='Мультимодальные')return (a.transport||[]).length>1;return hasMode(a,filter)}
-function groupFor(a){const rail=hasMode(a,'Ж/Д'),road=hasMode(a,'Авто'),sea=hasMode(a,'Море'),air=hasMode(a,'Авиа');if(rail&&road)return 'Ж/Д + Авто';if(sea&&rail)return 'Море + Ж/Д';if(rail)return 'Ж/Д';if(sea)return 'Море';if(air)return 'Авиа';if(road)return 'Авто';return 'Другие'}
-function groupLabel(g){if(currentLang==='en')return {'Ж/Д + Авто':'Rail + Road','Море + Ж/Д':'Sea + Rail','Ж/Д':'Rail','Море':'Sea','Авиа':'Air','Авто':'Road','Другие':'Other'}[g]||g;if(currentLang==='zh')return {'Ж/Д + Авто':'铁路 + 公路','Море + Ж/Д':'海运 + 铁路','Ж/Д':'铁路','Море':'海运','Авиа':'空运','Авто':'公路','Другие':'其他'}[g]||g;return g}
+const modes = {
+  air:{ru:"Авиа",en:"Air",zh:"空运",factor:167},
+  road:{ru:"Авто",en:"Road",zh:"公路",factor:400},
+  rail:{ru:"ЖД",en:"Rail",zh:"铁路",factor:500},
+  sea:{ru:"Море",en:"Sea",zh:"海运",factor:1000}
+};
+const modeGroups = [
+  ["rail","ЖД"],["road","Авто"],["air","Авиа"],["sea","Море"]
+];
+let lang = localStorage.getItem("iomastavka_lang") || "ru";
+let rates = {};
+let selectedForwarder = "";
+let selectedMode = "";
+let selectedFactor = 167;
 
-function carrierMenuMarkup(filtered=agents){const groups={};filtered.forEach(a=>(groups[groupFor(a)]??=[]).push(a));const order=['Ж/Д + Авто','Море + Ж/Д','Ж/Д','Море','Авиа','Авто','Другие'];return order.filter(g=>groups[g]?.length).map(g=>`<div class="carrier-group"><div class="group-title"><span>${esc(groupLabel(g))}</span><em>${groups[g].length}</em></div>${groups[g].map(a=>`<button type="button" class="carrier-item ${a.id===window.selectedCarrierId?'selected':''}" data-id="${esc(a.id)}"><span class="carrier-name">${esc(a.name)}</span><span class="carrier-contact">${esc(a.contact||'')}</span></button>`).join('')}</div>`).join('')||`<div class="empty">${t('noAgents')}</div>`}
-function renderMainCarrierMenu(){const menu=$('mainCarrierMenu');if(menu)menu.innerHTML=carrierMenuMarkup()}
-function renderCarrierGroups(){const filtered=agents.filter(a=>carrierSupports(a,carrierFilter));$('carrierGroups').innerHTML=carrierMenuMarkup(filtered);renderTransportFilters();renderMainCarrierMenu()}
-function renderTransportFilters(){const filters=[['Все','all'],['Ж/Д','rail'],['Авто','road'],['Море','sea'],['Авиа','air'],['Мультимодальные','multi']];$('transportFilters').innerHTML=filters.map(([f,k])=>`<button type="button" class="transport-filter ${carrierFilter===f?'active':''}" data-filter="${f}">${t(k)}</button>`).join('')}
-function setCarrier(id){const a=agents.find(x=>x.id===id);if(!a)return;window.selectedCarrierId=id;$('selectedCarrierName').textContent=a.name;$('mainCarrierValue').textContent=a.name;$('selectedCarrierTransport').textContent=(a.transport||[]).join(' · ');$('transportValue').textContent=(a.transport||[])[0]||t('transportChoose');renderTransportMenu();renderCarrierGroups()}
-function renderTransportMenu(){const a=agents.find(x=>x.id===window.selectedCarrierId);$('transportMenu').innerHTML=(a?.transport||[]).map((v,i)=>`<button type="button" class="menu-option ${i===0?'selected':''}" data-value="${esc(v)}">${esc(v)}</button>`).join('')||`<div class="menu-empty">${t('chooseCarrier')}</div>`}
-function renderIncoterms(){const vals=['EXW','FCA','FOB','CIF','DAP','DDP'];$('incotermMenu').innerHTML=vals.map((v,i)=>`<button type="button" class="menu-option ${i===0?'selected':''}" data-value="${v}">${v}</button>`).join('')}
-function renderDivisors(){const labels=currentLang==='zh'?['1 立方米 = 166.7 千克','1 立方米 = 200 千克','1 立方米 = 250 千克','1 立方米 = 300 千克']:currentLang==='en'?['1 m³ = 166.7 kg','1 m³ = 200 kg','1 m³ = 250 kg','1 m³ = 300 kg']:['1 м³ = 166,7 кг','1 м³ = 200 кг','1 м³ = 250 кг','1 м³ = 300 кг'];const vals=['6000','5000','4000','3333'];$('divisorMenu').innerHTML=vals.map((v,i)=>`<button type="button" class="menu-option ${i===0?'selected':''}" data-value="${v}">${labels[i]}</button>`).join('')}
-function chooseMenu(kind,value,label){if(kind==='incoterm')$('incotermValue').textContent=label;if(kind==='transport')$('transportValue').textContent=label;if(kind==='divisor')$('divisorValue').textContent=label;document.querySelectorAll(`.hover-select[data-select="${kind}"] .menu-option`).forEach(b=>b.classList.toggle('selected',b.dataset.value===value))}
+const cities = [
+ ["Иу","Yiwu","义乌","Jinhua Shi","China","cn"],["Шанхай","Shanghai","上海","Shanghai","China","cn"],
+ ["Шэньчжэнь","Shenzhen","深圳","Guangdong","China","cn"],["Гуанчжоу","Guangzhou","广州","Guangdong","China","cn"],
+ ["Пекин","Beijing","北京","Beijing","China","cn"],["Циндао","Qingdao","青岛","Shandong","China","cn"],
+ ["Нинбо","Ningbo","宁波","Zhejiang","China","cn"],["Тяньцзинь","Tianjin","天津","Tianjin","China","cn"],
+ ["Ханчжоу","Hangzhou","杭州","Zhejiang","China","cn"],["Чэнду","Chengdu","成都","Sichuan","China","cn"],
+ ["Чунцин","Chongqing","重庆","Chongqing","China","cn"],["Сямэнь","Xiamen","厦门","Fujian","China","cn"],
+ ["Сучжоу","Suzhou","苏州","Jiangsu","China","cn"],["Ухань","Wuhan","武汉","Hubei","China","cn"],
+ ["Далянь","Dalian","大连","Liaoning","China","cn"],["Шэньян","Shenyang","沈阳","Liaoning","China","cn"],
+ ["Харбин","Harbin","哈尔滨","Heilongjiang","China","cn"],["Сеул","Seoul","서울","South Korea","kr"],
+ ["Пусан","Busan","부산","South Korea","kr"],["Мумбаи","Mumbai","मुंबई","Maharashtra","India","in"],
+ ["Дели","Delhi","दिल्ली","India","in"],["Ченнаи","Chennai","சென்னை","Tamil Nadu","India","in"],
+ ["Москва","Moscow","Москва","Moscow","Russia","ru"],["Казань","Kazan","Казань","Tatarstan","Russia","ru"],
+ ["Санкт-Петербург","Saint Petersburg","Санкт-Петербург","Russia","Russia","ru"],["Екатеринбург","Yekaterinburg","Екатеринбург","Sverdlovsk","Russia","ru"],
+ ["Новосибирск","Novosibirsk","Новосибирск","Russia","Russia","ru"],["Владивосток","Vladivostok","Владивосток","Primorsky Krai","Russia","ru"],
+ ["Самара","Samara","Самара","Russia","Russia","ru"],["Нижний Новгород","Nizhny Novgorod","Нижний Новгород","Russia","Russia","ru"]
+];
 
-function localCityResults(q,country){const list=COMMON_CITIES[country]||[];const lower=q.toLocaleLowerCase();return list.filter(x=>x[0].toLocaleLowerCase().startsWith(lower)||x[1].toLocaleLowerCase().startsWith(lower)||x[0].toLocaleLowerCase().includes(lower)||x[1].toLocaleLowerCase().includes(lower)).slice(0,8).map(x=>({name:x[0],english:x[1],admin:x[2],country:x[3],label:x[0]+', '+x[2],lat:x[4],lon:x[5]}))}
-async function citySearch(kind,value){const q=value.trim(),box=$(kind+'Suggestions'),country=kind==='from'?'CN':'RU';if(!q){box.classList.remove('show');suggestionsState[kind]=[];return}const requestId=++cityRequest[kind];try{const local=localCityResults(q,country);let remote=[];if(q.length>=2){const calls=['ru','en'].map(lang=>{const u='/api/cities?q='+encodeURIComponent(q)+'&country='+country+'&language='+lang;return api(u).catch(()=>({results:[]}))});const data=await Promise.all(calls);remote=data.flatMap(x=>x.results||[])}if(requestId!==cityRequest[kind])return;const all=[...local,...remote],seen=new Set();suggestionsState[kind]=all.filter(c=>{const key=`${(c.name||'').toLowerCase()}|${(c.admin||'').toLowerCase()}|${(c.lat||'')}`;if(seen.has(key))return false;seen.add(key);return true}).slice(0,8);box.innerHTML=suggestionsState[kind].map((c,i)=>`<button type="button" class="suggestion" data-kind="${kind}" data-index="${i}"><span>${esc(c.name)}${c.english&&c.english!==c.name?' · '+esc(c.english):''}</span><small>${esc(c.admin||'')} · ${esc(c.country||'')}</small></button>`).join('');box.classList.toggle('show',suggestionsState[kind].length>0)}catch{if(requestId===cityRequest[kind])box.classList.remove('show')}}
-function closeSuggestions(){['from','to'].forEach(kind=>$(kind+'Suggestions').classList.remove('show'))}
-function bindAutocomplete(kind){const input=$(kind);input.addEventListener('input',()=>{selectedCoords[kind]=null;clearTimeout(cityTimers[kind]);closeSuggestions();cityTimers[kind]=setTimeout(()=>citySearch(kind,input.value),160)});input.addEventListener('focus',()=>{closeSuggestions();if(input.value.trim())citySearch(kind,input.value)});$(kind+'Suggestions').addEventListener('click',e=>{const b=e.target.closest('.suggestion');if(!b)return;const c=suggestionsState[kind][Number(b.dataset.index)];if(!c)return;input.value=c.label||c.name;selectedCoords[kind]={lat:Number(c.lat),lon:Number(c.lon)};closeSuggestions();autoDistance()})}
-async function autoDistance(){if(!selectedCoords.from||!selectedCoords.to)return;try{const r=await api(`/api/route-distance?fromLat=${selectedCoords.from.lat}&fromLon=${selectedCoords.from.lon}&toLat=${selectedCoords.to.lat}&toLon=${selectedCoords.to.lon}`);if(r.ok)$('distance').value=r.distanceKm}catch{}}
-function calculate(){const w=Number($('actualWeight').value)||0,places=Math.max(1,Number($('places').value)||1),l=Number($('length').value)||0,wd=Number($('width').value)||0,h=Number($('height').value)||0,divisor=Number((document.querySelector('#divisorMenu .menu-option.selected')||{}).dataset?.value)||6000;if(!w||!l||!wd||!h){$('result').classList.add('hidden');return alert(t('fill'))}const volume=l*wd*h/1e9*places,volumetric=volume*1e6/divisor,charge=Math.max(w,volumetric);const locale=currentLang==='ru'?'ru-RU':currentLang==='zh'?'zh-CN':'en-US';$('actualResult').textContent=w.toFixed(1)+' kg';$('volumetricResult').textContent=volumetric.toFixed(1)+' kg';$('volumeResult').textContent=volume.toFixed(3)+' m³';$('distanceResult').textContent=(Number($('distance').value)||0).toLocaleString(locale)+' km';$('chargeableWeight').textContent=charge.toFixed(1)+' kg';$('weightText').textContent=w>=volumetric?t('actualHigher'):t('volumeHigher');$('result').classList.remove('hidden')}
-async function loadWeather(){try{const r=await api('/api/weather');if(!r.ok)return;const types=String(r.type||'clear').split(/\s+/).filter(Boolean);$('weatherBg').className='weather-bg '+types.map(x=>'weather-'+x).join(' ')}catch{}}
-function applyLanguage(){document.documentElement.lang=currentLang;document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>el.placeholder=t(el.dataset.i18nPlaceholder));document.querySelectorAll('.lang-button').forEach(b=>b.classList.toggle('active',b.dataset.lang===currentLang));renderCarrierGroups();renderIncoterms();renderDivisors();renderTransportMenu();if(!window.selectedCarrierId){$('transportValue').textContent=t('transportChoose');$('mainCarrierValue').textContent=t('chooseCarrier')}}
-async function boot(){try{const me=await api('/api/me');if(!me.authenticated)return showLogin();agents=await api('/api/agents');showApp();applyLanguage();loadWeather()}catch(e){showLogin();$('loginError').textContent=e.message}}
+function tr(key){return I18N[lang][key] || key}
+function modeName(k){return modes[k]?.[lang] || k}
+function applyLang(){
+  document.documentElement.lang=lang;
+  $$("[data-i18n]").forEach(el=>el.textContent=tr(el.dataset.i18n));
+  $$(".lang").forEach(b=>b.classList.toggle("active",b.dataset.lang===lang));
+  localStorage.setItem("iomastavka_lang",lang);
+}
+$$(".lang").forEach(b=>b.onclick=()=>{lang=b.dataset.lang;applyLang();renderForwarderMenu();renderTransportMenu()});
 
-$('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginError').textContent='';try{await api('/api/login',{method:'POST',body:JSON.stringify({password:$('password').value})});$('password').value='';await boot()}catch(e){$('loginError').textContent=e.message}});
-$('calculateBtn').addEventListener('click',calculate);
-$('logoutBtn').addEventListener('click',async()=>{try{await api('/api/logout',{method:'POST'})}catch{}agents=[];showLogin()});
-$('languageSwitcher').addEventListener('click',e=>{const b=e.target.closest('.lang-button');if(!b)return;currentLang=b.dataset.lang;localStorage.setItem('iomastavka_lang',currentLang);applyLanguage()});
-$('carrierDockButton').addEventListener('click',e=>{e.stopPropagation();const dock=$('utilityDock'),open=!dock.classList.contains('open');dock.classList.toggle('open',open);$('carrierDockButton').setAttribute('aria-expanded',String(open))});
-$('openAgents').addEventListener('click',e=>{e.stopPropagation();$('utilityDock').classList.add('agents-open');$('utilityDock').classList.add('open');renderCarrierGroups()});
-$('closeCarrier').addEventListener('click',e=>{e.stopPropagation();$('utilityDock').classList.remove('agents-open')});
-$('utilityLogout').addEventListener('click',async e=>{e.stopPropagation();try{await api('/api/logout',{method:'POST'})}catch{}agents=[];showLogin();$('utilityDock').classList.remove('open','agents-open')});
-$('transportFilters').addEventListener('click',e=>{const b=e.target.closest('.transport-filter');if(!b)return;carrierFilter=b.dataset.filter;renderCarrierGroups()});
-$('carrierGroups').addEventListener('click',e=>{const b=e.target.closest('.carrier-item');if(b){setCarrier(b.dataset.id)}});
-$('mainCarrierMenu').addEventListener('click',e=>{const b=e.target.closest('.carrier-item');if(!b)return;setCarrier(b.dataset.id);document.querySelector('[data-select="carrier"]').classList.remove('manual-open')});
+async function loadRates(){
+  try{
+    const r=await fetch("/api/rates",{credentials:"same-origin"});
+    if(r.ok) rates=await r.json();
+  }catch{}
+  renderForwarderMenu();
+}
+function forwarderModes(name){return rates[name]?.modes || []}
+function renderForwarderMenu(){
+  const menu=$("#forwarderMenu"); menu.innerHTML="";
+  Object.keys(rates).forEach(name=>{
+    const b=document.createElement("button"); b.className="hover-item"; b.textContent=name;
+    b.onclick=()=>selectForwarder(name); menu.appendChild(b);
+  });
+  renderAgents();
+}
+function selectForwarder(name){
+  selectedForwarder=name; selectedMode="";
+  $("#forwarderBtn span").textContent=name;
+  $("#transportBtn span").textContent=tr("chooseTransport");
+  $("#selectedForwarder strong").textContent=name;
+  $("#capabilities").textContent=forwarderModes(name).map(modeName).join(" · ");
+  renderTransportMenu();
+  closeSide();
+  showRecommendation(name);
+}
+function renderTransportMenu(){
+  const menu=$("#transportMenu"); menu.innerHTML="";
+  const list=selectedForwarder?forwarderModes(selectedForwarder):[];
+  if(!list.length){menu.innerHTML=`<div class="hover-item">${tr("chooseForwarder")}</div>`;return}
+  list.forEach(k=>{const b=document.createElement("button");b.className="hover-item";b.textContent=`${modeName(k)} · ${modes[k].factor} кг/м³`;b.onclick=()=>{selectedMode=k;selectedFactor=modes[k].factor;$("#transportBtn span").textContent=modeName(k);$("#factorBtn span").textContent=`1 м³ = ${selectedFactor} кг`;};menu.appendChild(b)});
+}
+function renderAgents(){
+  const box=$("#agentGroups"); box.innerHTML="";
+  modeGroups.forEach(([mode,title])=>{
+    const list=Object.keys(rates).filter(n=>forwarderModes(n).includes(mode)); if(!list.length)return;
+    const g=document.createElement("div");g.innerHTML=`<div class="group-title">${title}</div>`;
+    list.forEach(n=>{const b=document.createElement("button");b.className="agent-row";b.innerHTML=`<strong>${n}</strong><small>${forwarderModes(n).map(modeName).join(" · ")}</small>`;b.onclick=()=>selectForwarder(n);g.appendChild(b)});
+    box.appendChild(g);
+  });
+}
+const incoterms=["EXW","FCA","FOB","CIF","DAP","DDP"];
+incoterms.forEach(x=>{const b=document.createElement("button");b.className="hover-item";b.textContent=x;b.onclick=()=>$("#incotermBtn span").textContent=x;$("#incotermMenu").appendChild(b)});
+[167,400,500,1000].forEach(x=>{const b=document.createElement("button");b.className="hover-item";b.textContent=`1 м³ = ${x} кг`;b.onclick=()=>{selectedFactor=x;$("#factorBtn span").textContent=`1 м³ = ${x} кг`};$("#factorMenu").appendChild(b)});
 
-document.querySelectorAll('.hover-select').forEach(wrap=>{const trigger=wrap.querySelector('.select-trigger');trigger.addEventListener('click',e=>{e.stopPropagation();document.querySelectorAll('.hover-select.manual-open').forEach(x=>{if(x!==wrap)x.classList.remove('manual-open')});wrap.classList.toggle('manual-open')});wrap.addEventListener('mouseenter',()=>wrap.classList.add('hover-open'));wrap.addEventListener('mouseleave',()=>wrap.classList.remove('hover-open'));const menu=wrap.querySelector('.hover-menu');menu.addEventListener('click',e=>{const b=e.target.closest('.menu-option');if(!b)return;chooseMenu(wrap.dataset.select,b.dataset.value,b.textContent);wrap.classList.remove('manual-open')})});
+function closeSide(){$("#sideMenu").classList.remove("open")}
+$("#menuButton").onclick=e=>{$("#sideMenu").classList.toggle("open");e.stopPropagation()};
+$("#agentsOpen").onclick=()=>{$("#agentsPanel").classList.toggle("open");closeSide()};
+$("#assistantOpen").onclick=()=>{$("#assistantPanel").classList.add("open");closeSide()};
+$("#assistantClose").onclick=()=>$("#assistantPanel").classList.remove("open");
+$("#logoutButton").onclick=$("#menuLogout").onclick=async()=>{await fetch("/api/logout",{method:"POST"});location.href="/";};
+document.addEventListener("click",e=>{
+  if(!e.target.closest("#menuButton")&&!e.target.closest("#sideMenu"))closeSide();
+  if(!e.target.closest("#agentsPanel")&&!e.target.closest("#agentsOpen"))$("#agentsPanel").classList.remove("open");
+});
 
-document.addEventListener('click',e=>{if(!e.target.closest('.autocomplete-field'))closeSuggestions();if(!e.target.closest('.utility-dock')){$('utilityDock').classList.remove('open','agents-open');$('carrierDockButton').setAttribute('aria-expanded','false')}if(!e.target.closest('.hover-select'))document.querySelectorAll('.hover-select').forEach(x=>x.classList.remove('manual-open'))});
-bindAutocomplete('from');bindAutocomplete('to');renderIncoterms();renderDivisors();boot();
+function showRecommendation(name){
+  const el=$("#recommendation");
+  if(name==="MultiWell"){el.textContent=lang==="ru"?"Совет: на этом направлении стоит присмотреться к MultiWell — по прошлым ставкам у него были хорошие условия.":lang==="en"?"Tip: consider MultiWell on this route — previous rates were competitive.":"建议：可以关注 MultiWell，这个方向之前的报价比较有竞争力。";el.classList.remove("hidden")}
+  else el.classList.add("hidden");
+}
+
+function normalize(s){return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")}
+function cityMatches(q, target){
+  const x=normalize(q); if(!x)return cities.slice(0,8);
+  const scored=cities.map(c=>{
+    const fields=[c[0],c[1],c[2]];
+    let score=99;
+    fields.forEach((f,i)=>{const n=normalize(f);if(n.startsWith(x))score=Math.min(score,i);else if(n.includes(x))score=Math.min(score,5+i)});
+    return {...{c},score};
+  }).filter(o=>o.score<99).sort((a,b)=>a.score-b.score);
+  return scored.slice(0,8).map(o=>o.c);
+}
+let geoTimer=null, geoAbort=null;
+function setupAutocomplete(inputId, boxId, target){
+  const input=$("#"+inputId), box=$("#"+boxId);
+  input.addEventListener("input",()=>{
+    clearTimeout(geoTimer);
+    const q=input.value.trim();
+    renderSuggestions(box,cityMatches(q,target),input);
+    geoTimer=setTimeout(()=>fetchGeo(q,target,box,input),120);
+  });
+  input.addEventListener("focus",()=>{renderSuggestions(box,cityMatches(input.value.trim(),target),input)});
+  document.addEventListener("click",e=>{if(!e.target.closest("#"+inputId)&&!e.target.closest("#"+boxId))box.classList.remove("open")});
+}
+function renderSuggestions(box,list,input){
+  box.innerHTML="";
+  list.forEach(c=>{const d=document.createElement("button");d.type="button";d.innerHTML=`<strong>${c[0]}</strong><small>${c[1]} · ${c[3]} · ${c[4]}</small>`;d.onclick=()=>{input.value=lang==="zh"?c[2]:lang==="en"?c[1]:c[0];box.classList.remove("open");autoDistance()};box.appendChild(d)});
+  box.classList.toggle("open",list.length>0);
+}
+async function fetchGeo(q,target,box,input){
+  if(!q)return;
+  if(geoAbort)geoAbort.abort(); geoAbort=new AbortController();
+  try{
+    const url=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=8&language=${lang==="ru"?"ru":"en"}&format=json`;
+    const r=await fetch(url,{signal:geoAbort.signal}); const data=await r.json();
+    if(input.value.trim()!==q)return;
+    const remote=(data.results||[]).map(x=>[x.name,x.name,x.name,x.admin1||"",x.country||"",x.country_code||""]).filter(x=>x[4]);
+    const local=cityMatches(q,target);
+    const merged=[...local,...remote].filter((v,i,a)=>a.findIndex(x=>normalize(x[1])===normalize(v[1])&&normalize(x[4])===normalize(v[4]))===i);
+    renderSuggestions(box,merged.slice(0,8),input);
+  }catch{}
+}
+setupAutocomplete("fromCity","fromSuggestions","china");
+setupAutocomplete("toCity","toSuggestions","russia");
+
+function autoDistance(){
+  const a=cityMatches($("#fromCity").value.trim())[0],b=cityMatches($("#toCity").value.trim())[0];
+  if(a&&b&&a[0]&&b[0]){
+    const known={ "Иу|Москва":7600,"Шанхай|Москва":7900,"Шэньчжэнь|Москва":8200,"Гуанчжоу|Москва":8100,"Пекин|Москва":7600,"Циндао|Москва":7400,"Нинбо|Москва":7700,"Сеул|Москва":6700,"Мумбаи|Москва":5200 };
+    const key=`${a[0]}|${b[0]}`; if(known[key])$("#distance").value=known[key];
+  }
+}
+
+$("#calculate").onclick=()=>{
+  const weight=Number($("#weight").value)||0,pieces=Number($("#pieces").value)||1;
+  const l=Number($("#length").value)||0,w=Number($("#width").value)||0,h=Number($("#height").value)||0;
+  const volume=(l*w*h/1e9)*pieces, volumetric=volume*selectedFactor, charge=Math.max(weight,volumetric);
+  const result=$("#result");result.classList.remove("hidden");
+  result.innerHTML=`<strong>${lang==="ru"?"Объём":"Volume"}:</strong> ${volume.toFixed(3)} м³ · <strong>${lang==="ru"?"Объёмный вес":"Volumetric weight"}:</strong> ${volumetric.toFixed(1)} кг · <strong>${lang==="ru"?"Расчётный вес":"Chargeable weight"}:</strong> ${charge.toFixed(1)} кг`;
+};
+
+$("#saveRate").onclick=async()=>{
+  const text=$("#rateInput").value.trim(); if(!text)return;
+  const status=$("#assistantStatus"); status.textContent=lang==="ru"?"Обрабатываю…":"Processing…";
+  const names=Object.keys(rates); const found=names.find(n=>normalize(text).includes(normalize(n)));
+  const modeKey=Object.keys(modes).find(k=>new RegExp(modes[k].ru,"i").test(text)||new RegExp(modes[k].en,"i").test(text)||new RegExp(modes[k].zh,"i").test(text));
+  const num=text.match(/(\d+(?:[.,]\d+)?)/);
+  if(!found){status.textContent=lang==="ru"?"Не нашёл экспедитора. Добавь его имя и попробуй снова.":"Forwarder not found.";return}
+  if(modeKey && num){
+    rates[found].modes=[...new Set([...(rates[found].modes||[]),modeKey])];
+    rates[found].latestRate={value:Number(num[1].replace(",",".")),raw:text,updatedAt:new Date().toISOString(),mode:modeKey};
+    const r=await fetch("/api/rates",{method:"PUT",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(rates)});
+    if(r.ok){status.textContent=lang==="ru"?"Ставка обновлена.":"Rate updated.";renderForwarderMenu();showRecommendation(found)}else status.textContent="Ошибка сохранения.";
+  }else status.textContent=lang==="ru"?"Укажи транспорт и число ставки.":"Add transport and a numeric rate.";
+};
+
+function openAssistantByGesture(){ $("#assistantPanel").classList.add("open") }
+let touchStart=null;
+document.addEventListener("touchstart",e=>{if(e.touches.length===3)touchStart=e.touches[0].clientX},{passive:true});
+document.addEventListener("touchmove",e=>{if(touchStart!==null&&e.touches.length===3){const dx=e.touches[0].clientX-touchStart;if(dx<-70)openAssistantByGesture()}},{passive:true});
+document.addEventListener("touchend",()=>touchStart=null,{passive:true});
+document.addEventListener("wheel",e=>{if(Math.abs(e.deltaX)>80&&e.deltaX<0&&e.deltaX<e.deltaY*0+e.deltaX)openAssistantByGesture()},{passive:true});
+
+function weather(){
+  fetch("https://api.openweathermap.org/data/2.5/weather?lat=55.7558&lon=37.6173&appid="+encodeURIComponent(window.OPENWEATHER_API_KEY||"")+"&units=metric")
+}
+async function initWeather(){
+  const key=document.querySelector('meta[name="ow-key"]')?.content;
+  if(!key){ // server injects no secret; use public endpoint only if key is provided through config is impossible client-side
+    setTimeWeather(); return;
+  }
+}
+function setTimeWeather(){
+  const hour=new Intl.DateTimeFormat("en-US",{timeZone:"Europe/Moscow",hour:"numeric",hour12:false}).format(new Date());
+  const h=Number(hour); document.body.classList.remove("weather-night","weather-sun","weather-cloud","weather-rain","weather-snow");
+  if(h<6||h>=20)document.body.classList.add("weather-night"); else document.body.classList.add("weather-sun");
+}
+setTimeWeather();
+
+async function checkWeather(){
+  try{
+    const r=await fetch("/api/config"); const cfg=await r.json();
+    if(!cfg.weatherConfigured){setTimeWeather();return}
+    // Server-side proxy keeps the OpenWeather key secret.
+    const wr=await fetch("/api/weather");
+    if(!wr.ok){setTimeWeather();return}
+    const d=await wr.json();
+    document.body.classList.remove("weather-night","weather-sun","weather-cloud","weather-rain","weather-snow");
+    const h=Number(new Intl.DateTimeFormat("en-US",{timeZone:"Europe/Moscow",hour:"numeric",hour12:false}).format(new Date()));
+    if(h<6||h>=20)document.body.classList.add("weather-night");
+    else if(d.main==="Rain"||d.main==="Drizzle"||d.main==="Thunderstorm")document.body.classList.add("weather-rain");
+    else if(d.main==="Snow")document.body.classList.add("weather-snow");
+    else if(d.main==="Clouds")document.body.classList.add("weather-cloud");
+    else document.body.classList.add("weather-sun");
+  }catch{setTimeWeather()}
+}
+checkWeather(); setInterval(checkWeather,10*60*1000);
+
+loadRates();applyLang();
