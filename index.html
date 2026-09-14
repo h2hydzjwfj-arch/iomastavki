@@ -85,16 +85,21 @@
           </div>
         </div>
 
-        <div class="form-grid three lower">
+        <div class="form-grid four lower">
+          <div class="field hover-select" data-select="carrier">
+            <label data-i18n="forwarder">Экспедитор</label>
+            <button class="select-trigger" type="button" aria-expanded="false"><span id="mainCarrierValue" data-i18n="chooseCarrier">Выберите экспедитора</span><span class="select-chevron">⌄</span></button>
+            <div class="hover-menu carrier-menu" id="mainCarrierMenu"></div>
+          </div>
+          <div class="field hover-select" data-select="transport">
+            <label data-i18n="transport">Вид транспорта</label>
+            <button class="select-trigger" type="button" aria-expanded="false"><span id="transportValue" data-i18n="transportChoose">Выберите транспорт</span><span class="select-chevron">⌄</span></button>
+            <div class="hover-menu" id="transportMenu"></div>
+          </div>
           <div class="field hover-select" data-select="incoterm">
             <label data-i18n="incoterm">Условия поставки</label>
             <button class="select-trigger" type="button" aria-expanded="false"><span id="incotermValue">EXW</span><span class="select-chevron">⌄</span></button>
             <div class="hover-menu" id="incotermMenu"></div>
-          </div>
-          <div class="field hover-select" data-select="transport">
-            <label data-i18n="transport">Вид транспорта</label>
-            <button class="select-trigger" type="button" aria-expanded="false"><span id="transportValue" data-i18n="chooseCarrier">Выберите экспедитора</span><span class="select-chevron">⌄</span></button>
-            <div class="hover-menu" id="transportMenu"></div>
           </div>
           <div class="field hover-select" data-select="divisor">
             <label data-i18n="volumetric">Объёмный вес</label>
@@ -122,12 +127,16 @@
       </section>
     </main>
 
-    <div id="carrierDock" class="carrier-dock">
-      <button id="carrierDockButton" class="carrier-orb" type="button" aria-label="Экспедиторы" aria-expanded="false">
-        <span class="orb-dot"></span><span class="orb-arrow">↗</span>
+    <div id="utilityDock" class="utility-dock">
+      <button id="carrierDockButton" class="utility-orb" type="button" aria-label="Меню" aria-expanded="false">
+        <span></span><span></span><span></span>
       </button>
+      <div id="carrierDock" class="utility-panel glass-card">
+        <button type="button" class="utility-item" id="openAgents"><span class="utility-icon">✦</span><span data-i18n="forwarders">Экспедиторы</span></button>
+        <button type="button" class="utility-item" id="utilityLogout"><span class="utility-icon">↗</span><span data-i18n="logout">Выйти</span></button>
+      </div>
       <div id="carrierPanel" class="carrier-panel glass-card">
-        <div class="panel-head"><div><span class="panel-kicker" data-i18n="forwarders">ЭКСПЕДИТОРЫ</span><h2 data-i18n="whoWillCarry">Кто повезёт?</h2></div><button id="closeCarrier" class="close-panel" type="button" aria-label="Закрыть">×</button></div>
+        <div class="panel-head"><div><span class="panel-kicker" data-i18n="forwarders">Экспедиторы</span><h2 data-i18n="whoWillCarry">Кто повезёт?</h2></div><button id="closeCarrier" class="close-panel" type="button" aria-label="Закрыть">×</button></div>
         <div id="transportFilters" class="transport-filters"></div>
         <div id="carrierGroups" class="carrier-groups"></div>
       </div>

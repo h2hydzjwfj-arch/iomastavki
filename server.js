@@ -11,5 +11,61 @@ const agents=raw.map((a,i)=>({id:`${slug(a[0]||'agent')}-${i+1}`,name:a[0]||'Б�
 app.use(helmet({contentSecurityPolicy:false}));app.use(express.json({limit:'50kb'}));app.use(cookieParser());app.use('/api/login',rateLimit({windowMs:15*60*1000,max:10,standardHeaders:true,legacyHeaders:false}));
 app.post('/api/login',(req,res)=>{const p=typeof req.body?.password==='string'?req.body.password:'';if(!verifyPassword(p))return res.status(401).json({error:'Неверный пароль'});res.cookie('auth',token(),{httpOnly:true,secure:true,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});return res.json({ok:true})});
 app.post('/api/logout',(req,res)=>{res.clearCookie('auth',{httpOnly:true,secure:true,sameSite:'lax',path:'/'});res.json({ok:true})});app.get('/api/me',(req,res)=>{if(!req.cookies.auth)return res.json({authenticated:false});auth(req,res,()=>res.json({authenticated:true}))});app.get('/api/agents',auth,(req,res)=>res.json(agents));app.get('/api/health',(req,res)=>res.json({ok:true}));
-let weatherCache={data:null,at:0};app.get('/api/weather',auth,async(req,res)=>{const key=process.env.OPENWEATHER_API_KEY;if(!key)return res.json({ok:false});if(weatherCache.data&&Date.now()-weatherCache.at<10*60*1000)return res.json(weatherCache.data);try{const r=await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=55.7558&lon=37.6173&appid=${encodeURIComponent(key)}&units=metric&lang=ru`);if(!r.ok)return res.json({ok:false});const d=await r.json();const id=d.weather?.[0]?.id||800;let type='clear';if(id>=200&&id<600)type='rain';else if(id>=600&&id<700)type='snow';else if(id>=700&&id<800)type='clouds';else if(id>=800)type=id===800?'clear':'clouds';const sunrise=(d.sys?.sunrise||0)*1000,sunset=(d.sys?.sunset||0)*1000;if(Date.now()<sunrise||Date.now()>sunset)type='night';const data={ok:true,city:'Москва и область',temp:Math.round(d.main.temp),description:d.weather?.[0]?.description||'',type};weatherCache={data,at:Date.now()};return res.json(data)}catch{return res.json({ok:false})}});app.get('/api/cities',auth,async(req,res)=>{const q=String(req.query.q||'').trim();const country=String(req.query.country||'').toUpperCase();if(q.length<2)return res.json({results:[]});try{const u=new URL('https://geocoding-api.open-meteo.com/v1/search');u.searchParams.set('name',q);u.searchParams.set('count','8');u.searchParams.set('language','ru');u.searchParams.set('format','json');if(country)u.searchParams.set('countryCode',country);const r=await fetch(u);if(!r.ok)return res.json({results:[]});const d=await r.json();const results=(d.results||[]).map(x=>({name:x.name,admin:[x.admin1,x.admin2].filter(Boolean).join(', '),country:x.country||'',label:[x.name,x.admin1,x.country].filter(Boolean).join(', '),lat:x.latitude,lon:x.longitude}));res.json({results})}catch{res.json({results:[]})}});app.get('/api/route-distance',auth,async(req,res)=>{const {fromLat,fromLon,toLat,toLon}=req.query;const nums=[fromLat,fromLon,toLat,toLon].map(Number);if(nums.some(Number.isNaN))return res.status(400).json({error:'Некорректные координаты'});try{const [a,b,c,d]=nums;const u=`https://router.project-osrm.org/route/v1/driving/${encodeURIComponent(b)},${encodeURIComponent(a)};${encodeURIComponent(d)},${encodeURIComponent(c)}?overview=false`;const r=await fetch(u,{headers:{'User-Agent':'logistics-calculator/1.0'}});if(!r.ok)return res.json({ok:false});const x=await r.json();const meters=x.routes?.[0]?.distance;if(!meters)return res.json({ok:false});res.json({ok:true,distanceKm:Math.round(meters/100)/10})}catch{res.json({ok:false})}});
-app.get('/',(req,res)=>res.sendFile(require('path').join(__dirname,'index.html')));app.get('/app.js',(req,res)=>res.sendFile(require('path').join(__dirname,'app.js')));app.get('/styles.css',(req,res)=>res.sendFile(require('path').join(__dirname,'styles.css')));app.use((req,res)=>res.status(404).send('Not found'));app.listen(PORT,'0.0.0.0',()=>console.log(`Logistics app running on ${PORT}`));
+let weatherCache={data:null,at:0};
+app.get('/api/weather',auth,async(req,res)=>{
+  const key=process.env.OPENWEATHER_API_KEY;
+  try{
+    const nowMoscow=new Date().toLocaleString('en-US',{timeZone:'Europe/Moscow'});
+    const moscowDate=new Date(nowMoscow);
+    const hour=moscowDate.getHours();
+    const isNight=hour>=21||hour<6;
+    if(weatherCache.data&&Date.now()-weatherCache.at<5*60*1000){
+      const cached={...weatherCache.data,type:isNight ? (weatherCache.data.dayType==='clear' ? 'night' : `night ${weatherCache.data.dayType}`) : weatherCache.data.dayType};
+      return res.json(cached);
+    }
+    if(!key){
+      const data={ok:true,city:'Москва и область',temp:null,description:'',type:isNight?'night':'clear',dayType:isNight?'night':'clear'};
+      weatherCache={data,at:Date.now()};return res.json(data);
+    }
+    const u=`https://api.openweathermap.org/data/2.5/weather?lat=55.7558&lon=37.6173&appid=${encodeURIComponent(key)}&units=metric&lang=ru`;
+    const r=await fetch(u);
+    if(!r.ok)throw new Error('OpenWeather error');
+    const d=await r.json();
+    const id=d.weather?.[0]?.id||800;
+    let dayType='clear';
+    if(id>=200&&id<600)dayType='rain';
+    else if(id>=600&&id<700)dayType='snow';
+    else if(id>=700&&id<800)dayType='clouds';
+    else if(id>=800)dayType=id===800?'clear':'clouds';
+    const type=isNight ? (dayType==='clear' ? 'night' : `night ${dayType}`) : dayType;
+    const data={ok:true,city:'Москва и область',temp:Math.round(d.main.temp),description:d.weather?.[0]?.description||'',type,dayType};
+    weatherCache={data,at:Date.now()};return res.json(data);
+  }catch{
+    const nowMoscow=new Date().toLocaleString('en-US',{timeZone:'Europe/Moscow'});
+    const hour=new Date(nowMoscow).getHours();
+    const night=hour>=21||hour<6;
+    const type=night?'night':'clear';
+    return res.json({ok:true,city:'Москва и область',temp:null,description:'',type,dayType:type});
+  }
+});
+app.get('/api/cities',auth,async(req,res)=>{
+  const q=String(req.query.q||'').trim();
+  const country=String(req.query.country||'').toUpperCase();
+  const language=['ru','en','zh'].includes(String(req.query.language||'').toLowerCase())?String(req.query.language).toLowerCase():'ru';
+  if(!q)return res.json({results:[]});
+  try{
+    const u=new URL('https://geocoding-api.open-meteo.com/v1/search');
+    u.searchParams.set('name',q);
+    u.searchParams.set('count','8');
+    u.searchParams.set('language',language);
+    u.searchParams.set('format','json');
+    if(country)u.searchParams.set('countryCode',country);
+    const r=await fetch(u);
+    if(!r.ok)return res.json({results:[]});
+    const d=await r.json();
+    const results=(d.results||[]).map(x=>({name:x.name,admin:[x.admin1,x.admin2].filter(Boolean).join(', '),country:x.country||'',label:[x.name,x.admin1,x.country].filter(Boolean).join(', '),lat:x.latitude,lon:x.longitude}));
+    res.json({results});
+  }catch{res.json({results:[]})}
+});
+app.get('/api/route-distance',auth,async(req,res)=>{const {fromLat,fromLon,toLat,toLon}=req.query;const nums=[fromLat,fromLon,toLat,toLon].map(Number);if(nums.some(Number.isNaN))return res.status(400).json({error:'Некорректные координаты'});try{const [a,b,c,d]=nums;const u=`https://router.project-osrm.org/route/v1/driving/${encodeURIComponent(b)},${encodeURIComponent(a)};${encodeURIComponent(d)},${encodeURIComponent(c)}?overview=false`;const r=await fetch(u,{headers:{'User-Agent':'iomastavka/1.0'}});if(!r.ok)return res.json({ok:false});const x=await r.json();const meters=x.routes?.[0]?.distance;if(!meters)return res.json({ok:false});res.json({ok:true,distanceKm:Math.round(meters/100)/10})}catch{res.json({ok:false})}});
+app.listen(PORT,()=>console.log(`iomastavka listening on ${PORT}`));
