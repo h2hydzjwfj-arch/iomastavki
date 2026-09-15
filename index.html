@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#78a8c3"><title>iomastavka</title><link rel="stylesheet" href="/styles.css?v=20260915-v6">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#78a8c3"><title>iomastavka</title><link rel="stylesheet" href="/styles.css?v=20260915-v7">
 </head>
 <body>
 <div id="weatherScene" class="weather-scene" aria-hidden="true"><div class="stars"></div><div class="sun"></div><div class="moon"></div><div class="cloud cloud-a"></div><div class="cloud cloud-b"></div><div class="rain"></div><div class="snow"></div><div class="wave wave-back"></div><div class="wave wave-mid"></div><div class="wave wave-front"></div></div>
@@ -14,6 +14,7 @@
     </svg>
   </button>
   <div class="theme-controls" aria-label="Theme"><button id="themeToggleButton" type="button" title="Theme" aria-label="Theme"><span id="themeIcon">☀</span></button></div>
+  <button id="agentImportButton" class="dollar-button" type="button" aria-label="Обновить экспедиторов" title="Обновить экспедиторов">$</button>
   <div class="brand" aria-label="iomastavka"><span>i</span><span>o</span><span>m</span><span>a</span><span>s</span><span>t</span><span>a</span><span>v</span><span>k</span><span>a</span></div>
   <div class="top-actions"><span class="live-pill"><i></i> LIVE</span><button class="lang active" data-lang="ru">🇷🇺</button><button class="lang" data-lang="en">🇬🇧</button><button class="lang" data-lang="zh">🇨🇳</button><button id="logoutButton" class="logout" data-i18n="logout">Выйти</button></div>
 </header>
@@ -47,6 +48,6 @@
 <section id="tarotView" class="view-layer" aria-hidden="true"><div id="tarotShell" class="tarot-shell"><canvas id="tarotDustCanvas" class="tarot-dust-canvas" aria-hidden="true"></canvas><button class="close-button view-close" data-close-view="tarotView" data-i18n-aria="close" aria-label="Закрыть" title="Закрыть">×</button><div class="tarot-card"><div class="tarot-particles" aria-hidden="true"></div><div class="tarot-stars">✦ · ✧ · ✦</div><div class="tarot-label">IOMASTAVKA · TODAY</div><div id="tarotSymbol" class="tarot-symbol">♌</div><h2 id="tarotTitle">Сегодня</h2><p id="tarotText"></p><div class="tarot-meta">21.08.2004 · 16:20 · Нижний Новгород</div></div></div></section>
 <section id="articleView" class="view-layer" aria-hidden="true"><article class="article-shell"><button class="close-button view-close" data-close-view="article" data-i18n-aria="close" aria-label="Закрыть" title="Закрыть">×</button><div id="articleContent"></div></article></section>
 </main>
-<script src="/app.js?v=20260915-v5"></script>
+<script src="/app.js?v=20260915-v7"></script>
 
 </body></html>

@@ -286,6 +286,7 @@ app.post('/api/logout', (req,res) => {
   res.json({ ok:true });
 });
 app.get('/api/me', auth, (req,res) => res.json({ ok:true }));
+app.get('/api/agents', auth, (req,res) => { try { const file=path.join(DATA_DIR,'agents.json'); const records=JSON.parse(fs.readFileSync(file,'utf8')); res.json({ok:true,records:Array.isArray(records)?records:[]}); } catch { res.json({ok:true,records:[]}); } });
 app.get('/api/rates', (req,res) => res.json(ensureRateDb()));
 app.get('/api/rates/recommend', (req,res) => {
   const db=ensureRateDb(); const from=String(req.query.from||''), to=String(req.query.to||''), mode=String(req.query.mode||''); const distance=Number(req.query.distance);
@@ -298,6 +299,25 @@ app.put('/api/rates', auth, (req,res) => {
   if(!data || typeof data!=='object' || Array.isArray(data)) return res.status(400).json({ok:false,error:'Некорректные данные'});
   saveRates(data); res.json({ok:true});
 });
+
+app.post('/api/agents/import', auth, async (req,res) => {
+  const key=process.env.OPENAI_API_KEY;
+  if(!key) return res.status(503).json({ok:false,error:'AI key not configured'});
+  const text=String(req.body?.text||'').trim();
+  if(!text) return res.status(400).json({ok:false,error:'Пустой текст'});
+  const system=`Ты извлекаешь данные экспедиторов из текста КП, писем, прайс-листов и контактных листов. Верни ТОЛЬКО валидный JSON-массив объектов без markdown. Поля каждого объекта: company, contact, phone, email, site, modes, transport, notes. modes допускаются только rail, road, air, sea, multimodal. transport — массив строк на языке исходного текста. Не придумывай данные. Если один и тот же человек/компания встречается несколько раз, объедини очевидные дубли. Если данных нет, оставь пустую строку/массив.`;
+  try{
+    const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model:process.env.OPENAI_MODEL||'gpt-5.6-luna',input:[{role:'system',content:system},{role:'user',content:text.slice(0,140000)}],max_output_tokens:1400})});
+    const d=await r.json(); if(!r.ok)return res.status(r.status).json({ok:false,error:d?.error?.message||'AI request failed'});
+    let raw=d.output_text||''; if(!raw&&Array.isArray(d.output))raw=d.output.flatMap(o=>o.content||[]).map(c=>c.text||'').join('');
+    raw=raw.replace(/^```json\s*/,'').replace(/\s*```$/,'').trim(); const parsed=JSON.parse(raw); const incoming=Array.isArray(parsed)?parsed:[];
+    const file=path.join(DATA_DIR,'agents.json'); let existing=[]; try{existing=JSON.parse(fs.readFileSync(file,'utf8'))}catch{}
+    const norm=x=>String(x||'').toLowerCase().replace(/[^a-zа-яё0-9]+/gi,''); const keyOf=x=>[norm(x.company),norm(x.contact),norm(x.email),norm(x.phone)].filter(Boolean).join('|');
+    let added=0; for(const a of incoming){if(!a||!String(a.company||'').trim())continue;const rec={company:String(a.company||'').trim(),contact:String(a.contact||'').trim(),phone:String(a.phone||'').trim(),email:String(a.email||'').trim(),site:String(a.site||'').trim(),modes:Array.isArray(a.modes)?a.modes.filter(Boolean):[],transport:Array.isArray(a.transport)?a.transport.filter(Boolean):[],notes:String(a.notes||'').trim()};const k=keyOf(rec);const idx=existing.findIndex(x=>keyOf(x)===k);if(idx>=0){existing[idx]={...existing[idx],...Object.fromEntries(Object.entries(rec).filter(([_,v])=>v!==''&&!(Array.isArray(v)&&!v.length)))}}else{existing.push({id:existing.reduce((m,x)=>Math.max(m,Number(x.id)||0),0)+1,...rec});added++}}
+    fs.writeFileSync(file,JSON.stringify(existing,null,2)); res.json({ok:true,added,records:existing.slice(-Math.max(added,1))});
+  }catch(e){res.status(502).json({ok:false,error:e.message||'Не удалось разобрать контакты'})}
+});
+
 app.post('/api/rates/import-local', auth, (req,res) => {
   const records=Array.isArray(req.body?.records)?req.body.records:[];
   if(!records.length)return res.status(400).json({ok:false,error:'Нет ставок'});
