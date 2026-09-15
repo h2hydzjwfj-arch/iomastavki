@@ -54,7 +54,7 @@ app.get('/api/currency', async (req,res) => {
     const xml = await r.text();
     const items = {};
     for (const code of ['USD','EUR','CNY']) {
-      const block = xml.match(new RegExp(`<Valute[^>]*>[\s\S]*?<CharCode>${code}<\/CharCode>[\s\S]*?<\/Valute>`, 'i'))?.[0];
+      const block = xml.match(new RegExp(`<Valute[^>]*>[\\s\\S]*?<CharCode>${code}<\\/CharCode>[\\s\\S]*?<\\/Valute>`, 'i'))?.[0];
       if (!block) continue;
       const nominal = block.match(/<Nominal>([^<]+)<\/Nominal>/i)?.[1];
       const value = block.match(/<Value>([^<]+)<\/Value>/i)?.[1];
@@ -140,7 +140,7 @@ app.post('/api/ai', async (req,res) => {
   if(!message) return res.status(400).json({ok:false,error:'Empty message'});
   const rates=safeReadRates();
   const system=`Ты AI-ассистент сайта iomastavka — помощник по международной логистике Китай/Азия → Россия. Отвечай кратко и по делу на языке пользователя. Помогай с маршрутами, Incoterms, транспортом, расчётом объёмного веса, таможней и ставками. Не выдумывай актуальные ставки: если данных нет, прямо скажи это. Текущая база экспедиторов и ставок: ${JSON.stringify(rates)}`;
-  const input=[{role:'system',content:[{type:'input_text',text:system}]},...history.map(x=>({role:x.role==='assistant'?'assistant':'user',content:[{type:'input_text',text:String(x.content||'')}] })),{role:'user',content:[{type:'input_text',text:message}]}];
+  const input=[{role:'system',content:system},...history.map(x=>({role:x.role==='assistant'?'assistant':'user',content:String(x.content||'')})),{role:'user',content:message}];
   try{
     const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model,input,max_output_tokens:700})});
     const d=await r.json();

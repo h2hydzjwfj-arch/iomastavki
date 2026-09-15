@@ -34,7 +34,7 @@ function forwarderModes(n){return rates[n]?.modes||[]}
 function renderForwarderMenu(){
  const menu=$('#forwarderMenu'); menu.innerHTML='';
  const list=Object.keys(rates).filter(name=>!selectedMode || forwarderModes(name).includes(selectedMode));
- list.forEach(name=>{const b=document.createElement('button');b.className='hover-item';b.textContent=name;b.onclick=()=>selectForwarder(name);menu.appendChild(b)});
+ list.forEach(name=>{const b=document.createElement('button');b.type='button';b.className='hover-item';b.textContent=name;b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();selectForwarder(name);menu.classList.remove('open')});menu.appendChild(b)});
  if(!list.length) menu.innerHTML=`<div class="hover-item">${tr('none')}</div>`;
  renderAgents();
 }
@@ -44,6 +44,10 @@ function renderAgents(){const box=$('#agentGroups');box.innerHTML='';modeGroups.
 function renderIncoterms(){const m=$('#incotermMenu');m.innerHTML='';['EXW','FCA','FOB','CIF','DAP','DDP'].forEach(x=>{const b=document.createElement('button');b.className='hover-item';b.textContent=x;b.onclick=()=>$('#incotermBtn span').textContent=x;m.appendChild(b)})}
 function volumeLabel(x){return lang==='zh'?`1 m³ = ${x} 公斤`:lang==='en'?`1 m³ = ${x} kg`:`1 м³ = ${x} кг`}
 function renderFactors(){const m=$('#factorMenu');m.innerHTML='';[167,400,500,1000].forEach(x=>{const b=document.createElement('button');b.className='hover-item';b.textContent=volumeLabel(x);b.onclick=()=>{selectedFactor=x;$('#factorBtn span').textContent=volumeLabel(x)};m.appendChild(b)})}
+
+// Dropdowns work both by hover and by click/tap.
+['forwarderBtn','transportBtn','incotermBtn','factorBtn'].forEach(id=>{const btn=$('#'+id);const menu=$('#'+id.replace('Btn','Menu'));if(btn&&menu)btn.addEventListener('click',e=>{e.stopPropagation();const open=menu.style.visibility==='visible'||menu.classList.contains('open');$$('.hover-menu').forEach(m=>m.classList.remove('open'));if(!open)menu.classList.add('open')})});
+document.addEventListener('click',e=>{$$('.hover-menu').forEach(m=>{if(!e.target.closest('.hover-select'))m.classList.remove('open')})});
 
 // Hamsa: hover открывает меню, но меню не исчезает пока курсор находится внутри него.
 let menuCloseTimer;
