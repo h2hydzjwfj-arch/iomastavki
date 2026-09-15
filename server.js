@@ -110,6 +110,7 @@ app.get('/', (req,res) => res.sendFile(path.join(ROOT, 'index.html')));
 app.get('/app.js', (req,res) => res.sendFile(path.join(ROOT, 'app.js')));
 app.get('/styles.css', (req,res) => res.sendFile(path.join(ROOT, 'styles.css')));
 app.get('/api/health', (req,res) => res.json({ ok: true }));
+app.get('/api/version', (req,res) => res.json({ok:true,version:'23',build:'IOMASTAVKA_FILE_23'}));
 app.get('/api/config', (req,res) => res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.OPENAI_API_KEY) }));
 
 app.get('/api/currency', async (req,res) => {
@@ -377,17 +378,13 @@ app.post('/api/customs/check', async (req,res) => {
   if(code.length!==10) return res.status(400).json({ok:false,error:'Введите полный 10-значный код ТН ВЭД ЕАЭС'});
   const key=process.env.OPENAI_API_KEY;
   if(!key) return res.status(503).json({ok:false,error:'OPENAI_API_KEY не настроен на сервере'});
-  const prompt=`Ты специалист по ТН ВЭД ЕАЭС для российского логиста. Проверь именно 10-значный код ${code}. Используй web search и приоритетно ищи на официальных ресурсах ФТС России (customs.gov.ru) и ЕЭК (eec.eaeunion.org). Не выдумывай данные. Верни структурировано на русском: 1) точное описание позиции/подпозиции; 2) иерархия 2/4/6/10 знаков; 3) ввозная пошлина; 4) НДС; 5) акциз, если есть; 6) меры нетарифного регулирования и запреты/ограничения; 7) сертификация/декларирование соответствия и иные разрешительные документы; 8) маркировка, если применимо; 9) дополнительные единицы измерения; 10) важные примечания и условия классификации; 11) что нужно уточнить у декларанта. Для каждого спорного или не найденного поля напиши «не найдено в доступном источнике», а не угадывай. Отдельно пометь неофициальные справочники, если они использованы. В конце обязательно: «Код требует проверки по характеристикам конкретного товара; окончательная классификация определяется в установленном порядке таможенным органом.»`;
+  const prompt=`Проверь код ТН ВЭД ЕАЭС ${code} для российского логиста. Это запрос на справочную проверку, не на юридическое заключение. ОБЯЗАТЕЛЬНО используй web search. Приоритет источников: 1) customs.gov.ru и его поддомены ФТС России, 2) eec.eaeunion.org и документы ЕЭК, 3) только затем авторитетные справочники. Найди именно 10-значный код, а не похожий код. Если точный код не найден, прямо напиши «точный код не найден» и не подставляй соседний код как результат. Верни на русском с заголовками: «Код», «Описание товара», «Иерархия 2/4/6/10 знаков», «Ввозная пошлина», «НДС», «Акциз», «Запреты и ограничения», «Разрешительные документы / соответствие», «Маркировка», «Дополнительная единица», «Примечания по классификации», «Что уточнить у декларанта», «Источники». Для каждого значения укажи источник и дату/актуальность, если она доступна. Не угадывай ставки. Если источник не дает значение, напиши «не найдено». В конце: «Справочно: окончательная классификация зависит от характеристик товара и документов и может требовать решения таможенного органа.»`;
   try{
-    let out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input:prompt,tools:[{type:'web_search',search_context_size:'high'}],max_output_tokens:2200});
-    if(out.error){
-      // Second pass without web search still gives a controlled explanation instead of a blank UI.
-      out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input:prompt,max_output_tokens:1800});
-    }
-    if(out.error) return res.status(out.error.status||502).json({ok:false,error:out.error.error||'Не удалось получить информацию по коду ТН ВЭД'});
+    const out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input:prompt,tools:[{type:'web_search'}],max_output_tokens:3000});
+    if(out.error) return res.status(out.error.status||502).json({ok:false,error:out.error.error||'Не удалось проверить код ТН ВЭД'});
     const text=responseText(out.d);
-    if(!text) return res.status(502).json({ok:false,error:'Сервис не вернул информацию по коду ТН ВЭД'});
-    res.json({ok:true,code,title:`ТН ВЭД ${code}`,analysis:text,sourceUrl:'https://customs.gov.ru/'});
+    if(!text) return res.status(502).json({ok:false,error:'По коду не получен ответ от справочного сервиса'});
+    res.json({ok:true,code,title:`ТН ВЭД ЕАЭС ${code}`,analysis:text});
   }catch(e){res.status(502).json({ok:false,error:e.message||'Ошибка проверки ТН ВЭД'});}
 });
 
