@@ -32,10 +32,14 @@ $$('.lang').forEach(b=>b.onclick=()=>{lang=b.dataset.lang;applyLang()});
 async function loadRates(){try{const r=await fetch('/api/rates',{credentials:'same-origin'});if(r.ok)rates=await r.json()}catch{} renderForwarderMenu()}
 function forwarderModes(n){return rates[n]?.modes||[]}
 function renderForwarderMenu(){
- const menu=$('#forwarderMenu');menu.innerHTML=''; Object.keys(rates).forEach(name=>{const b=document.createElement('button');b.className='hover-item';b.textContent=name;b.onclick=()=>selectForwarder(name);menu.appendChild(b)});renderAgents();
+ const menu=$('#forwarderMenu'); menu.innerHTML='';
+ const list=Object.keys(rates).filter(name=>!selectedMode || forwarderModes(name).includes(selectedMode));
+ list.forEach(name=>{const b=document.createElement('button');b.className='hover-item';b.textContent=name;b.onclick=()=>selectForwarder(name);menu.appendChild(b)});
+ if(!list.length) menu.innerHTML=`<div class="hover-item">${tr('none')}</div>`;
+ renderAgents();
 }
-function selectForwarder(name){selectedForwarder=name;selectedMode='';$('#forwarderBtn span').textContent=name;$('#transportBtn span').textContent=tr('chooseTransport');$('#selectedForwarder strong').textContent=name;$('#capabilities').textContent=forwarderModes(name).map(modeName).join(' · ');renderTransportMenu();showRecommendation(name)}
-function renderTransportMenu(){const menu=$('#transportMenu');menu.innerHTML='';const list=selectedForwarder?forwarderModes(selectedForwarder):[];if(!list.length){menu.innerHTML=`<div class="hover-item">${tr('chooseForwarder')}</div>`;return}list.forEach(k=>{const b=document.createElement('button');b.className='hover-item';b.textContent=`${modeName(k)} · ${modes[k].factor} ${lang==='zh'?'公斤/立方米':lang==='en'?'kg/m³':'кг/м³'}`;b.onclick=()=>{selectedMode=k;selectedFactor=modes[k].factor;$('#transportBtn span').textContent=modeName(k);$('#factorBtn span').textContent=volumeLabel(selectedFactor)};menu.appendChild(b)})}
+function selectForwarder(name){selectedForwarder=name;$('#forwarderBtn span').textContent=name;renderTransportMenu();showRecommendation(name)}
+function renderTransportMenu(){const menu=$('#transportMenu');menu.innerHTML='';const list=selectedForwarder?forwarderModes(selectedForwarder):Object.keys(modes);list.forEach(k=>{const b=document.createElement('button');b.className='hover-item';b.textContent=`${modeName(k)} · ${modes[k].factor} ${lang==='zh'?'公斤/立方米':lang==='en'?'kg/m³':'кг/м³'}`;b.onclick=()=>{selectedMode=k;selectedFactor=modes[k].factor;$('#transportBtn span').textContent=modeName(k);$('#factorBtn span').textContent=volumeLabel(selectedFactor);renderForwarderMenu();renderTransportMenu()};menu.appendChild(b)})}
 function renderAgents(){const box=$('#agentGroups');box.innerHTML='';modeGroups.forEach(([mode,title])=>{const list=Object.keys(rates).filter(n=>forwarderModes(n).includes(mode));if(!list.length)return;const g=document.createElement('div');g.innerHTML=`<div class="group-title">${modeName(mode)}</div>`;list.forEach(n=>{const b=document.createElement('button');b.className='agent-row';b.innerHTML=`<strong>${n}</strong><small>${forwarderModes(n).map(modeName).join(' · ')}</small>`;b.onclick=()=>selectForwarder(n);g.appendChild(b)});box.appendChild(g)})}
 function renderIncoterms(){const m=$('#incotermMenu');m.innerHTML='';['EXW','FCA','FOB','CIF','DAP','DDP'].forEach(x=>{const b=document.createElement('button');b.className='hover-item';b.textContent=x;b.onclick=()=>$('#incotermBtn span').textContent=x;m.appendChild(b)})}
 function volumeLabel(x){return lang==='zh'?`1 m³ = ${x} 公斤`:lang==='en'?`1 m³ = ${x} kg`:`1 м³ = ${x} кг`}
@@ -46,12 +50,11 @@ let menuCloseTimer;
 function openSide(){clearTimeout(menuCloseTimer);$('#sideMenu').classList.add('open');$('#menuButton').classList.add('active')}
 function scheduleCloseSide(){clearTimeout(menuCloseTimer);menuCloseTimer=setTimeout(()=>{$('#sideMenu').classList.remove('open');$('#menuButton').classList.remove('active')},180)}
 $('#menuButton').addEventListener('mouseenter',openSide);$('#menuButton').addEventListener('mouseleave',scheduleCloseSide);$('#sideMenu').addEventListener('mouseenter',openSide);$('#sideMenu').addEventListener('mouseleave',scheduleCloseSide);$('#menuButton').onclick=e=>{e.stopPropagation();openSide()};
-$('#agentsOpen').onclick=()=>{$('#agentsPanel').classList.toggle('open');$('#assistantPanel').classList.remove('open');$('#newsPanel').classList.remove('open')};
 $('#assistantOpen').onclick=()=>{$('#assistantPanel').classList.add('open');$('#agentsPanel').classList.remove('open');$('#newsPanel').classList.remove('open')};
 $('#newsOpen').onclick=()=>{$('#newsPanel').classList.add('open');$('#assistantPanel').classList.remove('open');$('#agentsPanel').classList.remove('open');loadNews()};
 $('#assistantClose').onclick=()=>$('#assistantPanel').classList.remove('open');$('#newsClose').onclick=()=>$('#newsPanel').classList.remove('open');
 $('#logoutButton').onclick=$('#menuLogout').onclick=async()=>{await fetch('/api/logout',{method:'POST'});location.href='/'};
-document.addEventListener('click',e=>{if(!e.target.closest('#sideMenu')&&!e.target.closest('#menuButton'))scheduleCloseSide();if(!e.target.closest('#agentsPanel')&&!e.target.closest('#agentsOpen'))$('#agentsPanel').classList.remove('open')});
+document.addEventListener('click',e=>{if(!e.target.closest('#sideMenu')&&!e.target.closest('#menuButton'))scheduleCloseSide();if(!e.target.closest('#agentsPanel'))$('#agentsPanel').classList.remove('open')});
 
 function showRecommendation(name){const el=$('#recommendation');const rate=rates[name]?.latestRate;if(!rate&&!name)return el.classList.add('hidden');let text;if(lang==='ru')text=rate?`Совет: присмотритесь к ${name}. Последняя сохранённая ставка — ${rate.value} (${modeName(rate.mode)}).`:`Совет: присмотритесь к ${name} на этом направлении.`;else if(lang==='en')text=rate?`Tip: consider ${name}. Last saved rate: ${rate.value} (${modeName(rate.mode)}).`:`Tip: consider ${name} for this route.`;else text=rate?`建议关注 ${name}。最近保存的价格：${rate.value}（${modeName(rate.mode)}）。`:`建议关注 ${name}。`;el.textContent=text;el.classList.remove('hidden')}
 

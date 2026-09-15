@@ -47,24 +47,21 @@ app.get('/styles.css', (req,res) => res.sendFile(path.join(ROOT, 'styles.css')))
 app.get('/api/health', (req,res) => res.json({ ok: true }));
 app.get('/api/config', (req,res) => res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.OPENAI_API_KEY) }));
 
-app.get('/api/currency', auth, async (req,res) => {
+app.get('/api/currency', async (req,res) => {
   try {
-    const r = await fetch('https://www.cbr.ru/scripts/XML_daily.asp', {
-      headers: { 'User-Agent': 'iomastavka/1.0' }
-    });
+    const r = await fetch('https://www.cbr.ru/scripts/XML_daily.asp', {headers:{'User-Agent':'iomastavka/1.0'}});
     if (!r.ok) return res.status(502).json({ok:false,error:'CBR unavailable'});
     const xml = await r.text();
-    const wanted = { USD:'Доллар США', EUR:'Евро', CNY:'Китайский юань' };
     const items = {};
-    for (const code of Object.keys(wanted)) {
-      const re = new RegExp(`<Valute[^>]*>\\s*<NumCode>[^<]*<\\/NumCode>\\s*<CharCode>${code}<\\/CharCode>[\\s\\S]*?<Nominal>([^<]+)<\\/Nominal>[\\s\\S]*?<Value>([^<]+)<\\/Value>`, 'i');
-      const m = xml.match(re);
-      if (m) items[code] = { name: wanted[code], nominal: Number(m[1]), value: Number(m[2].replace(',', '.')) };
+    for (const code of ['USD','EUR','CNY']) {
+      const block = xml.match(new RegExp(`<Valute[^>]*>[\s\S]*?<CharCode>${code}<\/CharCode>[\s\S]*?<\/Valute>`, 'i'))?.[0];
+      if (!block) continue;
+      const nominal = block.match(/<Nominal>([^<]+)<\/Nominal>/i)?.[1];
+      const value = block.match(/<Value>([^<]+)<\/Value>/i)?.[1];
+      if (value) items[code] = {nominal:Number(nominal||1), value:Number(value.replace(',', '.'))};
     }
     res.json({ok:true,date:new Date().toISOString(),items});
-  } catch {
-    res.status(502).json({ok:false,error:'CBR unavailable'});
-  }
+  } catch { res.status(502).json({ok:false,error:'CBR unavailable'}); }
 });
 
 app.get('/api/weather', async (req,res) => {
@@ -127,14 +124,14 @@ app.post('/api/logout', (req,res) => {
   res.json({ ok:true });
 });
 app.get('/api/me', auth, (req,res) => res.json({ ok:true }));
-app.get('/api/rates', auth, (req,res) => res.json(safeReadRates()));
+app.get('/api/rates', (req,res) => res.json(safeReadRates()));
 app.put('/api/rates', auth, (req,res) => {
   const data=req.body;
   if(!data || typeof data!=='object' || Array.isArray(data)) return res.status(400).json({ok:false,error:'Некорректные данные'});
   saveRates(data); res.json({ok:true});
 });
 
-app.post('/api/ai', auth, async (req,res) => {
+app.post('/api/ai', async (req,res) => {
   const key=process.env.OPENAI_API_KEY;
   if(!key) return res.status(503).json({ok:false,error:'AI key not configured'});
   const model=process.env.OPENAI_MODEL || 'gpt-5.6-luna';
