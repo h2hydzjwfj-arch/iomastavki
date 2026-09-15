@@ -47,6 +47,26 @@ app.get('/styles.css', (req,res) => res.sendFile(path.join(ROOT, 'styles.css')))
 app.get('/api/health', (req,res) => res.json({ ok: true }));
 app.get('/api/config', (req,res) => res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.OPENAI_API_KEY) }));
 
+app.get('/api/currency', auth, async (req,res) => {
+  try {
+    const r = await fetch('https://www.cbr.ru/scripts/XML_daily.asp', {
+      headers: { 'User-Agent': 'iomastavka/1.0' }
+    });
+    if (!r.ok) return res.status(502).json({ok:false,error:'CBR unavailable'});
+    const xml = await r.text();
+    const wanted = { USD:'Доллар США', EUR:'Евро', CNY:'Китайский юань' };
+    const items = {};
+    for (const code of Object.keys(wanted)) {
+      const re = new RegExp(`<Valute[^>]*>\\s*<NumCode>[^<]*<\\/NumCode>\\s*<CharCode>${code}<\\/CharCode>[\\s\\S]*?<Nominal>([^<]+)<\\/Nominal>[\\s\\S]*?<Value>([^<]+)<\\/Value>`, 'i');
+      const m = xml.match(re);
+      if (m) items[code] = { name: wanted[code], nominal: Number(m[1]), value: Number(m[2].replace(',', '.')) };
+    }
+    res.json({ok:true,date:new Date().toISOString(),items});
+  } catch {
+    res.status(502).json({ok:false,error:'CBR unavailable'});
+  }
+});
+
 app.get('/api/weather', async (req,res) => {
   const key = process.env.OPENWEATHER_API_KEY;
   if (!key) return res.status(503).json({ok:false,error:'Weather key not configured'});
