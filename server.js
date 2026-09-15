@@ -193,7 +193,7 @@ app.get('/api/news', async (req,res) => {
 });
 
 
-function langName(code){return code==='zh'?'Chinese':code==='en'?'English':'Russian';}
+function langName(code){return code==='zh'?'Chinese':code==='en'?'English':code==='tr'?'Turkish':'Russian';}
 
 function openAIModel(preferred){
   const m=String(preferred||'').trim();
@@ -385,7 +385,7 @@ app.post('/api/customs/check', async (req,res) => {
   const apiCloudConfigured=Boolean(process.env.API_CLOUD_FTS_TOKEN);
   const prompt=`Ты — специалист по ВЭД и таможенному оформлению в России. Проверь ровно код ТН ВЭД ЕАЭС ${code}. Пользователь хочет получить практический ответ для импорта в РФ из Китая/Азии.
 
-ОБЯЗАТЕЛЬНО используй web search и свежие источники. Приоритет: ФТС России/customs.gov.ru, ЕЭК/eec.eaeunion.org и официальные нормативные акты ЕАЭС/РФ. Для маркировки отдельно проверь официальный «Честный ЗНАК» (честныйзнак.рф / markirovka.ru) и нормативные документы. Не подставляй похожий 10-значный код. Если точный код не найден — так и напиши.
+ОБЯЗАТЕЛЬНО используй web search и свежие источники. Ответ формируй на языке запроса/интерфейса пользователя. Приоритет: ФТС России/customs.gov.ru, ЕЭК/eec.eaeunion.org и официальные нормативные акты ЕАЭС/РФ. Для маркировки отдельно проверь официальный «Честный ЗНАК» (честныйзнак.рф / markirovka.ru) и нормативные документы. Не подставляй похожий 10-значный код. Если точный код не найден — так и напиши.
 
 Верни ответ строго в следующем формате, каждый пункт с новой строки:
 КОД: ${code}
@@ -427,7 +427,7 @@ app.post('/api/ai', async (req,res) => {
   const factor=modeFactor[String(context.transport||'')]||167;
   const volume=Number(context.lengthMm||0)*Number(context.widthMm||0)*Number(context.heightMm||0)/1e9*Number(context.pieces||1);
   const chargeableKg=Math.max(Number(context.weightKg||0),volume*factor);
-  const system=`Ты AI-ассистент сайта iomastavka — специализированный помощник по международной логистике, ВЭД, Китай/Азия → Россия, ставкам, маршрутам, Incoterms, таможне, документам и анализу КП. Отвечай по делу на русском, если пользователь не попросил другой язык. Не превращай короткие запросы вроде «курс» в случайный ответ: уточни, какой курс нужен. Для свежих фактов используй web search. Не выдумывай ставки и таможенные данные. Исторические ставки из базы ниже помечай как исторические/ориентировочные, если срок не подтверждён. Текущий расчётный вес: ${chargeableKg.toFixed(1)} кг. Фактор: ${factor} кг/м³. База ставок: ${JSON.stringify(relevantRates)}. Контекст калькулятора: ${JSON.stringify(context)}.`;
+  const system=`Ты AI-ассистент сайта iomastavka — специализированный помощник по международной логистике, ВЭД, Китай/Азия → Россия, ставкам, маршрутам, Incoterms, таможне, документам и анализу КП. Отвечай на языке интерфейса пользователя, если он не попросил другой язык. Для tr используй естественный турецкий язык. Не превращай короткие запросы вроде «курс» в случайный ответ: уточни, какой курс нужен. Для свежих фактов используй web search. Не выдумывай ставки и таможенные данные. Исторические ставки из базы ниже помечай как исторические/ориентировочные, если срок не подтверждён. Текущий расчётный вес: ${chargeableKg.toFixed(1)} кг. Фактор: ${factor} кг/м³. База ставок: ${JSON.stringify(relevantRates)}. Контекст калькулятора: ${JSON.stringify(context)}.`;
   const input=[{role:'system',content:system},...history.map(x=>({role:x.role==='assistant'?'assistant':'user',content:String(x.content||'')})),{role:'user',content:message}];
   try{
     let out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input,tools:[{type:'web_search',search_context_size:'medium'}],max_output_tokens:1200});
