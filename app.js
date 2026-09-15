@@ -2,15 +2,25 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
 const I18N = {
-  ru:{title:'Рассчитать параметры груза',from:'Откуда',to:'Куда',cargo:'ГРУЗ',weight:'Вес, кг',pieces:'Количество мест',distance:'Расстояние, км',auto:'Автоматически',dimensions:'ГАБАРИТЫ ОДНОГО МЕСТА, ММ',volumeAll:'Объём — по всем местам',length:'Длина',width:'Ширина',height:'Высота',forwarder:'Экспедитор',transport:'Вид транспорта',incoterms:'Условия поставки',dimWeight:'Объёмный вес',chooseForwarder:'Выберите экспедитора',chooseTransport:'Выберите транспорт',selected:'ЭКСПЕДИТОР',none:'Не выбран',calculate:'Рассчитать',agents:'Экспедиторы',assistant:'ИИ-ассистент',assistantSub:'Спросите что угодно по логистике',assistantHelp:'Можно писать обычным языком: маршрут, ставка, Incoterms, таможня, расчёт веса или новая ставка.',send:'Отправить',news:'Новости',newsSub:'Логистика · Китай · Таможня',logout:'Выйти',thinking:'Думаю…',aiOff:'ИИ не подключён. Добавьте OPENAI_API_KEY в Render.',newsLoading:'Загружаю новости…',noNews:'Новости пока недоступны.',weatherError:'Погода временно недоступна.',todayRates:'Сегодняшний курс'},
-  en:{title:'Calculate cargo parameters',from:'From',to:'To',cargo:'CARGO',weight:'Weight, kg',pieces:'Pieces',distance:'Distance, km',auto:'Automatic',dimensions:'DIMENSIONS OF ONE PIECE, MM',volumeAll:'Volume — all pieces',length:'Length',width:'Width',height:'Height',forwarder:'Forwarder',transport:'Transport',incoterms:'Incoterms',dimWeight:'Volumetric weight',chooseForwarder:'Choose forwarder',chooseTransport:'Choose transport',selected:'FORWARDER',none:'Not selected',calculate:'Calculate',agents:'Forwarders',assistant:'AI assistant',assistantSub:'Ask anything about logistics',assistantHelp:'Write naturally: route, rate, Incoterms, customs, weight calculation or a new rate.',send:'Send',news:'News',newsSub:'Logistics · China · Customs',logout:'Log out',thinking:'Thinking…',aiOff:'AI is not connected. Add OPENAI_API_KEY in Render.',newsLoading:'Loading news…',noNews:'News are temporarily unavailable.',weatherError:'Weather is temporarily unavailable.',todayRates:'Today’s exchange rates'},
-  zh:{title:'计算货物参数',from:'起运地',to:'目的地',cargo:'货物',weight:'重量，公斤',pieces:'件数',distance:'距离，公里',auto:'自动',dimensions:'单件尺寸，毫米',volumeAll:'体积 — 所有件',length:'长度',width:'宽度',height:'高度',forwarder:'货运代理',transport:'运输方式',incoterms:'贸易术语',dimWeight:'体积重量',chooseForwarder:'选择货运代理',chooseTransport:'选择运输方式',selected:'货运代理',none:'未选择',calculate:'计算',agents:'货运代理',assistant:'AI 助手',assistantSub:'咨询物流问题',assistantHelp:'可以直接输入路线、运价、贸易术语、清关或体积重量问题。',send:'发送',news:'新闻',newsSub:'物流 · 中国 · 海关',logout:'退出',thinking:'思考中…',aiOff:'AI 尚未连接。请在 Render 添加 OPENAI_API_KEY。',newsLoading:'正在加载新闻…',noNews:'暂时没有新闻。',weatherError:'天气暂时不可用。',todayRates:'今日汇率'}
+  ru:{title:'Рассчитать параметры груза',from:'Откуда',to:'Куда',cargo:'ГРУЗ',weight:'Вес, кг',pieces:'Количество мест',distance:'Расстояние, км',auto:'Автоматически',dimensions:'ГАБАРИТЫ ОДНОГО МЕСТА, ММ',volumeAll:'Объём — по всем местам',length:'Длина',width:'Ширина',height:'Высота',forwarder:'Экспедитор',transport:'Вид транспорта',incoterms:'Условия поставки',dimWeight:'Объёмный вес',chooseForwarder:'Выберите экспедитора',chooseTransport:'Выберите транспорт',selected:'ЭКСПЕДИТОР',none:'Не выбран',calculate:'Рассчитать',agents:'Экспедиторы',assistant:'ИИ-ассистент',assistantSub:'Спросите что угодно по логистике',assistantHelp:'Можно писать обычным языком: маршрут, ставка, Incoterms, таможня, расчёт веса или новая ставка.',send:'Отправить',news:'Новости',newsSub:'Логистика · Китай · Таможня',logout:'Выйти',thinking:'Думаю…',aiOff:'ИИ не подключён. Добавьте OPENAI_API_KEY в Render.',newsLoading:'Загружаю новости…',noNews:'Новости пока недоступны.',weatherError:'Погода временно недоступна.',todayDate:'15.09.2026 г.'},
+  en:{title:'Calculate cargo parameters',from:'From',to:'To',cargo:'CARGO',weight:'Weight, kg',pieces:'Pieces',distance:'Distance, km',auto:'Automatic',dimensions:'DIMENSIONS OF ONE PIECE, MM',volumeAll:'Volume — all pieces',length:'Length',width:'Width',height:'Height',forwarder:'Forwarder',transport:'Transport',incoterms:'Incoterms',dimWeight:'Volumetric weight',chooseForwarder:'Choose forwarder',chooseTransport:'Choose transport',selected:'FORWARDER',none:'Not selected',calculate:'Calculate',agents:'Forwarders',assistant:'AI assistant',assistantSub:'Ask anything about logistics',assistantHelp:'Write naturally: route, rate, Incoterms, customs, weight calculation or a new rate.',send:'Send',news:'News',newsSub:'Logistics · China · Customs',logout:'Log out',thinking:'Thinking…',aiOff:'AI is not connected. Add OPENAI_API_KEY in Render.',newsLoading:'Loading news…',noNews:'News are temporarily unavailable.',weatherError:'Weather is temporarily unavailable.',todayDate:'15.09.2026'},
+  zh:{title:'计算货物参数',from:'起运地',to:'目的地',cargo:'货物',weight:'重量，公斤',pieces:'件数',distance:'距离，公里',auto:'自动',dimensions:'单件尺寸，毫米',volumeAll:'体积 — 所有件',length:'长度',width:'宽度',height:'高度',forwarder:'货运代理',transport:'运输方式',incoterms:'贸易术语',dimWeight:'体积重量',chooseForwarder:'选择货运代理',chooseTransport:'选择运输方式',selected:'货运代理',none:'未选择',calculate:'计算',agents:'货运代理',assistant:'AI 助手',assistantSub:'咨询物流问题',assistantHelp:'可以直接输入路线、运价、贸易术语、清关或体积重量问题。',send:'发送',news:'新闻',newsSub:'物流 · 中国 · 海关',logout:'退出',thinking:'思考中…',aiOff:'AI 尚未连接。请在 Render 添加 OPENAI_API_KEY。',newsLoading:'正在加载新闻…',noNews:'暂时没有新闻。',weatherError:'天气暂时不可用。',todayDate:'15.09.2026'}
 };
 
 const modes={air:{ru:'Авиа',en:'Air',zh:'空运',factor:167},road:{ru:'Авто',en:'Road',zh:'公路',factor:400},rail:{ru:'ЖД',en:'Rail',zh:'铁路',factor:500},sea:{ru:'Море',en:'Sea',zh:'海运',factor:1000}};
 const modeGroups=[['rail','ЖД'],['road','Авто'],['air','Авиа'],['sea','Море']];
 let lang=localStorage.getItem('iomastavka_lang')||'ru';
 let rates={}; let selectedForwarder=''; let selectedMode=''; let selectedFactor=167;
+const forwarderCatalog={
+  'MultiWell':['air','rail','road','sea'],
+  'CR FREIGHT':['air'],
+  'TRANSIT, LLC':['rail','road','sea'],
+  'Русмарин':['rail','road','air','sea'],
+  'Qtavia':['air'],
+  'Шатл Логистик / Shuttle-Logistic':['rail','road','sea','air'],
+  'Asia Cargo':['air','road','sea'],
+  'China Rail':['rail']
+};
 let chatHistory=[];
 
 // Быстрый локальный справочник. Он работает мгновенно и не ждёт API.
@@ -25,22 +35,23 @@ function applyLang(){
  document.documentElement.lang=lang; $$('[data-i18n]').forEach(el=>el.textContent=tr(el.dataset.i18n));
  $('#fromCity').placeholder=lang==='zh'?'中国城市':lang==='en'?'City in China':'Город в Китае'; $('#toCity').placeholder=lang==='zh'?'俄罗斯城市':lang==='en'?'City in Russia':'Город в России'; $('#distance').placeholder=tr('auto'); $('#factorBtn span').textContent=volumeLabel(selectedFactor); $('#assistantInput').placeholder=lang==='zh'?'输入消息…':lang==='en'?'Write a message…':'Напишите сообщение…';
  $$('.lang').forEach(b=>b.classList.toggle('active',b.dataset.lang===lang)); localStorage.setItem('iomastavka_lang',lang);
- renderForwarderMenu(); renderTransportMenu(); renderIncoterms(); renderFactors(); renderSuggestions($('#fromSuggestions'),cityMatches($('#fromCity').value,'china'),$('#fromCity'),'china'); renderSuggestions($('#toSuggestions'),cityMatches($('#toCity').value,'russia'),$('#toCity'),'russia');
+ renderForwarderMenu(); renderTransportMenu(); renderIncoterms(); renderFactors(); renderSuggestions($('#fromSuggestions'),$('#fromCity').value.trim()?cityMatches($('#fromCity').value,'china'):[],$('#fromCity'),'china'); renderSuggestions($('#toSuggestions'),$('#toCity').value.trim()?cityMatches($('#toCity').value,'russia'):[],$('#toCity'),'russia'); $('#currencyDate').textContent=formatToday();
 }
 $$('.lang').forEach(b=>b.onclick=()=>{lang=b.dataset.lang;applyLang()});
 
-async function loadRates(){try{const r=await fetch('/api/rates',{credentials:'same-origin'});if(r.ok)rates=await r.json()}catch{} renderForwarderMenu()}
-function forwarderModes(n){return rates[n]?.modes||[]}
+async function loadRates(){try{const r=await fetch('/api/rates',{credentials:'same-origin'});if(r.ok)rates=await r.json()}catch{} renderForwarderMenu();renderTransportMenu()}
+function allForwarderNames(){return [...new Set([...Object.keys(forwarderCatalog),...Object.keys(rates)])]}
+function forwarderModes(n){return rates[n]?.modes?.length?rates[n].modes:(forwarderCatalog[n]||[])}
 function renderForwarderMenu(){
  const menu=$('#forwarderMenu'); menu.innerHTML='';
- const list=Object.keys(rates).filter(name=>!selectedMode || forwarderModes(name).includes(selectedMode));
+ const list=allForwarderNames().filter(name=>!selectedMode || forwarderModes(name).includes(selectedMode));
  list.forEach(name=>{const b=document.createElement('button');b.type='button';b.className='hover-item';b.textContent=name;b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();selectForwarder(name);menu.classList.remove('open')});menu.appendChild(b)});
  if(!list.length) menu.innerHTML=`<div class="hover-item">${tr('none')}</div>`;
  renderAgents();
 }
 function selectForwarder(name){selectedForwarder=name;$('#forwarderBtn span').textContent=name;renderTransportMenu();showRecommendation(name)}
-function renderTransportMenu(){const menu=$('#transportMenu');menu.innerHTML='';const list=selectedForwarder?forwarderModes(selectedForwarder):Object.keys(modes);list.forEach(k=>{const b=document.createElement('button');b.className='hover-item';b.textContent=`${modeName(k)} · ${modes[k].factor} ${lang==='zh'?'公斤/立方米':lang==='en'?'kg/m³':'кг/м³'}`;b.onclick=()=>{selectedMode=k;selectedFactor=modes[k].factor;$('#transportBtn span').textContent=modeName(k);$('#factorBtn span').textContent=volumeLabel(selectedFactor);renderForwarderMenu();renderTransportMenu()};menu.appendChild(b)})}
-function renderAgents(){const box=$('#agentGroups');box.innerHTML='';modeGroups.forEach(([mode,title])=>{const list=Object.keys(rates).filter(n=>forwarderModes(n).includes(mode));if(!list.length)return;const g=document.createElement('div');g.innerHTML=`<div class="group-title">${modeName(mode)}</div>`;list.forEach(n=>{const b=document.createElement('button');b.className='agent-row';b.innerHTML=`<strong>${n}</strong><small>${forwarderModes(n).map(modeName).join(' · ')}</small>`;b.onclick=()=>selectForwarder(n);g.appendChild(b)});box.appendChild(g)})}
+function renderTransportMenu(){const menu=$('#transportMenu');menu.innerHTML='';const list=selectedForwarder?forwarderModes(selectedForwarder):Object.keys(modes);list.forEach(k=>{const b=document.createElement('button');b.className='hover-item';b.textContent=modeName(k);b.onclick=()=>{selectedMode=k;selectedFactor=modes[k].factor;$('#transportBtn span').textContent=modeName(k);$('#factorBtn span').textContent=volumeLabel(selectedFactor);renderForwarderMenu();renderTransportMenu()};menu.appendChild(b)})}
+function renderAgents(){const box=$('#agentGroups');if(!box)return;box.innerHTML='';modeGroups.forEach(([mode])=>{const list=allForwarderNames().filter(n=>forwarderModes(n).includes(mode));if(!list.length)return;const g=document.createElement('div');g.innerHTML=`<div class="group-title">${modeName(mode)}</div>`;list.forEach(n=>{const b=document.createElement('button');b.className='agent-row';b.innerHTML=`<strong>${n}</strong><small>${forwarderModes(n).map(modeName).join(' · ')}</small>`;b.onclick=()=>selectForwarder(n);g.appendChild(b)});box.appendChild(g)})}
 function renderIncoterms(){const m=$('#incotermMenu');m.innerHTML='';['EXW','FCA','FOB','CIF','DAP','DDP'].forEach(x=>{const b=document.createElement('button');b.className='hover-item';b.textContent=x;b.onclick=()=>$('#incotermBtn span').textContent=x;m.appendChild(b)})}
 function volumeLabel(x){return lang==='zh'?`1 m³ = ${x} 公斤`:lang==='en'?`1 m³ = ${x} kg`:`1 м³ = ${x} кг`}
 function renderFactors(){const m=$('#factorMenu');m.innerHTML='';[167,400,500,1000].forEach(x=>{const b=document.createElement('button');b.className='hover-item';b.textContent=volumeLabel(x);b.onclick=()=>{selectedFactor=x;$('#factorBtn span').textContent=volumeLabel(x)};m.appendChild(b)})}
@@ -68,26 +79,45 @@ function cityMatches(q,target){
  return list.map(c=>{const fields=[c[0],c[1],c[2]];let score=99;fields.forEach((f,i)=>{const n=normalize(f);if(n.startsWith(x))score=Math.min(score,i);else if(n.includes(x))score=Math.min(score,10+i)});return {c,score}}).filter(o=>o.score<99).sort((a,b)=>a.score-b.score||a.c[0].localeCompare(b.c[0],'ru')).slice(0,20).map(o=>o.c)
 }
 function renderSuggestions(box,list,input,target){box.innerHTML='';list.forEach(c=>{const d=document.createElement('button');d.type='button';d.innerHTML=`<strong>${c[lang==='zh'?2:lang==='en'?1:0]}</strong><small>${lang==='zh'?c[1]:c[2]} · ${c[3]} · ${c[4]}</small>`;d.onclick=()=>{input.value=lang==='zh'?c[2]:lang==='en'?c[1]:c[0];box.classList.remove('open');autoDistance()};box.appendChild(d)});box.classList.toggle('open',list.length>0)}
-function setupAutocomplete(inputId,boxId,target){const input=$('#'+inputId),box=$('#'+boxId);input.addEventListener('input',()=>{const q=input.value.trim();renderSuggestions(box,cityMatches(q,target),input,target);if(q.length>=1)fetchGeo(q,target,box,input)});input.addEventListener('focus',()=>renderSuggestions(box,cityMatches(input.value.trim(),target),input,target));}
+function setupAutocomplete(inputId,boxId,target){const input=$('#'+inputId),box=$('#'+boxId);input.addEventListener('input',()=>{const q=input.value.trim();renderSuggestions(box,cityMatches(q,target),input,target);if(q.length>=1)fetchGeo(q,target,box,input)});input.addEventListener('focus',()=>{const q=input.value.trim();renderSuggestions(box,q?cityMatches(q,target):[],input,target)});}
 async function fetchGeo(q,target,box,input){try{const url=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json`;const r=await fetch(url);const data=await r.json();if(input.value.trim()!==q)return;const remote=(data.results||[]).filter(x=>target==='china'?x.country_code==='CN':x.country_code==='RU').map(x=>[x.name,x.name,x.name,x.admin1||'',x.country||'',x.country_code]);const local=cityMatches(q,target);const merged=[...local,...remote].filter((v,i,a)=>a.findIndex(x=>normalize(x[1])===normalize(v[1]))===i);renderSuggestions(box,merged.slice(0,20),input,target)}catch{}}
 setupAutocomplete('fromCity','fromSuggestions','china');setupAutocomplete('toCity','toSuggestions','russia');
 
 document.addEventListener('click',e=>{$$('.suggestions').forEach(box=>{if(!e.target.closest('.autocomplete'))box.classList.remove('open')})});
 function autoDistance(){const a=cityMatches($('#fromCity').value,'china')[0],b=cityMatches($('#toCity').value,'russia')[0];if(a&&b){const known={'Иу|Москва':7600,'Циндао|Москва':7400,'Шанхай|Москва':7900,'Шэньчжэнь|Москва':8200,'Гуанчжоу|Москва':8100,'Пекин|Москва':7600,'Сеул|Москва':6700,'Мумбаи|Москва':5200};const key=`${a[0]}|${b[0]}`;if(known[key])$('#distance').value=known[key]}}
 
-$('#calculate').onclick=()=>{const weight=Number($('#weight').value)||0,pieces=Number($('#pieces').value)||1,l=Number($('#length').value)||0,w=Number($('#width').value)||0,h=Number($('#height').value)||0;const volume=l*w*h/1e9*pieces,volumetric=volume*selectedFactor,charge=Math.max(weight,volumetric);const result=$('#result');result.classList.remove('hidden');result.innerHTML=`<strong>${lang==='ru'?'Объём':lang==='zh'?'体积':'Volume'}:</strong> ${volume.toFixed(3)} m³ · <strong>${lang==='ru'?'Объёмный вес':lang==='zh'?'体积重量':'Volumetric weight'}:</strong> ${volumetric.toFixed(1)} kg · <strong>${lang==='ru'?'Расчётный вес':lang==='zh'?'计费重量':'Chargeable weight'}:</strong> ${charge.toFixed(1)} kg`};
+function containerFitWarning(){
+ const box=$('#containerWarning'); if(!box)return;
+ const l=Number($('#length').value)||0,w=Number($('#width').value)||0,h=Number($('#height').value)||0;
+ if(!l||!w||!h){box.classList.add('hidden');return}
+ const dims=[l,w,h].sort((a,b)=>b-a);
+ const fits=(c)=>{const cd=[c[0],c[1],c[2]].sort((a,b)=>b-a);return dims.every((v,i)=>v<=cd[i])};
+ const c20=[5898,2352,2390], c40=[12032,2352,2390], c40hc=[12032,2352,2690];
+ let text='';
+ if(fits(c20)) text='';
+ else if(fits(c40)) text='⚠️ В 20 DC не войдёт. Для этого места потребуется 40 DC.';
+ else if(fits(c40hc)) text='⚠️ В 20 DC и 40 DC не войдёт по высоте. Потребуется 40 HC.';
+ else text='⚠️ Габариты не помещаются даже в 40 HC. Нужен негабарит / OOG и отдельное согласование.';
+ box.textContent=text;box.classList.toggle('hidden',!text);
+}
+['length','width','height','pieces'].forEach(id=>$('#'+id)?.addEventListener('input',containerFitWarning));
+containerFitWarning();
+$('#calculate').onclick=()=>{const weight=Number($('#weight').value)||0,pieces=Number($('#pieces').value)||1,l=Number($('#length').value)||0,w=Number($('#width').value)||0,h=Number($('#height').value)||0;const volume=l*w*h/1e9*pieces,volumetric=volume*selectedFactor,charge=Math.max(weight,volumetric);const result=$('#result');result.classList.remove('hidden');result.innerHTML=`<strong>${lang==='ru'?'Объём':lang==='zh'?'体积':'Volume'}:</strong> ${volume.toFixed(3)} m³ · <strong>${lang==='ru'?'Объёмный вес':lang==='zh'?'体积重量':'Volumetric weight'}:</strong> ${volumetric.toFixed(1)} kg · <strong>${lang==='ru'?'Расчётный вес':lang==='zh'?'计费重量':'Chargeable weight'}:</strong> ${charge.toFixed(1)} kg`;containerFitWarning()};
 
 // AI chat
-async function sendAI(){const input=$('#assistantInput'),msg=input.value.trim();if(!msg)return;addChat('user',msg);input.value='';$('#assistantStatus').textContent=tr('thinking');try{const r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({message:msg,history:chatHistory})});const d=await r.json();if(!r.ok){$('#assistantStatus').textContent=d.error==='AI key not configured'?tr('aiOff'):(d.error||'AI error');return}addChat('assistant',d.text);chatHistory.push({role:'user',content:msg},{role:'assistant',content:d.text});chatHistory=chatHistory.slice(-12);$('#assistantStatus').textContent=''}catch{$('#assistantStatus').textContent=tr('aiOff')}}
+async function sendAI(){const input=$('#assistantInput'),msg=input.value.trim();if(!msg)return;addChat('user',msg);input.value='';setAIThinking(true);try{const r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({message:msg,history:chatHistory})});const d=await r.json();if(!r.ok){setAIThinking(false,d.error==='AI key not configured'?tr('aiOff'):(d.error||'AI error'));return}const text=String(d.text||'').trim();setAIThinking(false);addChat('assistant',text||'Не удалось получить текст ответа.');chatHistory.push({role:'user',content:msg},{role:'assistant',content:text});chatHistory=chatHistory.slice(-12)}catch{setAIThinking(false,tr('aiOff'))}}
+function setAIThinking(on,error=''){const s=$('#assistantStatus');if(on){s.innerHTML='<span class="thinking-orb" aria-hidden="true"><i></i><i></i><i></i></span><span>'+tr('thinking')+'</span>';s.classList.add('thinking-active')}else{s.innerHTML=error?`<span>${error}</span>`:'';s.classList.remove('thinking-active')}}
 function addChat(role,text){const d=document.createElement('div');d.className=`chat-bubble ${role}`;d.textContent=text;$('#chatMessages').appendChild(d);$('#chatMessages').scrollTop=$('#chatMessages').scrollHeight}
 $('#sendAI').onclick=sendAI;$('#assistantInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI()}});
 
 // News panel: обновляется с серверного RSS-кэша.
+function formatToday(){const p=new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Moscow',day:'2-digit',month:'2-digit',year:'numeric'}).formatToParts(new Date());const d=Object.fromEntries(p.map(x=>[x.type,x.value]));return `${d.day}.${d.month}.${d.year} г.`}
 async function loadCurrency(){
   try {
     const r=await fetch('/api/currency',{credentials:'same-origin'});
     if(!r.ok) return;
     const d=await r.json();
+    $('#currencyDate').textContent=formatToday();
     const fmt=x=>x==null?'—':Number(x).toLocaleString('ru-RU',{minimumFractionDigits:4,maximumFractionDigits:4});
     $('#usdRate').textContent=fmt(d.items?.USD?.value);
     $('#eurRate').textContent=fmt(d.items?.EUR?.value);
@@ -101,4 +131,4 @@ function setTimeWeather(){const h=Number(new Intl.DateTimeFormat('en-US',{timeZo
 async function checkWeather(){try{const cfg=await fetch('/api/config').then(r=>r.json());if(!cfg.weatherConfigured){setTimeWeather();return}const wr=await fetch('/api/weather');if(!wr.ok){setTimeWeather();return}const d=await wr.json();document.body.classList.remove('weather-night','weather-sun','weather-cloud','weather-rain','weather-snow');const h=Number(new Intl.DateTimeFormat('en-US',{timeZone:'Europe/Moscow',hour:'numeric',hour12:false}).format(new Date()));if(h<6||h>=20)document.body.classList.add('weather-night');else if(['Rain','Drizzle','Thunderstorm'].includes(d.main))document.body.classList.add('weather-rain');else if(d.main==='Snow')document.body.classList.add('weather-snow');else if(d.main==='Clouds')document.body.classList.add('weather-cloud');else document.body.classList.add('weather-sun')}catch{setTimeWeather()}}
 checkWeather();setInterval(checkWeather,10*60*1000);
 
-loadRates();renderIncoterms();renderFactors();applyLang();loadCurrency();setInterval(loadCurrency,60*60*1000);
+loadRates();renderIncoterms();renderFactors();applyLang();$('#currencyDate').textContent=formatToday();loadCurrency();setInterval(loadCurrency,60*60*1000);

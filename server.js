@@ -53,14 +53,16 @@ app.get('/api/currency', async (req,res) => {
     if (!r.ok) return res.status(502).json({ok:false,error:'CBR unavailable'});
     const xml = await r.text();
     const items = {};
-    for (const code of ['USD','EUR','CNY']) {
-      const block = xml.match(new RegExp(`<Valute[^>]*>[\\s\\S]*?<CharCode>${code}<\\/CharCode>[\\s\\S]*?<\\/Valute>`, 'i'))?.[0];
-      if (!block) continue;
-      const nominal = block.match(/<Nominal>([^<]+)<\/Nominal>/i)?.[1];
-      const value = block.match(/<Value>([^<]+)<\/Value>/i)?.[1];
-      if (value) items[code] = {nominal:Number(nominal||1), value:Number(value.replace(',', '.'))};
+    const blocks = [...xml.matchAll(/<Valute\b[^>]*>[\s\S]*?<\/Valute>/gi)].map(m => m[0]);
+    for (const block of blocks) {
+      const code = block.match(/<CharCode>\s*([^<]+?)\s*<\/CharCode>/i)?.[1]?.trim();
+      if (!['USD','EUR','CNY'].includes(code)) continue;
+      const nominal = block.match(/<Nominal>\s*([^<]+?)\s*<\/Nominal>/i)?.[1];
+      const value = block.match(/<Value>\s*([^<]+?)\s*<\/Value>/i)?.[1];
+      if (value) items[code] = { nominal:Number((nominal || '1').replace(',', '.')), value:Number(value.replace(',', '.')) };
     }
-    res.json({ok:true,date:new Date().toISOString(),items});
+    const dateMatch = xml.match(/Date=\"([^\"]+)\"/i);
+    res.json({ok:true,date:dateMatch?.[1] || new Date().toISOString(),items});
   } catch { res.status(502).json({ok:false,error:'CBR unavailable'}); }
 });
 
@@ -145,7 +147,11 @@ app.post('/api/ai', async (req,res) => {
     const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model,input,max_output_tokens:700})});
     const d=await r.json();
     if(!r.ok) return res.status(r.status).json({ok:false,error:d?.error?.message||'AI request failed'});
-    res.json({ok:true,text:d.output_text || ''});
+    let text = typeof d.output_text === 'string' ? d.output_text : '';
+    if (!text && Array.isArray(d.output)) {
+      text = d.output.flatMap(o => Array.isArray(o.content) ? o.content : []).map(c => c.text || c.value || '').filter(Boolean).join('\n');
+    }
+    res.json({ok:true,text});
   }catch{res.status(502).json({ok:false,error:'AI unavailable'});}
 });
 
