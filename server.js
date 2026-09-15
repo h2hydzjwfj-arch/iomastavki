@@ -220,8 +220,9 @@ app.post('/api/realtime/call', async (req,res)=>{
   const language=String(req.body?.language||'ru'); const context=req.body?.context||{};
   const instructions=`You are iomastavka, a calm expert logistics assistant for China/Asia to Russia. Speak naturally like a premium OpenAI voice assistant. Respond in ${langName(language)} unless the user asks for another language. Keep answers concise but useful. You can discuss logistics, Incoterms, customs, transport, rates, cities and the calculator context. Never invent rates. Current calculator context: ${JSON.stringify(context)}`;
   try{
-    const form=new FormData(); form.append('sdp',sdp); form.append('session',new Blob([JSON.stringify({type:'realtime',model:process.env.OPENAI_REALTIME_MODEL||'gpt-realtime-2.1',instructions,output_modalities:['audio'],audio:{input:{turn_detection:{type:'server_vad',create_response:true,interrupt_response:true}},output:{voice:process.env.OPENAI_REALTIME_VOICE||'marin'}}})],{type:'application/json'}),'session.json');
-    const r=await fetch('https://api.openai.com/v1/realtime/calls',{method:'POST',headers:{Authorization:`Bearer ${key}`},body:form});
+    const form=new FormData(); form.append('sdp',sdp); form.append('session',new Blob([JSON.stringify({type:'realtime',model,instructions,output_modalities:['audio'],audio:{input:{turn_detection:{type:'server_vad',create_response:true,interrupt_response:true}},output:{voice:process.env.OPENAI_REALTIME_VOICE||'marin'}}})],{type:'application/json'}),'session.json');
+    const model=process.env.OPENAI_REALTIME_MODEL||'gpt-realtime-2.1';
+    const r=await fetch(`https://api.openai.com/v1/realtime/calls?model=${encodeURIComponent(model)}`,{method:'POST',headers:{Authorization:`Bearer ${key}`},body:form});
     const text=await r.text();
     if(!r.ok) {
       let message=text||'Realtime call failed';

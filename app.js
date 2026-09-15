@@ -75,7 +75,7 @@ function renderTransportMenu(){
 }
 function renderAgents(){return;}
 function renderIncoterms(){const m=$('#incotermMenu');m.innerHTML='';['EXW','FCA','FOB','CIF','DAP','DDP'].forEach(x=>{const b=document.createElement('button');b.className='hover-item';b.textContent=x;b.onclick=()=>{$('#incotermBtn span').textContent=x;m.classList.remove('open')};m.appendChild(b)})}
-function renderFactors(){const el=$('#autoFactorValue');if(el)el.textContent=selectedMode&&modes[selectedMode]?`${volumeLabel(modes[selectedMode].factor)} · автоматически`:'Автоматически по транспорту'}
+function renderFactors(){selectedFactor=selectedMode&&modes[selectedMode]?modes[selectedMode].factor:167;}
 
 // Dropdowns work both by hover and by click/tap.
 ['forwarderBtn','transportBtn','incotermBtn'].forEach(id=>{const btn=$('#'+id);const menu=$('#'+id.replace('Btn','Menu'));if(btn&&menu)btn.addEventListener('click',e=>{e.stopPropagation();const open=menu.style.visibility==='visible'||menu.classList.contains('open');$$('.hover-menu').forEach(m=>m.classList.remove('open'));if(!open)menu.classList.add('open')})});
@@ -146,6 +146,9 @@ async function fetchGeo(q,target,box,input){try{const url=`/api/cities?q=${encod
 setupAutocomplete('fromCity','fromSuggestions','china');setupAutocomplete('toCity','toSuggestions','russia');
 
 document.addEventListener('click',e=>{$$('.suggestions').forEach(box=>{if(!e.target.closest('.autocomplete'))box.classList.remove('open')})});
+['fromCity','toCity'].forEach(id=>$('#'+id)?.addEventListener('blur',()=>setTimeout(autoDistance,120)));
+let autoDistanceTimer=0;
+['fromCity','toCity'].forEach(id=>$('#'+id)?.addEventListener('input',()=>{clearTimeout(autoDistanceTimer);autoDistanceTimer=setTimeout(autoDistance,350);}));
 function haversineKm(a,b){const R=6371,rad=x=>x*Math.PI/180;const dLat=rad(b[0]-a[0]),dLon=rad(b[1]-a[1]);const q=Math.sin(dLat/2)**2+Math.cos(rad(a[0]))*Math.cos(rad(b[0]))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(q))}
 async function resolveCityCoordinates(city,target){if(Array.isArray(city)&&Number.isFinite(Number(city[6]))&&Number.isFinite(Number(city[7])))return [Number(city[6]),Number(city[7])];const q=cityName(city);if(!q)return null;try{const url=`/api/cities?q=${encodeURIComponent(q)}&country=${target==='china'?'CN':'RU'}&limit=5`;const r=await fetch(url);if(!r.ok)return null;const d=await r.json();const x=(d.results||[]).find(v=>target==='china'?v.country_code==='CN':v.country_code==='RU');return x?[x.latitude,x.longitude]:null}catch{return null}}
 let distanceRequestId=0;
@@ -181,7 +184,7 @@ function containerFitWarning(){
 $$('.unit-choice').forEach(b=>b.addEventListener('click',()=>setDimensionUnit(b.dataset.unit)));
 updateDimensionUnitUI();
 containerFitWarning();
-$('#calculate').onclick=()=>{const weight=Number($('#weight').value)||0,pieces=Number($('#pieces').value)||1,[l,w,h]=dimensionsMm();selectedFactor=selectedMode&&modes[selectedMode]?modes[selectedMode].factor:167;renderFactors();const volume=l*w*h/1e9*pieces,volumetric=volume*selectedFactor,charge=Math.max(weight,volumetric);const result=$('#result');result.classList.remove('hidden');result.innerHTML=`<strong>${lang==='ru'?'Объём':lang==='zh'?'体积':'Volume'}:</strong> ${volume.toFixed(3)} m³ · <strong>${lang==='ru'?'Расчётный вес':lang==='zh'?'计费重量':'Chargeable weight'}:</strong> ${charge.toFixed(1)} kg <span class="result-muted">(${selectedMode?modeName(selectedMode):'авиа'} · ${selectedFactor} kg/m³)</span>`;containerFitWarning();showRecommendation(selectedForwarder)};
+$('#calculate').onclick=()=>{const weight=Number($('#weight').value)||0,pieces=Number($('#pieces').value)||1,[l,w,h]=dimensionsMm();selectedFactor=selectedMode&&modes[selectedMode]?modes[selectedMode].factor:167;renderFactors();const volume=l*w*h/1e9*pieces,volumetric=volume*selectedFactor,charge=Math.max(weight,volumetric);const result=$('#result');result.classList.remove('hidden');result.innerHTML=`<strong>${lang==='ru'?'Объём':lang==='zh'?'体积':'Volume'}:</strong> ${volume.toFixed(3)} m³ <span class="result-muted">(${selectedMode?modeName(selectedMode):(lang==='ru'?'авиа':lang==='zh'?'空运':'Air')})</span>`;containerFitWarning();showRecommendation(selectedForwarder)};
 
 let distanceTimer=null;
 ['fromCity','toCity'].forEach(id=>$('#'+id)?.addEventListener('input',()=>{clearTimeout(distanceTimer);distanceTimer=setTimeout(autoDistance,450)}));
@@ -303,7 +306,8 @@ async function startRealtime(){
     rtcDC.onopen=()=>{rtcConnected=true; setVoiceUI(true,tr('listen'));};
     rtcDC.onmessage=e=>handleRealtimeEvent(JSON.parse(e.data));
     const offer=await rtcPC.createOffer(); await rtcPC.setLocalDescription(offer);
-    const answerResp=await fetch('/api/realtime/call',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sdp:offer.sdp,language:lang,context:getCalculatorContext()})});
+    await new Promise(resolve=>{ if(rtcPC.iceGatheringState==='complete') return resolve(); const onState=()=>{if(rtcPC.iceGatheringState==='complete'){rtcPC.removeEventListener('icegatheringstatechange',onState);resolve();}}; rtcPC.addEventListener('icegatheringstatechange',onState); });
+    const answerResp=await fetch('/api/realtime/call',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sdp:rtcPC.localDescription?.sdp||offer.sdp,language:lang,context:getCalculatorContext()})});
     const answerText=await answerResp.text();
     if(!answerResp.ok) {
       let message=answerText||'Realtime connection failed';
