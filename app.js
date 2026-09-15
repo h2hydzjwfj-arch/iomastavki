@@ -232,140 +232,39 @@ function renderDirectory(){
  function renderDirectoryItems(mode){grid.innerHTML='';const rows=agentDirectory.filter(a=>mode==='all'||(a.modes||[]).includes(mode)||(mode==='rail'&&(a.modes||[]).includes('multimodal'))||(mode==='sea'&&(a.modes||[]).includes('multimodal')));rows.forEach(a=>{const tr=document.createElement('tr');const site=a.site?`<a href="${a.site.startsWith('http')?a.site:'https://'+a.site}" target="_blank" rel="noopener">${a.site.replace(/^https?:\/\//,'')}</a>`:'—';tr.innerHTML=`<td><b>${a.company||'—'}</b></td><td>${a.contact||'—'}</td><td>${a.phone||'—'}</td><td>${a.email||'—'}</td><td>${site}</td><td>${(a.transport||[]).map(translatedTransportLabel).join(', ')||'—'}</td><td>${a.notes||'—'}</td>`;grid.appendChild(tr)})}
 }
 
-// Voice AI: hands-free conversation with automatic end-of-speech detection and barge-in.
-let mediaRecorder=null, voiceChunks=[], voiceListening=false, voiceAutoSpeak=true, voiceAutoStopTimer=null;
-let voiceStream=null, voiceAnalyser=null, voiceAudioContext=null, voiceVadFrame=0, voiceStartedAt=0, voiceSpeechSeen=false, voiceLastSpeechAt=0;
-let currentAIaudio=null, interruptStream=null, interruptContext=null, interruptFrame=0;
-function voiceLang(){return lang==='zh'?'zh':lang==='en'?'en':'ru'}
+// Voice AI: completely local/free. No OpenAI transcription, Realtime or TTS calls.
+let voiceRecognition=null, voiceListening=false, voiceAutoSpeak=true, currentAIaudio=null;
+function voiceLang(){return lang==='zh'?'zh-CN':lang==='en'?'en-US':'ru-RU'}
 function voiceText(key){
- const m={
-  listen:{ru:'Слушаю…',en:'Listening…',zh:'正在聆听…'},
-  transcribe:{ru:'Распознаю…',en:'Transcribing…',zh:'正在识别…'},
-  ready:{ru:'Готов к разговору',en:'Ready to talk',zh:'准备对话'},
-  recognized:{ru:'Речь распознана',en:'Speech recognized',zh:'已识别语音'},
-  mic:{ru:'Разреши доступ к микрофону',en:'Allow microphone access',zh:'请允许麦克风访问'},
-  unavailable:{ru:'Микрофон временно недоступен',en:'Microphone is temporarily unavailable',zh:'麦克风暂时不可用'},
-  unsupported:{ru:'Голосовой ввод не поддерживается этим браузером',en:'Voice input is not supported by this browser',zh:'此浏览器不支持语音输入'},
-  fail:{ru:'Не удалось распознать голос',en:'Voice recognition failed',zh:'语音识别失败'}
- };
+ const m={listen:{ru:'Слушаю…',en:'Listening…',zh:'正在聆听…'},ready:{ru:'Готов к разговору',en:'Ready to talk',zh:'准备对话'},recognized:{ru:'Речь распознана',en:'Speech recognized',zh:'已识别语音'},mic:{ru:'Разреши доступ к микрофону',en:'Allow microphone access',zh:'请允许麦克风访问'},unsupported:{ru:'Голосовой ввод не поддерживается. Откройте Chrome или Edge.',en:'Voice input is not supported. Open Chrome or Edge.',zh:'此浏览器不支持语音输入。请使用 Chrome 或 Edge。'},fail:{ru:'Не удалось распознать голос',en:'Voice recognition failed',zh:'语音识别失败'}};
  return m[key]?.[lang]||m[key]?.ru||key;
 }
 function setVoiceUI(active,state){
  const btn=$('#voiceButton'),orb=$('#voiceOrb'),el=$('#voiceState');
- btn?.classList.toggle('listening',active); orb?.classList.toggle('listening',active);
- if(el&&state)el.textContent=state;
+ btn?.classList.toggle('listening',active); orb?.classList.toggle('listening',active); if(el&&state)el.textContent=state;
 }
-function stopVoiceTracks(){voiceStream?.getTracks().forEach(t=>t.stop());voiceStream=null;try{voiceAudioContext?.close()}catch{}voiceAudioContext=null;voiceAnalyser=null;if(voiceVadFrame)cancelAnimationFrame(voiceVadFrame);voiceVadFrame=0}
-function monitorSpeech(){
- if(!voiceListening||!voiceAnalyser)return;
- const data=new Uint8Array(voiceAnalyser.fftSize);voiceAnalyser.getByteTimeDomainData(data);
- let sum=0;for(const v of data){const x=(v-128)/128;sum+=x*x} const rms=Math.sqrt(sum/data.length);
- const now=performance.now();
- if(rms>0.028){voiceSpeechSeen=true;voiceLastSpeechAt=now;}
- if(voiceSpeechSeen && now-voiceStartedAt>900 && now-voiceLastSpeechAt>1250){stopVoice();return;}
- voiceVadFrame=requestAnimationFrame(monitorSpeech);
+function speakAI(text){
+ if(!voiceAutoSpeak||!text||!('speechSynthesis' in window))return;
+ window.speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text); u.lang=voiceLang(); u.rate=.96; u.pitch=.92; u.volume=1;
+ const voices=window.speechSynthesis.getVoices?.()||[]; const prefix=voiceLang().slice(0,2);
+ const v=voices.find(x=>x.lang?.toLowerCase().startsWith(prefix)&&/male|man|alex|daniel|google|microsoft/i.test(x.name))||voices.find(x=>x.lang?.toLowerCase().startsWith(prefix)); if(v)u.voice=v;
+ currentAIaudio=u; u.onend=()=>{if(currentAIaudio===u)currentAIaudio=null}; window.speechSynthesis.speak(u);
 }
-async function startVoice(){
- const btn=$('#voiceButton');
- if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){setVoiceUI(false,voiceText('unsupported'));return}
- try{
-  // If the assistant is speaking, this is a barge-in: stop its speech immediately.
-  if(currentAIaudio){try{currentAIaudio.pause();currentAIaudio.currentTime=0}catch{}currentAIaudio=null;window.speechSynthesis?.cancel();stopInterruptMonitor();}
-  voiceStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
-  const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(x=>MediaRecorder.isTypeSupported(x))||'';
-  mediaRecorder=new MediaRecorder(voiceStream,mime?{mimeType:mime}:undefined);voiceChunks=[];voiceListening=true;voiceStartedAt=performance.now();voiceSpeechSeen=false;voiceLastSpeechAt=voiceStartedAt;
-  setVoiceUI(true,voiceText('listen'));
-  voiceAudioContext=new (window.AudioContext||window.webkitAudioContext)();
-  const src=voiceAudioContext.createMediaStreamSource(voiceStream);voiceAnalyser=voiceAudioContext.createAnalyser();voiceAnalyser.fftSize=512;src.connect(voiceAnalyser);
-  mediaRecorder.ondataavailable=e=>{if(e.data.size)voiceChunks.push(e.data)};
-  mediaRecorder.onstop=async()=>{
-   const rec=mediaRecorder; const blob=new Blob(voiceChunks,{type:rec?.mimeType||'audio/webm'});
-   stopVoiceTracks();voiceListening=false;clearTimeout(voiceAutoStopTimer);voiceAutoStopTimer=null;setVoiceUI(false,voiceText('transcribe'));
-   try{
-    const fd=new FormData();fd.append('file',blob,'voice.'+(blob.type.includes('mp4')?'mp4':'webm'));fd.append('language',voiceLang());
-    const r=await fetch('/api/transcribe',{method:'POST',body:fd});const d=await r.json();if(!r.ok)throw new Error(d.error||'Transcription failed');
-    const text=String(d.text||'').trim();if(!text)throw new Error('No speech');
-    $('#assistantInput').value=text;setVoiceUI(false,voiceText('recognized'));await sendAI(true);
-   }catch(e){setVoiceUI(false,(e?.message&&e.message!=='No speech')?e.message:voiceText('fail'))}
-   setTimeout(()=>{if(!voiceListening)$('#voiceState').textContent=voiceText('ready')},1800);
-  };
-  mediaRecorder.start(120);
-  clearTimeout(voiceAutoStopTimer); voiceAutoStopTimer=setTimeout(()=>{if(voiceListening)stopVoice()},30000);
-  voiceVadFrame=requestAnimationFrame(monitorSpeech);
- }catch(e){stopVoiceTracks();voiceListening=false;setVoiceUI(false,e?.name==='NotAllowedError'?voiceText('mic'):voiceText('unavailable'))}
+function stopLocalVoice(){try{voiceRecognition?.stop()}catch{} voiceListening=false;setVoiceUI(false,voiceText('ready'));}
+function startLocalVoice(){
+ const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!Recognition){setVoiceUI(false,voiceText('unsupported'));return;}
+ if(voiceListening){stopLocalVoice();return;}
+ window.speechSynthesis?.cancel();
+ voiceRecognition=new Recognition(); voiceRecognition.lang=voiceLang(); voiceRecognition.interimResults=false; voiceRecognition.continuous=false; voiceRecognition.maxAlternatives=1;
+ voiceRecognition.onstart=()=>{voiceListening=true;setVoiceUI(true,voiceText('listen'));};
+ voiceRecognition.onerror=e=>{voiceListening=false;setVoiceUI(false,e.error==='not-allowed'?voiceText('mic'):voiceText('fail'));setTimeout(()=>setVoiceUI(false,voiceText('ready')),1800)};
+ voiceRecognition.onresult=e=>{const text=String(e.results?.[0]?.[0]?.transcript||'').trim();if(text){const input=$('#assistantInput');if(input){const existing=input.value.trim();input.value=existing?(existing+' '+text):text;input.focus();try{input.setSelectionRange(input.value.length,input.value.length)}catch{}}setVoiceUI(false,voiceText('recognized'));}};
+ voiceRecognition.onend=()=>{voiceListening=false;if($('#voiceState'))setTimeout(()=>{if(!voiceListening)$('#voiceState').textContent=voiceText('ready')},1200)};
+ try{voiceRecognition.start()}catch{voiceListening=false;setVoiceUI(false,voiceText('fail'))}
 }
-function stopVoice(){if(mediaRecorder&&voiceListening){try{mediaRecorder.stop()}catch{}}}
-let rtcPC=null, rtcDC=null, rtcStream=null, rtcAudio=null, rtcConnected=false;
-async function startRealtime(){
-  if(rtcConnected){ rtcDC?.send(JSON.stringify({type:'response.cancel'})); return; }
-  const btn=$('#voiceButton');
-  try{
-    btn.classList.add('listening'); $('#voiceOrb')?.classList.add('listening'); setVoiceUI(true,tr('listen'));
-    // The WebRTC offer is sent directly to the server. There is no separate
-    // /api/realtime/session endpoint in this architecture.
-    rtcPC=new RTCPeerConnection();
-    rtcAudio=new Audio(); rtcAudio.autoplay=true;
-    rtcPC.ontrack=e=>{rtcAudio.srcObject=e.streams[0];};
-    rtcStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
-    rtcStream.getTracks().forEach(t=>rtcPC.addTrack(t,rtcStream));
-    rtcDC=rtcPC.createDataChannel('oai-events');
-    rtcDC.onopen=()=>{rtcConnected=true; setVoiceUI(true,tr('listen'));};
-    rtcDC.onmessage=e=>handleRealtimeEvent(JSON.parse(e.data));
-    const offer=await rtcPC.createOffer(); await rtcPC.setLocalDescription(offer);
-    await new Promise(resolve=>{ if(rtcPC.iceGatheringState==='complete') return resolve(); const onState=()=>{if(rtcPC.iceGatheringState==='complete'){rtcPC.removeEventListener('icegatheringstatechange',onState);resolve();}}; rtcPC.addEventListener('icegatheringstatechange',onState); });
-    const answerResp=await fetch('/api/realtime/call',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sdp:rtcPC.localDescription?.sdp||offer.sdp,language:lang,context:getCalculatorContext()})});
-    const answerText=await answerResp.text();
-    if(!answerResp.ok) {
-      let message=answerText||'Realtime connection failed';
-      try { const parsed=JSON.parse(answerText); message=parsed.error||message; } catch {}
-      throw new Error(message);
-    }
-    // OpenAI returns a raw SDP answer, not JSON.
-    if(!answerText.includes('v=0')) throw new Error('Invalid Realtime SDP answer');
-    await rtcPC.setRemoteDescription({type:'answer',sdp:answerText});
-  }catch(e){stopRealtime();setVoiceUI(false,e.message||tr('unavailable'));}
-}
-function handleRealtimeEvent(ev){
-  if(ev.type==='input_audio_buffer.speech_started'){setVoiceUI(true,tr('listen'));return;}
-  if(ev.type==='input_audio_buffer.speech_stopped'){setVoiceUI(true,tr('thinking'));return;}
-  if(ev.type==='conversation.item.input_audio_transcription.completed'){
-    const text=ev.transcript||''; if(text.trim()) addChat('user',text,false); return;
-  }
-  if(ev.type==='response.output_audio_transcript.delta'){
-    if(!window._rtcAnswerText)window._rtcAnswerText=''; window._rtcAnswerText+=ev.delta||''; return;
-  }
-  if(ev.type==='response.output_audio_transcript.done'){
-    const text=ev.transcript||window._rtcAnswerText||''; window._rtcAnswerText=''; if(text.trim())addChat('assistant',text,false); setVoiceUI(true,tr('listen')); return;
-  }
-  if(ev.type==='response.done'){setVoiceUI(true,tr('listen'));}
-  if(ev.type==='error'){setVoiceUI(false,ev.error?.message||tr('unavailable'));}
-}
-function stopRealtime(){rtcConnected=false;try{rtcDC?.close()}catch{}try{rtcPC?.close()}catch{}rtcStream?.getTracks().forEach(t=>t.stop());rtcDC=null;rtcPC=null;rtcStream=null;rtcAudio=null;$('#voiceButton')?.classList.remove('listening');$('#voiceOrb')?.classList.remove('listening');setVoiceUI(false,tr('ready'));}
-function initVoice(){const btn=$('#voiceButton');if(!btn)return;btn.onclick=()=>rtcConnected?stopRealtime():startRealtime();}
-function stopInterruptMonitor(){if(interruptFrame)cancelAnimationFrame(interruptFrame);interruptFrame=0;interruptStream?.getTracks().forEach(t=>t.stop());interruptStream=null;try{interruptContext?.close()}catch{}interruptContext=null}
-async function monitorInterrupt(audio){
- try{
-  interruptStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
-  interruptContext=new (window.AudioContext||window.webkitAudioContext)();const src=interruptContext.createMediaStreamSource(interruptStream);const an=interruptContext.createAnalyser();an.fftSize=512;src.connect(an);
-  const data=new Uint8Array(an.fftSize);let loud=0;
-  const loop=()=>{
-   if(!currentAIaudio||currentAIaudio!==audio||audio.paused){stopInterruptMonitor();return}
-   an.getByteTimeDomainData(data);let sum=0;for(const v of data){const x=(v-128)/128;sum+=x*x}const rms=Math.sqrt(sum/data.length);
-   if(rms>0.075)loud++;else loud=Math.max(0,loud-1);
-   if(loud>=3){try{audio.pause();audio.currentTime=0}catch{}currentAIaudio=null;stopInterruptMonitor();setTimeout(()=>startVoice(),80);return}
-   interruptFrame=requestAnimationFrame(loop);
-  };interruptFrame=requestAnimationFrame(loop);
- }catch{}
-}
-async function speakAI(text){
- if(!voiceAutoSpeak||!text)return;
- window.speechSynthesis?.cancel();stopInterruptMonitor();
- try{
-  const r=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:text,language:voiceLang()})});
-  if(r.ok){const blob=await r.blob();const url=URL.createObjectURL(blob);const audio=new Audio(url);currentAIaudio=audio;audio.onended=()=>{URL.revokeObjectURL(url);if(currentAIaudio===audio){currentAIaudio=null;stopInterruptMonitor()}};audio.onerror=()=>{if(currentAIaudio===audio)currentAIaudio=null;stopInterruptMonitor()};await audio.play();monitorInterrupt(audio);return;}
- }catch{}
- if('speechSynthesis' in window){const u=new SpeechSynthesisUtterance(text);u.lang=lang==='zh'?'zh-CN':lang==='en'?'en-US':'ru-RU';u.rate=.96;u.pitch=.98;u.volume=1;window.speechSynthesis.speak(u)}
-}
+function initVoice(){const btn=$('#voiceButton');if(btn)btn.onclick=startLocalVoice;}
 initVoice();
 
 // News panel: обновляется с серверного RSS-кэша.
@@ -383,6 +282,12 @@ async function loadCurrency(){
   }catch{['usdRate','eurRate','cnyRate','homeCny','homeUsd','homeEur'].forEach(id=>{const el=$('#'+id);if(el&&el.textContent==='—')el.title='Курс временно недоступен'});}
 }
 
+function isUrgentNews(n){
+ const text=String((n?.title||'')+' '+(n?.description||'')).toLowerCase();
+ const logistics=/(тамож|пошлин|тариф|ндс|маркиров|декларац|импорт|экспорт|перевоз|логист|груз|санкц|лиценз|разрешен|сертифик|еаэс|китай|границ|контрол|ставк|запрет|огранич|регламент)/i.test(text);
+ const action=/(закон|постановлен|приказ|вступа(ет|ют)|изменен|изменя|нов(ые|ая)|срочн|запретил|запрещ|ужесточ|отмен|введен|повыс|сниз|обязател|требован|срок|сегодня|с 1 |с первого)/i.test(text);
+ return logistics&&action;
+}
 async function loadNews(){
   const box=$('#newsList'); box.innerHTML=`<div class="news-loading">${tr('newsLoading')}</div>`;
   try{
@@ -390,7 +295,7 @@ async function loadNews(){
     if(!d.items?.length){box.innerHTML=`<div class="news-loading">${tr('noNews')}</div>`;return}
     box.innerHTML='';
     d.items.forEach((n,i)=>{
-      const a=document.createElement('button'); a.type='button'; a.className='news-item';
+      const a=document.createElement('button'); a.type='button'; const urgent=isUrgentNews(n); a.className='news-item'+(urgent?' news-urgent':'');
       a.innerHTML=`${n.image?`<img class="news-thumb" src="${escapeHtml(n.image)}" alt="" loading="lazy">`:''}<span class="news-item-copy"><strong>${escapeHtml(n.title)}</strong><small>${escapeHtml(n.source||'')} · ${n.date?new Date(n.date).toLocaleDateString(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':'en-US'):''}</small></span>`;
       a.onclick=()=>openArticle(n); box.appendChild(a);
     });

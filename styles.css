@@ -106,3 +106,8 @@ body.weather-night .weather-scene{background:linear-gradient(180deg,#071827 0%,#
 #articleView .article-hero{min-height:min(52vh,560px)}
 #articleView .article-body{max-width:900px;padding:46px 32px 70px}
 @media(max-width:650px){#articleView .article-close{left:14px!important;top:14px!important}#articleView .article-body{padding:30px 20px 50px}#articleView .article-hero{min-height:420px}}
+
+/* Urgent VED/customs news */
+.news-item.news-urgent{background:linear-gradient(90deg,rgba(184,35,35,.12),rgba(255,245,245,.72));border-left:4px solid #c52f38;border-radius:12px;margin:5px 0;padding-left:12px;box-shadow:0 8px 24px rgba(160,35,35,.08)}
+.news-item.news-urgent strong{color:#8e1e28}.news-item.news-urgent small{color:#a45a60}.news-item.news-urgent:before{content:'СРОЧНО';display:inline-block;position:absolute;opacity:0}
+#distance[readonly]{background:rgba(241,248,251,.78);cursor:default}
