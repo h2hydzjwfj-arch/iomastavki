@@ -171,68 +171,19 @@ app.get('/api/cities', async (req,res) => {
 });
 
 app.get('/api/geocode', async (req,res) => {
-  const q=String(req.query.q||'').trim(), country=String(req.query.country||'').toLowerCase();
+  const q=String(req.query.q||'').trim(), country=String(req.query.country||'').toLowerCase(), scope=String(req.query.scope||'').toLowerCase();
+  const asiaCodes=new Set(['cn','jp','kr','kp','mn','in','pk','bd','np','bt','lk','mv','af','id','th','vn','my','sg','ph','mm','kh','la','bn','tl','kz','uz','kg','tj','tm']);
   if(!q)return res.json({ok:true,results:[]});
   try{
-    const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8${country?`&countrycodes=${encodeURIComponent(country)}`:''}&q=${encodeURIComponent(q)}`;
-    const r=await fetch(url,{headers:{'User-Agent':'iomastavka/1.2 (logistics calculator)'}}); if(!r.ok)throw new Error('geocode unavailable');
+    const cc=scope==='asia'||scope==='china'?'cn,jp,kr,kp,mn,in,pk,bd,np,bt,lk,mv,af,id,th,vn,my,sg,ph,mm,kh,la,bn,tl,kz,uz,kg,tj,tm':country;
+    const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=20${cc?`&countrycodes=${encodeURIComponent(cc)}`:''}&q=${encodeURIComponent(q)}`;
+    const r=await fetch(url,{headers:{'User-Agent':'iomastavka/1.3 (logistics calculator)'}}); if(!r.ok)throw new Error('geocode unavailable');
     const data=await r.json();
-    const results=(data||[]).map(x=>({name:x.name||x.display_name?.split(',')[0]||q,nameEn:x.name||x.display_name?.split(',')[0]||q,nameZh:x.name||x.display_name?.split(',')[0]||q,admin1:x.address?.state||x.address?.province||'',country:x.address?.country||'',country_code:x.address?.country_code||'',latitude:Number(x.lat),longitude:Number(x.lon),display_name:x.display_name||''})).filter(x=>Number.isFinite(x.latitude)&&Number.isFinite(x.longitude));
+    const results=(data||[]).map(x=>({name:x.name||x.display_name?.split(',')[0]||q,nameEn:x.name||x.display_name?.split(',')[0]||q,nameZh:x.name||x.display_name?.split(',')[0]||q,admin1:x.address?.state||x.address?.province||'',country:x.address?.country||'',country_code:x.address?.country_code||'',latitude:Number(x.lat),longitude:Number(x.lon),display_name:x.display_name||''})).filter(x=>Number.isFinite(x.latitude)&&Number.isFinite(x.longitude)).filter(x=>scope==='asia'||scope==='china'?asiaCodes.has(String(x.country_code).toLowerCase()):(!country||String(x.country_code).toLowerCase()===country));
     res.json({ok:true,results});
-  }catch(e){res.status(502).json({ok:false,error:'address search unavailable',results:[]});}
+  }catch{res.status(502).json({ok:false,error:'geocode unavailable',results:[]});}
 });
 
-app.get('/api/weather', async (req,res) => {
-  const key = process.env.OPENWEATHER_API_KEY;
-  if (!key) return res.status(503).json({ok:false,error:'Weather key not configured'});
-  try {
-    const u = `https://api.openweathermap.org/data/2.5/weather?lat=55.7558&lon=37.6173&appid=${encodeURIComponent(key)}&units=metric&lang=ru`;
-    const r = await fetch(u);
-    const d = await r.json();
-    if (!r.ok) return res.status(r.status).json({ok:false,error:d.message||'weather error'});
-    res.json({ok:true, main:d.weather?.[0]?.main||'Clear', description:d.weather?.[0]?.description||'', icon:d.weather?.[0]?.icon||'01d', temp:d.main?.temp, feelsLike:d.main?.feels_like, humidity:d.main?.humidity, pressure:d.main?.pressure, wind:d.wind?.speed, clouds:d.clouds?.all, visibility:d.visibility, rain1h:d.rain?.['1h']||0, snow1h:d.snow?.['1h']||0, sunrise:d.sys?.sunrise||0, sunset:d.sys?.sunset||0, city:d.name||'Москва'});
-  } catch { res.status(502).json({ok:false,error:'weather unavailable'}); }
-});
-
-let newsCache = { at: 0, items: [] };
-function stripHtml(s='') { return s.replace(/<[^>]*>/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\s+/g,' ').trim(); }
-function parseRss(xml) {
-  return [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(m => {
-    const x=m[1];
-    const pick=(tag)=>{ const z=x.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`,'i')); return z ? stripHtml(z[1]) : ''; };
-    const link = pick('link');
-    const media=(x.match(/<media:(?:content|thumbnail)[^>]+url=[\"']([^\"']+)/i)||[])[1] || (x.match(/<enclosure[^>]+url=[\"']([^\"']+)/i)||[])[1] || '';
-    return { title:pick('title'), link, date:pick('pubDate'), source:pick('source'), description:pick('description'), image:media };
-  }).filter(x=>x.title && x.link);
-}
-async function fetchNews() {
-  const feeds = [
-    'https://news.google.com/rss/search?q=China+logistics+customs+freight&hl=en-US&gl=US&ceid=US:en',
-    'https://news.google.com/rss/search?q=Китай+логистика+таможня+грузоперевозки&hl=ru&gl=RU&ceid=RU:ru',
-    'https://news.google.com/rss/search?q=China+shipping+customs&hl=en-US&gl=US&ceid=US:en'
-  ];
-  const all=[];
-  for(const url of feeds){
-    try{ const r=await fetch(url,{headers:{'User-Agent':'iomastavka/1.0'}}); if(r.ok) all.push(...parseRss(await r.text())); }catch{}
-  }
-  const seen=new Set();
-  let items=all.filter(x=>{const k=x.title.toLowerCase(); if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,24);
-  if(!items.length){
-    const now=new Date().toISOString();
-    items=[
-      {title:'Китай — Россия: что проверять перед расчётом мультимодальной перевозки',link:'',date:now,source:'IOMASTAVKA',description:'Практический разбор: Incoterms, габариты, объёмный вес, терминальные расходы и документы.',image:''},
-      {title:'ТН ВЭД и импорт: какие данные нужно собрать до запроса ставки',link:'',date:now,source:'IOMASTAVKA',description:'Чек-лист для логиста: описание товара, код ТН ВЭД, инвойс, упаковка, разрешительные документы и базис поставки.',image:''},
-      {title:'ЖД, море и авиа: как выбрать транспорт для груза из Китая',link:'',date:now,source:'IOMASTAVKA',description:'Сравнение сроков, расчётного веса и структуры стоимости по основным видам перевозки.',image:''}
-    ];
-  }
-  await Promise.all(items.slice(0,18).map(async item=>{
-    if(item.image && item.video && Array.isArray(item.images) && item.images.length)return;
-    try{const r=await fetch(item.link,{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0'}});if(!r.ok)return;const h=(await r.text()).slice(0,500000);const m=h.match(/<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+)/i)||h.match(/<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:image[\"']/i);if(m)item.image=m[1];const vm=h.match(/<meta[^>]+property=[\"']og:video(?::secure_url)?[\"'][^>]+content=[\"']([^\"']+)/i)||h.match(/<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:video(?::secure_url)?[\"']/i);if(vm)item.video=vm[1];const imgs=[...h.matchAll(/<meta[^>]+property=[\"']og:image(?::secure_url)?[\"'][^>]+content=[\"']([^\"']+)/gi)].map(z=>z[1]).filter(Boolean);if(imgs.length)item.images=[...new Set(imgs)].slice(0,5);
-    }catch{}
-  }));
-  newsCache={at:Date.now(),items};
-  return items;
-}
 app.get('/api/news', async (req,res) => {
   try {
     const items = (Date.now()-newsCache.at < 6*60*60*1000 && newsCache.items.length) ? newsCache.items : await fetchNews();
@@ -245,9 +196,32 @@ function langName(code){return code==='zh'?'Chinese':code==='en'?'English':'Russ
 
 function openAIModel(preferred){
   const m=String(preferred||'').trim();
-  // The web app must not try to call the internal ChatGPT model name.
-  if(m && !/luna|mini-test|local/i.test(m)) return m;
-  return 'gpt-5';
+  // API model IDs are different from internal ChatGPT model labels. GPT-5.6 Luna is a valid API model.
+  if(m && !/mini-test|local|chatgpt/i.test(m)) return m;
+  return 'gpt-5.6-luna';
+}
+function aiModelCandidates(preferred){
+  const first=openAIModel(preferred);
+  return [...new Set([first,'gpt-5.6-luna','gpt-5.6','gpt-5','gpt-4.1-mini'])];
+}
+async function responsesRequest({key,preferred,input,tools,max_output_tokens=1000}){
+  let last={status:502,error:'OpenAI request failed'};
+  for(const model of aiModelCandidates(preferred)){
+    const body={model,input,max_output_tokens};
+    if(tools) body.tools=tools;
+    try{
+      const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify(body)});
+      const raw=await r.text(); let d={}; try{d=JSON.parse(raw)}catch{}
+      if(r.ok)return {r,d};
+      last={status:r.status,error:d?.error?.message||raw||`Model ${model} failed`};
+    }catch(e){last={status:502,error:e.message||'OpenAI unavailable'};}
+  }
+  return {error:last};
+}
+function responseText(d){
+  let text=typeof d?.output_text==='string'?d.output_text:'';
+  if(!text&&Array.isArray(d?.output)) text=d.output.flatMap(o=>Array.isArray(o.content)?o.content:[]).map(c=>c.text||c.value||'').filter(Boolean).join('\n');
+  return String(text||'').trim();
 }
 
 app.post('/api/realtime/call', async (req,res)=>{
@@ -306,7 +280,7 @@ app.post('/api/logout', (req,res) => {
 });
 app.get('/api/me', auth, (req,res) => res.json({ ok:true }));
 const BUILTIN_AGENTS = [{"id":1,"company":"Multiwell","contact":"Kane","phone":"8 616 608 738 886","email":"sales344@multiwell.net","site":"www.multiwell.net","modes":["rail","road","sea"],"transport":["Прямое Ж/Д","Авто","Море"],"notes":"Сборные груза"},{"id":2,"company":"Multiwell","contact":"Sakiya","phone":"8 619 860 070 462","email":"sales242@multiwell.net","site":"www.multiwell.net","modes":["rail","road","sea"],"transport":["Прямое Ж/Д","Авто","Море"],"notes":"Сборные груза"},{"id":3,"company":"CR FREIGHT","contact":"Ирина Андреева","phone":"8 911 195 62 31","email":"andreeva@crfreight.cn","site":"","modes":["air"],"transport":["Авиа"],"notes":"Опасный"},{"id":4,"company":"CR FREIGHT","contact":"Ella и другие","phone":"","email":"cs19@crfreight.cn, ella@crfreight.cn, sr16@crfreight.cn","site":"","modes":["air"],"transport":["Авиа"],"notes":"Опасный"},{"id":5,"company":"TRANSIT, LLC","contact":"Konstantin Leonov","phone":"8 914 791 87 81","email":"k.leonov@transitllc.ru","site":"www.transitllc.ru","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":"Сборные груза, Ж/Д по России"},{"id":6,"company":"TRANSIT, LLC","contact":"Tatyana Iskaleeva","phone":"8 908 450 11 98","email":"t.iskaleeva@transitllc.ru","site":"www.transitllc.ru","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":"Сборные груза, Ж/Д по России"},{"id":7,"company":"TRANSIT, LLC","contact":"","phone":"","email":"directrail@transitllc.ru","site":"www.transitllc.ru","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":"Сборные груза, Ж/Д по России"},{"id":8,"company":"Русмарин","contact":"Евгений Ермоленко","phone":"8 921 401 61 29","email":"evermolenko@rusmarine.ru","site":"www.rusmarine.ru","modes":["rail","road","air","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Авиа","Море","Море + Ж/Д"],"notes":"Сборные груза"},{"id":9,"company":"Qtavia","contact":"Anastasiia Snatkina","phone":"86 131 499 21 667","email":"a.snatkina@qtavia.com","site":"https://qtavia.com/","modes":["air"],"transport":["Авиа"],"notes":""},{"id":10,"company":"Qtavia","contact":"Linara Iliazova","phone":"8 936 131 23 25","email":"linara.iliazova@qtavia.com","site":"https://qtavia.com/","modes":["air"],"transport":["Авиа"],"notes":""},{"id":11,"company":"Qtavia","contact":"Naida Azadova","phone":"8 986 749 55 92","email":"naida.azadova@qtavia.com","site":"https://qtavia.com/","modes":["air"],"transport":["Авиа"],"notes":""},{"id":12,"company":"ФЛГ","contact":"Александр Токарев","phone":"8 906 238 85 17","email":"sales@flgrussia.com","site":"https://flgrussia.com/","modes":["rail","road"],"transport":["Прямое Ж/Д","Авто"],"notes":"Сборные груза"},{"id":13,"company":"РусКарго","contact":"Alina Karpova","phone":"8 981 930 24 66","email":"kas@r-cargo.com","site":"https://r-cargo.com/","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":""},{"id":14,"company":"YM Trans Group","contact":"Милена Никитина","phone":"8 925 988 65 99","email":"982@ymtrans.ru","site":"www.ymtrans.ru","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":""},{"id":15,"company":"JENTY","contact":"Marina Kostukovich","phone":"375 29 192 46 69","email":"m.kostukovich@jenty-spedition.com","site":"https://jenty-spedition.ru/","modes":["road"],"transport":["Авто"],"notes":"Сборные груза"},{"id":16,"company":"Consolidator-DV LLC","contact":"Timofei Bakanovich","phone":"8 964 432 57 95","email":"import5@consolidator-dv.ru","site":"http://consolidator-dv.ru/","modes":["sea"],"transport":["Море"],"notes":"Сборные груза"},{"id":17,"company":"ТАМГА","contact":"Осипов Николай","phone":"8 985 279 69 39","email":"n.osipov@tamga80.ru","site":"https://tamga80.ru/ru","modes":["road"],"transport":["Авто"],"notes":"Сборные груза, Негабарит"},{"id":18,"company":"Green Avia","contact":"Kuzmina Maria","phone":"8 936 506 11 15","email":"sales3@avia-dostavka.com","site":"https://avia-dostavka.com/","modes":["air"],"transport":["Авиа"],"notes":""},{"id":19,"company":"Sky Cargo Service","contact":"Ekaterina Ivanova","phone":"8 913 061 71 56","email":"sales10@scs-aero.ru","site":"www.scs-aero.ru","modes":["air"],"transport":["Авиа"],"notes":""},{"id":20,"company":"Альфа Транзит","contact":"Щепина Виктория","phone":"8 916 894 05 20","email":"v.shchepina@alfa-transit.com","site":"www.alfa-transit.com","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":"Сборные груза, Ж/Д по России, Негабарит, Опасный"},{"id":21,"company":"Шатл Логистик / Shuttle-Logistic","contact":"Братасенко Михаил","phone":"8 999 614 64 92","email":"mb@shuttle-logistic.ru","site":"www.shuttle-logistic.ru","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":"Сборные груза, Ж/Д по России, Негабарит, Опасный"},{"id":22,"company":"Chengdu Tiechi Silk Road Supply Chain Management","contact":"Lily","phone":"8 619 115 959 752","email":"lily@tsrscm.com","site":"http://tsrscm.com/ru/","modes":["rail"],"transport":["Прямое Ж/Д"],"notes":"Сборные груза"},{"id":23,"company":"GUANGZHOU ETY TRANS INTERNATIONAL FREIGHT FORWARDING","contact":"Vera Yao","phone":"8 615 999 941 607","email":"vera@cnetytrans.com","site":"www.cnetytrans.com","modes":["rail","sea","multimodal"],"transport":["Прямое Ж/Д","Море","Море + Ж/Д"],"notes":""},{"id":24,"company":"A2","contact":"Микулин Владимир","phone":"8 913 061 71 56","email":"v.mikulin@a2-express.com","site":"a2-express.com","modes":["air"],"transport":["Авиа"],"notes":""},{"id":25,"company":"RUTENSIL Logistics","contact":"Алина","phone":"8 906 351 17 33","email":"108@rutensil.com","site":"http://rutensil.com/","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":"Сборные груза, Европа"},{"id":26,"company":"ВТХ","contact":"Станислав","phone":"8 914 077 79 26","email":"vthopr4@vostoktransholding.ru","site":"http://vostoktransholding.ru/","modes":["sea","multimodal"],"transport":["Море","Море + Ж/Д"],"notes":"Сборные груза, США, Европа"},{"id":27,"company":"ВТХ","contact":"Алексей","phone":"8 914 704 43 41","email":"sales4@vostoktransholding.ru","site":"http://vostoktransholding.ru/","modes":["sea","multimodal"],"transport":["Море","Море + Ж/Д"],"notes":"Сборные груза, США, Европа"},{"id":28,"company":"Chongqing Gudali Supply Chain Management","contact":"Logan","phone":"8 613 827 428 296","email":"logan@gdl-rail.com","site":"logan@gdl-rail.com","modes":["rail","road"],"transport":["Прямое Ж/Д","Авто"],"notes":"Сборные груза"},{"id":29,"company":"Вэй Трейд","contact":"Рукосуева Евгения Олеговна","phone":"8 902 981 11 04","email":"e.rukosueva@way-trade.ru","site":"https://way-trade.ru/","modes":["rail","road","multimodal"],"transport":["Прямое Ж/Д","Авто","Море + Ж/Д"],"notes":""},{"id":30,"company":"WAY GROUP","contact":"Общий","phone":"8 800 600 04 30","email":"info@wayg.ru","site":"https://www.wayg.ru/","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":"Сборные груза, Негабарит"},{"id":31,"company":"ФИТ, Владивосток","contact":"Маргарита","phone":"8-800-23-444-99 ext. 41501; +7-914-794-20-89","email":"NNKuznetsova@fesco.com","site":"https://www.fesco.ru/ru/","modes":["rail","sea","multimodal"],"transport":["Прямое Ж/Д","Море","Море + Ж/Д"],"notes":"Сборные груза, Ж/Д по России, Негабарит"},{"id":32,"company":"Нью Вэй Лоджистик","contact":"Боев Сергей","phone":"8 914 320 65 95","email":"310@newwaylogistic.ru","site":"https://newwaylogistic.ru/","modes":["sea","multimodal"],"transport":["Море","Море + Ж/Д"],"notes":"Ж/Д по России, Опасный"},{"id":33,"company":"ВЕЛЕС","contact":"Венера Рашидова","phone":"8 918 418 69 82","email":"operative2@velesforwarding.ru","site":"www.velesforwarding.ru","modes":["sea"],"transport":["Море"],"notes":"Новороссийск, Негабарит, Опасный"},{"id":34,"company":"ГАЛЕАС","contact":"Роман","phone":"8 961 520 31 25","email":"r.kuznetsov@galeasgroup.ru","site":"https://galeasgroup.ru/","modes":["sea"],"transport":["Море"],"notes":"Новороссийск"},{"id":35,"company":"Znylogistics","contact":"Maya","phone":"","email":"operator01@znylogistics.com","site":"","modes":["road"],"transport":["Авто"],"notes":"Турция"},{"id":36,"company":"РТТК","contact":"Алексей Веслополов (Чита)","phone":"8 3022 21 18 18; 8 914 464 23 32","email":"rttk888@mail.ru","site":"https://www.rttk.net/","modes":["rail","road"],"transport":["Ж/Д","Авто"],"notes":"Негабарит, Россия, Китай"},{"id":37,"company":"Tu-Tell","contact":"Вадим","phone":"375 33 3071468","email":"t14@tutell.com","site":"https://www.tutell.com/","modes":["road"],"transport":["Авто"],"notes":"Сборные груза, Турция, Европа"},{"id":38,"company":"СДЕК","contact":"Палащук Владислав Сергеевич","phone":"8 924 697 72 73","email":"v.palashchuk@cdek.ru","site":"www.cdek.ru","modes":["road"],"transport":["Мелкие груза"],"notes":"Китай"},{"id":39,"company":"ИП Полчанинов Кирилл Александрович","contact":"Кирилл","phone":"7 925 991 25 75","email":"pka666@yandex.ru","site":"","modes":["road"],"transport":["Автовывоз с СВХ, машина 42-43 куб.м."],"notes":"Россия, Москва, МО"},{"id":40,"company":"ИП Диана Куркина","contact":"Евгений","phone":"7 962 936 27 08","email":"yevgeniy-kurkin@mail.ru","site":"","modes":["road"],"transport":["Автовывоз с СВХ, машина до 18 куб.м."],"notes":"Россия, Москва, МО"},{"id":41,"company":"Автовывоз — Алексей","contact":"Алексей","phone":"7 985 227 06 67","email":"","site":"","modes":["road"],"transport":["Автовывоз с СВХ, более 20 куб.м."],"notes":"Россия, Москва, МО"}];
-app.get('/api/agents', (req,res) => { try { const file=path.join(DATA_DIR,'agents.json'); const records=JSON.parse(fs.readFileSync(file,'utf8')); res.json({ok:true,records:Array.isArray(records)&&records.length?records:BUILTIN_AGENTS}); } catch { res.json({ok:true,records:BUILTIN_AGENTS}); } });
+app.get('/api/agents', (req,res) => { try { const file=path.join(DATA_DIR,'agents.json'); const records=JSON.parse(fs.readFileSync(file,'utf8')); const out=Array.isArray(records)&&records.length?records:BUILTIN_AGENTS; res.json({ok:true,records:out}); } catch { res.json({ok:true,records:BUILTIN_AGENTS}); } });
 app.get('/api/rates', (req,res) => res.json(ensureRateDb()));
 app.get('/api/rates/recommend', (req,res) => {
   const db=ensureRateDb(); const from=String(req.query.from||''), to=String(req.query.to||''), mode=String(req.query.mode||''); const distance=Number(req.query.distance);
@@ -400,44 +374,26 @@ function relevantRateRecords(db, context){
 
 app.post('/api/customs/check', async (req,res) => {
   const code=String(req.body?.code||'').replace(/\D/g,'').slice(0,10);
-  if(code.length<4) return res.status(400).json({ok:false,error:'Введите корректный код ТН ВЭД'});
+  if(code.length!==10) return res.status(400).json({ok:false,error:'Введите полный 10-значный код ТН ВЭД ЕАЭС'});
   const key=process.env.OPENAI_API_KEY;
-  const officialUrl=`https://customs.gov.ru/`;
+  if(!key) return res.status(503).json({ok:false,error:'OPENAI_API_KEY не настроен на сервере'});
+  const prompt=`Ты специалист по ТН ВЭД ЕАЭС для российского логиста. Проверь именно 10-значный код ${code}. Используй web search и приоритетно ищи на официальных ресурсах ФТС России (customs.gov.ru) и ЕЭК (eec.eaeunion.org). Не выдумывай данные. Верни структурировано на русском: 1) точное описание позиции/подпозиции; 2) иерархия 2/4/6/10 знаков; 3) ввозная пошлина; 4) НДС; 5) акциз, если есть; 6) меры нетарифного регулирования и запреты/ограничения; 7) сертификация/декларирование соответствия и иные разрешительные документы; 8) маркировка, если применимо; 9) дополнительные единицы измерения; 10) важные примечания и условия классификации; 11) что нужно уточнить у декларанта. Для каждого спорного или не найденного поля напиши «не найдено в доступном источнике», а не угадывай. Отдельно пометь неофициальные справочники, если они использованы. В конце обязательно: «Код требует проверки по характеристикам конкретного товара; окончательная классификация определяется в установленном порядке таможенным органом.»`;
   try{
-    // First try the official FTS site directly.
-    let officialText='';
-    try{
-      const u=`https://customs.gov.ru/search?q=${encodeURIComponent(code)}`;
-      const r=await fetch(u,{headers:{'User-Agent':'Mozilla/5.0 (compatible; iomastavka/1.0)'},redirect:'follow',signal:AbortSignal.timeout(9000)});
-      if(r.ok){
-        const html=await r.text();
-        officialText=html.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ').trim();
-        if(officialText.length>220 && !/captcha|доступ запрещен|access denied|вход|логин/i.test(officialText)) officialText=officialText.slice(0,22000); else officialText='';
-      }
-    }catch{}
-    if(!key){
-      return res.json({ok:true,code,title:'ТН ВЭД',analysis:officialText?officialText:'Для интеллектуального разбора нужен OPENAI_API_KEY. Код принят, но автоматический анализ сейчас недоступен.',sourceUrl:officialUrl});
+    let out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input:prompt,tools:[{type:'web_search',search_context_size:'high'}],max_output_tokens:2200});
+    if(out.error){
+      // Second pass without web search still gives a controlled explanation instead of a blank UI.
+      out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input:prompt,max_output_tokens:1800});
     }
-    const model=openAIModel(process.env.OPENAI_MODEL);
-    const prompt=`Ты таможенный аналитик для российского логиста. Найди и проанализируй информацию именно по коду ТН ВЭД ЕАЭС ${code}. ПРИОРИТЕТ ИСТОЧНИКА: официальный сайт ФТС России customs.gov.ru. Используй веб-поиск. Если конкретная страница ФТС недоступна, можно дополнительно свериться с актуальными справочниками ТН ВЭД, но обязательно явно пометь их как неофициальные. Не выдумывай. Ответ на русском, структурировано: название кода; иерархия 4/6/10 знаков; пошлина; НДС; акциз; меры нетарифного регулирования; разрешительные документы/сертификация; маркировка; дополнительные единицы измерения; особые примечания; что нужно уточнить у декларанта. Если значение не найдено — так и напиши. В конце: 'Решение о классификации зависит от характеристик товара и официального решения таможенного органа.'${officialText?`\n\nТекст, полученный напрямую с customs.gov.ru:\n${officialText}`:''}`;
-    let r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model,input:prompt,tools:[{type:'web_search'}],tool_choice:'auto',max_output_tokens:1800})});
-    let d=await r.json();
-    if(!r.ok){
-      r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model,input:prompt,max_output_tokens:1800})});
-      d=await r.json();
-    }
-    if(!r.ok) return res.status(r.status).json({ok:false,error:d?.error?.message||'Не удалось выполнить анализ ТН ВЭД'});
-    let text=typeof d.output_text==='string'?d.output_text:'';
-    if(!text&&Array.isArray(d.output)) text=d.output.flatMap(o=>Array.isArray(o.content)?o.content:[]).map(c=>c.text||c.value||'').filter(Boolean).join('\n');
-    if(!text) throw new Error('Пустой ответ анализа ТН ВЭД');
-    res.json({ok:true,code,title:`ТН ВЭД ${code}`,analysis:text,sourceUrl:officialUrl});
-  }catch(e){res.status(502).json({ok:false,error:e.message||'Не удалось получить информацию по коду ТН ВЭД'});}
+    if(out.error) return res.status(out.error.status||502).json({ok:false,error:out.error.error||'Не удалось получить информацию по коду ТН ВЭД'});
+    const text=responseText(out.d);
+    if(!text) return res.status(502).json({ok:false,error:'Сервис не вернул информацию по коду ТН ВЭД'});
+    res.json({ok:true,code,title:`ТН ВЭД ${code}`,analysis:text,sourceUrl:'https://customs.gov.ru/'});
+  }catch(e){res.status(502).json({ok:false,error:e.message||'Ошибка проверки ТН ВЭД'});}
 });
 
 app.post('/api/ai', async (req,res) => {
   const key=process.env.OPENAI_API_KEY;
-  if(!key) return res.status(503).json({ok:false,error:'AI key not configured'});
-  const model=openAIModel(process.env.OPENAI_MODEL);
+  if(!key) return res.status(503).json({ok:false,error:'OPENAI_API_KEY не настроен на сервере'});
   const message=String(req.body?.message||'').trim();
   const history=Array.isArray(req.body?.history)?req.body.history.slice(-10):[];
   const context=req.body?.context&&typeof req.body.context==='object'?req.body.context:{};
@@ -448,27 +404,16 @@ app.post('/api/ai', async (req,res) => {
   const factor=modeFactor[String(context.transport||'')]||167;
   const volume=Number(context.lengthMm||0)*Number(context.widthMm||0)*Number(context.heightMm||0)/1e9*Number(context.pieces||1);
   const chargeableKg=Math.max(Number(context.weightKg||0),volume*factor);
-  const system=`Ты AI-ассистент сайта iomastavka — специализированный помощник по международной логистике, ВЭД, Китай/Азия → Россия, ставкам, маршрутам, Incoterms, таможне, документам и анализу КП. Не отвечай автоматически на любое короткое слово как на отдельный вопрос: если запрос слишком общий или двусмысленный (например, просто «курс»), уточни, что именно нужно: курс CNY/USD/EUR, курс ЦБ на дату или пересчёт конкретной ставки. Не превращай любой вопрос в разговор о курсе валют. Если вопрос вне логистики/ВЭД и не связан с приложенным файлом или текущим расчётом, вежливо скажи, что специализация ассистента — логистика, и предложи уточнить логистическую задачу. Отвечай кратко и по делу. Объёмный вес выбирается автоматически: авиа 167, авто 400, ЖД 500, море 1000, мультимодальная море+ЖД 1000 кг/м³. Текущий расчётный вес: ${chargeableKg.toFixed(1)} кг. Для расстояния используй контекст; расстояние между городами — географическое по координатам и является ориентиром, если нет фактического маршрута перевозчика. Для ставок используй только базу ниже. Если ставка указана за кг/тонну/м³, пересчитай её на текущий груз только когда база расчёта однозначна. Если ставка указана за отправку/контейнер — не умножай её на вес. Если точного маршрута нет, допускается ориентировочный диапазон по ближайшим историческим ставкам; расстояние можно учитывать как коэффициент только если транспорт, база расчёта и характер маршрута сопоставимы, и обязательно помечай такой расчёт как ориентировочный. Не придумывай отсутствующие тарифы. Если есть историческая ставка конкретного экспедитора по этому или похожему направлению — можно рекомендовать его. Не утверждай, что ставка актуальна сегодня без срока действия. Если вопрос требует свежих сведений, которых нет в базе ставок (новые законы, тарифы, ограничения, расписания, рыночные события, текущие цены), обязательно используй веб-поиск и отделяй найденные свежие факты от исторических ставок. База ставок (сначала наиболее похожие): ${JSON.stringify(relevantRates)}. Текущий контекст калькулятора: ${JSON.stringify(context)}.`;
+  const system=`Ты AI-ассистент сайта iomastavka — специализированный помощник по международной логистике, ВЭД, Китай/Азия → Россия, ставкам, маршрутам, Incoterms, таможне, документам и анализу КП. Отвечай по делу на русском, если пользователь не попросил другой язык. Не превращай короткие запросы вроде «курс» в случайный ответ: уточни, какой курс нужен. Для свежих фактов используй web search. Не выдумывай ставки и таможенные данные. Исторические ставки из базы ниже помечай как исторические/ориентировочные, если срок не подтверждён. Текущий расчётный вес: ${chargeableKg.toFixed(1)} кг. Фактор: ${factor} кг/м³. База ставок: ${JSON.stringify(relevantRates)}. Контекст калькулятора: ${JSON.stringify(context)}.`;
   const input=[{role:'system',content:system},...history.map(x=>({role:x.role==='assistant'?'assistant':'user',content:String(x.content||'')})),{role:'user',content:message}];
   try{
-    const payload={model,input,max_output_tokens:900,tools:[{type:'web_search'}],tool_choice:'auto'};
-    let r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify(payload)});
-    let raw=await r.text();
-    let d={}; try{d=JSON.parse(raw)}catch{}
-    // If web search is rejected by the account/model, retry once without the tool so ordinary AI chat still works.
-    if(!r.ok && /web.?search|tool|unsupported|invalid/i.test(String(d?.error?.message||raw))){
-      const fallbackPayload={model,input,max_output_tokens:900};
-      r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify(fallbackPayload)});
-      raw=await r.text(); try{d=JSON.parse(raw)}catch{d={}}
-    }
-    if(!r.ok) return res.status(r.status).json({ok:false,error:d?.error?.message||raw||'AI request failed'});
-    let text = typeof d.output_text === 'string' ? d.output_text : '';
-    if (!text && Array.isArray(d.output)) {
-      text = d.output.flatMap(o => Array.isArray(o.content) ? o.content : []).map(c => c.text || c.value || '').filter(Boolean).join('\n');
-    }
-    if(!text) return res.status(502).json({ok:false,error:'OpenAI returned an empty response'});
+    let out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input,tools:[{type:'web_search',search_context_size:'medium'}],max_output_tokens:1200});
+    if(out.error) out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input,max_output_tokens:1200});
+    if(out.error)return res.status(out.error.status||502).json({ok:false,error:out.error.error||'AI request failed'});
+    const text=responseText(out.d);
+    if(!text)return res.status(502).json({ok:false,error:'OpenAI returned an empty response'});
     res.json({ok:true,text});
-  }catch{res.status(502).json({ok:false,error:'AI unavailable'});}
+  }catch(e){res.status(502).json({ok:false,error:e.message||'AI unavailable'});}
 });
 
 app.listen(PORT, () => console.log(`iomastavka listening on ${PORT}`));
