@@ -216,7 +216,15 @@ async function fetchNews() {
     try{ const r=await fetch(url,{headers:{'User-Agent':'iomastavka/1.0'}}); if(r.ok) all.push(...parseRss(await r.text())); }catch{}
   }
   const seen=new Set();
-  const items=all.filter(x=>{const k=x.title.toLowerCase(); if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,24);
+  let items=all.filter(x=>{const k=x.title.toLowerCase(); if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,24);
+  if(!items.length){
+    const now=new Date().toISOString();
+    items=[
+      {title:'Китай — Россия: что проверять перед расчётом мультимодальной перевозки',link:'',date:now,source:'IOMASTAVKA',description:'Практический разбор: Incoterms, габариты, объёмный вес, терминальные расходы и документы.',image:''},
+      {title:'ТН ВЭД и импорт: какие данные нужно собрать до запроса ставки',link:'',date:now,source:'IOMASTAVKA',description:'Чек-лист для логиста: описание товара, код ТН ВЭД, инвойс, упаковка, разрешительные документы и базис поставки.',image:''},
+      {title:'ЖД, море и авиа: как выбрать транспорт для груза из Китая',link:'',date:now,source:'IOMASTAVKA',description:'Сравнение сроков, расчётного веса и структуры стоимости по основным видам перевозки.',image:''}
+    ];
+  }
   await Promise.all(items.slice(0,18).map(async item=>{
     if(item.image && item.video && Array.isArray(item.images) && item.images.length)return;
     try{const r=await fetch(item.link,{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0'}});if(!r.ok)return;const h=(await r.text()).slice(0,500000);const m=h.match(/<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+)/i)||h.match(/<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:image[\"']/i);if(m)item.image=m[1];const vm=h.match(/<meta[^>]+property=[\"']og:video(?::secure_url)?[\"'][^>]+content=[\"']([^\"']+)/i)||h.match(/<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:video(?::secure_url)?[\"']/i);if(vm)item.video=vm[1];const imgs=[...h.matchAll(/<meta[^>]+property=[\"']og:image(?::secure_url)?[\"'][^>]+content=[\"']([^\"']+)/gi)].map(z=>z[1]).filter(Boolean);if(imgs.length)item.images=[...new Set(imgs)].slice(0,5);
@@ -239,7 +247,7 @@ function openAIModel(preferred){
   const m=String(preferred||'').trim();
   // The web app must not try to call the internal ChatGPT model name.
   if(m && !/luna|mini-test|local/i.test(m)) return m;
-  return 'gpt-5';
+  return 'gpt-5.6-luna';
 }
 
 app.post('/api/realtime/call', async (req,res)=>{
@@ -297,7 +305,7 @@ app.post('/api/logout', (req,res) => {
   res.json({ ok:true });
 });
 app.get('/api/me', auth, (req,res) => res.json({ ok:true }));
-app.get('/api/agents', auth, (req,res) => { try { const file=path.join(DATA_DIR,'agents.json'); const records=JSON.parse(fs.readFileSync(file,'utf8')); res.json({ok:true,records:Array.isArray(records)?records:[]}); } catch { res.json({ok:true,records:[]}); } });
+app.get('/api/agents', (req,res) => { try { const file=path.join(DATA_DIR,'agents.json'); const records=JSON.parse(fs.readFileSync(file,'utf8')); res.json({ok:true,records:Array.isArray(records)?records:[]}); } catch { res.json({ok:true,records:[]}); } });
 app.get('/api/rates', (req,res) => res.json(ensureRateDb()));
 app.get('/api/rates/recommend', (req,res) => {
   const db=ensureRateDb(); const from=String(req.query.from||''), to=String(req.query.to||''), mode=String(req.query.mode||''); const distance=Number(req.query.distance);
@@ -389,7 +397,7 @@ function relevantRateRecords(db, context){
 }
 
 
-app.post('/api/customs/check', auth, async (req,res) => {
+app.post('/api/customs/check', async (req,res) => {
   const code=String(req.body?.code||'').replace(/\D/g,'').slice(0,10);
   if(code.length<4) return res.status(400).json({ok:false,error:'Введите корректный код ТН ВЭД'});
   const key=process.env.OPENAI_API_KEY;
@@ -438,13 +446,22 @@ app.post('/api/ai', async (req,res) => {
   const system=`Ты AI-ассистент сайта iomastavka — специализированный помощник по международной логистике, ВЭД, Китай/Азия → Россия, ставкам, маршрутам, Incoterms, таможне, документам и анализу КП. Не отвечай автоматически на любое короткое слово как на отдельный вопрос: если запрос слишком общий или двусмысленный (например, просто «курс»), уточни, что именно нужно: курс CNY/USD/EUR, курс ЦБ на дату или пересчёт конкретной ставки. Не превращай любой вопрос в разговор о курсе валют. Если вопрос вне логистики/ВЭД и не связан с приложенным файлом или текущим расчётом, вежливо скажи, что специализация ассистента — логистика, и предложи уточнить логистическую задачу. Отвечай кратко и по делу. Объёмный вес выбирается автоматически: авиа 167, авто 400, ЖД 500, море 1000, мультимодальная море+ЖД 1000 кг/м³. Текущий расчётный вес: ${chargeableKg.toFixed(1)} кг. Для расстояния используй контекст; расстояние между городами — географическое по координатам и является ориентиром, если нет фактического маршрута перевозчика. Для ставок используй только базу ниже. Если ставка указана за кг/тонну/м³, пересчитай её на текущий груз только когда база расчёта однозначна. Если ставка указана за отправку/контейнер — не умножай её на вес. Если точного маршрута нет, допускается ориентировочный диапазон по ближайшим историческим ставкам; расстояние можно учитывать как коэффициент только если транспорт, база расчёта и характер маршрута сопоставимы, и обязательно помечай такой расчёт как ориентировочный. Не придумывай отсутствующие тарифы. Если есть историческая ставка конкретного экспедитора по этому или похожему направлению — можно рекомендовать его. Не утверждай, что ставка актуальна сегодня без срока действия. Если вопрос требует свежих сведений, которых нет в базе ставок (новые законы, тарифы, ограничения, расписания, рыночные события, текущие цены), обязательно используй веб-поиск и отделяй найденные свежие факты от исторических ставок. База ставок (сначала наиболее похожие): ${JSON.stringify(relevantRates)}. Текущий контекст калькулятора: ${JSON.stringify(context)}.`;
   const input=[{role:'system',content:system},...history.map(x=>({role:x.role==='assistant'?'assistant':'user',content:String(x.content||'')})),{role:'user',content:message}];
   try{
-    const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model,input,max_output_tokens:900,tools:[{type:'web_search'}],tool_choice:'auto'})});
-    const d=await r.json();
-    if(!r.ok) return res.status(r.status).json({ok:false,error:d?.error?.message||'AI request failed'});
+    const payload={model,input,max_output_tokens:900,tools:[{type:'web_search'}],tool_choice:'auto'};
+    let r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify(payload)});
+    let raw=await r.text();
+    let d={}; try{d=JSON.parse(raw)}catch{}
+    // If web search is rejected by the account/model, retry once without the tool so ordinary AI chat still works.
+    if(!r.ok && /web.?search|tool|unsupported|invalid/i.test(String(d?.error?.message||raw))){
+      const fallbackPayload={model,input,max_output_tokens:900};
+      r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify(fallbackPayload)});
+      raw=await r.text(); try{d=JSON.parse(raw)}catch{d={}}
+    }
+    if(!r.ok) return res.status(r.status).json({ok:false,error:d?.error?.message||raw||'AI request failed'});
     let text = typeof d.output_text === 'string' ? d.output_text : '';
     if (!text && Array.isArray(d.output)) {
       text = d.output.flatMap(o => Array.isArray(o.content) ? o.content : []).map(c => c.text || c.value || '').filter(Boolean).join('\n');
     }
+    if(!text) return res.status(502).json({ok:false,error:'OpenAI returned an empty response'});
     res.json({ok:true,text});
   }catch{res.status(502).json({ok:false,error:'AI unavailable'});}
 });

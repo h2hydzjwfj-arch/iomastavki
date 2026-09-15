@@ -753,3 +753,16 @@ body.weather-night .moon{animation:none!important}
 .moon{animation:none!important;transform:none!important;translate:none!important;rotate:none!important;scale:1!important;}
 .tarot-shell.tarot-ready .tarot-card{animation:tarotSoftAppear .72s cubic-bezier(.2,.75,.25,1) .62s forwards!important;opacity:1!important;}
 .currency-bar{opacity:1!important;visibility:visible!important;}
+
+/* FILE 19: theme rail must never translate/shake */
+.topbar>.theme-controls button,#themeToggleButton{animation:none!important;transition:background-color .2s ease,color .2s ease,box-shadow .2s ease!important;transform:none!important;}
+.topbar>.theme-controls button:hover,#themeToggleButton:hover{transform:none!important;}
+.topbar>.theme-controls{transform:none!important;}
+/* FILE 19: left rail buttons remain fixed without hover translation */
+.topbar>.hamsa-button:hover,.topbar>.dollar-button:hover,.topbar>.customs-button:hover{transform:translateY(-50%)!important;}
+
+/* FILE 20 — absolute stability: no shaking on moon/sun/theme control */
+.moon,.sun{animation:none!important;transform:none!important;translate:none!important;rotate:none!important;scale:1!important;transition:none!important;will-change:auto!important;}
+body.weather-night .moon,body.weather-sun .sun{animation:none!important;transform:none!important;}
+.topbar>.theme-controls,#themeToggleButton{animation:none!important;transform:none!important;translate:none!important;rotate:none!important;transition:none!important;will-change:auto!important;}
+.topbar>.theme-controls:hover,#themeToggleButton:hover,#themeToggleButton:active{transform:none!important;}
