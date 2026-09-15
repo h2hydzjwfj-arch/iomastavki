@@ -490,7 +490,7 @@ async function checkCustomsCode(){
     if(r.status===401)throw new Error('Сессия авторизации истекла. Перезайдите в приложение.');
     if(!r.ok||!d.ok)throw new Error(d.error||'Не удалось получить информацию по коду');
     if(status)status.textContent=`Код ${d.code||code} проверен`;
-    if(result){result.innerHTML=`<div class="customs-result-title">${escapeHtml(d.title||('ТН ВЭД '+code))}</div><div class="customs-result-body">${escapeHtml(String(d.analysis||'Информация не найдена.')).replace(/\n/g,'<br>')}</div>`;result.classList.remove('hidden')}
+    if(result){const raw=String(d.analysis||'Информация не найдена.'); const lines=raw.split(/\n+/).map(x=>x.trim()).filter(Boolean); const labels=['КОД','ОПИСАНИЕ','ИМПОРТНАЯ ПОШЛИНА','НДС','АКЦИЗ','ТАМОЖЕННЫЙ СБОР','ЧЕСТНЫЙ ЗНАК','РАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ','ЗАПРЕТЫ И ОГРАНИЧЕНИЯ','ЕДИНИЦА ИЗМЕРЕНИЯ','ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ','ИСТОЧНИКИ','ПРИМЕЧАНИЕ']; const cards=lines.map(line=>{const m=line.match(/^([^:]{2,45}):\s*(.*)$/); if(!m||!labels.includes(m[1].toUpperCase())) return `<div class="customs-free-line">${escapeHtml(line)}</div>`; const cls=m[1].toUpperCase()==='ЧЕСТНЫЙ ЗНАК'?' customs-marking':''; return `<div class="customs-info-card${cls}"><div class="customs-info-label">${escapeHtml(m[1])}</div><div class="customs-info-value">${escapeHtml(m[2])}</div></div>`}).join(''); result.innerHTML=`<div class="customs-result-title">${escapeHtml(d.title||('ТН ВЭД '+code))}</div><div class="customs-result-grid">${cards}</div>`;result.classList.remove('hidden')}
   }catch(e){if(status)status.textContent=e.message||'Ошибка проверки';}
 }
 $('#customsCheck')?.addEventListener('click',e=>{e.preventDefault();checkCustomsCode()});

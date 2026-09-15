@@ -110,8 +110,8 @@ app.get('/', (req,res) => res.sendFile(path.join(ROOT, 'index.html')));
 app.get('/app.js', (req,res) => res.sendFile(path.join(ROOT, 'app.js')));
 app.get('/styles.css', (req,res) => res.sendFile(path.join(ROOT, 'styles.css')));
 app.get('/api/health', (req,res) => res.json({ ok: true }));
-app.get('/api/version', (req,res) => res.json({ok:true,version:'23',build:'IOMASTAVKA_FILE_23'}));
-app.get('/api/config', (req,res) => res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.OPENAI_API_KEY) }));
+app.get('/api/version', (req,res) => res.json({ok:true,version:'24',build:'IOMASTAVKA_FILE_24'}));
+app.get('/api/config', (req,res) => res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.OPENAI_API_KEY), ftsConfigured: Boolean(process.env.API_CLOUD_FTS_TOKEN) }));
 
 app.get('/api/currency', async (req,res) => {
   try {
@@ -199,11 +199,11 @@ function openAIModel(preferred){
   const m=String(preferred||'').trim();
   // API model IDs are different from internal ChatGPT model labels. GPT-5.6 Luna is a valid API model.
   if(m && !/mini-test|local|chatgpt/i.test(m)) return m;
-  return 'gpt-5.6-luna';
+  return 'gpt-5';
 }
 function aiModelCandidates(preferred){
   const first=openAIModel(preferred);
-  return [...new Set([first,'gpt-5.6-luna','gpt-5.6','gpt-5','gpt-4.1-mini'])];
+  return [...new Set([first,'gpt-5','gpt-4.1-mini','gpt-4o-mini'])];
 }
 async function responsesRequest({key,preferred,input,tools,max_output_tokens=1000}){
   let last={status:502,error:'OpenAI request failed'};
@@ -378,13 +378,39 @@ app.post('/api/customs/check', async (req,res) => {
   if(code.length!==10) return res.status(400).json({ok:false,error:'Введите полный 10-значный код ТН ВЭД ЕАЭС'});
   const key=process.env.OPENAI_API_KEY;
   if(!key) return res.status(503).json({ok:false,error:'OPENAI_API_KEY не настроен на сервере'});
-  const prompt=`Проверь код ТН ВЭД ЕАЭС ${code} для российского логиста. Это запрос на справочную проверку, не на юридическое заключение. ОБЯЗАТЕЛЬНО используй web search. Приоритет источников: 1) customs.gov.ru и его поддомены ФТС России, 2) eec.eaeunion.org и документы ЕЭК, 3) только затем авторитетные справочники. Найди именно 10-значный код, а не похожий код. Если точный код не найден, прямо напиши «точный код не найден» и не подставляй соседний код как результат. Верни на русском с заголовками: «Код», «Описание товара», «Иерархия 2/4/6/10 знаков», «Ввозная пошлина», «НДС», «Акциз», «Запреты и ограничения», «Разрешительные документы / соответствие», «Маркировка», «Дополнительная единица», «Примечания по классификации», «Что уточнить у декларанта», «Источники». Для каждого значения укажи источник и дату/актуальность, если она доступна. Не угадывай ставки. Если источник не дает значение, напиши «не найдено». В конце: «Справочно: окончательная классификация зависит от характеристик товара и документов и может требовать решения таможенного органа.»`;
+
+  // API-CLOUD FTS is intentionally kept server-side. Its documented FTS v2 method
+  // is for customs clearance of passenger cars by VIN, not for HS/TN VED codes.
+  // The token is therefore not exposed to the browser and is not sent for a TN VED lookup.
+  const apiCloudConfigured=Boolean(process.env.API_CLOUD_FTS_TOKEN);
+  const prompt=`Ты — специалист по ВЭД и таможенному оформлению в России. Проверь ровно код ТН ВЭД ЕАЭС ${code}. Пользователь хочет получить практический ответ для импорта в РФ из Китая/Азии.
+
+ОБЯЗАТЕЛЬНО используй web search и свежие источники. Приоритет: ФТС России/customs.gov.ru, ЕЭК/eec.eaeunion.org и официальные нормативные акты ЕАЭС/РФ. Для маркировки отдельно проверь официальный «Честный ЗНАК» (честныйзнак.рф / markirovka.ru) и нормативные документы. Не подставляй похожий 10-значный код. Если точный код не найден — так и напиши.
+
+Верни ответ строго в следующем формате, каждый пункт с новой строки:
+КОД: ${code}
+ОПИСАНИЕ: ...
+ИМПОРТНАЯ ПОШЛИНА: ...
+НДС: ...
+АКЦИЗ: ...
+ТАМОЖЕННЫЙ СБОР: ...
+ЧЕСТНЫЙ ЗНАК: ТРЕБУЕТСЯ / НЕ ТРЕБУЕТСЯ / ЗАВИСИТ ОТ ХАРАКТЕРИСТИК — затем кратко почему
+РАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: ...
+ЗАПРЕТЫ И ОГРАНИЧЕНИЯ: ...
+ЕДИНИЦА ИЗМЕРЕНИЯ: ...
+ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: ...
+ИСТОЧНИКИ: ...
+
+Если ставка зависит от страны происхождения, материала, назначения, вида товара или специальных условий — обязательно укажи это. Не выдумывай ставку. Если актуальное значение не удалось подтвердить, пиши «не удалось подтвердить по доступному официальному источнику». Для пошлины укажи процент и/или формулу, если она специфическая. Для НДС учитывай актуальные правила РФ на текущую дату. Для Честного ЗНАКА не путай обязательную маркировку с таможенной пошлиной.
+
+В самом конце одной строкой: ПРИМЕЧАНИЕ: окончательная классификация и применяемые меры зависят от точных характеристик товара и документов.`;
   try{
-    const out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input:prompt,tools:[{type:'web_search'}],max_output_tokens:3000});
+    let out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input:prompt,tools:[{type:'web_search'}],max_output_tokens:3500});
+    if(out.error) out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input:prompt,max_output_tokens:3500});
     if(out.error) return res.status(out.error.status||502).json({ok:false,error:out.error.error||'Не удалось проверить код ТН ВЭД'});
     const text=responseText(out.d);
     if(!text) return res.status(502).json({ok:false,error:'По коду не получен ответ от справочного сервиса'});
-    res.json({ok:true,code,title:`ТН ВЭД ЕАЭС ${code}`,analysis:text});
+    res.json({ok:true,code,title:`ТН ВЭД ЕАЭС ${code}`,analysis:text,apiCloudConfigured});
   }catch(e){res.status(502).json({ok:false,error:e.message||'Ошибка проверки ТН ВЭД'});}
 });
 

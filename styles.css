@@ -776,3 +776,12 @@ body.weather-night .moon,body.weather-sun .sun{animation:none!important;transfor
 .topbar>.theme-controls button,#themeToggleButton{width:40px!important;height:40px!important;transform:none!important;animation:none!important;transition:none!important;}
 .topbar>.hamsa-button:hover,.topbar>.hamsa-button:active,.topbar>.dollar-button:hover,.topbar>.dollar-button:active,.topbar>.customs-button:hover,.topbar>.customs-button:active,.topbar>.theme-controls button:hover,.topbar>.theme-controls button:active,#themeToggleButton:hover,#themeToggleButton:active{transform:none!important;animation:none!important;}
 @media(max-width:650px){.topbar>.hamsa-button,.topbar>.theme-controls,.topbar>.dollar-button,.topbar>.customs-button{left:10px!important;width:38px!important;height:38px!important}.topbar>.hamsa-button{top:calc(50% - 72px)!important}.topbar>.theme-controls{top:calc(50% - 24px)!important}.topbar>.dollar-button{top:calc(50% + 24px)!important}.topbar>.customs-button{top:calc(50% + 72px)!important}.topbar>.theme-controls button,#themeToggleButton{width:38px!important;height:38px!important}}
+
+/* File 24: structured customs result */
+.customs-result-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.customs-info-card{padding:14px 16px;border:1px solid rgba(80,150,220,.16);border-radius:16px;background:rgba(255,255,255,.72);box-shadow:0 8px 24px rgba(20,70,110,.05)}
+.customs-info-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;opacity:.58;margin-bottom:6px;font-weight:800}
+.customs-info-value{font-size:14px;line-height:1.45;white-space:pre-wrap}
+.customs-marking{grid-column:1/-1}
+.customs-free-line{grid-column:1/-1;font-size:13px;line-height:1.5;padding:4px 2px}
+@media(max-width:700px){.customs-result-grid{grid-template-columns:1fr}.customs-marking{grid-column:auto}}
