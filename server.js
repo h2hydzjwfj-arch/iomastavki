@@ -154,14 +154,17 @@ const CITY_ALIASES = {
 };
 app.get('/api/cities', async (req,res) => {
   const q=String(req.query.q||'').trim(), country=String(req.query.country||'CN').toUpperCase(), limit=Math.min(100,Math.max(1,Number(req.query.limit)||30));
+  const ASIA_CODES_SERVER=new Set(['CN','JP','KR','KP','MN','IN','PK','BD','NP','BT','LK','MV','AF','ID','TH','VN','MY','SG','PH','MM','KH','LA','BN','TL','KZ','UZ','KG','TJ','TM']);
+  const isAsiaScope=country==='ASIA';
+  const allowedCodes=isAsiaScope?ASIA_CODES_SERVER:new Set([country]);
   if(!q) return res.json({ok:true,results:[]});
   try{
     const alias=CITY_ALIASES[normalizeText(q)]; const searchName=alias?.[0]||q; const results=[];
     const add=(x)=>{if(!x)return;const name=x.name||x.city||x.town||x.village||x.municipality||x.display_name?.split(',')[0];if(!name)return;results.push({name,nameEn:x.nameEn||x.name||name,nameZh:x.nameZh||x.name||name,admin1:x.admin1||x.state||x.province||'',country:x.country||'China',country_code:x.country_code||country,latitude:Number(x.latitude??x.lat),longitude:Number(x.longitude??x.lon)})};
-    try{const u=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchName)}&count=100&language=en&format=json`;const r=await fetch(u,{headers:{'User-Agent':'iomastavastka/1.0'}});if(r.ok){const d=await r.json();for(const x of d.results||[]){if(!country||x.country_code===country)add({name:x.name,nameEn:x.name,admin1:x.admin1,country:x.country,country_code:x.country_code,latitude:x.latitude,longitude:x.longitude})}}}catch{}
-    if(q.length>=1){try{const u=`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=100&countrycodes=${country.toLowerCase()}&q=${encodeURIComponent(q)}`;const r=await fetch(u,{headers:{'User-Agent':'iomastavka/1.1'}});if(r.ok){const d=await r.json();for(const x of d)add(x)}}catch{}}
-    if(alias && country===alias[1]) add({name:alias[0],nameEn:alias[0],nameZh:alias[3],admin1:alias[2],country:'China',country_code:'CN',latitude:null,longitude:null});
-    const seen=new Set(); const clean=results.filter(x=>{if(x.country_code&&x.country_code!==country)return false;const k=normalizeText(`${x.name}|${x.admin1}|${x.country_code}`);if(seen.has(k))return false;seen.add(k);return true});
+    try{const u=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchName)}&count=100&language=en&format=json`;const r=await fetch(u,{headers:{'User-Agent':'iomastavastka/1.0'}});if(r.ok){const d=await r.json();for(const x of d.results||[]){if((isAsiaScope&&ASIA_CODES_SERVER.has(String(x.country_code||'').toUpperCase()))||(!isAsiaScope&&x.country_code===country))add({name:x.name,nameEn:x.name,admin1:x.admin1,country:x.country,country_code:x.country_code,latitude:x.latitude,longitude:x.longitude})}}}catch{}
+    if(q.length>=1){try{const cc=isAsiaScope?[...ASIA_CODES_SERVER].map(x=>x.toLowerCase()).join(','):country.toLowerCase(); const u=`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=100&countrycodes=${cc}&q=${encodeURIComponent(q)}`;const r=await fetch(u,{headers:{'User-Agent':'iomastavka/1.1'}});if(r.ok){const d=await r.json();for(const x of d)add(x)}}catch{}}
+    if(alias && (isAsiaScope||country===alias[1])) add({name:alias[0],nameEn:alias[0],nameZh:alias[3],admin1:alias[2],country:'China',country_code:'CN',latitude:null,longitude:null});
+    const seen=new Set(); const clean=results.filter(x=>{if(x.country_code&&((isAsiaScope&&!ASIA_CODES_SERVER.has(String(x.country_code).toUpperCase()))||(!isAsiaScope&&x.country_code!==country)))return false;const k=normalizeText(`${x.name}|${x.admin1}|${x.country_code}`);if(seen.has(k))return false;seen.add(k);return true});
     clean.sort((a,b)=>{const aa=normalizeText(`${a.name} ${a.nameEn} ${a.nameZh}`),bb=normalizeText(`${b.name} ${b.nameEn} ${b.nameZh}`),qq=normalizeText(q);const sa=aa.startsWith(qq)?0:aa.includes(qq)?1:2,sb=bb.startsWith(qq)?0:bb.includes(qq)?1:2;return sa-sb});
     res.json({ok:true,results:clean.slice(0,limit)});
   }catch{res.status(502).json({ok:false,error:'city search unavailable',results:[]});}
@@ -389,32 +392,33 @@ function relevantRateRecords(db, context){
 app.post('/api/customs/check', auth, async (req,res) => {
   const code=String(req.body?.code||'').replace(/\D/g,'').slice(0,10);
   if(code.length<4) return res.status(400).json({ok:false,error:'Введите корректный код ТН ВЭД'});
-  const sourceUrl=`https://customs.gov.ru/search?q=${encodeURIComponent(code)}&date_since=&date_until=&fields%5B%5D=title&fields%5B%5D=sub&fields%5B%5D=description&fields%5B%5D=text`;
+  const key=process.env.OPENAI_API_KEY;
+  const officialUrl=`https://customs.gov.ru/`;
   try{
-    const r=await fetch(sourceUrl,{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0'},redirect:'follow'});
-    const html=await r.text();
-    let text=html.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ').trim().slice(0,18000);
-    if(text.length < 180 || /вход|логин|captcha|доступ запрещен/i.test(text)){
-      // The current FTS site may return a shell/login page to server-side requests.
-      // Pull the public EAEU nomenclature dataset from the Russian tax authority as a fallback,
-      // while clearly telling the AI which source is secondary.
-      try{
-        const fr=await fetch('https://www.nalog.gov.ru/rn77/program/5961290/',{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0'}});
-        if(fr.ok){const fh=await fr.text(); const ft=fh.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ').trim(); text='ФТС search page did not expose code-specific text. Public EAEU TN VED dataset reference: '+ft.slice(0,14000);}
-      }catch{}
+    // First try the official FTS site directly.
+    let officialText='';
+    try{
+      const u=`https://customs.gov.ru/search?q=${encodeURIComponent(code)}`;
+      const r=await fetch(u,{headers:{'User-Agent':'Mozilla/5.0 (compatible; iomastavka/1.0)'},redirect:'follow',signal:AbortSignal.timeout(9000)});
+      if(r.ok){
+        const html=await r.text();
+        officialText=html.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ').trim();
+        if(officialText.length>220 && !/captcha|доступ запрещен|access denied|вход|логин/i.test(officialText)) officialText=officialText.slice(0,22000); else officialText='';
+      }
+    }catch{}
+    if(!key){
+      return res.json({ok:true,code,title:'ТН ВЭД',analysis:officialText?officialText:'Для интеллектуального разбора нужен OPENAI_API_KEY. Код принят, но автоматический анализ сейчас недоступен.',sourceUrl:officialUrl});
     }
-    const key=process.env.OPENAI_API_KEY;
-    if(!key){ return res.json({ok:true,code,title:'Информация ФТС',analysis:'Официальная страница ФТС найдена, но OPENAI_API_KEY не настроен для автоматического разбора.',sourceUrl}); }
-    const model=process.env.OPENAI_MODEL || 'gpt-5.6-luna';
-    const prompt=`Ты таможенный аналитик iomastavka. Разбери только информацию, найденную на официальном сайте ФТС России customs.gov.ru для кода ТН ВЭД ЕАЭС ${code}. Не выдумывай отсутствующие данные. Дай структурировано: 1) наименование/описание товара; 2) уровень кода (4/6/10 знаков); 3) ставки пошлины, если явно указаны; 4) НДС/акциз, если явно указаны; 5) запреты/ограничения, лицензии, разрешения, сертификаты, маркировка и иные меры нетарифного регулирования, если есть; 6) особые условия/примечания; 7) что нужно уточнить у декларанта. Если официальная страница не содержит конкретного значения, напиши «не найдено на странице ФТС». В конце добавь предупреждение, что классификация зависит от фактических характеристик товара и решение таможни имеет приоритет. Сведения ФТС: ${text}`;
-    const ar=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model,input:[{role:'system',content:'Отвечай на русском, кратко и структурировано.'},{role:'user',content:prompt}],max_output_tokens:1200})});
-    const d=await ar.json();
-    if(!ar.ok) return res.status(ar.status).json({ok:false,error:d?.error?.message||'Не удалось разобрать данные ФТС'});
-    let analysis=d.output_text||'';
-    if(!analysis&&Array.isArray(d.output)) analysis=d.output.flatMap(o=>Array.isArray(o.content)?o.content:[]).map(c=>c.text||c.value||'').filter(Boolean).join('\n');
-    const htmlOut=analysis.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-    res.json({ok:true,code,title:'Информация ФТС',analysis:analysis,analysisHtml:htmlOut,sourceUrl});
-  }catch(e){res.status(502).json({ok:false,error:'Не удалось получить информацию с customs.gov.ru: '+(e.message||'ошибка сети')});}
+    const model=openAIModel(process.env.OPENAI_MODEL);
+    const prompt=`Ты таможенный аналитик для российского логиста. Найди и проанализируй информацию именно по коду ТН ВЭД ЕАЭС ${code}. ПРИОРИТЕТ ИСТОЧНИКА: официальный сайт ФТС России customs.gov.ru. Используй веб-поиск. Если конкретная страница ФТС недоступна, можно дополнительно свериться с актуальными справочниками ТН ВЭД, но обязательно явно пометь их как неофициальные. Не выдумывай. Ответ на русском, структурировано: название кода; иерархия 4/6/10 знаков; пошлина; НДС; акциз; меры нетарифного регулирования; разрешительные документы/сертификация; маркировка; дополнительные единицы измерения; особые примечания; что нужно уточнить у декларанта. Если значение не найдено — так и напиши. В конце: 'Решение о классификации зависит от характеристик товара и официального решения таможенного органа.'${officialText?`\n\nТекст, полученный напрямую с customs.gov.ru:\n${officialText}`:''}`;
+    const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model,input:prompt,tools:[{type:'web_search'}],tool_choice:'auto',max_output_tokens:1800})});
+    const d=await r.json();
+    if(!r.ok) return res.status(r.status).json({ok:false,error:d?.error?.message||'Не удалось выполнить анализ ТН ВЭД'});
+    let text=typeof d.output_text==='string'?d.output_text:'';
+    if(!text&&Array.isArray(d.output)) text=d.output.flatMap(o=>Array.isArray(o.content)?o.content:[]).map(c=>c.text||c.value||'').filter(Boolean).join('\n');
+    if(!text) throw new Error('Пустой ответ анализа ТН ВЭД');
+    res.json({ok:true,code,title:`ТН ВЭД ${code}`,analysis:text,sourceUrl:officialUrl});
+  }catch(e){res.status(502).json({ok:false,error:e.message||'Не удалось получить информацию по коду ТН ВЭД'});}
 });
 
 app.post('/api/ai', async (req,res) => {
