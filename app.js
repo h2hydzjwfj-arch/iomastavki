@@ -2,9 +2,9 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
 const I18N = {
-  ru:{title:'Расчёт ставки',from:'Откуда',to:'Куда',cargo:'ГРУЗ',weight:'Вес, кг',pieces:'Количество мест',distance:'Расстояние, км',auto:'Автоматически',dimensions:'ГАБАРИТЫ ОДНОГО МЕСТА',volumeAll:'Объём — по всем местам',length:'Длина',width:'Ширина',height:'Высота',forwarder:'Экспедитор',transport:'Вид транспорта',incoterms:'Условия поставки',dimWeight:'Объёмный вес',chooseForwarder:'Выберите экспедитора',chooseTransport:'Выберите транспорт',selected:'ЭКСПЕДИТОР',none:'Не выбран',calculate:'Рассчитать',agents:'Экспедиторы',assistant:'ИИ-ассистент',assistantSub:'Спросите что угодно по логистике',assistantHelp:'Можно писать обычным языком: маршрут, ставка, Incoterms, таможня, расчёт веса или новая ставка.',send:'Отправить',news:'Новости',newsSub:'Логистика · Китай · Таможня',logout:'Выйти',thinking:'Думаю…',aiOff:'ИИ не подключён. Добавьте OPENAI_API_KEY в Render.',newsLoading:'Загружаю новости…',noNews:'Новости пока недоступны.',weatherError:'Погода временно недоступна.',todayDate:'15.09.2026 г.'},
-  en:{title:'Rate calculation',from:'From',to:'To',cargo:'CARGO',weight:'Weight, kg',pieces:'Pieces',distance:'Distance, km',auto:'Automatic',dimensions:'DIMENSIONS OF ONE PIECE',volumeAll:'Volume — all pieces',length:'Length',width:'Width',height:'Height',forwarder:'Forwarder',transport:'Transport',incoterms:'Incoterms',dimWeight:'Volumetric weight',chooseForwarder:'Choose forwarder',chooseTransport:'Choose transport',selected:'FORWARDER',none:'Not selected',calculate:'Calculate',agents:'Forwarders',assistant:'AI assistant',assistantSub:'Ask anything about logistics',assistantHelp:'Write naturally: route, rate, Incoterms, customs, weight calculation or a new rate.',send:'Send',news:'News',newsSub:'Logistics · China · Customs',logout:'Log out',thinking:'Thinking…',aiOff:'AI is not connected. Add OPENAI_API_KEY in Render.',newsLoading:'Loading news…',noNews:'News are temporarily unavailable.',weatherError:'Weather is temporarily unavailable.',todayDate:'15.09.2026'},
-  zh:{title:'运价计算',from:'起运地',to:'目的地',cargo:'货物',weight:'重量，公斤',pieces:'件数',distance:'距离，公里',auto:'自动',dimensions:'单件尺寸',volumeAll:'体积 — 所有件',length:'长度',width:'宽度',height:'高度',forwarder:'货运代理',transport:'运输方式',incoterms:'贸易术语',dimWeight:'体积重量',chooseForwarder:'选择货运代理',chooseTransport:'选择运输方式',selected:'货运代理',none:'未选择',calculate:'计算',agents:'货运代理',assistant:'AI 助手',assistantSub:'咨询物流问题',assistantHelp:'可以直接输入路线、运价、贸易术语、清关或体积重量问题。',send:'发送',news:'新闻',newsSub:'物流 · 中国 · 海关',logout:'退出',thinking:'思考中…',aiOff:'AI 尚未连接。请在 Render 添加 OPENAI_API_KEY。',newsLoading:'正在加载新闻…',noNews:'暂时没有新闻。',weatherError:'天气暂时不可用。',todayDate:'15.09.2026'}
+  ru:{title:'Расчёт ставки',from:'Откуда',to:'Куда',cargo:'ГРУЗ',weight:'Вес, кг',pieces:'Количество мест',distance:'Расстояние, км',auto:'Автоматически',dimensions:'ГАБАРИТЫ ОДНОГО МЕСТА',volumeAll:'Объём — по всем местам',length:'Длина',width:'Ширина',height:'Высота',forwarder:'Экспедитор',transport:'Вид транспорта',incoterms:'Условия поставки',dimWeight:'Объёмный вес',chooseForwarder:'Выберите экспедитора',chooseTransport:'Выберите транспорт',selected:'ЭКСПЕДИТОР',none:'Не выбран',calculate:'Рассчитать',agents:'Экспедиторы',assistant:'ИИ-ассистент',assistantSub:'Спросите что угодно по логистике',assistantHelp:'Можно писать обычным языком: маршрут, ставка, Incoterms, таможня, расчёт веса или новая ставка.',send:'Отправить',news:'Новости',newsSub:'Логистика · Китай · Таможня',logout:'Выйти',thinking:'Думаю…',aiOff:'ИИ не подключён. Добавьте OPENAI_API_KEY в Render.',newsLoading:'Загружаю новости…',noNews:'Новости пока недоступны.',weatherError:'Погода временно недоступна.',todayDate:'15.09.2026 г.',home:'Главная',heroEyebrow:'ЛОГИСТИКА · КИТАЙ → РОССИЯ',heroText:'Точный расчёт. Умный помощник.\nВсё необходимое для работы с грузом — в одном месте.',tileRates:'Расчёт ставок',tileRatesSub:'Маршрут, ставка и транспорт',tileAI:'AI-ассистент',tileAISub:'Текстом или голосом',tileAgents:'Экспедиторы',tileAgentsSub:'Контакты и направления перевозок',tileNews:'Новости ВЭД',tileNewsSub:'Китай · логистика · таможня',directoryEyebrow:'СПРАВОЧНИК',directorySub:'Поставщики и контакты по направлениям.',intelligence:'ИНТЕЛЛЕКТ',assistantSub2:'Логистика, расчёты и ВЭД — голосом или текстом.',attach:'＋ Прикрепить КП / PDF / Excel / Word / TXT',fileHint:'Файл можно добавить вместе с сообщением',voice:'Голос',intelligenceFeed:'ИНФОРМАЦИОННАЯ ЛЕНТА',newsSub2:'Китай · логистика · таможня'},
+  en:{title:'Rate calculation',from:'From',to:'To',cargo:'CARGO',weight:'Weight, kg',pieces:'Pieces',distance:'Distance, km',auto:'Automatic',dimensions:'DIMENSIONS OF ONE PIECE',volumeAll:'Volume — all pieces',length:'Length',width:'Width',height:'Height',forwarder:'Forwarder',transport:'Transport',incoterms:'Incoterms',dimWeight:'Volumetric weight',chooseForwarder:'Choose forwarder',chooseTransport:'Choose transport',selected:'FORWARDER',none:'Not selected',calculate:'Calculate',agents:'Forwarders',assistant:'AI assistant',assistantSub:'Ask anything about logistics',assistantHelp:'Write naturally: route, rate, Incoterms, customs, weight calculation or a new rate.',send:'Send',news:'News',newsSub:'Logistics · China · Customs',logout:'Log out',thinking:'Thinking…',aiOff:'AI is not connected. Add OPENAI_API_KEY in Render.',newsLoading:'Loading news…',noNews:'News are temporarily unavailable.',weatherError:'Weather is temporarily unavailable.',todayDate:'15.09.2026',home:'Home',heroEyebrow:'LOGISTICS · CHINA → RUSSIA',heroText:'Accurate rates. Smart assistant.\nEverything you need for cargo work — in one place.',tileRates:'Rate calculation',tileRatesSub:'Route, rate and transport',tileAI:'AI assistant',tileAISub:'Text or voice',tileAgents:'Forwarders',tileAgentsSub:'Contacts and transport directions',tileNews:'Foreign trade news',tileNewsSub:'China · logistics · customs',directoryEyebrow:'DIRECTORY',directorySub:'Suppliers and contacts by direction.',intelligence:'INTELLIGENCE',assistantSub2:'Logistics, rates and foreign trade — by voice or text.',attach:'＋ Attach quote / PDF / Excel / Word / TXT',fileHint:'You can add a file with your message',voice:'Voice',intelligenceFeed:'INTELLIGENCE FEED',newsSub2:'China · logistics · customs'},
+  zh:{title:'运价计算',from:'起运地',to:'目的地',cargo:'货物',weight:'重量，公斤',pieces:'件数',distance:'距离，公里',auto:'自动',dimensions:'单件尺寸',volumeAll:'体积 — 所有件',length:'长度',width:'宽度',height:'高度',forwarder:'货运代理',transport:'运输方式',incoterms:'贸易术语',dimWeight:'体积重量',chooseForwarder:'选择货运代理',chooseTransport:'选择运输方式',selected:'货运代理',none:'未选择',calculate:'计算',agents:'货运代理',assistant:'AI 助手',assistantSub:'咨询物流问题',assistantHelp:'可以直接输入路线、运价、贸易术语、清关或体积重量问题。',send:'发送',news:'新闻',newsSub:'物流 · 中国 · 海关',logout:'退出',thinking:'思考中…',aiOff:'AI 尚未连接。请在 Render 添加 OPENAI_API_KEY。',newsLoading:'正在加载新闻…',noNews:'暂时没有新闻。',weatherError:'天气暂时不可用。',todayDate:'15.09.2026',home:'Home',heroEyebrow:'LOGISTICS · CHINA → RUSSIA',heroText:'Accurate rates. Smart assistant.\nEverything you need for cargo work — in one place.',tileRates:'Rate calculation',tileRatesSub:'Route, rate and transport',tileAI:'AI assistant',tileAISub:'Text or voice',tileAgents:'Forwarders',tileAgentsSub:'Contacts and transport directions',tileNews:'Foreign trade news',tileNewsSub:'China · logistics · customs',directoryEyebrow:'DIRECTORY',directorySub:'Suppliers and contacts by direction.',intelligence:'INTELLIGENCE',assistantSub2:'Logistics, rates and foreign trade — by voice or text.',attach:'＋ Attach quote / PDF / Excel / Word / TXT',fileHint:'You can add a file with your message',voice:'Voice',intelligenceFeed:'INTELLIGENCE FEED',newsSub2:'China · logistics · customs'}
 };
 
 const modes={air:{ru:'Авиа',en:'Air',zh:'空运',factor:167},road:{ru:'Авто',en:'Road',zh:'公路',factor:400},rail:{ru:'ЖД',en:'Rail',zh:'铁路',factor:500},sea:{ru:'Море',en:'Sea',zh:'海运',factor:1000},multimodal:{ru:'Море + ЖД',en:'Sea + Rail',zh:'海运+铁路',factor:1000}};
@@ -33,8 +33,9 @@ function setDimensionLabels(){
  });
 }
 function applyLang(){
- document.documentElement.lang=lang; $$('[data-i18n]').forEach(el=>el.textContent=tr(el.dataset.i18n));
- $('#fromCity').placeholder=lang==='zh'?'中国城市':lang==='en'?'City in China':'Город в Китае'; $('#toCity').placeholder=lang==='zh'?'俄罗斯城市':lang==='en'?'City in Russia':'Город в России'; $('#distance').placeholder=tr('auto'); renderFactors(); $('#assistantInput').placeholder=lang==='zh'?'输入消息…':lang==='en'?'Write a message…':'Напишите сообщение…';
+ document.documentElement.lang=lang;
+ $$('[data-i18n]').forEach(el=>{const key=el.dataset.i18n;if(key==='heroText') el.innerHTML=tr(key).replace(/\n/g,'<br>'); else el.textContent=tr(key)}); $$('[data-i18n]').forEach(el=>el.textContent=tr(el.dataset.i18n));
+ $('#fromCity').placeholder=lang==='zh'?'中国城市':lang==='en'?'City in China':'Город в Китае'; $('#toCity').placeholder=lang==='zh'?'俄罗斯城市':lang==='en'?'City in Russia':'Город в России'; $('#distance').placeholder=tr('auto'); renderFactors(); $('#assistantInput').placeholder=lang==='zh'?'输入消息…':lang==='en'?'Write a message…':'Напишите сообщение…'; $('#fileNames').textContent=tr('fileHint');
  $$('.lang').forEach(b=>b.classList.toggle('active',b.dataset.lang===lang)); localStorage.setItem('iomastavka_lang',lang);
  setDimensionLabels(); renderForwarderMenu(); renderTransportMenu(); renderIncoterms(); renderFactors(); renderSuggestions($('#fromSuggestions'),$('#fromCity').value.trim()?cityMatches($('#fromCity').value,'china'):[],$('#fromCity'),'china'); renderSuggestions($('#toSuggestions'),$('#toCity').value.trim()?cityMatches($('#toCity').value,'russia'):[],$('#toCity'),'russia'); $('#currencyDate').textContent=formatToday();
 }
@@ -190,7 +191,7 @@ let distanceTimer=null;
 function getCalculatorContext(){
  return {from:$('#fromCity')?.value||'',to:$('#toCity')?.value||'',distanceKm:Number($('#distance')?.value)||null,weightKg:Number($('#weight')?.value)||null,pieces:Number($('#pieces')?.value)||null,lengthMm:dimensionsMm()[0]||null,widthMm:dimensionsMm()[1]||null,heightMm:dimensionsMm()[2]||null,forwarder:selectedForwarder||'',transport:selectedMode?modeName(selectedMode):'',incoterms:$('#incotermBtn span')?.textContent||'EXW'};
 }
-async function sendAI(){
+async function sendAI(fromVoice=false){
  const input=$('#assistantInput'),msg=input.value.trim(),files=[...($('#aiFile')?.files||[])];
  if(!msg&&!files.length)return;
  const shown=msg||(files.length?`📎 ${files.map(f=>f.name).join(', ')}`:''); addChat('user',shown); input.value=''; setAIThinking(true);
@@ -220,33 +221,92 @@ function renderDirectory(){
  function renderDirectoryItems(mode){grid.innerHTML='';const rows=agentDirectory.filter(a=>mode==='all'||(a.modes||[]).includes(mode)||(mode==='rail'&&(a.modes||[]).includes('multimodal'))||(mode==='sea'&&(a.modes||[]).includes('multimodal')));rows.forEach(a=>{const tr=document.createElement('tr');const site=a.site?`<a href="${a.site.startsWith('http')?a.site:'https://'+a.site}" target="_blank" rel="noopener">${a.site.replace(/^https?:\/\//,'')}</a>`:'—';tr.innerHTML=`<td><b>${a.company||'—'}</b></td><td>${a.contact||'—'}</td><td>${a.phone||'—'}</td><td>${a.email||'—'}</td><td>${site}</td><td>${(a.transport||[]).join(', ')||'—'}</td><td>${a.notes||'—'}</td>`;grid.appendChild(tr)})}
 }
 
-// Voice AI: robust recorder for Safari/Chrome/Android + server transcription + spoken TTS.
+// Voice AI: hands-free conversation with automatic end-of-speech detection and barge-in.
 let mediaRecorder=null, voiceChunks=[], voiceListening=false, voiceAutoSpeak=true;
+let voiceStream=null, voiceAnalyser=null, voiceAudioContext=null, voiceVadFrame=0, voiceStartedAt=0, voiceSpeechSeen=false, voiceLastSpeechAt=0;
+let currentAIaudio=null, interruptStream=null, interruptContext=null, interruptFrame=0;
 function voiceLang(){return lang==='zh'?'zh':lang==='en'?'en':'ru'}
+function voiceText(key){
+ const m={
+  listen:{ru:'Слушаю…',en:'Listening…',zh:'正在聆听…'},
+  transcribe:{ru:'Распознаю…',en:'Transcribing…',zh:'正在识别…'},
+  ready:{ru:'Готов к разговору',en:'Ready to talk',zh:'准备对话'},
+  recognized:{ru:'Речь распознана',en:'Speech recognized',zh:'已识别语音'},
+  mic:{ru:'Разреши доступ к микрофону',en:'Allow microphone access',zh:'请允许麦克风访问'},
+  unavailable:{ru:'Микрофон временно недоступен',en:'Microphone is temporarily unavailable',zh:'麦克风暂时不可用'},
+  unsupported:{ru:'Голосовой ввод не поддерживается этим браузером',en:'Voice input is not supported by this browser',zh:'此浏览器不支持语音输入'},
+  fail:{ru:'Не удалось распознать голос',en:'Voice recognition failed',zh:'语音识别失败'}
+ };
+ return m[key]?.[lang]||m[key]?.ru||key;
+}
+function setVoiceUI(active,state){
+ const btn=$('#voiceButton'),orb=$('#voiceOrb'),el=$('#voiceState');
+ btn?.classList.toggle('listening',active); orb?.classList.toggle('listening',active);
+ if(el&&state)el.textContent=state;
+}
+function stopVoiceTracks(){voiceStream?.getTracks().forEach(t=>t.stop());voiceStream=null;try{voiceAudioContext?.close()}catch{}voiceAudioContext=null;voiceAnalyser=null;if(voiceVadFrame)cancelAnimationFrame(voiceVadFrame);voiceVadFrame=0}
+function monitorSpeech(){
+ if(!voiceListening||!voiceAnalyser)return;
+ const data=new Uint8Array(voiceAnalyser.fftSize);voiceAnalyser.getByteTimeDomainData(data);
+ let sum=0;for(const v of data){const x=(v-128)/128;sum+=x*x} const rms=Math.sqrt(sum/data.length);
+ const now=performance.now();
+ if(rms>0.035){voiceSpeechSeen=true;voiceLastSpeechAt=now;}
+ if(voiceSpeechSeen && now-voiceStartedAt>700 && now-voiceLastSpeechAt>850){stopVoice();return;}
+ voiceVadFrame=requestAnimationFrame(monitorSpeech);
+}
 async function startVoice(){
- const btn=$('#voiceButton'),orb=$('#voiceOrb'),state=$('#voiceState');
- if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){state.textContent='Голосовой ввод не поддерживается этим браузером';return}
+ const btn=$('#voiceButton');
+ if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){setVoiceUI(false,voiceText('unsupported'));return}
  try{
-  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  // If the assistant is speaking, this is a barge-in: stop its speech immediately.
+  if(currentAIaudio){try{currentAIaudio.pause();currentAIaudio.currentTime=0}catch{}currentAIaudio=null;window.speechSynthesis?.cancel();stopInterruptMonitor();}
+  voiceStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
   const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(x=>MediaRecorder.isTypeSupported(x))||'';
-  mediaRecorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);voiceChunks=[];voiceListening=true;
-  btn.classList.add('listening');orb?.classList.add('listening');state.textContent=lang==='ru'?'Слушаю…':lang==='en'?'Listening…':'正在聆听…';
+  mediaRecorder=new MediaRecorder(voiceStream,mime?{mimeType:mime}:undefined);voiceChunks=[];voiceListening=true;voiceStartedAt=performance.now();voiceSpeechSeen=false;voiceLastSpeechAt=voiceStartedAt;
+  setVoiceUI(true,voiceText('listen'));
+  voiceAudioContext=new (window.AudioContext||window.webkitAudioContext)();
+  const src=voiceAudioContext.createMediaStreamSource(voiceStream);voiceAnalyser=voiceAudioContext.createAnalyser();voiceAnalyser.fftSize=512;src.connect(voiceAnalyser);
   mediaRecorder.ondataavailable=e=>{if(e.data.size)voiceChunks.push(e.data)};
   mediaRecorder.onstop=async()=>{
-   stream.getTracks().forEach(t=>t.stop());voiceListening=false;btn.classList.remove('listening');orb?.classList.remove('listening');state.textContent=lang==='ru'?'Распознаю…':lang==='en'?'Transcribing…':'正在识别…';
-   const blob=new Blob(voiceChunks,{type:mediaRecorder.mimeType||'audio/webm'});
-   try{const fd=new FormData();fd.append('file',blob,'voice.'+(blob.type.includes('mp4')?'mp4':'webm'));fd.append('language',voiceLang());const r=await fetch('/api/transcribe',{method:'POST',body:fd});const d=await r.json();if(!r.ok)throw new Error(d.error||'Transcription failed');const text=String(d.text||'').trim();if(!text)throw new Error('No speech');$('#assistantInput').value=text;state.textContent=lang==='ru'?'Речь распознана':lang==='en'?'Speech recognized':'已识别语音';await sendAI();}catch(e){state.textContent=lang==='ru'?'Не удалось распознать голос':lang==='en'?'Voice recognition failed':'语音识别失败'}
-   setTimeout(()=>{if(!voiceListening)state.textContent=lang==='ru'?'Готов к разговору':lang==='en'?'Ready to talk':'准备对话'},1800);
+   const rec=mediaRecorder; const blob=new Blob(voiceChunks,{type:rec?.mimeType||'audio/webm'});
+   stopVoiceTracks();voiceListening=false;setVoiceUI(false,voiceText('transcribe'));
+   try{
+    const fd=new FormData();fd.append('file',blob,'voice.'+(blob.type.includes('mp4')?'mp4':'webm'));fd.append('language',voiceLang());
+    const r=await fetch('/api/transcribe',{method:'POST',body:fd});const d=await r.json();if(!r.ok)throw new Error(d.error||'Transcription failed');
+    const text=String(d.text||'').trim();if(!text)throw new Error('No speech');
+    $('#assistantInput').value=text;setVoiceUI(false,voiceText('recognized'));await sendAI(true);
+   }catch(e){setVoiceUI(false,voiceText('fail'))}
+   setTimeout(()=>{if(!voiceListening)$('#voiceState').textContent=voiceText('ready')},1800);
   };
-  mediaRecorder.start();
- }catch(e){state.textContent=e?.name==='NotAllowedError'?(lang==='ru'?'Разреши доступ к микрофону': 'Allow microphone access'):'Микрофон временно недоступен'}
+  mediaRecorder.start(120);
+  voiceVadFrame=requestAnimationFrame(monitorSpeech);
+ }catch(e){stopVoiceTracks();voiceListening=false;setVoiceUI(false,e?.name==='NotAllowedError'?voiceText('mic'):voiceText('unavailable'))}
 }
-function stopVoice(){if(mediaRecorder&&voiceListening)mediaRecorder.stop()}
+function stopVoice(){if(mediaRecorder&&voiceListening){try{mediaRecorder.stop()}catch{}}}
 function initVoice(){const btn=$('#voiceButton');if(!btn)return;btn.onclick=()=>voiceListening?stopVoice():startVoice()}
+function stopInterruptMonitor(){if(interruptFrame)cancelAnimationFrame(interruptFrame);interruptFrame=0;interruptStream?.getTracks().forEach(t=>t.stop());interruptStream=null;try{interruptContext?.close()}catch{}interruptContext=null}
+async function monitorInterrupt(audio){
+ try{
+  interruptStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+  interruptContext=new (window.AudioContext||window.webkitAudioContext)();const src=interruptContext.createMediaStreamSource(interruptStream);const an=interruptContext.createAnalyser();an.fftSize=512;src.connect(an);
+  const data=new Uint8Array(an.fftSize);let loud=0;
+  const loop=()=>{
+   if(!currentAIaudio||currentAIaudio!==audio||audio.paused){stopInterruptMonitor();return}
+   an.getByteTimeDomainData(data);let sum=0;for(const v of data){const x=(v-128)/128;sum+=x*x}const rms=Math.sqrt(sum/data.length);
+   if(rms>0.075)loud++;else loud=Math.max(0,loud-1);
+   if(loud>=3){try{audio.pause();audio.currentTime=0}catch{}currentAIaudio=null;stopInterruptMonitor();setTimeout(()=>startVoice(),80);return}
+   interruptFrame=requestAnimationFrame(loop);
+  };interruptFrame=requestAnimationFrame(loop);
+ }catch{}
+}
 async function speakAI(text){
  if(!voiceAutoSpeak||!text)return;
- try{const r=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:text,language:voiceLang()})});if(r.ok){const blob=await r.blob();const url=URL.createObjectURL(blob);const audio=new Audio(url);audio.onended=()=>URL.revokeObjectURL(url);await audio.play();return;}}catch{}
- if('speechSynthesis' in window){window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=lang==='zh'?'zh-CN':lang==='en'?'en-US':'ru-RU';u.rate=.96;u.pitch=.98;u.volume=1;window.speechSynthesis.speak(u)}
+ window.speechSynthesis?.cancel();stopInterruptMonitor();
+ try{
+  const r=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:text,language:voiceLang()})});
+  if(r.ok){const blob=await r.blob();const url=URL.createObjectURL(blob);const audio=new Audio(url);currentAIaudio=audio;audio.onended=()=>{URL.revokeObjectURL(url);if(currentAIaudio===audio){currentAIaudio=null;stopInterruptMonitor()}};audio.onerror=()=>{if(currentAIaudio===audio)currentAIaudio=null;stopInterruptMonitor()};await audio.play();monitorInterrupt(audio);return;}
+ }catch{}
+ if('speechSynthesis' in window){const u=new SpeechSynthesisUtterance(text);u.lang=lang==='zh'?'zh-CN':lang==='en'?'en-US':'ru-RU';u.rate=.96;u.pitch=.98;u.volume=1;window.speechSynthesis.speak(u)}
 }
 initVoice();
 
@@ -268,7 +328,7 @@ async function loadCurrency(){
 async function loadNews(){const box=$('#newsList');box.innerHTML=`<div class="news-loading">${tr('newsLoading')}</div>`;try{const r=await fetch('/api/news');const d=await r.json();if(!d.items?.length){box.innerHTML=`<div class="news-loading">${tr('noNews')}</div>`;return}box.innerHTML='';d.items.forEach(n=>{const a=document.createElement('a');a.href=n.link;a.target='_blank';a.rel='noopener noreferrer';a.className='news-item';a.innerHTML=`<strong>${n.title}</strong><small>${n.source||''} · ${n.date?new Date(n.date).toLocaleDateString(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':'en-US'):''}</small>`;box.appendChild(a)})}catch{box.innerHTML=`<div class="news-loading">${tr('noNews')}</div>`}}
 
 function setTimeWeather(){const h=Number(new Intl.DateTimeFormat('en-US',{timeZone:'Europe/Moscow',hour:'numeric',hour12:false}).format(new Date()));document.body.classList.remove('weather-night','weather-sun','weather-cloud','weather-rain','weather-snow','weather-storm');document.body.classList.add(h<6||h>=20?'weather-night':'weather-sun')}
-function applyWeatherVisual(d){document.body.classList.remove('weather-night','weather-sun','weather-cloud','weather-rain','weather-snow','weather-storm');const now=Math.floor(Date.now()/1000);const night=d.sunrise&&d.sunset?(now<d.sunrise||now>d.sunset):false;const main=d.main||'';const icon=d.icon||'';document.body.classList.add(night?'weather-night':main==='Thunderstorm'?'weather-storm':main==='Rain'||main==='Drizzle'?'weather-rain':main==='Snow'?'weather-snow':main==='Clouds'?'weather-cloud':'weather-sun');document.documentElement.style.setProperty('--weather-clouds',Math.min(1,(Number(d.clouds)||0)/100));document.documentElement.style.setProperty('--weather-wind',Math.min(1,(Number(d.wind)||0)/18));document.documentElement.style.setProperty('--weather-temp',Number(d.temp)||0);document.documentElement.dataset.weatherIcon=icon;const hw=$('#homeWeatherText');if(hw)hw.textContent=`${main}${d.temp!=null?' · '+Math.round(d.temp)+'°':''}`;const hs=$('#homeRouteStatus');if(hs&&$('#distance')?.value)hs.textContent=`Маршрут · ${Number($('#distance').value).toLocaleString('ru-RU')} км`;}
+function applyWeatherVisual(d){document.body.classList.remove('weather-night','weather-sun','weather-cloud','weather-rain','weather-snow','weather-storm');const now=Math.floor(Date.now()/1000);const night=d.sunrise&&d.sunset?(now<d.sunrise||now>d.sunset):false;const main=d.main||'';const icon=d.icon||'';document.body.classList.add(night?'weather-night':main==='Thunderstorm'?'weather-storm':main==='Rain'||main==='Drizzle'?'weather-rain':main==='Snow'?'weather-snow':main==='Clouds'?'weather-cloud':'weather-sun');document.documentElement.style.setProperty('--weather-clouds',Math.min(1,(Number(d.clouds)||0)/100));document.documentElement.style.setProperty('--weather-wind',Math.min(1,(Number(d.wind)||0)/18));document.documentElement.style.setProperty('--weather-temp',Number(d.temp)||0);document.documentElement.dataset.weatherIcon=icon;const weatherNames={Clear:{ru:'Ясно',en:'Clear',zh:'晴'},Clouds:{ru:'Облачно',en:'Cloudy',zh:'多云'},Rain:{ru:'Дождь',en:'Rain',zh:'下雨'},Drizzle:{ru:'Морось',en:'Drizzle',zh:'毛毛雨'},Snow:{ru:'Снег',en:'Snow',zh:'下雪'},Thunderstorm:{ru:'Гроза',en:'Thunderstorm',zh:'雷雨'},Mist:{ru:'Туман',en:'Mist',zh:'雾'},Fog:{ru:'Туман',en:'Fog',zh:'雾'}};const hw=$('#homeWeatherText');if(hw)hw.textContent=`${weatherNames[main]?.[lang]||main}${d.temp!=null?' · '+Math.round(d.temp)+'°':''}`;const hs=$('#homeRouteStatus');if(hs&&$('#distance')?.value)hs.textContent=`Маршрут · ${Number($('#distance').value).toLocaleString('ru-RU')} км`;}
 async function checkWeather(){try{const cfg=await fetch('/api/config',{cache:'no-store'}).then(r=>r.json());if(!cfg.weatherConfigured){setTimeWeather();return}const wr=await fetch('/api/weather',{cache:'no-store'});if(!wr.ok)throw new Error('weather');const d=await wr.json();applyWeatherVisual(d)}catch{setTimeWeather()}}
 async function backgroundRefresh(){await Promise.allSettled([checkWeather(),loadRates(),loadCurrency()]);}
 checkWeather();setInterval(checkWeather,5*60*1000);
