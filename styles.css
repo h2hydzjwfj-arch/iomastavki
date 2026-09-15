@@ -111,7 +111,7 @@ body.weather-night .weather-scene{background:linear-gradient(180deg,#071827 0%,#
 
 /* Theme switch beside Hamsa */
 .theme-controls{display:flex;gap:4px;margin-left:4px;align-items:center}.theme-controls button{width:32px;height:32px;border:0;border-radius:50%;background:rgba(255,255,255,.45);color:#456b7e;cursor:pointer;box-shadow:0 5px 15px rgba(25,70,95,.08);transition:.2s}.theme-controls button:hover{transform:scale(1.08);background:rgba(255,255,255,.75)}
-body.manual-dark{--ink:#e9f4f8;--muted:#9ab0bd;--line:rgba(220,240,248,.13);--white:rgba(20,43,58,.82);--shadow:0 30px 90px rgba(0,0,0,.3);background:#081c29;color:var(--ink)}body.manual-dark .weather-scene{filter:brightness(.72) saturate(.88)}body.manual-dark .service-card,body.manual-dark .calculator-card,body.manual-dark .directory-panel,body.manual-dark .assistant-shell{background:linear-gradient(135deg,rgba(13,37,51,.86),rgba(17,52,69,.72));border-color:rgba(170,218,235,.13);color:#e7f4f8}body.manual-dark input,body.manual-dark textarea,body.manual-dark .fake-select{background:rgba(11,31,43,.78);color:#e7f4f8;border-color:rgba(170,218,235,.16)}body.manual-dark .hover-menu,body.manual-dark .suggestions{background:rgba(13,37,51,.98);color:#e7f4f8}body.manual-dark .hover-item,body.manual-dark .suggestions button{color:#dcecf2}body.manual-dark .service-text small,body.manual-dark .field label,body.manual-dark .eyebrow{color:#9ab6c3}body.manual-dark .hero-copy h1{color:#d9f2fb}body.manual-dark .hero-copy p{color:#a8bec9}body.manual-dark .result,body.manual-dark .recommendation,body.manual-dark .dimensions{background:rgba(10,33,46,.65);color:#dcecf2}.manual-dark .close-button{background:#dfe8ec;color:#415966}
+body.manual-dark{--ink:#f2fbff;--muted:#b9cfda;--line:rgba(220,240,248,.19);--white:rgba(22,48,65,.9);--shadow:0 30px 90px rgba(0,0,0,.34);background:#0b2534;color:var(--ink)}body.manual-dark .weather-scene{filter:brightness(.94) saturate(1.02)}body.manual-dark .service-card,body.manual-dark .calculator-card,body.manual-dark .directory-panel,body.manual-dark .assistant-shell{background:linear-gradient(135deg,rgba(18,50,67,.94),rgba(24,66,84,.9));border-color:rgba(190,231,244,.2);color:#f1fbff;box-shadow:0 25px 70px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.06)}body.manual-dark input,body.manual-dark textarea,body.manual-dark .fake-select{background:rgba(12,38,52,.92);color:#f2fbff;border-color:rgba(190,231,244,.22)}body.manual-dark .hover-menu,body.manual-dark .suggestions{background:rgba(13,37,51,.98);color:#e7f4f8}body.manual-dark .hover-item,body.manual-dark .suggestions button{color:#dcecf2}body.manual-dark .service-text small,body.manual-dark .field label,body.manual-dark .eyebrow{color:#b9d1dc}body.manual-dark .hero-copy h1{color:#d9f2fb}body.manual-dark .hero-copy p{color:#c1d5df}body.manual-dark .result,body.manual-dark .recommendation,body.manual-dark .dimensions{background:rgba(10,33,46,.65);color:#dcecf2}.manual-dark .close-button{background:#dfe8ec;color:#415966}
 
 .auto-calc-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:11px}.auto-calc-strip>div{padding:9px 11px;border-radius:12px;background:rgba(255,255,255,.42);border:1px solid rgba(55,103,132,.08);display:flex;justify-content:space-between;gap:10px;align-items:center}.auto-calc-strip span{font-size:9px;color:#7c92a0}.auto-calc-strip b{font-size:11px;color:#315a71}
 
@@ -168,3 +168,25 @@ body.manual-dark .tarot-shell{background:radial-gradient(circle at 50% 25%,rgba(
 @media(max-width:700px){.result-grid{grid-template-columns:1fr}.article-gallery{grid-template-columns:1fr 1fr}.article-gallery img{height:110px}}
 .home-currency{font-size:13px;gap:7px}.home-currency span{font-size:10px}.home-currency b{font-size:16px;margin-right:10px;color:#315d74}.currency-item b{font-size:16px}.currency-bar{font-size:14px}.currency-source{font-size:10px}
 .article-video-frame{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:16px;margin-top:10px;background:#092535}
+
+/* Dark theme: luminous, deep-blue night rather than near-black. */
+body.manual-dark .topbar .brand{color:#bcecff}
+body.manual-dark .hamsa-button{background:rgba(32,82,105,.65);border-color:rgba(211,243,251,.3);box-shadow:0 12px 35px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.08)}
+body.manual-dark .theme-controls button{background:rgba(34,88,112,.72);color:#e8fbff;border:1px solid rgba(204,239,248,.18)}
+body.manual-dark .lang:hover,body.manual-dark .lang.active{background:rgba(73,135,160,.3);border-color:rgba(207,240,249,.25)}
+body.manual-dark .logout{background:rgba(40,92,113,.68);color:#e7f8fd}
+body.manual-dark .result,body.manual-dark .recommendation,body.manual-dark .dimensions{background:rgba(16,47,63,.94);color:#eefaff;border-color:rgba(190,231,244,.18)}
+body.manual-dark .auto-calc-strip>div{background:rgba(38,88,107,.55);border-color:rgba(190,231,244,.16)}
+body.manual-dark .auto-calc-strip span{color:#b8d0da}
+body.manual-dark .auto-calc-strip b{color:#ecfbff}
+body.manual-dark .currency-item{background:rgba(35,86,106,.6);border-color:rgba(190,231,244,.18);color:#eefaff}
+
+/* Tarot particle materialization */
+.tarot-dust-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}
+.tarot-card{z-index:3;opacity:0;transform:none!important;filter:none!important;animation:none!important}
+.tarot-shell.tarot-ready .tarot-card{animation:tarotCardMaterialize .7s ease-out 1.48s both!important}
+.tarot-shell.tarot-ready .tarot-stars{animation:starShimmer 2.6s ease-in-out 2.1s infinite}
+@keyframes tarotCardMaterialize{0%{opacity:0;filter:blur(5px);transform:scale(.985)}100%{opacity:1;filter:blur(0);transform:scale(1)}}
+body.manual-dark .tarot-shell{background:radial-gradient(circle at 50% 38%,rgba(54,111,137,.72),rgba(9,32,47,.96) 60%,rgba(4,22,33,.98));}
+body.manual-dark .tarot-card{background:linear-gradient(145deg,#24566d,#317d99 46%,#153b51);box-shadow:0 35px 100px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.18)}
+@media (prefers-reduced-motion: reduce){.tarot-shell.tarot-ready .tarot-card{animation:tarotCardMaterialize .2s ease-out both!important}.tarot-dust-canvas{display:none}}

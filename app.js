@@ -109,7 +109,41 @@ document.addEventListener('click',e=>{$$('.hover-menu').forEach(m=>{if(!e.target
 $('#menuButton').onclick=()=>showTarot();
 $('#logoutButton').onclick=async()=>{await fetch('/api/logout',{method:'POST'});location.href='/'}; $('#themeToggleButton').onclick=()=>setTheme(document.body.classList.contains('manual-dark')?'light':'dark'); setTheme(localStorage.getItem('iomastavka_theme')||'light');
 
-function showTarot(){showView('tarotView');const shell=$('#tarotShell'),card=$('.tarot-card');shell?.classList.remove('tarot-ready');card?.classList.remove('tarot-reveal');void card?.offsetWidth;setTimeout(()=>{shell?.classList.add('tarot-ready');card?.classList.add('tarot-reveal')},1000);const cards=[{s:'♌',t:{ru:'Солнце',en:'The Sun',zh:'太阳'},d:{ru:'Сегодня твоя карта — Солнце. День про ясность, движение и уверенный шаг вперёд. Не усложняй то, что уже понятно.',en:'Your card today is The Sun. A day for clarity, movement and a confident step forward. Do not complicate what is already clear.',zh:'今天的牌是太阳。适合清晰、行动和自信前进。已经明确的事情不要再复杂化。'}},{s:'✦',t:{ru:'Звезда',en:'The Star',zh:'星星'},d:{ru:'Сегодня твоя карта — Звезда. Хороший день для идеи, которая давно ждёт своего момента. Дай ей пространство.',en:'Your card today is The Star. A good day for an idea that has been waiting for its moment. Give it space.',zh:'今天的牌是星星。适合让等待已久的想法获得空间。'}},{s:'☽',t:{ru:'Луна',en:'The Moon',zh:'月亮'},d:{ru:'Сегодня твоя карта — Луна. Не спеши с выводами: часть картины проявится позже. Доверься наблюдательности.',en:'Your card today is The Moon. Do not rush to conclusions; part of the picture will appear later. Trust observation.',zh:'今天的牌是月亮。不要急于下结论，部分答案会稍后出现。相信观察。'}}];const day=new Date();const idx=(day.getFullYear()*10000+(day.getMonth()+1)*100+day.getDate())%cards.length;const c=cards[idx];$('#tarotSymbol').textContent=c.s;$('#tarotTitle').textContent=c.t[lang];$('#tarotText').textContent=c.d[lang];}
+function showTarot(){
+  showView('tarotView');
+  const shell=$('#tarotShell'), card=$('.tarot-card');
+  if(!shell||!card)return;
+  shell.classList.remove('tarot-ready','tarot-closing');
+  card.classList.remove('tarot-reveal');
+  const cards=[{s:'♌',t:{ru:'Солнце',en:'The Sun',zh:'太阳'},d:{ru:'Сегодня твоя карта — Солнце. День про ясность, движение и уверенный шаг вперёд. Не усложняй то, что уже понятно.',en:'Your card today is The Sun. A day for clarity, movement and a confident step forward. Do not complicate what is already clear.',zh:'今天的牌是太阳。适合清晰、行动和自信前进。已经明确的事情不要再复杂化。'}},{s:'✦',t:{ru:'Звезда',en:'The Star',zh:'星星'},d:{ru:'Сегодня твоя карта — Звезда. Хороший день для идеи, которая давно ждёт своего момента. Дай ей пространство.',en:'Your card today is The Star. A good day for an idea that has been waiting for its moment. Give it space.',zh:'今天的牌是星星。适合让等待已久的想法获得空间。'}},{s:'☽',t:{ru:'Луна',en:'The Moon',zh:'月亮'},d:{ru:'Сегодня твоя карта — Луна. Не спеши с выводами: часть картины проявится позже. Доверься наблюдательности.',en:'Your card today is The Moon. Do not rush to conclusions; part of the picture will appear later. Trust observation.',zh:'今天的牌是月亮。不要急于下结论，部分答案会稍后出现。相信观察。'}}];
+  const day=new Date(); const idx=(day.getFullYear()*10000+(day.getMonth()+1)*100+day.getDate())%cards.length; const c=cards[idx];
+  $('#tarotSymbol').textContent=c.s; $('#tarotTitle').textContent=c.t[lang]; $('#tarotText').textContent=c.d[lang];
+  requestAnimationFrame(()=>{shell.classList.add('tarot-ready'); startTarotDust(false);});
+}
+function startTarotDust(reverse=false){
+  const canvas=$('#tarotDustCanvas'), shell=$('#tarotShell'); if(!canvas||!shell)return;
+  const ctx=canvas.getContext('2d'); if(!ctx)return;
+  const dpr=Math.min(window.devicePixelRatio||1,2), w=shell.clientWidth, h=shell.clientHeight;
+  canvas.width=Math.max(1,Math.floor(w*dpr)); canvas.height=Math.max(1,Math.floor(h*dpr)); ctx.setTransform(dpr,0,0,dpr,0,0);
+  const rectW=Math.min(390,w*.88), rectH=Math.min(560,h*.78), cx=w/2, cy=h/2;
+  const particles=[]; const count=Math.min(900,Math.max(520,Math.floor(w*h/1400)));
+  for(let i=0;i<count;i++){
+    const x=(Math.random()*w), y=(Math.random()*h), side=Math.floor(Math.random()*4);
+    let tx=cx+(Math.random()-.5)*rectW*.92, ty=cy+(Math.random()-.5)*rectH*.92;
+    // keep targets concentrated around the card perimeter + interior so the silhouette emerges from dust
+    if(Math.random()<.42){ const a=Math.random()*Math.PI*2; const rr=Math.random()<.65?.49:.40; tx=cx+Math.cos(a)*rectW*rr; ty=cy+Math.sin(a)*rectH*rr; }
+    particles.push({x:reverse?tx:x,y:reverse?ty:y,tx:reverse?x:tx,ty:reverse?y:ty,r:.45+Math.random()*1.35,delay:Math.random()*.55,phase:Math.random()*Math.PI*2,speed:.8+Math.random()*.55});
+  }
+  const started=performance.now(); const duration=reverse?650:1500;
+  function frame(now){
+    const t=Math.min(1,(now-started)/duration), e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2; ctx.clearRect(0,0,w,h);
+    for(const p of particles){let q=Math.max(0,Math.min(1,(t-p.delay*.22)/(1-p.delay*.22))); q=reverse?e:e*q; const x=p.x+(p.tx-p.x)*q, y=p.y+(p.ty-p.y)*q; const glow=reverse?(1-q):q; ctx.globalAlpha=.15+.8*glow; ctx.fillStyle=`rgba(255,${215+Math.floor(35*glow)},${150+Math.floor(75*glow)},${.8})`; ctx.shadowBlur=reverse?3+8*glow:2+12*glow; ctx.shadowColor='rgba(255,220,130,.75)'; ctx.beginPath(); ctx.arc(x,y,p.r*(.8+.45*Math.sin(now/260+p.phase)),0,Math.PI*2); ctx.fill(); }
+    ctx.shadowBlur=0; ctx.globalAlpha=1;
+    if(t<1)requestAnimationFrame(frame); else ctx.clearRect(0,0,w,h);
+  }
+  requestAnimationFrame(frame);
+}
+
 function setTheme(mode){document.body.classList.toggle('manual-dark',mode==='dark');document.body.classList.toggle('manual-light',mode==='light');localStorage.setItem('iomastavka_theme',mode);const b=$('#themeToggleButton'),i=$('#themeIcon');if(i)i.textContent=mode==='dark'?'☾':'☀';if(b){b.title=mode==='dark'?tr('themeLight'):tr('themeDark');b.setAttribute('aria-label',b.title);}}
 const views={home:'#homeView',calculator:'#calculatorView',assistant:'#assistantView',forwarders:'#forwardersView',news:'#newsView',article:'#articleView',tarotView:'#tarotView'};
 function showView(name){
@@ -123,7 +157,7 @@ $$('[data-open-view]').forEach(b=>b.addEventListener('click',()=>showView(b.data
 $$('[data-close-view]').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.closeView==='tarotView')closeTarot();else showView('home')}));
 document.querySelector('#tarotView')?.addEventListener('click',e=>{if(e.target.id==='tarotView'||e.target.id==='tarotShell')closeTarot()});
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#tarotView')?.classList.contains('open'))closeTarot();else if(e.key==='Escape')showView('home')});
-function closeTarot(){const shell=$('#tarotShell');if(!shell)return showView('home');shell.classList.add('tarot-closing');setTimeout(()=>{shell.classList.remove('tarot-closing','tarot-ready');showView('home')},620)}
+function closeTarot(){const shell=$('#tarotShell');if(!shell)return showView('home');shell.classList.add('tarot-closing');startTarotDust(true);setTimeout(()=>{shell.classList.remove('tarot-closing','tarot-ready');showView('home')},680)}
 
 async function showRecommendation(name){
  const el=$('#recommendation'); if(!el)return;
