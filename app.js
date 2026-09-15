@@ -73,7 +73,6 @@ function renderTransportMenu(){
  const list=selectedForwarder?forwarderModes(selectedForwarder):Object.keys(modes);
  list.filter(k=>modes[k]).forEach(k=>{const b=document.createElement('button');b.className='hover-item';b.textContent=modeName(k);b.onclick=()=>{selectedMode=k;selectedFactor=modes[k].factor;$('#transportBtn span').textContent=modeName(k);renderFactors();renderForwarderMenu();renderTransportMenu();menu.classList.remove('open')};menu.appendChild(b)})
 }
-function renderAgents(){return;}
 function renderIncoterms(){const m=$('#incotermMenu');m.innerHTML='';['EXW','FCA','FOB','CIF','DAP','DDP'].forEach(x=>{const b=document.createElement('button');b.className='hover-item';b.textContent=x;b.onclick=()=>{$('#incotermBtn span').textContent=x;m.classList.remove('open')};m.appendChild(b)})}
 function renderFactors(){selectedFactor=selectedMode&&modes[selectedMode]?modes[selectedMode].factor:167;}
 
@@ -135,6 +134,7 @@ function dimensionsMm(){
  return ['length','width','height'].map(id=>(Number($('#'+id).value)||0)*UNIT_SCALE[dimensionUnit]);
 }
 function normalize(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+function cityName(c){if(Array.isArray(c)) return String(c[lang==='zh'?2:lang==='en'?1:0]||c[1]||c[0]||'').trim(); if(c&&typeof c==='object') return String(c.name||c.nameEn||c.nameZh||'').trim(); return String(c||'').trim()}
 function cityMatches(q,target){
  const x=normalize(q).trim(); const list=cities.filter(c=>target==='china'?c[5]==='cn':c[5]==='ru'); if(!x)return [];
  return list.map(c=>{const fields=[c[0],c[1],c[2]];let score=99;fields.forEach((f,i)=>{const n=normalize(f);if(n.startsWith(x))score=Math.min(score,i);else if(n.includes(x))score=Math.min(score,10+i)});return {c,score}}).filter(o=>o.score<99).sort((a,b)=>a.score-b.score||a.c[0].localeCompare(b.c[0],'ru')).slice(0,20).map(o=>o.c)
@@ -150,18 +150,18 @@ document.addEventListener('click',e=>{$$('.suggestions').forEach(box=>{if(!e.tar
 let autoDistanceTimer=0;
 ['fromCity','toCity'].forEach(id=>$('#'+id)?.addEventListener('input',()=>{clearTimeout(autoDistanceTimer);autoDistanceTimer=setTimeout(autoDistance,350);}));
 function haversineKm(a,b){const R=6371,rad=x=>x*Math.PI/180;const dLat=rad(b[0]-a[0]),dLon=rad(b[1]-a[1]);const q=Math.sin(dLat/2)**2+Math.cos(rad(a[0]))*Math.cos(rad(b[0]))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(q))}
-async function resolveCityCoordinates(city,target){if(Array.isArray(city)&&Number.isFinite(Number(city[6]))&&Number.isFinite(Number(city[7])))return [Number(city[6]),Number(city[7])];const q=cityName(city);if(!q)return null;try{const url=`/api/cities?q=${encodeURIComponent(q)}&country=${target==='china'?'CN':'RU'}&limit=5`;const r=await fetch(url);if(!r.ok)return null;const d=await r.json();const x=(d.results||[]).find(v=>target==='china'?v.country_code==='CN':v.country_code==='RU');return x?[x.latitude,x.longitude]:null}catch{return null}}
+async function resolveCityCoordinates(city,target){if(Array.isArray(city)&&Number.isFinite(Number(city[6]))&&Number.isFinite(Number(city[7])))return [Number(city[6]),Number(city[7])];const q=cityName(city);if(!q)return null;try{const url=`/api/cities?q=${encodeURIComponent(q)}&country=${target==='china'?'CN':'RU'}&limit=5`;const r=await fetch(url);if(!r.ok)return null;const d=await r.json();const x=(d.results||[]).find(v=>{const cc=String(v.country_code||'').toUpperCase();return (target==='china'?cc==='CN':cc==='RU')&&Number.isFinite(Number(v.latitude))&&Number.isFinite(Number(v.longitude))}) || (d.results||[]).find(v=>Number.isFinite(Number(v.latitude))&&Number.isFinite(Number(v.longitude)));return x?[Number(x.latitude),Number(x.longitude)]:null}catch{return null}}
 let distanceRequestId=0;
 async function autoDistance(){
  const requestId=++distanceRequestId;
  const fromText=$('#fromCity')?.value?.trim()||'', toText=$('#toCity')?.value?.trim()||'';
- if(!fromText||!toText){$('#distance').value='';$('#distance').dataset.auto='';const hs=$('#homeRouteStatus');if(hs)hs.textContent='Расстояние появится после выбора двух городов';return}
+ if(!fromText||!toText){$('#distance').value='';$('#distance').dataset.auto='';return}
  const a=selectedCities.from && cityName(selectedCities.from)===fromText?selectedCities.from:[fromText];
  const b=selectedCities.to && cityName(selectedCities.to)===toText?selectedCities.to:[toText];
  const [ca,cb]=await Promise.all([resolveCityCoordinates(a,'china'),resolveCityCoordinates(b,'russia')]);
  if(requestId!==distanceRequestId||!ca||!cb)return;
  const km=Math.round(haversineKm(ca,cb));$('#distance').value=km;$('#distance').dataset.auto='1';
- const hs=$('#homeRouteStatus');if(hs)hs.textContent=`${fromText} → ${toText} · ${km.toLocaleString('ru-RU')} км`; showRecommendation(selectedForwarder);
+ showRecommendation(selectedForwarder);
 }
 
 function fitsContainer(dims, container){
@@ -395,7 +395,7 @@ function renderArticleMarkdown(text=''){
   const safe=escapeHtml(text); return safe.replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').split(/\n\s*\n/).map(p=>p.trim()?`<p>${p.replace(/\n/g,'<br>')}</p>`:'').join('');
 }
 async function openArticle(n){
-  currentArticleNews=n; openView('article'); const box=$('#articleContent'); box.innerHTML=`<div class="article-loading">${tr('articleLoading')}</div>`;
+  currentArticleNews=n; showView('article'); const box=$('#articleContent'); box.innerHTML=`<div class="article-loading">${tr('articleLoading')}</div>`;
   try{
     const r=await fetch('/api/news/article',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:n.title,description:n.description||'',source:n.source||'',date:n.date||'',link:n.link||'',image:n.image||'',language:lang})});
     const d=await r.json(); if(!r.ok||!d.ok)throw new Error(d.error||tr('articleError'));

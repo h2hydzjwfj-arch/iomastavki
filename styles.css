@@ -64,3 +64,14 @@ body.weather-night .weather-scene{background:linear-gradient(180deg,#071827 0%,#
 .voice-orb-stage .voice-orb{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
 .voice-orb-stage .voice-orb.listening{transform:translate(-50%,-50%)}
 @media(max-width:650px){.view-layer > .view-close{left:14px;top:12px}.voice-orb-stage{height:110px;flex-basis:110px}.voice-orb-stage .voice-orb{left:50%;top:50%}}
+
+/* Popup controls: the macOS close button belongs to the popup itself. */
+.view-layer > .card, .view-layer > .directory-panel, .view-layer > .assistant-shell, .view-layer > .article-shell { position: relative; }
+.view-layer > .card > .view-close, .view-layer > .directory-panel > .view-close, .view-layer > .assistant-shell > .view-close, .view-layer > .article-shell > .view-close { position:absolute!important; left:16px!important; top:14px!important; }
+.view-layer > .calculator-card { padding-top:54px; }
+.view-layer > .directory-panel { padding-top:50px; }
+.view-layer > .assistant-shell { padding-top:50px; }
+.view-layer > .article-shell { padding-top:0; }
+.home-status > .home-currency { margin-left:auto; margin-right:auto; }
+/* Never show the old helper/status copy on the dashboard. */
+#homeWeatherText,#homeRouteStatus { display:none!important; }
