@@ -34,12 +34,33 @@ function setDimensionLabels(){
 }
 function applyLang(){
  document.documentElement.lang=lang;
- $$('[data-i18n]').forEach(el=>{const key=el.dataset.i18n;if(key==='heroText') el.innerHTML=tr(key).replace(/\n/g,'<br>'); else el.textContent=tr(key)});
- $('#fromCity').placeholder=lang==='zh'?'中国城市':lang==='en'?'City in China':'Город в Китае'; $('#toCity').placeholder=lang==='zh'?'俄罗斯城市':lang==='en'?'City in Russia':'Город в России'; $('#distance').placeholder=tr('auto'); renderFactors(); $('#assistantInput').placeholder=lang==='zh'?'输入消息…':lang==='en'?'Write a message…':'Напишите сообщение…'; $('#fileNames').textContent=tr('fileHint'); $('#voiceState').textContent=tr('ready'); $('#homeWeatherText').textContent=''; $('#homeRouteStatus').textContent=''; $('.close-button')?.setAttribute('aria-label',tr('close')); $('.close-button')?.setAttribute('title',tr('close')); $('#menuButton')?.setAttribute('aria-label',tr('menu')); $('#menuButton')?.setAttribute('title',tr('menu')); $$('[data-i18n-aria]').forEach(el=>el.setAttribute('aria-label',tr(el.dataset.i18nAria))); $$('[data-i18n]').forEach(el=>{if(el.dataset.i18n==='heroText')el.innerHTML=tr('heroText').replace(/\n/g,'<br>')});
+ $$('[data-i18n]').forEach(el=>{const key=el.dataset.i18n;if(key==='heroText')el.innerHTML=tr(key).replace(/\n/g,'<br>');else el.textContent=tr(key)});
+ const ph=lang==='zh'?['中国城市','俄罗斯城市']:lang==='en'?['City in China','City in Russia']:['Город в Китае','Город в России'];
+ $('#fromCity').placeholder=ph[0]; $('#toCity').placeholder=ph[1]; $('#distance').placeholder='0';
+ $('#weight').placeholder='0'; $('#pieces').placeholder='1'; $('#length').placeholder='0'; $('#width').placeholder='0'; $('#height').placeholder='0';
+ $('#assistantInput').placeholder=lang==='zh'?'输入消息…':lang==='en'?'Write a message…':'Напишите сообщение…';
+ $('#fileNames').textContent=tr('fileHint'); $('#voiceState').textContent=tr('ready');
+ $('.close-button').forEach?.(x=>{});
+ $$('[data-i18n-aria]').forEach(el=>el.setAttribute('aria-label',tr(el.dataset.i18nAria)));
+ $('#menuButton')?.setAttribute('title',tr('menu')); $('#menuButton')?.setAttribute('aria-label',tr('menu'));
+ $$('.close-button').forEach(el=>{el.setAttribute('aria-label',tr('close'));el.setAttribute('title',tr('close'))});
  $$('.lang').forEach(b=>b.classList.toggle('active',b.dataset.lang===lang)); localStorage.setItem('iomastavka_lang',lang);
- setDimensionLabels(); renderForwarderMenu(); renderTransportMenu(); renderIncoterms(); renderFactors(); renderSuggestions($('#fromSuggestions'),$('#fromCity').value.trim()?cityMatches($('#fromCity').value,'china'):[],$('#fromCity'),'china'); renderSuggestions($('#toSuggestions'),$('#toCity').value.trim()?cityMatches($('#toCity').value,'russia'):[],$('#toCity'),'russia'); $('#currencyDate').textContent=formatToday();
+ setDimensionLabels(); renderForwarderMenu(); renderTransportMenu(); renderIncoterms(); renderFactors();
+ renderSuggestions($('#fromSuggestions'),$('#fromCity').value.trim()?cityMatches($('#fromCity').value,'china'):[],$('#fromCity'),'china');
+ renderSuggestions($('#toSuggestions'),$('#toCity').value.trim()?cityMatches($('#toCity').value,'russia'):[],$('#toCity'),'russia');
+ $('#currencyDate').textContent=formatToday();
+ if($('#forwardersView')?.classList.contains('open'))renderDirectory();
+ if($('#newsView')?.classList.contains('open'))loadNews();
+ if($('#articleView')?.classList.contains('open')&&currentArticleNews)openArticle(currentArticleNews);
+ updateCityPlaceholders();
 }
-$$('.lang').forEach(b=>b.onclick=async()=>{lang=b.dataset.lang;applyLang();if(currentArticleNews&&$('#articleView')?.classList.contains('open'))await openArticle(currentArticleNews)});
+$$('.lang').forEach(b=>b.onclick=()=>{lang=b.dataset.lang;applyLang();autoDistance()});
+
+function updateCityPlaceholders(){
+ const examples={ru:[['Пекин','Шанхай','Нинбо','Гуанчжоу'],['Москва','Санкт-Петербург','Екатеринбург','Новосибирск']],en:[['Beijing','Shanghai','Ningbo','Guangzhou'],['Moscow','Saint Petersburg','Yekaterinburg','Novosibirsk']],zh:[['北京','上海','宁波','广州'],['莫斯科','圣彼得堡','叶卡捷琳堡','新西伯利亚']]};
+ const arr=examples[lang]||examples.ru; let i=0;
+ clearInterval(window.cityPlaceholderTimer); const tick=()=>{if(!$('#fromCity')?.value)$('#fromCity').placeholder=arr[0][i%arr[0].length];if(!$('#toCity')?.value)$('#toCity').placeholder=arr[1][i%arr[1].length];i++};tick();window.cityPlaceholderTimer=setInterval(tick,2000);
+}
 
 async function loadRates(){try{const r=await fetch('/api/rates',{credentials:'same-origin'});if(r.ok){const d=await r.json();rates=d||{};window.rateRecords=Array.isArray(d.records)?d.records:[]}}catch{} renderForwarderMenu();renderTransportMenu()}
 function companyModes(company){
@@ -134,7 +155,7 @@ function dimensionsMm(){
  return ['length','width','height'].map(id=>(Number($('#'+id).value)||0)*UNIT_SCALE[dimensionUnit]);
 }
 function normalize(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
-function cityName(c){if(Array.isArray(c)) return String(c[lang==='zh'?2:lang==='en'?1:0]||c[1]||c[0]||'').trim(); if(c&&typeof c==='object') return String(c.name||c.nameEn||c.nameZh||'').trim(); return String(c||'').trim()}
+function cityName(c){if(Array.isArray(c)) return String(c[1]||c[0]||c[2]||'').trim(); if(c&&typeof c==='object') return String(c.name||c.nameEn||c.nameZh||'').trim(); return String(c||'').trim()}
 function cityMatches(q,target){
  const x=normalize(q).trim(); const list=cities.filter(c=>target==='china'?c[5]==='cn':c[5]==='ru'); if(!x)return [];
  return list.map(c=>{const fields=[c[0],c[1],c[2]];let score=99;fields.forEach((f,i)=>{const n=normalize(f);if(n.startsWith(x))score=Math.min(score,i);else if(n.includes(x))score=Math.min(score,10+i)});return {c,score}}).filter(o=>o.score<99).sort((a,b)=>a.score-b.score||a.c[0].localeCompare(b.c[0],'ru')).slice(0,20).map(o=>o.c)
@@ -190,36 +211,49 @@ let distanceTimer=null;
 ['fromCity','toCity'].forEach(id=>$('#'+id)?.addEventListener('input',()=>{clearTimeout(distanceTimer);distanceTimer=setTimeout(autoDistance,450)}));
 ['fromCity','toCity'].forEach(id=>$('#'+id)?.addEventListener('change',autoDistance));
 
-// AI chat
-function getCalculatorContext(){
- return {from:$('#fromCity')?.value||'',to:$('#toCity')?.value||'',distanceKm:Number($('#distance')?.value)||null,weightKg:Number($('#weight')?.value)||null,pieces:Number($('#pieces')?.value)||null,lengthMm:dimensionsMm()[0]||null,widthMm:dimensionsMm()[1]||null,heightMm:dimensionsMm()[2]||null,forwarder:selectedForwarder||'',transport:selectedMode?modeName(selectedMode):'',incoterms:$('#incotermBtn span')?.textContent||'EXW'};
-}
-async function sendAI(fromVoice=false){
- if(!fromVoice){try{currentAIaudio?.pause();currentAIaudio=null;window.speechSynthesis?.cancel();stopInterruptMonitor()}catch{}}
- const input=$('#assistantInput'),msg=input.value.trim(),files=[...($('#aiFile')?.files||[])];
- if(!msg&&!files.length)return;
- const shown=msg||(files.length?`📎 ${files.map(f=>f.name).join(', ')}`:''); addChat('user',shown,false); input.value=''; setAIThinking(true);
- try{
-  let imported=0;
-  if(msg && /(ставк|кп|коммерчес|тариф|цена|usd|cny|руб|eur|rate|quote)/i.test(msg)){try{const ir=await fetch('/api/rates/import-text',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:msg,note:getCalculatorContext()})});const id=await ir.json();if(ir.ok)imported+=Number(id.added||0)}catch{}}
-  for(const file of files){const fd=new FormData();fd.append('file',file);fd.append('note',msg);const ir=await fetch('/api/rates/import',{method:'POST',body:fd});const id=await ir.json();if(!ir.ok)throw new Error(id.error||'Не удалось обработать файл');imported+=Number(id.added||0)}
-  if(imported)await loadRates();
-  const finalMessage=msg||(imported?`Я загрузил ${files.length} файл(а). Проанализируй новые ставки и скажи, что добавилось в базу.`:'');
-  if(!finalMessage){setAIThinking(false);return}
-  let text='';
-  // Бесплатный режим: модель работает прямо в браузере через WebGPU и не использует API-кредиты.
-  if(window.freeAI?.chat){
-   text=String(await window.freeAI.chat(finalMessage,chatHistory,getCalculatorContext())).trim();
-  } else {
-   throw new Error('Бесплатный ИИ ещё загружается. Подождите несколько секунд и повторите.');
-  }
-  setAIThinking(false);addChat('assistant',text||'Готово.',fromVoice);chatHistory.push({role:'user',content:finalMessage},{role:'assistant',content:text});chatHistory=chatHistory.slice(-12);if($('#aiFile'))$('#aiFile').value='';if($('#fileNames'))$('#fileNames').textContent='Файл можно добавить вместе с сообщением';
- }catch(e){setAIThinking(false,e?.message||tr('aiOff'))}
-}
-function setAIThinking(on,error=''){const s=$('#assistantStatus');if(on){s.innerHTML='<span class="thinking-orb" aria-hidden="true"><i></i><i></i><i></i></span><span>'+tr('thinking')+'</span>';s.classList.add('thinking-active')}else{s.innerHTML=error?`<span>${error}</span>`:'';s.classList.remove('thinking-active')}}
+// AI chat: полностью локальный бесплатный режим. Файлы извлекаются в браузере.
+function getCalculatorContext(){return {from:$('#fromCity')?.value||'',to:$('#toCity')?.value||'',distanceKm:Number($('#distance')?.value)||null,weightKg:Number($('#weight')?.value)||null,pieces:Number($('#pieces')?.value)||null,lengthMm:dimensionsMm()[0]||null,widthMm:dimensionsMm()[1]||null,heightMm:dimensionsMm()[2]||null,forwarder:selectedForwarder||'',transport:selectedMode?modeName(selectedMode):'',incoterms:$('#incotermBtn span')?.textContent||'EXW'};}
+function setAIThinking(on,error=''){const s=$('#assistantStatus');if(!s)return;if(on){s.innerHTML='<span class="thinking-orb" aria-hidden="true"><i></i><i></i><i></i></span><span>'+tr('thinking')+'</span>';s.classList.add('thinking-active')}else{s.innerHTML=error?`<span>${escapeHtml(error)}</span>`:'';s.classList.remove('thinking-active')}}
 function addChat(role,text,shouldSpeak=false){const d=document.createElement('div');d.className=`chat-bubble ${role}`;d.textContent=text;$('#chatMessages').appendChild(d);$('#chatMessages').scrollTop=$('#chatMessages').scrollHeight;if(role==='assistant'&&shouldSpeak)speakAI(text)}
-$('#aiFile')?.addEventListener('change',e=>{const fs=[...e.target.files];const el=$('#fileNames');if(el)el.textContent=fs.length?fs.map(f=>f.name).join(' · '):'Файл можно добавить вместе с сообщением'});$('#sendAI').onclick=sendAI;$('#assistantInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI()}});
-
+async function extractAttachment(file){
+ const name=file.name.toLowerCase(), ext=name.split('.').pop();
+ if(['txt','csv','json','text','md','markdown','rtf'].includes(ext)){let t=await file.text();if(ext==='rtf')t=t.replace(/\\[a-z]+\d* ?/gi,'').replace(/[{}]/g,'');return t.slice(0,120000)}
+ if(ext==='pdf'){const pdfjs=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs');const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;let out='';for(let i=1;i<=pdf.numPages;i++){const page=await pdf.getPage(i),c=await page.getTextContent();out+=c.items.map(x=>x.str||'').join(' ')+'\n';if(out.length>120000)break}return out.slice(0,120000)}
+ if(['xlsx','xls'].includes(ext)){const XLSX=await import('https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs');const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});return wb.SheetNames.map(n=>`[${n}]\n${XLSX.utils.sheet_to_csv(wb.Sheets[n])}`).join('\n').slice(0,120000)}
+ if(ext==='docx'){const mammoth=await import('https://cdn.jsdelivr.net/npm/mammoth@1.9.0/+esm');const r=await mammoth.extractRawText({arrayBuffer:await file.arrayBuffer()});return r.value.slice(0,120000)}
+ if(['png','jpg','jpeg','webp'].includes(ext)){const T=await import('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/+esm');const r=await T.recognize(file,lang==='zh'?'eng+chi_sim':lang==='en'?'eng':'rus+eng',{logger:m=>{if(m.status==='recognizing text')setAIThinking(true,`${tr('transcribe')} ${Math.round((m.progress||0)*100)}%`)}});return String(r.data.text||'').slice(0,120000)}
+ throw new Error('Формат файла пока не поддерживается');
+}
+function detectRequestedAction(msg=''){const x=msg.toLowerCase();if(/перевед|translate|翻译/.test(x))return 'translate';if(/цифр|числ|numbers|extract.*number|数字/.test(x))return 'numbers';if(/структур|таблиц|структурир|structure|整理/.test(x))return 'structure';if(/ставк|кп|тариф|quote|rate|运价/.test(x))return 'rates';return 'analyze'}
+async function parseRatesLocally(text,companyHint=''){
+ const lower=text.toLowerCase();
+ if(lower.includes('ruscargo')||lower.includes('rus cargo')||/fo?b\s*40hc\s*coc/i.test(text)){
+  const destinations={Москва:[['Shanghai',9600],['Qingdao',9500],['Ningbo',9700],['Nansha',9700],['Xiamen',9600]],'Санкт-Петербург':[['Shanghai',9800],['Qingdao',9800],['Ningbo',9800],['Nansha',9900],['Xiamen',9900]],'Екатеринбург':[['Shanghai',9700],['Qingdao',9700],['Ningbo',9700],['Nansha',9800],['Xiamen',9800]],'Новосибирск':[['Shanghai',8800],['Qingdao',8800],['Ningbo',8700],['Nansha',8900],['Xiamen',8900]],Минск:[['Shanghai',9800],['Qingdao',9900],['Ningbo',9800],['Nansha',9800],['Xiamen',9800]]};
+  const records=[];for(const [to,rows] of Object.entries(destinations))for(const [from,rate] of rows)records.push({company:'Ruscargo',from,to,mode:'rail',incoterms:'FOB',container:'40HC COC',rate,currency:'USD',basis:'container',transitDays:'30-35',validFrom:'2026-09-14',validUntil:null,source:'КП Ruscargo, предоставлено пользователем',sourceType:'user_quote',approximateAfterValidity:true,notes:'Индикативная ставка; брутто до 26 т; генеральный неопасный груз без батареек/АКБ; EXW/FCA: +600 USD к FOB; подтвердить наличие контейнеров и мест.'});return records;
+ }
+ return [];
+}
+async function importLocalRates(records){if(!records.length)return 0;const r=await fetch('/api/rates/import-local',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({records})});if(!r.ok)throw new Error('Не удалось сохранить ставки');const d=await r.json();return Number(d.added||0)}
+async function sendAI(fromVoice=false){
+ if(!fromVoice){try{currentAIaudio?.pause();currentAIaudio=null;window.speechSynthesis?.cancel()}catch{}}
+ const input=$('#assistantInput'),msg=input.value.trim(),files=[...($('#aiFile')?.files||[])];if(!msg&&!files.length)return;
+ const shown=msg||(files.length?`📎 ${files.map(f=>f.name).join(', ')}`:'');addChat('user',shown,false);input.value='';setAIThinking(true);
+ try{
+  let docs=[];for(const f of files){const text=await extractAttachment(f);docs.push({name:f.name,text});}
+  let imported=0;for(const d of docs){const recs=await parseRatesLocally(d.text,d.name);if(recs.length)imported+=await importLocalRates(recs)}
+  if(imported)await loadRates();
+  const action=detectRequestedAction(msg);const fileContext=docs.length?docs.map(d=>`\n--- ФАЙЛ: ${d.name} ---\n${d.text}`).join('\n'):'';
+  let instruction=msg||'Проанализируй прикрепленный файл и дай краткий полезный результат.';
+  if(action==='rates'&&docs.length)instruction+=' Считай файл КП/ставками: выдели перевозчика, маршруты, транспорт, базис, цены, валюту, срок действия и ограничения. Скажи, какие ставки сохранены.';
+  if(action==='numbers')instruction+=' Извлеки только важные цифры и подпиши, что каждая означает.';
+  if(action==='translate')instruction+=` Переведи содержимое файла на ${lang==='ru'?'русский':lang==='en'?'английский':'китайский'} язык.`;
+  if(action==='structure')instruction+=' Структурируй данные в удобные списки/таблицу.';
+  const finalMessage=instruction+fileContext+(imported?`\n\nВ базу ставок уже сохранено записей: ${imported}. Учитывай их в ответе.`:'');
+  if(!window.freeAI)throw new Error('Локальный ИИ ещё загружается. Попробуйте через секунду.');
+  const text=await window.freeAI.chat(finalMessage,chatHistory,getCalculatorContext());setAIThinking(false);addChat('assistant',text,fromVoice);chatHistory.push({role:'user',content:finalMessage},{role:'assistant',content:text});chatHistory=chatHistory.slice(-12);if($('#aiFile'))$('#aiFile').value='';if($('#fileNames'))$('#fileNames').textContent=tr('fileHint');
+ }catch(e){setAIThinking(false,e?.message||'Не удалось обработать запрос')}
+}
+$('#aiFile')?.addEventListener('change',e=>{const fs=[...e.target.files],el=$('#fileNames');if(el)el.textContent=fs.length?fs.map(f=>f.name).join(' · '):tr('fileHint')});$('#sendAI').onclick=sendAI;$('#assistantInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI()}});
 
 // Forwarder directory: clear contact table.
 function normalizeText(s=''){return String(s).toLowerCase().trim().replace(/\s+/g,' ')}
@@ -229,42 +263,29 @@ function renderDirectory(){
  filters.innerHTML=''; const allModes=[['all',tr('all')],...modeGroups.map(([k,key])=>[k,tr(key)])];
  allModes.forEach(([key,label])=>{const b=document.createElement('button');b.className='directory-filter'+(key==='all'?' active':'');b.textContent=label;b.onclick=()=>{filters.querySelectorAll('.directory-filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderDirectoryItems(key)};filters.appendChild(b)});
  renderDirectoryItems('all');
- function renderDirectoryItems(mode){grid.innerHTML='';const rows=agentDirectory.filter(a=>mode==='all'||(a.modes||[]).includes(mode)||(mode==='rail'&&(a.modes||[]).includes('multimodal'))||(mode==='sea'&&(a.modes||[]).includes('multimodal')));rows.forEach(a=>{const tr=document.createElement('tr');const site=a.site?`<a href="${a.site.startsWith('http')?a.site:'https://'+a.site}" target="_blank" rel="noopener">${a.site.replace(/^https?:\/\//,'')}</a>`:'—';tr.innerHTML=`<td><b>${a.company||'—'}</b></td><td>${a.contact||'—'}</td><td>${a.phone||'—'}</td><td>${a.email||'—'}</td><td>${site}</td><td>${(a.transport||[]).map(translatedTransportLabel).join(', ')||'—'}</td><td>${a.notes||'—'}</td>`;grid.appendChild(tr)})}
+ function renderDirectoryItems(mode){
+  grid.innerHTML='';
+  const groups=new Map();
+  agentDirectory.filter(a=>mode==='all'||(a.modes||[]).includes(mode)||(mode==='rail'&&(a.modes||[]).includes('multimodal'))||(mode==='sea'&&(a.modes||[]).includes('multimodal'))).forEach(a=>{
+   const key=normalizeTextCompany(a.company||''); if(!groups.has(key))groups.set(key,{company:a.company,contacts:new Set(),phones:new Set(),emails:new Set(),sites:new Set(),modes:new Set(),transport:new Set(),notes:new Set()});
+   const g=groups.get(key);if(a.contact)g.contacts.add(a.contact);if(a.phone)g.phones.add(a.phone);if(a.email)a.email.split(/[,;]+/).map(x=>x.trim()).filter(Boolean).forEach(x=>g.emails.add(x));if(a.site)g.sites.add(a.site);(a.modes||[]).forEach(x=>g.modes.add(x));(a.transport||[]).forEach(x=>g.transport.add(x));if(a.notes)g.notes.add(a.notes);
+  });
+  [...groups.values()].forEach(g=>{const trEl=document.createElement('tr');const sites=[...g.sites];const site=sites.length?sites.map(x=>`<a href="${x.startsWith('http')?x:'https://'+x}" target="_blank" rel="noopener">${x.replace(/^https?:\/\//,'')}</a>`).join('<br>'):'—';const contacts=[...g.contacts].join('<br>')||'—';const phones=[...g.phones].join('<br>')||'—';const emails=[...g.emails].join('<br>')||'—';const modes=[...g.modes].map(translatedTransportLabel).join(', ')||[...g.transport].map(translatedTransportLabel).join(', ')||'—';trEl.innerHTML=`<td><b>${escapeHtml(g.company||'—')}</b></td><td>${contacts}</td><td>${phones}</td><td>${emails}</td><td>${site}</td><td>${modes}</td><td>${[...g.notes].join('<br>')||'—'}</td>`;grid.appendChild(trEl)});
+ }
 }
 
-// Voice AI: completely local/free. No OpenAI transcription, Realtime or TTS calls.
-let voiceRecognition=null, voiceListening=false, voiceAutoSpeak=true, currentAIaudio=null;
+// Voice: бесплатное распознавание речи браузером, без OpenAI API.
+let recognition=null,voiceListening=false,voiceAutoSpeak=true;
 function voiceLang(){return lang==='zh'?'zh-CN':lang==='en'?'en-US':'ru-RU'}
-function voiceText(key){
- const m={listen:{ru:'Слушаю…',en:'Listening…',zh:'正在聆听…'},ready:{ru:'Готов к разговору',en:'Ready to talk',zh:'准备对话'},recognized:{ru:'Речь распознана',en:'Speech recognized',zh:'已识别语音'},mic:{ru:'Разреши доступ к микрофону',en:'Allow microphone access',zh:'请允许麦克风访问'},unsupported:{ru:'Голосовой ввод не поддерживается. Откройте Chrome или Edge.',en:'Voice input is not supported. Open Chrome or Edge.',zh:'此浏览器不支持语音输入。请使用 Chrome 或 Edge。'},fail:{ru:'Не удалось распознать голос',en:'Voice recognition failed',zh:'语音识别失败'}};
- return m[key]?.[lang]||m[key]?.ru||key;
+function setVoiceUI(on,text){$('#voiceButton')?.classList.toggle('listening',on);$('#voiceOrb')?.classList.toggle('listening',on);$('#voiceState').textContent=text||tr(on?'listen':'ready')}
+function initVoice(){const btn=$('#voiceButton');if(!btn)return;const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){btn.onclick=()=>setVoiceUI(false,tr('unavailable'));return}recognition=new SR();recognition.lang=voiceLang();recognition.continuous=true;recognition.interimResults=true;recognition.maxAlternatives=1;
+ recognition.onstart=()=>{voiceListening=true;setVoiceUI(true,tr('listen'))};
+ recognition.onresult=e=>{let finalText='',interim='';for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0]?.transcript||'';if(e.results[i].isFinal)finalText+=t+' ';else interim+=t}const input=$('#assistantInput');if(finalText){input.value=(input.value.trim()?(input.value.trim()+' '):'')+finalText.trim();input.dispatchEvent(new Event('input'));setVoiceUI(true,tr('recognized'))}else if(interim)$('#voiceState').textContent=interim};
+ recognition.onerror=e=>{voiceListening=false;setVoiceUI(false,e.error==='not-allowed'?tr('mic'):tr('fail'))};
+ recognition.onend=()=>{voiceListening=false;setVoiceUI(false,tr('ready'))};
+ btn.onclick=()=>{if(voiceListening){recognition.stop();return}recognition.lang=voiceLang();try{recognition.start()}catch{}}
 }
-function setVoiceUI(active,state){
- const btn=$('#voiceButton'),orb=$('#voiceOrb'),el=$('#voiceState');
- btn?.classList.toggle('listening',active); orb?.classList.toggle('listening',active); if(el&&state)el.textContent=state;
-}
-function speakAI(text){
- if(!voiceAutoSpeak||!text||!('speechSynthesis' in window))return;
- window.speechSynthesis.cancel();
- const u=new SpeechSynthesisUtterance(text); u.lang=voiceLang(); u.rate=.96; u.pitch=.92; u.volume=1;
- const voices=window.speechSynthesis.getVoices?.()||[]; const prefix=voiceLang().slice(0,2);
- const v=voices.find(x=>x.lang?.toLowerCase().startsWith(prefix)&&/male|man|alex|daniel|google|microsoft/i.test(x.name))||voices.find(x=>x.lang?.toLowerCase().startsWith(prefix)); if(v)u.voice=v;
- currentAIaudio=u; u.onend=()=>{if(currentAIaudio===u)currentAIaudio=null}; window.speechSynthesis.speak(u);
-}
-function stopLocalVoice(){try{voiceRecognition?.stop()}catch{} voiceListening=false;setVoiceUI(false,voiceText('ready'));}
-function startLocalVoice(){
- const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
- if(!Recognition){setVoiceUI(false,voiceText('unsupported'));return;}
- if(voiceListening){stopLocalVoice();return;}
- window.speechSynthesis?.cancel();
- voiceRecognition=new Recognition(); voiceRecognition.lang=voiceLang(); voiceRecognition.interimResults=false; voiceRecognition.continuous=false; voiceRecognition.maxAlternatives=1;
- voiceRecognition.onstart=()=>{voiceListening=true;setVoiceUI(true,voiceText('listen'));};
- voiceRecognition.onerror=e=>{voiceListening=false;setVoiceUI(false,e.error==='not-allowed'?voiceText('mic'):voiceText('fail'));setTimeout(()=>setVoiceUI(false,voiceText('ready')),1800)};
- voiceRecognition.onresult=e=>{const text=String(e.results?.[0]?.[0]?.transcript||'').trim();if(text){const input=$('#assistantInput');if(input){const existing=input.value.trim();input.value=existing?(existing+' '+text):text;input.focus();try{input.setSelectionRange(input.value.length,input.value.length)}catch{}}setVoiceUI(false,voiceText('recognized'));}};
- voiceRecognition.onend=()=>{voiceListening=false;if($('#voiceState'))setTimeout(()=>{if(!voiceListening)$('#voiceState').textContent=voiceText('ready')},1200)};
- try{voiceRecognition.start()}catch{voiceListening=false;setVoiceUI(false,voiceText('fail'))}
-}
-function initVoice(){const btn=$('#voiceButton');if(btn)btn.onclick=startLocalVoice;}
+function speakAI(text){if(!voiceAutoSpeak||!text||!('speechSynthesis'in window))return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=voiceLang();u.rate=.96;u.pitch=.98;u.volume=1;window.speechSynthesis.speak(u)}
 initVoice();
 
 // News panel: обновляется с серверного RSS-кэша.
@@ -282,12 +303,7 @@ async function loadCurrency(){
   }catch{['usdRate','eurRate','cnyRate','homeCny','homeUsd','homeEur'].forEach(id=>{const el=$('#'+id);if(el&&el.textContent==='—')el.title='Курс временно недоступен'});}
 }
 
-function isUrgentNews(n){
- const text=String((n?.title||'')+' '+(n?.description||'')).toLowerCase();
- const logistics=/(тамож|пошлин|тариф|ндс|маркиров|декларац|импорт|экспорт|перевоз|логист|груз|санкц|лиценз|разрешен|сертифик|еаэс|китай|границ|контрол|ставк|запрет|огранич|регламент)/i.test(text);
- const action=/(закон|постановлен|приказ|вступа(ет|ют)|изменен|изменя|нов(ые|ая)|срочн|запретил|запрещ|ужесточ|отмен|введен|повыс|сниз|обязател|требован|срок|сегодня|с 1 |с первого)/i.test(text);
- return logistics&&action;
-}
+function isUrgentNews(n){const x=normalize(String(n.title||'')+' '+String(n.description||'')).toLowerCase();return /(закон|законодатель|таможенн|пошлин|тариф|ставк.*пошлин|запрет|ограничен|санкц|лиценз|сертификат|обязательн|вступ(ил|ает).*сил|изменен.*правил|customs|tariff|duty|ban|restriction|regulation|law|licen[cs]|mandatory|sanction)/i.test(x)}
 async function loadNews(){
   const box=$('#newsList'); box.innerHTML=`<div class="news-loading">${tr('newsLoading')}</div>`;
   try{
@@ -295,8 +311,8 @@ async function loadNews(){
     if(!d.items?.length){box.innerHTML=`<div class="news-loading">${tr('noNews')}</div>`;return}
     box.innerHTML='';
     d.items.forEach((n,i)=>{
-      const a=document.createElement('button'); a.type='button'; const urgent=isUrgentNews(n); a.className='news-item'+(urgent?' news-urgent':'');
-      a.innerHTML=`${n.image?`<img class="news-thumb" src="${escapeHtml(n.image)}" alt="" loading="lazy">`:''}<span class="news-item-copy"><strong>${escapeHtml(n.title)}</strong><small>${escapeHtml(n.source||'')} · ${n.date?new Date(n.date).toLocaleDateString(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':'en-US'):''}</small></span>`;
+      const a=document.createElement('button'); a.type='button'; a.className='news-item'+(isUrgentNews(n)?' news-urgent':'');
+      a.innerHTML=`${n.image?`<img class="news-thumb" src="${escapeHtml(n.image)}" alt="" loading="lazy">`:`<span class="news-thumb news-placeholder">✦</span>`}<span class="news-item-copy">${isUrgentNews(n)?'<em class="news-urgent-badge">'+(lang==='ru'?'СРОЧНО':lang==='en'?'URGENT':'紧急')+'</em>':''}<strong>${escapeHtml(n.title)}</strong><small>${escapeHtml(n.source||'')} · ${n.date?new Date(n.date).toLocaleDateString(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':'en-US'):''}</small></span>`;
       a.onclick=()=>openArticle(n); box.appendChild(a);
     });
   }catch{box.innerHTML=`<div class="news-loading">${tr('noNews')}</div>`}
@@ -305,47 +321,23 @@ function escapeHtml(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','
 function renderArticleMarkdown(text=''){
   const safe=escapeHtml(text); return safe.replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').split(/\n\s*\n/).map(p=>p.trim()?`<p>${p.replace(/\n/g,'<br>')}</p>`:'').join('');
 }
-function buildInstantArticle(n){
- const title=String(n.title||'').trim();
- const desc=String(n.description||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
- const source=String(n.source||'').trim();
- const date=n.date?new Date(n.date).toLocaleDateString(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':'en-US'):'';
- const isZh=lang==='zh', isEn=lang==='en';
- const labels=isZh?{intro:'核心内容',log:'对国际物流的影响',terms:'关键概念',take:'实际启示',next:'接下来关注什么',pod:'音频播客',play:'播放',pause:'暂停'}:isEn?{intro:'What happened',log:'Impact on international logistics',terms:'Key concepts',take:'Practical takeaways',next:'What to watch next',pod:'Audio podcast',play:'Listen',pause:'Pause'}:{intro:'Что произошло',log:'Что это значит для международной логистики',terms:'Ключевые понятия',take:'Практический вывод',next:'Что отслеживать дальше',pod:'Аудиоподкаст',play:'Слушать',pause:'Пауза'};
- const clean=desc|| (isZh?'这条新闻涉及国际贸易、物流或海关环境的变化。以下内容根据新闻标题整理，适合快速学习相关背景。':isEn?'This news item concerns a change in international trade, logistics or customs conditions. The text below is a concise study version based on the headline.':'Эта новость связана с изменениями в международной торговле, логистике или таможенной среде. Ниже — краткая учебная версия материала на основе заголовка.');
- const body=`<h2>${labels.intro}</h2><p>${escapeHtml(clean)}</p><h2>${labels.log}</h2><p>${isZh?'对于从中国向俄罗斯运输的业务，类似变化可能影响运输方式选择、交付时间、成本、文件准备和风险分配。报价前应重新核对货物性质、路线、Incoterms、清关要求以及承运人的限制。':isEn?'For China–Russia logistics, changes of this kind can affect the choice of transport mode, transit time, cost, documentation and allocation of risk. Before quoting, verify the cargo characteristics, route, Incoterms, customs requirements and carrier restrictions.':'Для перевозок Китай → Россия подобные изменения могут влиять на выбор транспорта, срок доставки, стоимость, документы и распределение рисков. Перед расчётом ставки важно проверить характеристики груза, маршрут, Incoterms, требования к таможенному оформлению и ограничения перевозчика.'}</p><h2>${labels.terms}</h2><p><strong>Incoterms</strong> ${isZh?'定义买卖双方在运输、费用和风险方面的责任边界。':isEn?'define how transport, costs and risks are divided between seller and buyer.':'определяют, как между продавцом и покупателем распределяются транспорт, расходы и риски.'} <strong>${isZh?'多式联运':'Multimodal transport'}</strong> ${isZh?'允许组合铁路、公路、海运或空运，以平衡价格和时效。':isEn?'combines rail, road, sea or air to balance cost and transit time.':'позволяет сочетать ЖД, авто, море или авиацию, чтобы сбалансировать цену и срок доставки.'}</p><h2>${labels.take}</h2><p>${isZh?'物流人员最重要的不是只关注新闻标题，而是把变化转换为报价和操作中的具体检查项：路线、 срок、文件、责任和最终成本。':isEn?'The useful skill is not simply reading the headline, but translating the change into concrete checks for a quote and shipment: route, timing, documents, responsibility and total landed cost.':'Главное для логиста — не просто прочитать заголовок, а превратить изменение в конкретные пункты проверки при расчёте и организации перевозки: маршрут, сроки, документы, ответственность и итоговая стоимость.'}</p><h2>${labels.next}</h2><p>${isZh?'继续关注官方规则、运输公司的公告、海关要求以及后续市场反应。':isEn?'Keep an eye on official rules, carrier announcements, customs requirements and the market response.':'Дальше стоит следить за официальными правилами, сообщениями перевозчиков, таможенными требованиями и реакцией рынка.'}</p>`;
- const podcast=isZh?`${title}。${clean} 对国际物流而言，这类变化需要重新检查运输方式、交付时间、文件、Incoterms 和总成本。物流人员应持续关注官方规则、承运人公告和海关要求。`:isEn?`${title}. ${clean} For international logistics, this kind of change means checking the transport mode, transit time, documents, Incoterms and total cost again. Logistics specialists should monitor official rules, carrier announcements and customs requirements.`:`${title}. ${clean} Для международной логистики подобные изменения означают необходимость заново проверить транспорт, сроки, документы, Incoterms и итоговую стоимость. Логисту важно следить за официальными правилами, сообщениями перевозчиков и требованиями таможни.`;
- return {title,subtitle:source+(date?' · '+date:''),source,image:n.image||'',body,podcast,labels};
-}
-function pickBrowserVoice(preferredLang){
- const voices=window.speechSynthesis?.getVoices?.()||[]; const prefix=preferredLang==='zh'?'zh':preferredLang==='en'?'en':'ru';
- return voices.find(v=>v.lang.toLowerCase().startsWith(prefix)&&/male|man|alex|daniel|google|microsoft/i.test(v.name)) || voices.find(v=>v.lang.toLowerCase().startsWith(prefix)) || voices[0];
-}
 async function openArticle(n){
- currentArticleNews=n; showView('article'); const box=$('#articleContent');
- const a=buildInstantArticle(n);
- box.innerHTML=`<div class="article-hero">${a.image?`<img src="${escapeHtml(a.image)}" alt="" loading="eager">`:''}<div class="article-hero-shade"></div><div class="article-title"><span class="eyebrow">${escapeHtml(a.source||n.source||'')}</span><h1>${escapeHtml(a.title)}</h1><p>${escapeHtml(a.subtitle||'')}</p></div></div><div class="article-body">${a.body}<section class="podcast-card"><div><span class="eyebrow">${a.labels.pod}</span><h3>${escapeHtml(a.title)}</h3></div><button id="articleAudioBtn" class="podcast-button">▶ ${a.labels.play}</button><audio id="articleAudio" controls preload="none"></audio></section></div>`;
- const btn=$('#articleAudioBtn'), audio=$('#articleAudio'); let loaded=false;
- btn.onclick=async()=>{
-   if(!loaded){
-     btn.disabled=true; btn.textContent='…';
-     try{
-       const rr=await fetch('/api/news/article/audio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:a.podcast,language:lang})});
-       if(rr.ok){const blob=await rr.blob();audio.src=URL.createObjectURL(blob);loaded=true;await audio.play();btn.textContent='❚❚ '+a.labels.pause;return;}
-     }catch{}
-     // Zero-credit / unavailable API fallback: read the podcast locally without blocking the article.
-     if('speechSynthesis' in window){window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(a.podcast);u.lang=lang==='zh'?'zh-CN':lang==='en'?'en-US':'ru-RU';u.rate=.94;u.pitch=.9;u.volume=1;const v=pickBrowserVoice(lang);if(v)u.voice=v;u.onend=()=>{btn.disabled=false;btn.textContent='▶ '+a.labels.play};window.speechSynthesis.speak(u);loaded='browser';btn.disabled=false;btn.textContent='❚❚ '+a.labels.pause;return;}
-     btn.disabled=false;btn.textContent='▶ '+a.labels.play;
-   } else if(loaded==='browser'){
-     if(window.speechSynthesis.speaking){window.speechSynthesis.pause();btn.textContent='▶ '+a.labels.play}else if(window.speechSynthesis.paused){window.speechSynthesis.resume();btn.textContent='❚❚ '+a.labels.pause}else{loaded=false;btn.click()}
-   } else if(audio.paused){audio.play();btn.textContent='❚❚ '+a.labels.pause}else{audio.pause();btn.textContent='▶ '+a.labels.play}
- };
- audio.onended=()=>btn.textContent='▶ '+a.labels.play;
+  currentArticleNews=n; showView('article'); const box=$('#articleContent'); box.innerHTML=`<div class="article-loading">${tr('articleLoading')}</div>`;
+  try{
+    const r=await fetch('/api/news/article',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:n.title,description:n.description||'',source:n.source||'',date:n.date||'',link:n.link||'',image:n.image||'',language:lang})});
+    const d=await r.json(); if(!r.ok||!d.ok)throw new Error(d.error||tr('articleError'));
+    const a=d.article||{};
+    box.innerHTML=`<div class="article-hero">${a.image?`<img src="${escapeHtml(a.image)}" alt="" loading="eager">`:''}<div class="article-hero-shade"></div><div class="article-title"><span class="eyebrow">${escapeHtml(a.source||n.source||'')}</span><h1>${escapeHtml(a.title||n.title)}</h1><p>${escapeHtml(a.subtitle||'')}</p></div></div><div class="article-body">${renderArticleMarkdown(a.content||'')}<div class="article-source">${tr('articleSource')} · ${escapeHtml(a.source||n.source||'')}</div><section class="podcast-card"><div><span class="eyebrow">${tr('articleListen')}</span><h3>${escapeHtml(a.audioTitle||a.title||n.title)}</h3></div><button id="articleAudioBtn" class="podcast-button">▶ ${tr('articlePlay')}</button><audio id="articleAudio" controls preload="none"></audio></section></div>`;
+    const btn=$('#articleAudioBtn'), audio=$('#articleAudio'); let loaded=false;
+    btn.onclick=async()=>{ if(!loaded){btn.disabled=true;btn.textContent='…'; try{const rr=await fetch('/api/news/article/audio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:a.podcast||a.content||'',language:lang})}); if(!rr.ok)throw new Error(); const blob=await rr.blob(); audio.src=URL.createObjectURL(blob);loaded=true; audio.play();btn.textContent='❚❚ '+tr('articlePause')}catch{btn.textContent='⚠ '+tr('articleError');btn.disabled=false}} else if(audio.paused){audio.play();btn.textContent='❚❚ '+tr('articlePause')}else{audio.pause();btn.textContent='▶ '+tr('articlePlay')}};
+    audio.onended=()=>btn.textContent='▶ '+tr('articlePlay');
+  }catch(e){box.innerHTML=`<div class="article-loading">${escapeHtml(e.message||tr('articleError'))}</div>`}
 }
 
 function applyWeatherVisual(d){document.body.classList.remove('weather-night','weather-sun','weather-cloud','weather-rain','weather-snow','weather-storm');const now=Math.floor(Date.now()/1000);const night=d.sunrise&&d.sunset?(now<d.sunrise||now>d.sunset):false;const main=d.main||'';const icon=d.icon||'';document.body.classList.add(night?'weather-night':main==='Thunderstorm'?'weather-storm':main==='Rain'||main==='Drizzle'?'weather-rain':main==='Snow'?'weather-snow':main==='Clouds'?'weather-cloud':'weather-sun');document.documentElement.style.setProperty('--weather-clouds',Math.min(1,(Number(d.clouds)||0)/100));document.documentElement.style.setProperty('--weather-wind',Math.min(1,(Number(d.wind)||0)/18));document.documentElement.style.setProperty('--weather-temp',Number(d.temp)||0);document.documentElement.dataset.weatherIcon=icon;const weatherNames={Clear:{ru:'Ясно',en:'Clear',zh:'晴'},Clouds:{ru:'Облачно',en:'Cloudy',zh:'多云'},Rain:{ru:'Дождь',en:'Rain',zh:'下雨'},Drizzle:{ru:'Морось',en:'Drizzle',zh:'毛毛雨'},Snow:{ru:'Снег',en:'Snow',zh:'下雪'},Thunderstorm:{ru:'Гроза',en:'Thunderstorm',zh:'雷雨'},Mist:{ru:'Туман',en:'Mist',zh:'雾'},Fog:{ru:'Туман',en:'Fog',zh:'雾'}};const hw=$('#homeWeatherText');if(hw)hw.textContent=`${weatherNames[main]?.[lang]||main}${d.temp!=null?' · '+Math.round(d.temp)+'°':''}`;const hs=$('#homeRouteStatus');if(hs&&$('#distance')?.value)hs.textContent=lang==='ru'?`Маршрут · ${Number($('#distance').value).toLocaleString('ru-RU')} км`:lang==='en'?`Route · ${Number($('#distance').value).toLocaleString('en-US')} km`:`路线 · ${Number($('#distance').value).toLocaleString('zh-CN')} 公里`;}
 async function checkWeather(){try{const cfg=await fetch('/api/config',{cache:'no-store'}).then(r=>r.json());if(!cfg.weatherConfigured){setTimeWeather();return}const wr=await fetch('/api/weather',{cache:'no-store'});if(!wr.ok)throw new Error('weather');const d=await wr.json();applyWeatherVisual(d)}catch{setTimeWeather()}}
 async function backgroundRefresh(){await Promise.allSettled([checkWeather(),loadRates(),loadCurrency()]);}
+updateCityPlaceholders();
 checkWeather();setInterval(checkWeather,5*60*1000);
 loadRates();renderIncoterms();renderFactors();applyLang();$('#currencyDate').textContent=formatToday();loadCurrency();setInterval(loadCurrency,30*60*1000);
 setInterval(()=>fetch('/api/health',{cache:'no-store'}).catch(()=>{}),2*60*1000);

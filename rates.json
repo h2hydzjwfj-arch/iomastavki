@@ -1,34 +1,31 @@
 {
-  "MultiWell": {
-    "modes": [
-      "air",
-      "rail",
-      "road",
-      "sea"
-    ],
-    "notes": "Сильное направление Китай → Россия; проверять актуальную ставку перед расчётом."
-  },
-  "Шатл Логистик / Shuttle-Logistic": {
-    "modes": [
-      "rail",
-      "road",
-      "sea",
-      "air"
-    ],
-    "notes": "Прямое ЖД, авто, море, море + ЖД."
-  },
-  "Asia Cargo": {
-    "modes": [
-      "air",
-      "road",
-      "sea"
-    ],
-    "notes": "Авиа, авто, море."
-  },
-  "China Rail": {
-    "modes": [
-      "rail"
-    ],
-    "notes": "ЖД."
-  }
+  "version": 2,
+  "updatedAt": "2026-09-15T00:00:00.000Z",
+  "records": [
+    {"company":"Ruscargo","from":"Shanghai","to":"Москва","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9600,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка. Подтвердить наличие контейнеров и мест. Генеральные неопасные грузы без батареек/АКБ. EXW/FCA: +600 USD к FOB."},
+    {"company":"Ruscargo","from":"Qingdao","to":"Москва","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9500,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка. Брутто до 26 т. EXW/FCA: +600 USD к FOB."},
+    {"company":"Ruscargo","from":"Ningbo","to":"Москва","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9700,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка. EXW/FCA: +600 USD к FOB."},
+    {"company":"Ruscargo","from":"Nansha","to":"Москва","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9700,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка. EXW/FCA: +600 USD к FOB."},
+    {"company":"Ruscargo","from":"Xiamen","to":"Москва","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9600,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка. EXW/FCA: +600 USD к FOB."},
+    {"company":"Ruscargo","from":"Shanghai","to":"Санкт-Петербург","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9800,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка. Брутто до 26 т. EXW/FCA: +600 USD к FOB."},
+    {"company":"Ruscargo","from":"Qingdao","to":"Санкт-Петербург","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9800,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Ningbo","to":"Санкт-Петербург","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9800,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Nansha","to":"Санкт-Петербург","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9900,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Xiamen","to":"Санкт-Петербург","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9900,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Shanghai","to":"Екатеринбург","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9700,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Qingdao","to":"Екатеринбург","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9700,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Ningbo","to":"Екатеринбург","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9700,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Nansha","to":"Екатеринбург","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9800,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Xiamen","to":"Екатеринбург","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9800,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Shanghai","to":"Новосибирск","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":8800,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Qingdao","to":"Новосибирск","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":8800,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Ningbo","to":"Новосибирск","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":8700,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Nansha","to":"Новосибирск","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":8900,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Xiamen","to":"Новосибирск","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":8900,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Shanghai","to":"Минск","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9800,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Qingdao","to":"Минск","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9900,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Ningbo","to":"Минск","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9800,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Nansha","to":"Минск","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9800,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."},
+    {"company":"Ruscargo","from":"Xiamen","to":"Минск","mode":"rail","incoterms":"FOB","container":"40HC COC","rate":9800,"currency":"USD","basis":"container","transitDays":"30-35","validFrom":"2026-09-14","validUntil":null,"source":"КП Ruscargo, предоставлено пользователем","sourceType":"user_quote","approximateAfterValidity":true,"notes":"Индикативная ставка."}
+  ]
 }

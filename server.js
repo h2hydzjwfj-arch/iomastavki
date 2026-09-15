@@ -47,7 +47,7 @@ function routeScore(record, from, to, mode, distance) {
   else if (rt && b && (rt.split(/\s+/)[0]===b.split(/\s+/)[0])) score+=3;
   if (mode && record.mode && normalizeText(record.mode)===normalizeText(mode)) score+=5;
   if (Number.isFinite(distance) && Number(record.distanceKm)) score += Math.max(0,5-Math.abs(distance-Number(record.distanceKm))/1200);
-  if (record.validUntil){const t=Date.parse(record.validUntil);if(Number.isFinite(t)&&t>=Date.now())score+=1;}
+  if (record.validUntil){const t=Date.parse(record.validUntil);if(Number.isFinite(t)&&t>=Date.now())score+=1;} else if(record.approximateAfterValidity) score+=0.25;
   return score;
 }
 function parseJsonLoose(text) {
@@ -202,6 +202,11 @@ async function fetchNews() {
   }
   const seen=new Set();
   const items=all.filter(x=>{const k=x.title.toLowerCase(); if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,24);
+  await Promise.all(items.slice(0,18).map(async item=>{
+    if(item.image)return;
+    try{const r=await fetch(item.link,{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0'}});if(!r.ok)return;const h=(await r.text()).slice(0,500000);const m=h.match(/<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+)/i)||h.match(/<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:image[\"']/i);if(m)item.image=m[1];
+    }catch{}
+  }));
   newsCache={at:Date.now(),items};
   return items;
 }
@@ -281,6 +286,12 @@ app.put('/api/rates', auth, (req,res) => {
   if(!data || typeof data!=='object' || Array.isArray(data)) return res.status(400).json({ok:false,error:'Некорректные данные'});
   saveRates(data); res.json({ok:true});
 });
+app.post('/api/rates/import-local', auth, (req,res) => {
+  const records=Array.isArray(req.body?.records)?req.body.records:[];
+  if(!records.length)return res.status(400).json({ok:false,error:'Нет ставок'});
+  try{const result=mergeRateRecords(records,'browser-local');res.json({ok:true,added:result.added,records:result.db.records.slice(-result.added)})}catch(e){res.status(500).json({ok:false,error:e.message||'Не удалось сохранить ставки'})}
+});
+
 app.post('/api/rates/import', upload.single('file'), async (req,res) => {
   const key=process.env.OPENAI_API_KEY;
   if(!key) return res.status(503).json({ok:false,error:'AI key not configured'});
