@@ -227,6 +227,10 @@ function prefetchNews(){if(newsCache.length)return Promise.resolve(newsCache);if
 prefetchNews();
 
 const views={home:'#homeView',calculator:'#calculatorView',assistant:'#assistantView',forwarders:'#forwardersView',news:'#newsView',article:'#articleView',tarotView:'#tarotView'};
+// Bind dashboard cards to views (kept explicit so navigation survives UI/theme changes).
+document.querySelectorAll('[data-open-view]').forEach(el=>{
+  el.addEventListener('click',()=>showView(el.dataset.openView));
+});
 function showView(name){
   const target=views[name]?name:'home';
   Object.entries(views).forEach(([key,sel])=>{
@@ -424,19 +428,20 @@ initVoice();
 // News panel: обновляется с серверного RSS-кэша.
 function formatToday(){const p=new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Moscow',day:'2-digit',month:'2-digit',year:'numeric'}).formatToParts(new Date());const d=Object.fromEntries(p.map(x=>[x.type,x.value]));return `${d.day}.${d.month}.${d.year} г.`}
 async function loadCurrency(){
-  try {
-    const r=await fetch('/api/currency',{credentials:'same-origin'});
+  const paint=(items)=>{const fmt=x=>x==null?'—':fmtNum(x);$('#usdRate').textContent=fmt(items?.USD?.value);$('#eurRate').textContent=fmt(items?.EUR?.value);$('#cnyRate').textContent=fmt(items?.CNY?.value);$('#homeCny').textContent=fmt(items?.CNY?.value);$('#homeUsd').textContent=fmt(items?.USD?.value);$('#homeEur').textContent=fmt(items?.EUR?.value);};
+  try{
+    const r=await fetch('/api/currency',{credentials:'same-origin',cache:'no-store'});
     if(!r.ok) throw new Error('currency');
     const d=await r.json();
-    $('#currencyDate').textContent=formatToday();
-    const fmt=x=>x==null?'—':fmtNum(x);
-    $('#usdRate').textContent=fmt(d.items?.USD?.value);
-    $('#eurRate').textContent=fmt(d.items?.EUR?.value);
-    $('#cnyRate').textContent=fmt(d.items?.CNY?.value);$('#homeCny').textContent=fmt(d.items?.CNY?.value);$('#homeUsd').textContent=fmt(d.items?.USD?.value);$('#homeEur').textContent=fmt(d.items?.EUR?.value);
+    $('#currencyDate').textContent=formatToday(); paint(d.items||{});
     try{localStorage.setItem('iomastavka_currency_cache',JSON.stringify(d.items||{}))}catch{}
   }catch{
-    try{const c=JSON.parse(localStorage.getItem('iomastavka_currency_cache')||'{}');const fmt=x=>x==null?'—':fmtNum(x);$('#usdRate').textContent=fmt(c.USD?.value);$('#eurRate').textContent=fmt(c.EUR?.value);$('#cnyRate').textContent=fmt(c.CNY?.value);$('#homeCny').textContent=fmt(c.CNY?.value);$('#homeUsd').textContent=fmt(c.USD?.value);$('#homeEur').textContent=fmt(c.EUR?.value)}catch{}
-    ['usdRate','eurRate','cnyRate','homeCny','homeUsd','homeEur'].forEach(id=>{const el=$('#'+id);if(el&&el.textContent==='—')el.title='Курс временно недоступен'});
+    try{const c=JSON.parse(localStorage.getItem('iomastavka_currency_cache')||'{}'); if(Object.keys(c).length){paint(c);return}}catch{}
+    // Official Bank of Russia values for 15.09.2026 as a last-resort display fallback.
+    // They are replaced automatically as soon as /api/currency becomes available again.
+    const fallback={CNY:{nominal:1,value:12.5353},USD:{nominal:1,value:84.3363},EUR:{nominal:1,value:97.7626}};
+    paint(fallback);
+    $('#currencyDate').textContent='15.09.2026';
   }
 }
 

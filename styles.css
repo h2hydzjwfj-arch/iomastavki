@@ -483,3 +483,47 @@ body.manual-dark .article-shell{background:linear-gradient(145deg,#06172b,#0a314
 body.manual-dark .tarot-shell{background:radial-gradient(circle at 50% 30%,rgba(29,79,117,.46),rgba(3,10,24,.97) 72%)!important}.tarot-card h2,.tarot-card p,.tarot-meta{color:#fff1bd!important}.tarot-card .tarot-label{color:#dfcb91!important}
 /* Window navigation must remain clickable above the decorative scene. */
 .view-layer{z-index:200!important}.view-layer.open{pointer-events:auto!important}.weather-scene{z-index:0!important}.topbar{z-index:400!important}
+
+/* Final visual pass: calm, high-contrast night mode. Gold is an accent, never the body text. */
+body.manual-dark{background:#071522!important;color:#eef4f3!important}
+body.manual-dark .weather-scene{filter:saturate(1.08) brightness(.86)!important}
+body.manual-dark .hero-copy .eyebrow{color:#a9c7cf!important;text-shadow:none!important}
+body.manual-dark .hero-copy h1{color:#f4f7f3!important;text-shadow:0 0 24px rgba(145,210,220,.12)!important}
+body.manual-dark .hero-copy p{color:#cbd9d8!important}
+body.manual-dark .service-card,body.manual-dark .calculator-card,body.manual-dark .directory-panel,body.manual-dark .assistant-shell,body.manual-dark .agent-import-shell{background:linear-gradient(145deg,rgba(10,30,47,.96),rgba(9,42,55,.96))!important;border-color:rgba(132,202,211,.18)!important;color:#edf4f2!important;box-shadow:0 28px 90px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.06)!important}
+body.manual-dark .service-text b,body.manual-dark .calculator-card h1,body.manual-dark .directory-head h2,body.manual-dark .assistant-head h2,body.manual-dark .section-title,body.manual-dark .dimensions-head{color:#f2f6f3!important}
+body.manual-dark .service-text small,body.manual-dark .field label,body.manual-dark .directory-head p,body.manual-dark .assistant-head small,body.manual-dark .home-status{color:#aebfc2!important}
+body.manual-dark .field input,body.manual-dark input,body.manual-dark textarea,body.manual-dark .fake-select{background:#0b2234!important;color:#f1f6f4!important;border-color:rgba(130,199,209,.24)!important}
+body.manual-dark input::placeholder,body.manual-dark textarea::placeholder{color:#708b91!important}
+body.manual-dark .dimensions,body.manual-dark .result,body.manual-dark .recommendation{background:#0d293b!important;color:#dbe8e7!important;border-color:rgba(124,195,207,.2)!important}
+body.manual-dark .result strong,body.manual-dark .result-price{color:#f4f7f3!important}
+body.manual-dark .result-grid span,body.manual-dark .auto-calc-strip>div{background:#12374a!important;color:#bfd0d1!important;border-color:rgba(124,195,207,.16)!important}
+body.manual-dark .result-grid b,body.manual-dark .auto-calc-strip b{color:#f0f5f3!important}
+body.manual-dark .currency-item,body.manual-dark .home-currency{background:rgba(15,48,65,.94)!important;color:#e9f1ef!important;border:1px solid rgba(134,210,216,.28)!important;box-shadow:0 12px 30px rgba(0,0,0,.24)!important}
+body.manual-dark .currency-item b,body.manual-dark .home-currency b{color:#f3f6ef!important;text-shadow:none!important}
+body.manual-dark .home-currency span{color:#b6c9cb!important}
+body.manual-dark .currency-title,body.manual-dark .currency-source{color:#9fb6bb!important}
+body.manual-dark .directory-table-wrap{background:#0a2132!important;border-color:rgba(132,202,211,.22)!important}
+body.manual-dark .directory-table th{background:#123b4e!important;color:#edf5f3!important}
+body.manual-dark .directory-table td{background:#0d2b3d!important;color:#dbe8e7!important;border-bottom-color:rgba(130,199,209,.12)!important}
+body.manual-dark .directory-table tr:hover td{background:#11384b!important}
+body.manual-dark .news-item{color:#e8f1ef!important;border-bottom-color:rgba(132,202,211,.13)!important}
+body.manual-dark .news-item strong{color:#f2f6f4!important}
+body.manual-dark .news-item small{color:#93adb2!important}
+body.manual-dark .chat-bubble.assistant{background:#12384a!important;color:#e4eeec!important}
+body.manual-dark .chat-bubble.user{background:#176079!important;color:#fff!important}
+body.manual-dark .thinking-active{color:#9fc6cb!important}
+body.manual-dark .theme-controls button,body.manual-dark .dollar-button,body.manual-dark .hamsa-button{background:rgba(17,57,73,.96)!important;color:#e9f1ef!important;border-color:rgba(139,210,216,.28)!important}
+body.manual-dark .logout{background:rgba(17,53,68,.94)!important;color:#e7efed!important}
+body.manual-dark .hover-menu,body.manual-dark .suggestions{background:#0a1f30!important;color:#e8f0ee!important;border-color:rgba(130,199,209,.22)!important}
+body.manual-dark .hover-item,body.manual-dark .suggestions button{color:#dce9e7!important}
+body.manual-dark .hover-item:hover,body.manual-dark .suggestions button:hover{background:#12394b!important;color:#f0f5f2!important}
+body.manual-dark .article-shell{background:linear-gradient(145deg,#071a2b,#0b3343)!important;color:#eaf1ef!important}
+body.manual-dark .article-body,body.manual-dark .article-body p,body.manual-dark .article-checklist{color:#d7e5e3!important}
+body.manual-dark .article-body h1,body.manual-dark .article-body h2,body.manual-dark .article-body h3,body.manual-dark .article-title h1{color:#f2f6f3!important}
+body.manual-dark .article-source{background:#103445!important;color:#c7d8d7!important}
+body.manual-dark .article-visual-card,body.manual-dark .article-video-card,body.manual-dark .flow-step{background:linear-gradient(145deg,#103144,#124153)!important;color:#e6efed!important;border-color:rgba(130,199,209,.17)!important}
+body.manual-dark .article-mini-table th{color:#c8d8d7!important}body.manual-dark .article-mini-table td{color:#e2ecea!important}
+body.manual-dark .tarot-card h2,body.manual-dark .tarot-card p,body.manual-dark .tarot-meta{color:#edf3ef!important}.tarot-card .tarot-label{color:#a7c0c2!important}
+/* Keep gold for small accents only. */
+body.manual-dark .eyebrow,body.manual-dark .section-title:before{color:#d8b86a!important}
