@@ -190,3 +190,73 @@ body.manual-dark .currency-item{background:rgba(35,86,106,.6);border-color:rgba(
 body.manual-dark .tarot-shell{background:radial-gradient(circle at 50% 38%,rgba(54,111,137,.72),rgba(9,32,47,.96) 60%,rgba(4,22,33,.98));}
 body.manual-dark .tarot-card{background:linear-gradient(145deg,#24566d,#317d99 46%,#153b51);box-shadow:0 35px 100px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.18)}
 @media (prefers-reduced-motion: reduce){.tarot-shell.tarot-ready .tarot-card{animation:tarotCardMaterialize .2s ease-out both!important}.tarot-dust-canvas{display:none}}
+
+/* FILE 06 — harmony + cinematic tarot pass */
+body.manual-dark{
+  --ink:#eefcff;--muted:#b9dce8;--line:rgba(145,224,239,.20);--white:rgba(15,54,72,.92);
+  background:#082c3d;color:var(--ink);
+}
+body.manual-dark .service-card,body.manual-dark .calculator-card,body.manual-dark .directory-panel,body.manual-dark .assistant-shell{
+  background:linear-gradient(145deg,rgba(9,58,78,.96),rgba(10,76,94,.94));
+  border-color:rgba(128,226,235,.24);color:#effcff;
+  box-shadow:0 25px 70px rgba(0,22,35,.34),inset 0 1px 0 rgba(255,255,255,.09);
+}
+body.manual-dark input,body.manual-dark textarea,body.manual-dark .fake-select{
+  background:rgba(6,45,61,.94);color:#effcff;border-color:rgba(123,218,232,.25)
+}
+body.manual-dark .hover-menu,body.manual-dark .suggestions{background:rgba(7,48,64,.985);color:#eafcff;border-color:rgba(123,218,232,.22)}
+body.manual-dark .hover-item,body.manual-dark .suggestions button{color:#dff8fc}
+body.manual-dark .service-text small,body.manual-dark .field label,body.manual-dark .eyebrow{color:#acd5df}
+body.manual-dark .hero-copy h1{color:#e3fbff}.hero-copy p{color:#c6e5ec}
+body.manual-dark .result,body.manual-dark .recommendation,body.manual-dark .dimensions{
+  background:rgba(7,52,69,.97)!important;color:#ecfcff;border-color:rgba(123,218,232,.24)
+}
+body.manual-dark .result-grid span{background:rgba(13,72,89,.82);border-color:rgba(123,218,232,.18);color:#acd4df}
+body.manual-dark .result-grid b{color:#e8fcff}
+body.manual-dark .auto-calc-strip>div{background:rgba(16,78,94,.62);border-color:rgba(123,218,232,.18)}
+body.manual-dark .auto-calc-strip span{color:#acd4df}body.manual-dark .auto-calc-strip b{color:#edfcff}
+body.manual-dark .currency-item{background:rgba(13,74,91,.72);border-color:rgba(123,218,232,.20);color:#effcff}
+body.manual-dark .currency-item b,body.manual-dark .home-currency b{color:#dffaff}
+body.manual-dark .logout{background:rgba(14,78,96,.75);color:#eaffff;border-color:rgba(123,218,232,.20)}
+body.manual-dark .theme-controls button{background:rgba(15,83,101,.80);color:#eaffff;border-color:rgba(123,218,232,.24)}
+body.manual-dark .hamsa-button{background:rgba(13,79,98,.76);border-color:rgba(145,232,239,.30)}
+
+/* Tarot: same luminous palette in both themes; no gray veil. */
+.tarot-shell{
+  background:radial-gradient(circle at 50% 42%,rgba(255,255,255,.88) 0%,rgba(214,244,249,.78) 28%,rgba(167,218,230,.62) 54%,rgba(91,166,188,.45) 100%)!important;
+}
+body.manual-dark .tarot-shell{
+  background:radial-gradient(circle at 50% 42%,rgba(43,133,158,.72) 0%,rgba(11,74,93,.82) 34%,rgba(4,42,59,.96) 70%,rgba(2,28,42,.99) 100%)!important;
+}
+.tarot-dust-canvas{z-index:4!important;mix-blend-mode:screen}
+.tarot-card{z-index:3!important;opacity:0;transform:translateY(-14px) scale(1.10)!important;filter:blur(1px)!important;animation:none!important;will-change:transform,opacity,filter}
+.tarot-shell.tarot-ready .tarot-card{
+  animation:tarotImpact .92s cubic-bezier(.18,.88,.28,1) 1.02s both!important;
+}
+.tarot-shell.tarot-ready .tarot-stars{
+  animation:starPulse 1.9s ease-in-out 1.78s infinite!important;
+}
+@keyframes tarotImpact{
+  0%{opacity:0;transform:translateY(-20px) scale(1.10)!important;filter:blur(5px)!important}
+  62%{opacity:1;transform:translateY(4px) scale(1.018)!important;filter:blur(.5px)!important}
+  78%{transform:translateY(-2px) scale(.994)!important}
+  100%{opacity:1;transform:translateY(0) scale(1)!important;filter:blur(0)!important}
+}
+@keyframes starPulse{
+  0%,100%{opacity:.62;text-shadow:0 0 5px rgba(255,241,170,.35),0 0 12px rgba(255,215,100,.12);transform:scale(.96)}
+  45%{opacity:1;text-shadow:0 0 9px rgba(255,248,190,.95),0 0 24px rgba(255,222,112,.9),0 0 42px rgba(255,205,90,.48);transform:scale(1.05)}
+  55%{opacity:.78;transform:scale(1.01)}
+  66%{opacity:1;text-shadow:0 0 7px rgba(255,248,190,.9),0 0 18px rgba(255,222,112,.72);transform:scale(1.03)}
+}
+/* remove the old pop/flash animation */
+.tarot-shell.tarot-ready:before{animation:none!important;opacity:0!important}
+.tarot-shell.tarot-ready .tarot-particles{animation:none!important;opacity:0!important}
+.tarot-shell.tarot-closing .tarot-card{animation:tarotImpactOut .52s cubic-bezier(.55,.08,.68,.53) both!important}
+@keyframes tarotImpactOut{
+  0%{opacity:1;transform:translateY(0) scale(1)!important;filter:blur(0)!important}
+  45%{opacity:1;transform:translateY(5px) scale(1.018)!important}
+  100%{opacity:0;transform:translateY(18px) scale(.82)!important;filter:blur(7px)!important}
+}
+
+/* impact dust: the canvas supplies the actual particles; keep the stage calm */
+@media (prefers-reduced-motion:reduce){.tarot-shell.tarot-ready .tarot-card{animation:tarotImpact .15s ease-out 0s both!important}.tarot-shell.tarot-ready .tarot-stars{animation:none!important}}

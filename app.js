@@ -125,25 +125,69 @@ function startTarotDust(reverse=false){
   const ctx=canvas.getContext('2d'); if(!ctx)return;
   const dpr=Math.min(window.devicePixelRatio||1,2), w=shell.clientWidth, h=shell.clientHeight;
   canvas.width=Math.max(1,Math.floor(w*dpr)); canvas.height=Math.max(1,Math.floor(h*dpr)); ctx.setTransform(dpr,0,0,dpr,0,0);
-  const rectW=Math.min(390,w*.88), rectH=Math.min(560,h*.78), cx=w/2, cy=h/2;
-  const particles=[]; const count=Math.min(900,Math.max(520,Math.floor(w*h/1400)));
+  const cx=w/2, cy=h/2, cardW=Math.min(390,w*.88), cardH=Math.min(560,h*.78);
+  const particles=[];
+  const count=Math.min(1050,Math.max(620,Math.floor(w*h/1200)));
   for(let i=0;i<count;i++){
-    const x=(Math.random()*w), y=(Math.random()*h), side=Math.floor(Math.random()*4);
-    let tx=cx+(Math.random()-.5)*rectW*.92, ty=cy+(Math.random()-.5)*rectH*.92;
-    // keep targets concentrated around the card perimeter + interior so the silhouette emerges from dust
-    if(Math.random()<.42){ const a=Math.random()*Math.PI*2; const rr=Math.random()<.65?.49:.40; tx=cx+Math.cos(a)*rectW*rr; ty=cy+Math.sin(a)*rectH*rr; }
-    particles.push({x:reverse?tx:x,y:reverse?ty:y,tx:reverse?x:tx,ty:reverse?y:ty,r:.45+Math.random()*1.35,delay:Math.random()*.55,phase:Math.random()*Math.PI*2,speed:.8+Math.random()*.55});
+    const edge=Math.random()<.72;
+    let sx,sy;
+    if(edge){
+      const a=Math.random()*Math.PI*2, rr=.58+Math.random()*.75;
+      sx=cx+Math.cos(a)*cardW*rr; sy=cy+Math.sin(a)*cardH*rr;
+    }else{ sx=Math.random()*w; sy=Math.random()*h; }
+    const ang=Math.random()*Math.PI*2;
+    const radius=.18+Math.random()*.92;
+    const tx=cx+(Math.random()-.5)*cardW*.96;
+    const ty=cy+(Math.random()-.5)*cardH*.96;
+    const burstX=cx+Math.cos(ang)*(cardW*(.54+radius*.48));
+    const burstY=cy+Math.sin(ang)*(cardH*(.54+radius*.48));
+    particles.push({
+      x:reverse?tx:sx,y:reverse?ty:sy,
+      gatherX:tx,gatherY:ty,
+      burstX,burstY,
+      r:.35+Math.random()*1.25,
+      delay:Math.random()*.28,
+      phase:Math.random()*Math.PI*2,
+      tw:Math.random()*Math.PI*2
+    });
   }
-  const started=performance.now(); const duration=reverse?650:1500;
+  const started=performance.now();
+  const duration=reverse?540:1120;
+  function easeOut(t){return 1-Math.pow(1-t,3)}
+  function easeInOut(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
   function frame(now){
-    const t=Math.min(1,(now-started)/duration), e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2; ctx.clearRect(0,0,w,h);
-    for(const p of particles){let q=Math.max(0,Math.min(1,(t-p.delay*.22)/(1-p.delay*.22))); q=reverse?e:e*q; const x=p.x+(p.tx-p.x)*q, y=p.y+(p.ty-p.y)*q; const glow=reverse?(1-q):q; ctx.globalAlpha=.15+.8*glow; ctx.fillStyle=`rgba(255,${215+Math.floor(35*glow)},${150+Math.floor(75*glow)},${.8})`; ctx.shadowBlur=reverse?3+8*glow:2+12*glow; ctx.shadowColor='rgba(255,220,130,.75)'; ctx.beginPath(); ctx.arc(x,y,p.r*(.8+.45*Math.sin(now/260+p.phase)),0,Math.PI*2); ctx.fill(); }
-    ctx.shadowBlur=0; ctx.globalAlpha=1;
-    if(t<1)requestAnimationFrame(frame); else ctx.clearRect(0,0,w,h);
+    const raw=Math.min(1,(now-started)/duration);
+    ctx.clearRect(0,0,w,h);
+    for(const p of particles){
+      let t=Math.max(0,(raw-p.delay*.18)/(1-p.delay*.18));
+      let x,y,alpha;
+      if(!reverse){
+        // First the card is born from dust, then the particles make a soft outward "impact".
+        if(t<.78){
+          const q=easeInOut(t/.78);
+          x=p.x+(p.gatherX-p.x)*q; y=p.y+(p.gatherY-p.y)*q;
+          alpha=Math.min(1,q*1.35)*(1-t*.18);
+        }else{
+          const q=easeOut((t-.78)/.22);
+          x=p.gatherX+(p.burstX-p.gatherX)*q; y=p.gatherY+(p.burstY-p.gatherY)*q;
+          alpha=(1-q)*.95;
+        }
+      }else{
+        const q=easeOut(t);
+        x=p.gatherX+(p.burstX-p.gatherX)*q; y=p.gatherY+(p.burstY-p.gatherY)*q;
+        alpha=(1-q)*.95;
+      }
+      const pulse=.75+.35*Math.sin(now/170+p.tw);
+      ctx.globalAlpha=alpha;
+      ctx.fillStyle=`rgba(255,${218+Math.floor(28*pulse)},${150+Math.floor(75*pulse)},1)`;
+      ctx.shadowBlur=2+8*pulse; ctx.shadowColor='rgba(255,224,130,.9)';
+      ctx.beginPath();ctx.arc(x,y,p.r*pulse,0,Math.PI*2);ctx.fill();
+    }
+    ctx.shadowBlur=0;ctx.globalAlpha=1;
+    if(raw<1)requestAnimationFrame(frame); else ctx.clearRect(0,0,w,h);
   }
   requestAnimationFrame(frame);
 }
-
 function setTheme(mode){document.body.classList.toggle('manual-dark',mode==='dark');document.body.classList.toggle('manual-light',mode==='light');localStorage.setItem('iomastavka_theme',mode);const b=$('#themeToggleButton'),i=$('#themeIcon');if(i)i.textContent=mode==='dark'?'☾':'☀';if(b){b.title=mode==='dark'?tr('themeLight'):tr('themeDark');b.setAttribute('aria-label',b.title);}}
 const views={home:'#homeView',calculator:'#calculatorView',assistant:'#assistantView',forwarders:'#forwardersView',news:'#newsView',article:'#articleView',tarotView:'#tarotView'};
 function showView(name){
