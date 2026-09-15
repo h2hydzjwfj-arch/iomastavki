@@ -167,6 +167,18 @@ app.get('/api/cities', async (req,res) => {
   }catch{res.status(502).json({ok:false,error:'city search unavailable',results:[]});}
 });
 
+app.get('/api/geocode', async (req,res) => {
+  const q=String(req.query.q||'').trim(), country=String(req.query.country||'').toLowerCase();
+  if(!q)return res.json({ok:true,results:[]});
+  try{
+    const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8${country?`&countrycodes=${encodeURIComponent(country)}`:''}&q=${encodeURIComponent(q)}`;
+    const r=await fetch(url,{headers:{'User-Agent':'iomastavka/1.2 (logistics calculator)'}}); if(!r.ok)throw new Error('geocode unavailable');
+    const data=await r.json();
+    const results=(data||[]).map(x=>({name:x.name||x.display_name?.split(',')[0]||q,nameEn:x.name||x.display_name?.split(',')[0]||q,nameZh:x.name||x.display_name?.split(',')[0]||q,admin1:x.address?.state||x.address?.province||'',country:x.address?.country||'',country_code:x.address?.country_code||'',latitude:Number(x.lat),longitude:Number(x.lon),display_name:x.display_name||''})).filter(x=>Number.isFinite(x.latitude)&&Number.isFinite(x.longitude));
+    res.json({ok:true,results});
+  }catch(e){res.status(502).json({ok:false,error:'address search unavailable',results:[]});}
+});
+
 app.get('/api/weather', async (req,res) => {
   const key = process.env.OPENWEATHER_API_KEY;
   if (!key) return res.status(503).json({ok:false,error:'Weather key not configured'});
@@ -203,8 +215,8 @@ async function fetchNews() {
   const seen=new Set();
   const items=all.filter(x=>{const k=x.title.toLowerCase(); if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,24);
   await Promise.all(items.slice(0,18).map(async item=>{
-    if(item.image)return;
-    try{const r=await fetch(item.link,{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0'}});if(!r.ok)return;const h=(await r.text()).slice(0,500000);const m=h.match(/<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+)/i)||h.match(/<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:image[\"']/i);if(m)item.image=m[1];
+    if(item.image && item.video && Array.isArray(item.images) && item.images.length)return;
+    try{const r=await fetch(item.link,{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0'}});if(!r.ok)return;const h=(await r.text()).slice(0,500000);const m=h.match(/<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+)/i)||h.match(/<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:image[\"']/i);if(m)item.image=m[1];const vm=h.match(/<meta[^>]+property=[\"']og:video(?::secure_url)?[\"'][^>]+content=[\"']([^\"']+)/i)||h.match(/<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:video(?::secure_url)?[\"']/i);if(vm)item.video=vm[1];const imgs=[...h.matchAll(/<meta[^>]+property=[\"']og:image(?::secure_url)?[\"'][^>]+content=[\"']([^\"']+)/gi)].map(z=>z[1]).filter(Boolean);if(imgs.length)item.images=[...new Set(imgs)].slice(0,5);
     }catch{}
   }));
   newsCache={at:Date.now(),items};
@@ -359,7 +371,7 @@ app.post('/api/ai', async (req,res) => {
   const factor=modeFactor[String(context.transport||'')]||167;
   const volume=Number(context.lengthMm||0)*Number(context.widthMm||0)*Number(context.heightMm||0)/1e9*Number(context.pieces||1);
   const chargeableKg=Math.max(Number(context.weightKg||0),volume*factor);
-  const system=`Ты AI-ассистент сайта iomastavka — помощник по международной логистике Китай/Азия → Россия. Отвечай кратко и по делу. Объёмный вес выбирается автоматически: авиа 167, авто 400, ЖД 500, море 1000, мультимодальная море+ЖД 1000 кг/м³. Текущий расчётный вес: ${chargeableKg.toFixed(1)} кг. Для расстояния используй контекст; расстояние между городами — географическое по координатам и является ориентиром, если нет фактического маршрута перевозчика. Для ставок используй только базу ниже. Если ставка указана за кг/тонну/м³, пересчитай её на текущий груз только когда база расчёта однозначна. Если ставка указана за отправку/контейнер — не умножай её на вес. Если точного маршрута нет, допускается ориентировочный диапазон по ближайшим историческим ставкам; расстояние можно учитывать как коэффициент только если транспорт, база расчёта и характер маршрута сопоставимы, и обязательно помечай такой расчёт как ориентировочный. Не придумывай отсутствующие тарифы. Если есть историческая ставка конкретного экспедитора по этому или похожему направлению — можно рекомендовать его. Не утверждай, что ставка актуальна сегодня без срока действия. Если вопрос требует свежих сведений, которых нет в базе ставок (новые законы, тарифы, ограничения, расписания, рыночные события, текущие цены), обязательно используй веб-поиск и отделяй найденные свежие факты от исторических ставок. База ставок (сначала наиболее похожие): ${JSON.stringify(relevantRates)}. Текущий контекст калькулятора: ${JSON.stringify(context)}.`;
+  const system=`Ты AI-ассистент сайта iomastavka — специализированный помощник по международной логистике, ВЭД, Китай/Азия → Россия, ставкам, маршрутам, Incoterms, таможне, документам и анализу КП. Не отвечай автоматически на любое короткое слово как на отдельный вопрос: если запрос слишком общий или двусмысленный (например, просто «курс»), уточни, что именно нужно: курс CNY/USD/EUR, курс ЦБ на дату или пересчёт конкретной ставки. Не превращай любой вопрос в разговор о курсе валют. Если вопрос вне логистики/ВЭД и не связан с приложенным файлом или текущим расчётом, вежливо скажи, что специализация ассистента — логистика, и предложи уточнить логистическую задачу. Отвечай кратко и по делу. Объёмный вес выбирается автоматически: авиа 167, авто 400, ЖД 500, море 1000, мультимодальная море+ЖД 1000 кг/м³. Текущий расчётный вес: ${chargeableKg.toFixed(1)} кг. Для расстояния используй контекст; расстояние между городами — географическое по координатам и является ориентиром, если нет фактического маршрута перевозчика. Для ставок используй только базу ниже. Если ставка указана за кг/тонну/м³, пересчитай её на текущий груз только когда база расчёта однозначна. Если ставка указана за отправку/контейнер — не умножай её на вес. Если точного маршрута нет, допускается ориентировочный диапазон по ближайшим историческим ставкам; расстояние можно учитывать как коэффициент только если транспорт, база расчёта и характер маршрута сопоставимы, и обязательно помечай такой расчёт как ориентировочный. Не придумывай отсутствующие тарифы. Если есть историческая ставка конкретного экспедитора по этому или похожему направлению — можно рекомендовать его. Не утверждай, что ставка актуальна сегодня без срока действия. Если вопрос требует свежих сведений, которых нет в базе ставок (новые законы, тарифы, ограничения, расписания, рыночные события, текущие цены), обязательно используй веб-поиск и отделяй найденные свежие факты от исторических ставок. База ставок (сначала наиболее похожие): ${JSON.stringify(relevantRates)}. Текущий контекст калькулятора: ${JSON.stringify(context)}.`;
   const input=[{role:'system',content:system},...history.map(x=>({role:x.role==='assistant'?'assistant':'user',content:String(x.content||'')})),{role:'user',content:message}];
   try{
     const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model,input,max_output_tokens:900,tools:[{type:'web_search'}],tool_choice:'auto'})});
