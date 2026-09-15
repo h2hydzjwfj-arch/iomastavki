@@ -377,6 +377,29 @@ function relevantRateRecords(db, context){
  return db.records.map(r=>({...r,_score:routeScore(r,from,to,mode,Number.isFinite(distance)?distance:null)})).sort((a,b)=>b._score-a._score||new Date(b.updatedAt||0)-new Date(a.updatedAt||0)).slice(0,40);
 }
 
+
+app.post('/api/customs/check', auth, async (req,res) => {
+  const code=String(req.body?.code||'').replace(/\D/g,'').slice(0,10);
+  if(code.length<4) return res.status(400).json({ok:false,error:'Введите корректный код ТН ВЭД'});
+  const sourceUrl=`https://customs.gov.ru/search?q=${encodeURIComponent(code)}&date_since=&date_until=&fields%5B%5D=title&fields%5B%5D=sub&fields%5B%5D=description&fields%5B%5D=text`;
+  try{
+    const r=await fetch(sourceUrl,{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0'},redirect:'follow'});
+    const html=await r.text();
+    const text=html.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ').trim().slice(0,18000);
+    const key=process.env.OPENAI_API_KEY;
+    if(!key){ return res.json({ok:true,code,title:'Информация ФТС',analysis:'Официальная страница ФТС найдена, но OPENAI_API_KEY не настроен для автоматического разбора.',sourceUrl}); }
+    const model=process.env.OPENAI_MODEL || 'gpt-5.6-luna';
+    const prompt=`Ты таможенный аналитик iomastavka. Разбери только информацию, найденную на официальном сайте ФТС России customs.gov.ru для кода ТН ВЭД ЕАЭС ${code}. Не выдумывай отсутствующие данные. Дай структурировано: 1) наименование/описание товара; 2) уровень кода (4/6/10 знаков); 3) ставки пошлины, если явно указаны; 4) НДС/акциз, если явно указаны; 5) запреты/ограничения, лицензии, разрешения, сертификаты, маркировка и иные меры нетарифного регулирования, если есть; 6) особые условия/примечания; 7) что нужно уточнить у декларанта. Если официальная страница не содержит конкретного значения, напиши «не найдено на странице ФТС». В конце добавь предупреждение, что классификация зависит от фактических характеристик товара и решение таможни имеет приоритет. Сведения ФТС: ${text}`;
+    const ar=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model,input:[{role:'system',content:'Отвечай на русском, кратко и структурировано.'},{role:'user',content:prompt}],max_output_tokens:1200})});
+    const d=await ar.json();
+    if(!ar.ok) return res.status(ar.status).json({ok:false,error:d?.error?.message||'Не удалось разобрать данные ФТС'});
+    let analysis=d.output_text||'';
+    if(!analysis&&Array.isArray(d.output)) analysis=d.output.flatMap(o=>Array.isArray(o.content)?o.content:[]).map(c=>c.text||c.value||'').filter(Boolean).join('\n');
+    const htmlOut=analysis.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    res.json({ok:true,code,title:'Информация ФТС',analysis:analysis,analysisHtml:htmlOut,sourceUrl});
+  }catch(e){res.status(502).json({ok:false,error:'Не удалось получить информацию с customs.gov.ru: '+(e.message||'ошибка сети')});}
+});
+
 app.post('/api/ai', async (req,res) => {
   const key=process.env.OPENAI_API_KEY;
   if(!key) return res.status(503).json({ok:false,error:'AI key not configured'});

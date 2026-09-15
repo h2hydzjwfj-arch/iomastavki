@@ -7,7 +7,7 @@ document.addEventListener('click', (e) => {
   const trigger = e.target.closest?.('[data-open-view]');
   if (trigger) {
     const name = trigger.getAttribute('data-open-view');
-    const target = document.getElementById(name === 'calculator' ? 'calculatorView' : name === 'assistant' ? 'assistantView' : name === 'forwarders' ? 'forwardersView' : name === 'news' ? 'newsView' : name === 'article' ? 'articleView' : name === 'tarotView' ? 'tarotView' : 'homeView');
+    const target = document.getElementById(name === 'calculator' ? 'calculatorView' : name === 'assistant' ? 'assistantView' : name === 'forwarders' ? 'forwardersView' : name === 'news' ? 'newsView' : name === 'article' ? 'articleView' : name === 'tarotView' ? 'tarotView' : name === 'customsView' ? 'customsView' : 'homeView');
     if (target) {
       document.querySelectorAll('.view-layer').forEach(v => { v.classList.remove('open'); v.setAttribute('aria-hidden','true'); });
       target.classList.add('open'); target.setAttribute('aria-hidden','false');
@@ -151,6 +151,21 @@ function renderFactors(){selectedFactor=selectedMode&&modes[selectedMode]?modes[
 document.addEventListener('click',e=>{$$('.hover-menu').forEach(m=>{if(!e.target.closest('.hover-select'))m.classList.remove('open')})});
 
 // Navigation: the Hamsa is a compact command button; hover/click reveals the home dashboard.
+$('#customsButton')?.addEventListener('click',()=>showView('customsView'));
+$('#customsCheck')?.addEventListener('click', async()=>{
+  const code=($('#customsCode')?.value||'').replace(/\D/g,''); const status=$('#customsStatus'), out=$('#customsResult');
+  if(code.length<4){status.textContent='Введите код ТН ВЭД (обычно 10 цифр).'; return;}
+  status.textContent='Проверяю официальные материалы ФТС…'; out.classList.add('hidden'); out.innerHTML='';
+  try{const r=await fetch('/api/customs/check',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({code})}); const d=await r.json(); if(!r.ok||!d.ok) throw new Error(d.error||'Не удалось проверить код');
+    out.innerHTML=`<div class="customs-code-card"><b>${escapeHtml(d.code)}</b><span>${escapeHtml(d.title||'Информация найдена')}</span></div><div class="customs-analysis">${d.analysisHtml||escapeHtml(d.analysis||'Информация получена.')}</div>${d.sourceUrl?`<a href="${d.sourceUrl}" target="_blank" rel="noopener">Источник ФТС: customs.gov.ru ↗</a>`:''}`; out.classList.remove('hidden'); status.textContent='Проверка завершена.';
+  }catch(e){status.textContent=e.message||'Не удалось проверить код.';}
+});
+// Final navigation safety: all command buttons use the same view controller.
+$('#menuButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();showTarot()});
+$('#agentImportButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openAgentImporter()});
+$('#customsButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();showView('customsView')});
+$$('[data-close-view]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const n=b.dataset.closeView;if(n==='tarotView')closeTarot();else showView('home')}));
+
 $('#menuButton').onclick=()=>showTarot();
 $('#agentImportButton').onclick=()=>openAgentImporter();
 $('#logoutButton').onclick=async()=>{await fetch('/api/logout',{method:'POST'});location.href='/'}; $('#themeToggleButton').onclick=()=>setTheme(document.body.classList.contains('manual-dark')?'light':'dark'); setTheme(localStorage.getItem('iomastavka_theme')||'light');
@@ -272,7 +287,7 @@ let newsPrefetchPromise=null;
 function prefetchNews(){if(newsCache.length)return Promise.resolve(newsCache);if(newsPrefetchPromise)return newsPrefetchPromise;newsPrefetchPromise=fetch('/api/news',{cache:'no-store'}).then(r=>r.json()).then(d=>{newsCache=d.items||[];return newsCache}).catch(()=>[]);return newsPrefetchPromise}
 prefetchNews();
 
-const views={home:'#homeView',calculator:'#calculatorView',assistant:'#assistantView',forwarders:'#forwardersView',news:'#newsView',article:'#articleView',tarotView:'#tarotView'};
+const views={home:'#homeView',calculator:'#calculatorView',assistant:'#assistantView',forwarders:'#forwardersView',news:'#newsView',article:'#articleView',tarotView:'#tarotView',customsView:'#customsView'};
 // Bind dashboard cards to views (kept explicit so navigation survives UI/theme changes).
 document.querySelectorAll('[data-open-view]').forEach(el=>{
   el.addEventListener('click',()=>showView(el.dataset.openView));

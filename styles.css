@@ -624,3 +624,59 @@ body.manual-dark .tarot-card h2,body.manual-dark .tarot-card p,body.manual-dark 
 body.manual-dark .tarot-card p{color:#edf4ff !important}
 .tarot-diamond{animation:tarotDiamond 1.8s ease-in-out infinite !important}
 @keyframes tarotDiamond{0%,100%{opacity:.72;transform:scale(.96);text-shadow:0 0 4px #fff3a5,0 0 10px rgba(255,220,110,.35)}50%{opacity:1;transform:scale(1.08);text-shadow:0 0 7px #fff7bf,0 0 18px rgba(255,221,100,.85),0 0 30px rgba(255,204,60,.45)}}
+
+/* Customs inspector tool */
+.topbar .customs-button{position:relative!important;left:auto!important;top:auto!important;transform:none!important;width:var(--control-size,40px)!important;height:var(--control-size,40px)!important;flex:0 0 var(--control-size,40px);margin:0 0 0 10px!important;border-radius:12px;border:1px solid rgba(83,132,158,.22);background:rgba(255,255,255,.76);display:grid;place-items:center;font-size:18px;cursor:pointer;z-index:103;box-shadow:0 8px 24px rgba(30,70,90,.08)}
+.customs-shell{position:relative;width:min(760px,calc(100vw - 28px));max-height:min(720px,calc(100svh - 28px));overflow:auto;padding:48px 34px 28px;border-radius:28px;background:rgba(248,252,255,.97);border:1px solid rgba(66,126,153,.16);box-shadow:0 30px 100px rgba(24,65,85,.22);color:#183247}
+.customs-head h2{margin:6px 0 8px;font-size:30px;color:#183247}.customs-head p{margin:0;color:#5a7281;line-height:1.55}.customs-form{display:flex;gap:10px;margin:24px 0}.customs-form input{flex:1;min-width:0;border:1px solid rgba(70,125,150,.25);border-radius:14px;padding:13px 15px;font-size:16px;background:#fff;color:#17344a}.customs-form .calculate{width:auto;margin:0;padding:0 20px}.customs-status{min-height:22px;color:#567383;font-size:13px}.customs-result{margin-top:12px;padding:18px;border-radius:18px;background:#fff;border:1px solid rgba(67,128,154,.16);line-height:1.65;color:#29485b}.customs-code-card{display:flex;align-items:center;gap:14px;margin-bottom:14px}.customs-code-card b{font-size:22px;color:#1c6f95}.customs-code-card span{font-weight:700;color:#35586a}.customs-analysis{font-size:14px}.customs-source{display:inline-block;margin-top:18px;color:#1f789d;font-weight:700;text-decoration:none}.customs-result.hidden{display:none}
+body.manual-dark .topbar .customs-button{background:#103f55!important;color:#ffe08a!important;border-color:rgba(122,219,229,.35)!important;box-shadow:0 8px 30px rgba(0,0,0,.28),0 0 18px rgba(74,181,205,.10)}
+body.manual-dark .customs-shell{background:linear-gradient(145deg,#071d35,#082d45 70%,#0b3b51)!important;border-color:rgba(105,208,220,.24)!important;color:#edfaff!important}.manual-dark .customs-head h2{color:#fff!important}.manual-dark .customs-head p,.manual-dark .customs-status{color:#b8d6df!important}.manual-dark .customs-form input{background:#09263e!important;color:#f4fbff!important;border-color:rgba(111,205,218,.28)!important}.manual-dark .customs-result{background:#0a2942!important;border-color:rgba(111,205,218,.25)!important;color:#e7f8fb!important}.manual-dark .customs-code-card b{color:#ffe08a!important}.manual-dark .customs-code-card span{color:#e4f5f8!important}.manual-dark .customs-source{color:#7fe1ed!important}
+@media(max-width:650px){.topbar .customs-button{width:36px!important;height:36px!important;margin-left:8px!important}.customs-shell{padding:46px 20px 22px}.customs-form{flex-direction:column}.customs-form .calculate{min-height:44px}}
+
+/* FILE 15 — vertical command rail + unified cosmic night background */
+:root{--rail-size:42px;--rail-gap:10px}
+.topbar{position:relative!important}
+.topbar>.hamsa-button,
+.topbar>.theme-controls,
+.topbar>.dollar-button,
+.topbar>.customs-button{position:fixed!important;left:18px!important;top:calc(50% - 108px)!important;transform:none!important;width:var(--rail-size)!important;height:var(--rail-size)!important;margin:0!important;z-index:1001!important;border-radius:14px!important}
+.topbar>.theme-controls{top:calc(50% - 54px)!important}
+.topbar>.dollar-button{top:50%!important}
+.topbar>.customs-button{top:calc(50% + 54px)!important}
+.topbar>.hamsa-button,.topbar>.theme-controls button,.topbar>.dollar-button,.topbar>.customs-button{display:grid!important;place-items:center!important}
+.topbar>.hamsa-button{padding:0!important}
+.topbar>.theme-controls{display:block!important;width:var(--rail-size)!important;height:var(--rail-size)!important}
+.topbar>.theme-controls button{width:100%!important;height:100%!important}
+.topbar>.dollar-button{font-size:17px!important}
+.topbar>.customs-button{font-size:19px!important}
+
+/* Keep every popup close control clickable above all popup content. */
+.view-layer .close-button,.view-layer>.view-close,.customs-shell>.view-close,.agent-import-shell>.close-button{z-index:3000!important;pointer-events:auto!important}
+.customs-shell>.view-close{position:absolute!important;right:16px!important;left:auto!important;top:14px!important;width:34px!important;height:34px!important}
+
+/* Cosmic night: background belongs to the same visual family as the panels. */
+body.manual-dark .weather-scene{
+  background:
+    radial-gradient(circle at 78% 18%,rgba(47,111,176,.34),transparent 24%),
+    radial-gradient(circle at 18% 72%,rgba(20,91,146,.24),transparent 30%),
+    radial-gradient(circle at 52% 42%,rgba(18,62,112,.18),transparent 45%),
+    linear-gradient(180deg,#030b20 0%,#061735 46%,#071f42 100%)!important;
+}
+body.manual-dark .weather-scene:after{
+  background:
+    radial-gradient(circle at 50% 35%,rgba(70,143,212,.10),transparent 35%),
+    linear-gradient(180deg,rgba(3,10,28,.08),rgba(2,14,31,.20))!important;
+}
+body.manual-dark .stars{opacity:1!important}
+body.manual-dark .wave-back{background:#124d86!important;opacity:.16!important}
+body.manual-dark .wave-mid{background:#1a6da1!important;opacity:.10!important}
+body.manual-dark .wave-front{background:#5d8db4!important;opacity:.05!important}
+
+/* Light mode keeps the same depth, but airy. */
+body.manual-light .weather-scene{filter:saturate(1.02)}
+
+@media(max-width:700px){
+  :root{--rail-size:36px;--rail-gap:8px}
+  .topbar>.hamsa-button,.topbar>.theme-controls,.topbar>.dollar-button,.topbar>.customs-button{left:10px!important;width:36px!important;height:36px!important;border-radius:12px!important}
+  .topbar>.hamsa-button{top:calc(50% - 90px)!important}.topbar>.theme-controls{top:calc(50% - 45px)!important}.topbar>.dollar-button{top:50%!important}.topbar>.customs-button{top:calc(50% + 45px)!important}
+}
