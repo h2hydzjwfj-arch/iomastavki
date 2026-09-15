@@ -1,24 +1,34 @@
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
-// Emergency navigation binding: keep the main windows clickable even if a later
-// optional module fails during startup. Event delegation is intentionally early.
-document.addEventListener('click', (e) => {
-  const trigger = e.target.closest?.('[data-open-view]');
-  if (trigger) {
-    const name = trigger.getAttribute('data-open-view');
-    const target = document.getElementById(name === 'calculator' ? 'calculatorView' : name === 'assistant' ? 'assistantView' : name === 'forwarders' ? 'forwardersView' : name === 'news' ? 'newsView' : name === 'article' ? 'articleView' : name === 'tarotView' ? 'tarotView' : name === 'customsView' ? 'customsView' : 'homeView');
-    if (target) {
-      document.querySelectorAll('.view-layer').forEach(v => { v.classList.remove('open'); v.setAttribute('aria-hidden','true'); });
-      target.classList.add('open'); target.setAttribute('aria-hidden','false');
-      document.body.classList.toggle('view-open', name !== 'home');
-      if(name === 'forwarders' && typeof renderDirectory === 'function') renderDirectory();
-      if(name === 'news' && typeof loadNews === 'function') loadNews();
-      if(name === 'assistant') setTimeout(()=>document.querySelector('#assistantInput')?.focus(),120);
-      e.preventDefault();
-    }
-  }
-}, true);
+// HARDENED UI BOOT: these handlers are intentionally independent from the rest of the app.
+// If an optional module fails later, the core windows, close buttons and theme controls still work.
+(() => {
+  const viewMap = {calculator:'calculatorView',assistant:'assistantView',forwarders:'forwardersView',news:'newsView',article:'articleView',tarotView:'tarotView',customsView:'customsView'};
+  const open = (name) => {
+    const id=viewMap[name]; if(!id) return false;
+    const target=document.getElementById(id); if(!target) return false;
+    document.querySelectorAll('.view-layer').forEach(v=>{v.classList.remove('open');v.setAttribute('aria-hidden','true')});
+    target.classList.add('open'); target.setAttribute('aria-hidden','false'); document.body.classList.add('view-open');
+    return true;
+  };
+  const close = () => { document.querySelectorAll('.view-layer').forEach(v=>{v.classList.remove('open');v.setAttribute('aria-hidden','true')}); document.body.classList.remove('view-open'); };
+  window.__iomaOpenView=open; window.__iomaCloseViews=close;
+  document.addEventListener('click',(e)=>{
+    const trigger=e.target.closest?.('[data-open-view]');
+    if(trigger){ const name=trigger.getAttribute('data-open-view'); if(open(name)){e.preventDefault();e.stopPropagation();return;} }
+    const closeBtn=e.target.closest?.('[data-close-view],.view-close');
+    if(closeBtn){ close(); e.preventDefault(); e.stopPropagation(); return; }
+    if(e.target.classList?.contains('view-layer') && e.target.classList.contains('open')){close();}
+  }, true);
+  window.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+  // Always show a useful last-resort currency until the live CBR request completes.
+  const seed=()=>{
+    const values={homeCny:'12.535',homeUsd:'84.336',homeEur:'97.763',cnyRate:'12.535',usdRate:'84.336',eurRate:'97.763'};
+    Object.entries(values).forEach(([id,val])=>{const el=document.getElementById(id);if(el && (!el.textContent || el.textContent==='—'))el.textContent=val});
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',seed,{once:true}); else seed();
+})();
 
 const I18N = {
   ru:{title:'Расчёт ставки',from:'Откуда',to:'Куда',cargo:'ГРУЗ',weight:'Вес, кг',pieces:'Количество мест',distance:'Расстояние, км',auto:'Автоматически',dimensions:'ГАБАРИТЫ ОДНОГО МЕСТА',volumeAll:'Объём — по всем местам',length:'Длина',width:'Ширина',height:'Высота',forwarder:'Экспедитор',transport:'Вид транспорта',incoterms:'Условия поставки',dimWeight:'Объёмный вес',chooseForwarder:'Выберите экспедитора',chooseTransport:'Выберите транспорт',selected:'ЭКСПЕДИТОР',none:'Не выбран',calculate:'Рассчитать',agents:'Экспедиторы',assistant:'ИИ-ассистент',assistantSub:'Спросите что угодно по логистике',assistantHelp:'Можно писать обычным языком: маршрут, ставка, Incoterms, таможня, расчёт веса или новая ставка.',send:'Отправить',news:'Новости',newsSub:'Логистика · Китай · Таможня',logout:'Выйти',thinking:'Думаю над вашим ответом…',aiOff:'ИИ не подключён. Добавьте OPENAI_API_KEY в Render.',newsLoading:'Загружаю новости…',noNews:'Новости пока недоступны.',weatherError:'Погода временно недоступна.',todayDate:'15.09.2026 г.',home:'Главная',heroEyebrow:'ЛОГИСТИКА · КИТАЙ → РОССИЯ',heroText:'Точный расчёт. Умный помощник.\nВсё необходимое для работы с грузом — в одном месте.',tileRates:'Расчёт ставок',tileRatesSub:'Маршрут, ставка и транспорт',tileAI:'AI-ассистент',tileAISub:'Текстом или голосом',tileAgents:'Экспедиторы',tileAgentsSub:'Контакты и направления перевозок',tileNews:'Новости ВЭД',tileNewsSub:'Китай · логистика · таможня',directoryEyebrow:'СПРАВОЧНИК',directorySub:'Поставщики и контакты по направлениям.',intelligence:'ИНТЕЛЛЕКТ',assistantSub2:'Логистика, расчёты и ВЭД — голосом или текстом.',attach:'Файл',fileHint:'Файл можно добавить вместе с сообщением',voice:'Микрофон',intelligenceFeed:'ИНФОРМАЦИОННАЯ ЛЕНТА',newsSub2:'Китай · логистика · таможня',chargeWeight:'Расчётный вес',company:'Компания',contact:'Контакт',phone:'Телефон',email:'Email',website:'Сайт',directions:'Направления',note:'Примечание',all:'Все',close:'Закрыть',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Автоматически по транспорту',transportRail:'ЖД',transportRoad:'Авто',transportAir:'Авиа',transportSea:'Море',transportMulti:'Море + ЖД',menu:'Меню',ready:'Готов к разговору',listen:'Слушаю…',transcribe:'Расшифровываю…',recognized:'Речь распознана',fail:'Не удалось распознать голос',mic:'Нет доступа к микрофону',unavailable:'Голос недоступен',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'ЦБ РФ',articleLoading:'Готовлю статью…',articleError:'Не удалось подготовить статью.',articleListen:'Аудиоподкаст',articlePlay:'Слушать',articlePause:'Пауза',articleSource:'Материал подготовлен на основе новости',articleBack:'К новостям',autoVolumeLabel:'Объём',autoVolumetricLabel:'Объёмный вес',factorLabel:'Фактор',themeLight:'Светлая тема',themeDark:'Тёмная тема',themeToggle:'Сменить тему'},
@@ -150,25 +160,13 @@ function renderFactors(){selectedFactor=selectedMode&&modes[selectedMode]?modes[
 ['forwarderBtn','transportBtn','incotermBtn'].forEach(id=>{const btn=$('#'+id);const menu=$('#'+id.replace('Btn','Menu'));if(btn&&menu)btn.addEventListener('click',e=>{e.stopPropagation();const open=menu.style.visibility==='visible'||menu.classList.contains('open');$$('.hover-menu').forEach(m=>m.classList.remove('open'));if(!open)menu.classList.add('open')})});
 document.addEventListener('click',e=>{$$('.hover-menu').forEach(m=>{if(!e.target.closest('.hover-select'))m.classList.remove('open')})});
 
-// Navigation: the Hamsa is a compact command button; hover/click reveals the home dashboard.
-$('#customsButton')?.addEventListener('click',()=>showView('customsView'));
-$('#customsCheck')?.addEventListener('click', async()=>{
-  const code=($('#customsCode')?.value||'').replace(/\D/g,''); const status=$('#customsStatus'), out=$('#customsResult');
-  if(code.length<4){status.textContent='Введите код ТН ВЭД (обычно 10 цифр).'; return;}
-  status.textContent='Проверяю официальные материалы ФТС…'; out.classList.add('hidden'); out.innerHTML='';
-  try{const r=await fetch('/api/customs/check',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({code})}); const d=await r.json(); if(!r.ok||!d.ok) throw new Error(d.error||'Не удалось проверить код');
-    out.innerHTML=`<div class="customs-code-card"><b>${escapeHtml(d.code)}</b><span>${escapeHtml(d.title||'Информация найдена')}</span></div><div class="customs-analysis">${d.analysisHtml||escapeHtml(d.analysis||'Информация получена.')}</div>${d.sourceUrl?`<a href="${d.sourceUrl}" target="_blank" rel="noopener">Источник ФТС: customs.gov.ru ↗</a>`:''}`; out.classList.remove('hidden'); status.textContent='Проверка завершена.';
-  }catch(e){status.textContent=e.message||'Не удалось проверить код.';}
-});
-// Final navigation safety: all command buttons use the same view controller.
+// Navigation controls. Keep a single source of truth to avoid duplicate handlers.
+$('#customsButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.__iomaOpenView?.('customsView')});
 $('#menuButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();showTarot()});
 $('#agentImportButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openAgentImporter()});
-$('#customsButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();showView('customsView')});
-$$('[data-close-view]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const n=b.dataset.closeView;if(n==='tarotView')closeTarot();else showView('home')}));
-
-$('#menuButton').onclick=()=>showTarot();
-$('#agentImportButton').onclick=()=>openAgentImporter();
-$('#logoutButton').onclick=async()=>{await fetch('/api/logout',{method:'POST'});location.href='/'}; $('#themeToggleButton').onclick=()=>setTheme(document.body.classList.contains('manual-dark')?'light':'dark'); setTheme(localStorage.getItem('iomastavka_theme')||'light');
+$('#logoutButton')?.addEventListener('click',async()=>{try{await fetch('/api/logout',{method:'POST'})}finally{location.href='/'}});
+$('#themeToggleButton')?.addEventListener('click',()=>setTheme(document.body.classList.contains('manual-dark')?'light':'dark'));
+setTheme(localStorage.getItem('iomastavka_theme')||'light');
 
 function showTarot(){
   showView('tarotView');
@@ -288,27 +286,15 @@ function prefetchNews(){if(newsCache.length)return Promise.resolve(newsCache);if
 prefetchNews();
 
 const views={home:'#homeView',calculator:'#calculatorView',assistant:'#assistantView',forwarders:'#forwardersView',news:'#newsView',article:'#articleView',tarotView:'#tarotView',customsView:'#customsView'};
-// Bind dashboard cards to views (kept explicit so navigation survives UI/theme changes).
-document.querySelectorAll('[data-open-view]').forEach(el=>{
-  el.addEventListener('click',()=>showView(el.dataset.openView));
-});
 function showView(name){
-  const target=views[name]?name:'home';
-  Object.entries(views).forEach(([key,sel])=>{
-    const el=$(sel); if(!el)return;
-    const open=key===target;
-    el.classList.toggle('open',open);
-    el.setAttribute('aria-hidden',String(!open));
-  });
-  document.body.classList.toggle('view-open',target!=='home');
-  if(target==='forwarders')renderDirectory();
-  if(target==='news')loadNews();
-  if(target==='assistant')setTimeout(()=>$('#assistantInput')?.focus(),120);
+  if(name==='home'){window.__iomaCloseViews?.();return;}
+  if(window.__iomaOpenView?.(name)){
+    if(name==='forwarders')renderDirectory();
+    if(name==='news')loadNews();
+    if(name==='assistant')setTimeout(()=>$('#assistantInput')?.focus(),120);
+  }
 }
-$$('[data-close-view]').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.closeView==='tarotView')closeTarot();else showView('home')}));
-document.querySelector('#tarotView')?.addEventListener('click',e=>{if(e.target.id==='tarotView'||e.target.id==='tarotShell')closeTarot()});
-window.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#tarotView')?.classList.contains('open'))closeTarot();else if(e.key==='Escape')showView('home')});
-function closeTarot(){const shell=$('#tarotShell');if(!shell)return showView('home');shell.classList.add('tarot-closing');startTarotDust(true);setTimeout(()=>{shell.classList.remove('tarot-closing','tarot-ready');showView('home')},680)}
+function closeTarot(){const shell=$('#tarotShell');if(!shell)return window.__iomaCloseViews?.();shell.classList.add('tarot-closing');try{startTarotDust(true)}catch{}setTimeout(()=>{shell.classList.remove('tarot-closing','tarot-ready');window.__iomaCloseViews?.()},420)}
 
 async function showRecommendation(name){
  const el=$('#recommendation'); if(!el)return;
@@ -472,16 +458,42 @@ function renderDirectory(){
  }
 }
 
-// Voice: бесплатное распознавание речи браузером, без OpenAI API.
-let recognition=null,voiceListening=false,voiceAutoSpeak=true,voiceFinalBuffer='';
+// Voice: use native SpeechRecognition when available; otherwise record audio and transcribe via OpenAI.
+let recognition=null,voiceListening=false,voiceAutoSpeak=true,voiceFinalBuffer='',mediaRecorder=null,mediaChunks=[];
 function voiceLang(){return lang==='zh'?'zh-CN':lang==='en'?'en-US':'ru-RU'}
-function setVoiceUI(on,text){$('#voiceButton')?.classList.toggle('listening',on);$('#voiceOrb')?.classList.toggle('listening',on);$('#assistantView')?.classList.toggle('voice-active',on);$('#voiceState').textContent=text||tr(on?'listen':'ready')}
-function initVoice(){const btn=$('#voiceButton');if(!btn)return;const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){btn.onclick=()=>setVoiceUI(false,tr('unavailable'));return}recognition=new SR();recognition.lang=voiceLang();recognition.continuous=true;recognition.interimResults=true;recognition.maxAlternatives=1;
- recognition.onstart=()=>{voiceListening=true;voiceFinalBuffer='';setVoiceUI(true,tr('listen'))};
- recognition.onresult=e=>{let finalText='',interim='';for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0]?.transcript||'';if(e.results[i].isFinal)finalText+=t+' ';else interim+=t}const input=$('#assistantInput');if(finalText){const clean=finalText.trim();voiceFinalBuffer+=(voiceFinalBuffer?' ':'')+clean;input.value=(input.value.trim()?(input.value.trim()+' '):'')+clean;input.dispatchEvent(new Event('input'));setVoiceUI(true,tr('recognized'))}else if(interim)$('#voiceState').textContent=interim};
- recognition.onerror=e=>{voiceListening=false;setVoiceUI(false,e.error==='not-allowed'?tr('mic'):tr('fail'))};
- recognition.onend=()=>{voiceListening=false;setVoiceUI(false,tr('ready'));if(voiceFinalBuffer.trim()){const text=voiceFinalBuffer.trim();voiceFinalBuffer='';$('#assistantInput').value=text;sendAI(true)}};
- btn.onclick=()=>{if(voiceListening){recognition.stop();return}recognition.lang=voiceLang();try{recognition.start()}catch{}}
+function setVoiceUI(on,text){$('#voiceButton')?.classList.toggle('listening',on);$('#voiceOrb')?.classList.toggle('listening',on);$('#assistantView')?.classList.toggle('voice-active',on);if($('#voiceState'))$('#voiceState').textContent=text||tr(on?'listen':'ready')}
+async function transcribeRecordedAudio(){
+  const blob=new Blob(mediaChunks,{type:mediaRecorder?.mimeType||'audio/webm'}); mediaChunks=[];
+  if(blob.size<1000) return;
+  setVoiceUI(true,tr('transcribe'));
+  const fd=new FormData(); fd.append('file',blob,'voice.webm'); fd.append('language',voiceLang().slice(0,2));
+  const r=await fetch('/api/transcribe',{method:'POST',body:fd,credentials:'same-origin'}); const d=await r.json();
+  if(!r.ok||!d.ok) throw new Error(d.error||tr('fail'));
+  const text=String(d.text||'').trim(); if(text){$('#assistantInput').value=text;sendAI(true)}
+}
+function initVoice(){
+  const btn=$('#voiceButton'); if(!btn)return;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(SR){
+    recognition=new SR(); recognition.lang=voiceLang(); recognition.continuous=true; recognition.interimResults=true; recognition.maxAlternatives=1;
+    recognition.onstart=()=>{voiceListening=true;voiceFinalBuffer='';setVoiceUI(true,tr('listen'))};
+    recognition.onresult=e=>{let finalText='',interim='';for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0]?.transcript||'';if(e.results[i].isFinal)finalText+=t+' ';else interim+=t}if(finalText){const clean=finalText.trim();voiceFinalBuffer+=(voiceFinalBuffer?' ':'')+clean;$('#assistantInput').value=voiceFinalBuffer;setVoiceUI(true,tr('recognized'))}else if(interim&&$('#voiceState'))$('#voiceState').textContent=interim};
+    recognition.onerror=e=>{voiceListening=false;setVoiceUI(false,e.error==='not-allowed'?tr('mic'):tr('fail'))};
+    recognition.onend=()=>{voiceListening=false;setVoiceUI(false,tr('ready'));if(voiceFinalBuffer.trim()){const text=voiceFinalBuffer.trim();voiceFinalBuffer='';$('#assistantInput').value=text;sendAI(true)}};
+    btn.onclick=()=>{if(voiceListening){try{recognition.stop()}catch{};return}recognition.lang=voiceLang();try{recognition.start()}catch{setVoiceUI(false,tr('fail'))}};
+  }else if(window.MediaRecorder && navigator.mediaDevices?.getUserMedia){
+    btn.onclick=async()=>{
+      if(mediaRecorder && mediaRecorder.state==='recording'){mediaRecorder.stop();return}
+      try{
+        const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+        mediaChunks=[]; mediaRecorder=new MediaRecorder(stream); voiceListening=true; setVoiceUI(true,tr('listen'));
+        mediaRecorder.ondataavailable=e=>{if(e.data?.size)mediaChunks.push(e.data)};
+        mediaRecorder.onerror=()=>{stream.getTracks().forEach(t=>t.stop());voiceListening=false;setVoiceUI(false,tr('fail'))};
+        mediaRecorder.onstop=async()=>{stream.getTracks().forEach(t=>t.stop());voiceListening=false;try{await transcribeRecordedAudio();setVoiceUI(false,tr('ready'))}catch(e){setVoiceUI(false,e.message||tr('fail'))}};
+        mediaRecorder.start();
+      }catch(e){setVoiceUI(false,e.name==='NotAllowedError'?tr('mic'):tr('fail'))}
+    };
+  }else btn.onclick=()=>setVoiceUI(false,tr('unavailable'));
 }
 function speakAI(text){if(!voiceAutoSpeak||!text||!('speechSynthesis'in window))return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=voiceLang();u.rate=.96;u.pitch=.98;u.volume=1;window.speechSynthesis.speak(u)}
 initVoice();
@@ -489,7 +501,7 @@ initVoice();
 // News panel: обновляется с серверного RSS-кэша.
 function formatToday(){const p=new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Moscow',day:'2-digit',month:'2-digit',year:'numeric'}).formatToParts(new Date());const d=Object.fromEntries(p.map(x=>[x.type,x.value]));return `${d.day}.${d.month}.${d.year} г.`}
 async function loadCurrency(){
-  const paint=(items)=>{const fmt=x=>x==null?'—':fmtNum(x);$('#usdRate').textContent=fmt(items?.USD?.value);$('#eurRate').textContent=fmt(items?.EUR?.value);$('#cnyRate').textContent=fmt(items?.CNY?.value);$('#homeCny').textContent=fmt(items?.CNY?.value);$('#homeUsd').textContent=fmt(items?.USD?.value);$('#homeEur').textContent=fmt(items?.EUR?.value);};
+  const paint=(items)=>{const fmt=x=>x==null?'—':fmtNum(x);if(items?.USD?.value!=null){$('#usdRate').textContent=fmt(items.USD.value);$('#homeUsd').textContent=fmt(items.USD.value)}if(items?.EUR?.value!=null){$('#eurRate').textContent=fmt(items.EUR.value);$('#homeEur').textContent=fmt(items.EUR.value)}if(items?.CNY?.value!=null){$('#cnyRate').textContent=fmt(items.CNY.value);$('#homeCny').textContent=fmt(items.CNY.value)}};
   try{
     const r=await fetch('/api/currency',{credentials:'same-origin',cache:'no-store'});
     if(!r.ok) throw new Error('currency');

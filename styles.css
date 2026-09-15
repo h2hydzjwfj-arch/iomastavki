@@ -680,3 +680,61 @@ body.manual-light .weather-scene{filter:saturate(1.02)}
   .topbar>.hamsa-button,.topbar>.theme-controls,.topbar>.dollar-button,.topbar>.customs-button{left:10px!important;width:36px!important;height:36px!important;border-radius:12px!important}
   .topbar>.hamsa-button{top:calc(50% - 90px)!important}.topbar>.theme-controls{top:calc(50% - 45px)!important}.topbar>.dollar-button{top:50%!important}.topbar>.customs-button{top:calc(50% + 45px)!important}
 }
+
+/* FINAL STABILITY OVERRIDES v16 */
+.view-layer{z-index:1000!important;}
+.view-layer.open{z-index:1000!important;pointer-events:auto!important;}
+.view-layer:not(.open){pointer-events:none!important;}
+.view-layer>.view-close,.view-layer .close-button{pointer-events:auto!important;z-index:10000!important;}
+.view-layer>.view-close{position:absolute!important;right:18px!important;left:auto!important;top:18px!important;}
+.calculator-card,.directory-panel,.assistant-shell,.customs-shell,.article-shell{z-index:1001!important;}
+#customsView .customs-shell{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(720px,92vw);max-height:calc(100svh - 90px);overflow:auto;}
+#customsView.open .customs-shell{transform:translate(-50%,-50%);}
+#tarotView .tarot-shell{z-index:1002!important;}
+#tarotView .close-button{position:fixed!important;right:24px!important;left:auto!important;top:20px!important;}
+/* Dark space: vivid, never muddy */
+body.manual-dark{background:#061326!important;color:#edf8ff!important;}
+body.manual-dark .weather-scene{opacity:1!important;filter:saturate(1.16) brightness(1.02)!important;}
+body.manual-dark .home-view{color:#eef8ff!important;}
+body.manual-dark .hero-copy .eyebrow,body.manual-dark .hero-copy h1,body.manual-dark .hero-copy p{color:#f3e7b0!important;text-shadow:0 0 16px rgba(255,218,125,.12);}
+body.manual-dark .hero-copy h1{-webkit-text-stroke:.55px #143f69;}
+body.manual-dark .service-card,body.manual-dark .calculator-card,body.manual-dark .directory-panel,body.manual-dark .assistant-shell,body.manual-dark .customs-shell{background:linear-gradient(145deg,rgba(10,36,67,.96),rgba(8,58,78,.94))!important;border-color:rgba(118,210,233,.28)!important;color:#eef8ff!important;box-shadow:0 28px 80px rgba(0,0,0,.34),inset 0 1px 0 rgba(176,235,245,.12)!important;}
+body.manual-dark .service-text b,body.manual-dark .calculator-card h1,body.manual-dark .directory-head h2,body.manual-dark .assistant-head h2,body.manual-dark .customs-head h2{color:#fff8da!important;}
+body.manual-dark .service-text small,body.manual-dark .hero-copy p,body.manual-dark .directory-head p,body.manual-dark .assistant-head small,body.manual-dark .home-status,body.manual-dark .field label,body.manual-dark .section-title,body.manual-dark .dimensions-head{color:#b9d8e8!important;}
+body.manual-dark input,body.manual-dark textarea,body.manual-dark .fake-select{background:#092d49!important;color:#f4fbff!important;border-color:rgba(126,219,238,.30)!important;}
+body.manual-dark input::placeholder,body.manual-dark textarea::placeholder{color:#8fb3c6!important;}
+body.manual-dark .currency-bar{color:#c7deea!important;}
+body.manual-dark .currency-item,body.manual-dark .home-currency{background:linear-gradient(145deg,#0b2f52,#0b5365)!important;border:1px solid rgba(255,216,112,.42)!important;color:#fff3bf!important;box-shadow:0 10px 34px rgba(0,0,0,.28),0 0 18px rgba(255,213,102,.06)!important;}
+body.manual-dark .currency-item b,body.manual-dark .home-currency b{color:#ffe9a1!important;text-shadow:0 0 8px rgba(255,220,120,.18)!important;}
+body.manual-dark .currency-title,body.manual-dark .currency-source,body.manual-dark .home-currency span{color:#cbdde6!important;}
+body.manual-dark .directory-table-wrap{background:#082b45!important;border-color:rgba(117,211,232,.24)!important;}
+body.manual-dark .directory-table th{background:#0d4c66!important;color:#fff0b7!important;}
+body.manual-dark .directory-table td{background:#092f4a!important;color:#edf8ff!important;border-bottom-color:rgba(117,211,232,.13)!important;}
+body.manual-dark .news-item{color:#eef8ff!important;border-bottom-color:rgba(117,211,232,.14)!important;}
+body.manual-dark .news-item strong{color:#fff4c9!important;}body.manual-dark .news-item small{color:#9fc2d2!important;}
+body.manual-dark .close-button{background:#0b4760!important;color:#ffe9a1!important;border:1px solid rgba(125,219,237,.34)!important;}
+body.manual-dark .eyebrow{color:#ffe8a0!important;}
+/* Hamsa / theme / dollar / customs are one tidy control rail */
+.topbar{position:relative!important;}
+.hamsa-button,.theme-controls,.dollar-button,.customs-button{position:absolute!important;top:50%!important;transform:translateY(-50%)!important;margin:0!important;}
+.hamsa-button{left:18px!important;}
+.theme-controls{left:68px!important;}
+.dollar-button{left:118px!important;}
+.customs-button{left:168px!important;}
+.hamsa-button:hover,.dollar-button:hover,.customs-button:hover,#themeToggleButton:hover{transform:translateY(-50%) scale(1.04)!important;}
+@media(max-width:650px){.hamsa-button{left:10px!important}.theme-controls{left:54px!important}.dollar-button{left:98px!important}.customs-button{left:142px!important}.view-layer{padding:8px!important}.view-layer>.view-close{right:12px!important;top:12px!important}}
+
+/* FINAL LEFT COMMAND RAIL v16.1 */
+:root{--rail-size:44px}
+.topbar>.hamsa-button,.topbar>.theme-controls,.topbar>.dollar-button,.topbar>.customs-button{position:fixed!important;left:18px!important;width:var(--rail-size)!important;height:var(--rail-size)!important;margin:0!important;z-index:5000!important;}
+.topbar>.hamsa-button{top:calc(50% - 84px)!important;transform:translateY(-50%)!important;}
+.topbar>.theme-controls{top:calc(50% - 28px)!important;transform:translateY(-50%)!important;display:block!important;}
+.topbar>.dollar-button{top:calc(50% + 28px)!important;transform:translateY(-50%)!important;}
+.topbar>.customs-button{top:calc(50% + 84px)!important;transform:translateY(-50%)!important;}
+.topbar>.theme-controls button{width:100%!important;height:100%!important;margin:0!important;}
+.topbar>.hamsa-button:hover,.topbar>.dollar-button:hover,.topbar>.customs-button:hover,.topbar>.theme-controls button:hover{transform:translateY(-50%) scale(1.04)!important;}
+@media(max-width:650px){:root{--rail-size:38px}.topbar>.hamsa-button{left:10px!important;top:calc(50% - 72px)!important}.topbar>.theme-controls{left:10px!important;top:calc(50% - 24px)!important}.topbar>.dollar-button{left:10px!important;top:calc(50% + 24px)!important}.topbar>.customs-button{left:10px!important;top:calc(50% + 72px)!important}}
+/* Every window can close by its X or by clicking the dimmed area. */
+.view-layer{cursor:default!important;}
+.view-layer.open{background:rgba(3,21,36,.06);}
+body.manual-dark .view-layer.open{background:rgba(2,10,25,.28);}
