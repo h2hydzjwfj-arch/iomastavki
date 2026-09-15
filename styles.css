@@ -374,3 +374,72 @@ body.manual-dark .article-body p,body.manual-dark .article-checklist,body.manual
 body.manual-light .article-shell{background:#f8fcfd!important;color:#173d51!important}
 body.manual-light .article-body h1,body.manual-light .article-body h2,body.manual-light .article-body h3,body.manual-light .article-title h1{color:#173d51!important}
 body.manual-light .article-body p,body.manual-light .article-checklist,body.manual-light .article-source{color:#486979!important}
+
+/* FILE 09 — refined contrast and spacing */
+:root{--ink-light:#173f54;--muted-light:#527184}
+/* One clean, quiet dark palette: navy + teal, never gray. */
+body.manual-dark{background:linear-gradient(145deg,#061b28 0%,#073346 52%,#08495a 100%)!important;color:#f5feff!important}
+body.manual-dark .hero-copy .eyebrow{color:#bdeff4!important}
+body.manual-dark .hero-copy h1{color:#ffffff!important;text-shadow:0 3px 24px rgba(74,206,224,.18)}
+body.manual-dark .hero-copy p{color:#d9f3f6!important}
+body.manual-dark .service-card,body.manual-dark .calculator-card,body.manual-dark .directory-panel,body.manual-dark .assistant-shell,body.manual-dark .agent-import-shell{background:linear-gradient(145deg,#0b3a4b,#0e5261)!important;color:#f7ffff!important;border-color:rgba(151,235,240,.28)!important}
+body.manual-dark .service-text b,body.manual-dark .calculator-card h1,body.manual-dark .directory-head h2,body.manual-dark .assistant-head h2,body.manual-dark .section-title,body.manual-dark .dimensions-head{color:#ffffff!important}
+body.manual-dark .service-text small,body.manual-dark .field label,body.manual-dark .directory-head p,body.manual-dark .assistant-head small,body.manual-dark .home-status{color:#c8e9ee!important}
+body.manual-dark .field input,body.manual-dark input,body.manual-dark textarea,body.manual-dark .fake-select{background:#082d3d!important;color:#ffffff!important;border-color:rgba(144,231,237,.34)!important}
+body.manual-dark input::placeholder,body.manual-dark textarea::placeholder{color:#8fbfc8!important}
+body.manual-dark .dimensions,body.manual-dark .result,body.manual-dark .recommendation{background:#0a3445!important;color:#f6ffff!important;border-color:rgba(144,231,237,.28)!important}
+body.manual-dark .result-grid span,body.manual-dark .auto-calc-strip>div{background:#105064!important;color:#ccebef!important;border-color:rgba(144,231,237,.22)!important}
+body.manual-dark .result-grid b,body.manual-dark .auto-calc-strip b{color:#ffffff!important}
+body.manual-dark .currency-item,body.manual-dark .home-currency{background:#0d5a69!important;color:#ffffff!important;border:1px solid rgba(166,239,242,.38)!important;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+body.manual-dark .currency-item b,body.manual-dark .home-currency b{color:#ffffff!important}
+body.manual-dark .home-currency span{color:#ccecef!important}
+body.manual-dark .directory-table-wrap{background:#082f40!important;border-color:rgba(150,235,240,.3)!important}
+body.manual-dark .directory-table th{background:#126071!important;color:#ffffff!important}
+body.manual-dark .directory-table td{background:#0b4051!important;color:#effdff!important}
+body.manual-dark .directory-table tr:hover td{background:#115668!important}
+body.manual-dark .news-shell{background:linear-gradient(145deg,#0b3a4b,#0e5261)!important}
+body.manual-dark .news-item{color:#effcff!important;border-bottom-color:rgba(151,235,240,.16)!important}
+body.manual-dark .news-item:hover{background:#105566!important}
+body.manual-dark .news-item strong{color:#ffffff!important}
+body.manual-dark .news-item small{color:#b9dce3!important}
+body.manual-dark .chat-bubble.assistant{background:#104758!important;color:#effcff!important}
+body.manual-dark .thinking-active{color:#9de8ef!important}
+body.manual-dark .theme-controls button{background:#0e6070!important;color:#fff!important;border-color:rgba(174,240,244,.38)!important}
+body.manual-dark .logout{background:#0d5868!important;color:#fff!important}
+/* Light mode keeps the same hierarchy, with warm-white panels and deep blue text. */
+body.manual-light{background:#eef7fa!important;color:#173f54!important}
+body.manual-light .hero-copy .eyebrow{color:#316d86!important}
+body.manual-light .hero-copy h1{color:#143e57!important}
+body.manual-light .hero-copy p{color:#3f6376!important}
+body.manual-light .service-card,body.manual-light .calculator-card,body.manual-light .directory-panel,body.manual-light .assistant-shell,body.manual-light .agent-import-shell{color:#173f54!important}
+body.manual-light .service-text b,body.manual-light .calculator-card h1,body.manual-light .directory-head h2,body.manual-light .assistant-head h2{color:#173f54!important}
+body.manual-light .service-text small,body.manual-light .field label,body.manual-light .directory-head p,body.manual-light .assistant-head small,body.manual-light .home-status{color:#557383!important}
+body.manual-light .news-item{color:#21495d!important}
+body.manual-light .news-item strong{color:#173f54!important}
+body.manual-light .news-item small{color:#6f8794!important}
+/* Keep the three left controls on one clean vertical rhythm. */
+.topbar .hamsa-button{position:relative}
+.dollar-button{left:35px!important;top:55px!important;width:34px!important;height:34px!important;z-index:102!important}
+.theme-controls{margin-left:8px!important;align-self:center!important}
+/* News never shows raw RSS markup. */
+.news-item strong{overflow:hidden;text-overflow:ellipsis}
+/* Article typography */
+.article-body{color:#244d61!important}
+body.manual-light .article-body{color:#244d61!important}
+body.manual-light .article-body p{color:#456b7b!important}
+body.manual-light .article-body h2,body.manual-light .article-body h3{color:#173f54!important}
+body.manual-dark .article-shell{background:linear-gradient(145deg,#082b3b,#0b4050)!important;color:#f3fdff!important}
+body.manual-dark .article-body{color:#dff6f8!important}
+body.manual-dark .article-body p{color:#d0edf1!important}
+body.manual-dark .article-body h2,body.manual-dark .article-body h3{color:#ffffff!important}
+body.manual-dark .article-source{background:#10495a!important;color:#cce8ed!important}
+body.manual-dark .article-visual-card,body.manual-dark .article-video-card,body.manual-dark .flow-step{background:linear-gradient(145deg,#0d4a5b,#115c6c)!important;color:#eaffff!important;border-color:rgba(150,235,240,.22)!important}
+body.manual-dark .article-mini-table th{color:#bde7ec!important}body.manual-dark .article-mini-table td{color:#e8fbfd!important}
+/* FILE 10 — clean left control cluster */
+.topbar{--control-size:40px}
+.topbar .hamsa-button{width:var(--control-size)!important;height:var(--control-size)!important;flex:0 0 var(--control-size);margin:0!important}
+.topbar .theme-controls{display:flex!important;align-items:center!important;margin:0 0 0 10px!important;width:var(--control-size);height:var(--control-size)}
+.topbar .theme-controls button{width:var(--control-size)!important;height:var(--control-size)!important;margin:0!important}
+.topbar .dollar-button{position:relative!important;left:auto!important;top:auto!important;width:var(--control-size)!important;height:var(--control-size)!important;margin:0 0 0 10px!important;flex:0 0 var(--control-size);z-index:102!important}
+.topbar .brand{pointer-events:none}
+@media(max-width:650px){.topbar{--control-size:36px}.topbar .theme-controls{margin-left:8px!important}.topbar .dollar-button{margin-left:8px!important}}

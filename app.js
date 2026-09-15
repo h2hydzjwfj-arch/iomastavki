@@ -23,6 +23,31 @@ const cities=[
 ];
 
 
+
+// Asia origin directory: major cities across the user's supported countries.
+const ASIA_CITY_SEED = [
+['Токио','Tokyo','東京','Tokyo','Japan','asia'],['Осака','Osaka','大阪','Osaka','Japan','asia'],['Нагоя','Nagoya','名古屋','Aichi','Japan','asia'],['Йокогама','Yokohama','横浜','Kanagawa','Japan','asia'],
+['Сеул','Seoul','서울','Seoul','South Korea','asia'],['Пусан','Busan','부산','Busan','South Korea','asia'],['Инчхон','Incheon','인천','Incheon','South Korea','asia'],['Тэгу','Daegu','대구','Daegu','South Korea','asia'],
+['Пхеньян','Pyongyang','평양','Pyongyang','North Korea','asia'],['Хамхын','Hamhung','함흥','South Hamgyong','North Korea','asia'],
+['Улан-Батор','Ulaanbaatar','Улаанбаатар','Ulaanbaatar','Mongolia','asia'],['Эрдэнэт','Erdenet','Эрдэнэт','Orkhon','Mongolia','asia'],['Дархан','Darkhan','Дархан','Darkhan-Uul','Mongolia','asia'],
+['Мумбаи','Mumbai','मुंबई','Maharashtra','India','asia'],['Дели','Delhi','दिल्ली','Delhi','India','asia'],['Нью-Дели','New Delhi','नई दिल्ली','Delhi','India','asia'],['Ченнаи','Chennai','சென்னை','Tamil Nadu','India','asia'],['Бангалор','Bengaluru','ಬೆಂಗಳೂರು','Karnataka','India','asia'],['Хайдарабад','Hyderabad','హైదరాబాద్','Telangana','India','asia'],['Ахмедабад','Ahmedabad','અમદાવાદ','Gujarat','India','asia'],['Калькутта','Kolkata','কলকাতা','West Bengal','India','asia'],['Пуна','Pune','पुणे','Maharashtra','India','asia'],['Нагпур','Nagpur','नागपूर','Maharashtra','India','asia'],
+['Карачи','Karachi','کراچی','Sindh','Pakistan','asia'],['Лахор','Lahore','لاہور','Punjab','Pakistan','asia'],['Исламабад','Islamabad','اسلام آباد','Islamabad','Pakistan','asia'],['Фейсалабад','Faisalabad','فیصل آباد','Punjab','Pakistan','asia'],
+['Дакка','Dhaka','ঢাকা','Dhaka','Bangladesh','asia'],['Читтагонг','Chattogram','চট্টগ্রাম','Chattogram','Bangladesh','asia'],['Силхет','Sylhet','সিলেট','Sylhet','Bangladesh','asia'],
+['Катманду','Kathmandu','काठमाडौं','Bagmati','Nepal','asia'],['Покхара','Pokhara','पोखरा','Gandaki','Nepal','asia'],['Лалитпур','Lalitpur','ललितपुर','Bagmati','Nepal','asia'],
+['Тхимпху','Thimphu','ཐིམ་ཕུ','Thimphu','Bhutan','asia'],['Пхунчхолинг','Phuntsholing','ཕུན་ཚོགས་གླིང་','Chukha','Bhutan','asia'],
+['Коломбо','Colombo','කොළඹ','Western','Sri Lanka','asia'],['Хамбантота','Hambantota','හම්බන්තොට','Southern','Sri Lanka','asia'],['Канди','Kandy','මහනුවර','Central','Sri Lanka','asia'],
+['Мале','Malé','މާލެ','Malé','Maldives','asia'],
+['Кабул','Kabul','کابل','Kabul','Afghanistan','asia'],['Герат','Herat','هرات','Herat','Afghanistan','asia'],['Мазари-Шариф','Mazar-i-Sharif','مزار شریف','Balkh','Afghanistan','asia'],
+['Джакарта','Jakarta','Jakarta','Jakarta','Indonesia','asia'],['Сурабая','Surabaya','Surabaya','East Java','Indonesia','asia'],['Батам','Batam','Batam','Riau Islands','Indonesia','asia'],['Медан','Medan','Medan','North Sumatra','Indonesia','asia'],
+['Бангкок','Bangkok','กรุงเทพมหานคร','Bangkok','Thailand','asia'],['Лаем-Чабанг','Laem Chabang','แหลมฉบัง','Chon Buri','Thailand','asia'],['Чиангмай','Chiang Mai','เชียงใหม่','Chiang Mai','Thailand','asia'],['Хошимин','Ho Chi Minh City','Thành phố Hồ Chí Minh','Ho Chi Minh','Vietnam','asia'],['Ханой','Hanoi','Hà Nội','Hanoi','Vietnam','asia'],['Хайфон','Hai Phong','Hải Phòng','Hai Phong','Vietnam','asia'],['Дананг','Da Nang','Đà Nẵng','Da Nang','Vietnam','asia'],
+['Куала-Лумпур','Kuala Lumpur','Kuala Lumpur','Kuala Lumpur','Malaysia','asia'],['Порт-Кланг','Port Klang','Pelabuhan Klang','Selangor','Malaysia','asia'],['Джохор-Бару','Johor Bahru','Johor Bahru','Johor','Malaysia','asia'],['Сингапур','Singapore','Singapore','Singapore','Singapore','asia'],
+['Манила','Manila','Maynila','Metro Manila','Philippines','asia'],['Себу','Cebu City','Cebu','Cebu','Philippines','asia'],['Давао','Davao City','Davao','Davao','Philippines','asia'],
+['Янгон','Yangon','ရန်ကုန်','Yangon','Myanmar','asia'],['Мандалай','Mandalay','မန္တလေး','Mandalay','Myanmar','asia'],['Пномпень','Phnom Penh','ភ្នំពេញ','Phnom Penh','Cambodia','asia'],['Сиануквиль','Sihanoukville','ក្រុងព្រះសីហនុ','Preah Sihanouk','Cambodia','asia'],['Вьентьян','Vientiane','ວຽງຈັນ','Vientiane','Laos','asia'],['Луангпхабанг','Luang Prabang','ຫຼວງພະບາງ','Luang Prabang','Laos','asia'],['Бандар-Сери-Бегаван','Bandar Seri Begawan','Bandar Seri Begawan','Brunei-Muara','Brunei','asia'],['Дили','Dili','Dili','Dili','Timor-Leste','asia'],
+['Алматы','Almaty','Алматы','Almaty','Kazakhstan','asia'],['Астана','Astana','Астана','Astana','Kazakhstan','asia'],['Шымкент','Shymkent','Шымкент','Shymkent','Kazakhstan','asia'],['Ташкент','Tashkent','Toshkent','Tashkent','Uzbekistan','asia'],['Самарканд','Samarkand','Samarqand','Samarkand','Uzbekistan','asia'],['Бишкек','Bishkek','Бишкек','Bishkek','Kyrgyzstan','asia'],['Ош','Osh','Ош','Osh','Kyrgyzstan','asia'],['Душанбе','Dushanbe','Душанбе','Dushanbe','Tajikistan','asia'],['Худжанд','Khujand','Хуҷанд','Sughd','Tajikistan','asia'],['Ашхабад','Ashgabat','Aşgabat','Ahal','Turkmenistan','asia'],['Туркменабад','Turkmenabat','Türkmenabat','Lebap','Turkmenistan','asia']
+];
+for(const c of ASIA_CITY_SEED){ if(!cities.some(x=>String(x[1]).toLowerCase()===String(c[1]).toLowerCase())) cities.push(c); }
+const ASIA_CODES = new Set(['cn','jp','kr','kp','mn','in','pk','bd','np','bt','lk','mv','af','id','th','vn','my','sg','ph','mm','kh','la','bn','tl','kz','uz','kg','tj','tm','asia']);
+
 const CITY_COORDS={'Пекин':[39.9042,116.4074],'北京':[39.9042,116.4074],'Beijing':[39.9042,116.4074],'Шанхай':[31.2304,121.4737],'上海':[31.2304,121.4737],'Shanghai':[31.2304,121.4737],'Нинбо':[29.8683,121.5440],'宁波':[29.8683,121.5440],'Ningbo':[29.8683,121.5440],'Гуанчжоу':[23.1291,113.2644],'广州':[23.1291,113.2644],'Guangzhou':[23.1291,113.2644],'Циндао':[36.0671,120.3826],'青岛':[36.0671,120.3826],'Qingdao':[36.0671,120.3826],'Сямэнь':[24.4798,118.0894],'厦门':[24.4798,118.0894],'Xiamen':[24.4798,118.0894],'Чэнду':[30.5728,104.0668],'成都':[30.5728,104.0668],'Chengdu':[30.5728,104.0668],'Москва':[55.7558,37.6173],'Moscow':[55.7558,37.6173],'Санкт-Петербург':[59.9311,30.3609],'Saint Petersburg':[59.9311,30.3609],'圣彼得堡':[59.9311,30.3609],'Екатеринбург':[56.8389,60.6057],'Yekaterinburg':[56.8389,60.6057],'Новосибирск':[55.0084,82.9357],'Novosibirsk':[55.0084,82.9357],'Нижний Новгород':[56.2965,43.9361],'Nizhny Novgorod':[56.2965,43.9361],'Казань':[55.7879,49.1233],'Kazan':[55.7879,49.1233],'Самара':[53.1959,50.1002],'Samara':[53.1959,50.1002],'Владивосток':[43.1155,131.8855],'Vladivostok':[43.1155,131.8855]};
 for(const c of cities){for(const n of [c[0],c[1],c[2]])if(CITY_COORDS[n]){c[6]=CITY_COORDS[n][0];c[7]=CITY_COORDS[n][1];break;}}
 
@@ -50,7 +75,7 @@ function applyLang(){
  $$('.close-button').forEach(el=>{el.setAttribute('aria-label',tr('close'));el.setAttribute('title',tr('close'))});
  $$('.lang').forEach(b=>b.classList.toggle('active',b.dataset.lang===lang)); localStorage.setItem('iomastavka_lang',lang); setTheme(localStorage.getItem('iomastavka_theme')||'light');
  setDimensionLabels(); renderForwarderMenu(); renderTransportMenu(); renderIncoterms(); renderFactors();
- renderSuggestions($('#fromSuggestions'),$('#fromCity').value.trim()?cityMatches($('#fromCity').value,'china'):[],$('#fromCity'),'china');
+ renderSuggestions($('#fromSuggestions'),$('#fromCity').value.trim()?cityMatches($('#fromCity').value,'asia'):[],$('#fromCity'),'asia');
  renderSuggestions($('#toSuggestions'),$('#toCity').value.trim()?cityMatches($('#toCity').value,'russia'):[],$('#toCity'),'russia');
  $('#currencyDate').textContent=formatToday();
  if($('#forwardersView')?.classList.contains('open'))renderDirectory();
@@ -197,6 +222,10 @@ function openAgentImporter(){
 }
 
 function setTheme(mode){document.body.classList.toggle('manual-dark',mode==='dark');document.body.classList.toggle('manual-light',mode==='light');localStorage.setItem('iomastavka_theme',mode);const b=$('#themeToggleButton'),i=$('#themeIcon');if(i)i.textContent=mode==='dark'?'☾':'☀';if(b){b.title=mode==='dark'?tr('themeLight'):tr('themeDark');b.setAttribute('aria-label',b.title);}}
+let newsPrefetchPromise=null;
+function prefetchNews(){if(newsCache.length)return Promise.resolve(newsCache);if(newsPrefetchPromise)return newsPrefetchPromise;newsPrefetchPromise=fetch('/api/news',{cache:'no-store'}).then(r=>r.json()).then(d=>{newsCache=d.items||[];return newsCache}).catch(()=>[]);return newsPrefetchPromise}
+prefetchNews();
+
 const views={home:'#homeView',calculator:'#calculatorView',assistant:'#assistantView',forwarders:'#forwardersView',news:'#newsView',article:'#articleView',tarotView:'#tarotView'};
 function showView(name){
   Object.entries(views).forEach(([key,sel])=>{const el=$(sel);if(!el)return;const open=key===name;el.classList.toggle('open',open);el.setAttribute('aria-hidden',String(!open));});
@@ -253,7 +282,7 @@ function normalize(s){return String(s||'').toLowerCase().normalize('NFD').replac
 function cityName(c){if(Array.isArray(c)) return String(c[1]||c[0]||c[2]||'').trim(); if(c&&typeof c==='object') return String(c.name||c.nameEn||c.nameZh||'').trim(); return String(c||'').trim()}
 function editDistance(a,b){a=normalize(a);b=normalize(b);const m=a.length,n=b.length;if(!m||!n)return Math.max(m,n);let prev=Array.from({length:n+1},(_,i)=>i);for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(cur[j-1]+1,prev[j]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur}return prev[n]}
 function cityMatches(q,target){
- const x=normalize(q).trim(); const list=cities.filter(c=>target==='china'?c[5]==='cn':c[5]==='ru'); if(!x)return [];
+ const x=normalize(q).trim(); const list=cities.filter(c=>target==='asia'?ASIA_CODES.has(c[5]):c[5]==='ru'); if(!x)return [];
  return list.map(c=>{const fields=[c[0],c[1],c[2]];let score=99;let fuzzy=false;fields.forEach((f,i)=>{const n=normalize(f);if(n===x)score=Math.min(score,0);else if(n.startsWith(x))score=Math.min(score,1+i*.1);else if(n.includes(x))score=Math.min(score,3+i*.1);else {const d=editDistance(x,n);if(d<=Math.max(1,Math.floor(Math.max(x.length,n.length)/4))){score=Math.min(score,6+d);fuzzy=true}}});if(fuzzy){c=[...c];c[8]={correction:c[1]}}return {c,score}}).filter(o=>o.score<99).sort((a,b)=>a.score-b.score||a.c[0].localeCompare(b.c[0],'ru')).slice(0,20).map(o=>o.c)
 }
 function renderSuggestions(box,list,input,target){
@@ -263,12 +292,12 @@ function renderSuggestions(box,list,input,target){
 }
 function inputIdForTarget(target){return target==='china'?'fromCity':'toCity'}
 function setupAutocomplete(inputId,boxId,target){const input=$('#'+inputId),box=$('#'+boxId);input.addEventListener('input',()=>{const q=input.value.trim();if(inputId==='fromCity')selectedCities.from=null;else selectedCities.to=null;renderSuggestions(box,cityMatches(q,target),input,target);if(q.length>=1)fetchGeo(q,target,box,input)});input.addEventListener('focus',()=>{const q=input.value.trim();renderSuggestions(box,q?cityMatches(q,target):[],input,target)});}
-async function fetchGeo(q,target,box,input){try{const endpoint=q.length>=4?`/api/geocode?q=${encodeURIComponent(q)}&country=${target==='china'?'CN':'RU'}`:`/api/cities?q=${encodeURIComponent(q)}&country=${target==='china'?'CN':'RU'}`;const r=await fetch(endpoint);const data=await r.json();if(input.value.trim()!==q)return;const remote=(data.results||[]).map(x=>{const label=x.display_name||x.name;const name=x.name||label.split(',')[0];const arr=[name,x.nameEn||name,x.nameZh||name,x.admin1||'',x.country||'',x.country_code,x.latitude,x.longitude];if(label&&label!==name)arr[8]={address:label};return arr});
+async function fetchGeo(q,target,box,input){try{const endpoint=q.length>=4?`/api/geocode?q=${encodeURIComponent(q)}`:`/api/cities?q=${encodeURIComponent(q)}`;const r=await fetch(endpoint);const data=await r.json();if(input.value.trim()!==q)return;const remote=(data.results||[]).map(x=>{const label=x.display_name||x.name;const name=x.name||label.split(',')[0];const arr=[name,x.nameEn||name,x.nameZh||name,x.admin1||'',x.country||'',x.country_code,x.latitude,x.longitude];if(label&&label!==name)arr[8]={address:label};return arr});
  const local=cityMatches(q,target);let merged=[...local,...remote];const exactNames=new Set();merged=merged.filter(v=>{const k=normalize(v[1]||v[0]);if(exactNames.has(k))return false;exactNames.add(k);return true});
- if(!local.length&&remote.length===0){const fuzzy=cities.filter(c=>target==='china'?c[5]==='cn':c[5]==='ru').map(c=>({c,d:editDistance(q,c[1])})).sort((a,b)=>a.d-b.d)[0];if(fuzzy&&fuzzy.d<=Math.max(2,Math.floor(q.length*.35))){fuzzy.c[8]={correction:fuzzy.c[1]};merged.unshift(fuzzy.c)}}
+ if(!local.length&&remote.length===0){const fuzzy=cities.filter(c=>target==='asia'?ASIA_CODES.has(c[5]):c[5]==='ru').map(c=>({c,d:editDistance(q,c[1])})).sort((a,b)=>a.d-b.d)[0];if(fuzzy&&fuzzy.d<=Math.max(2,Math.floor(q.length*.35))){fuzzy.c[8]={correction:fuzzy.c[1]};merged.unshift(fuzzy.c)}}
  renderSuggestions(box,merged.slice(0,20),input,target)
  }catch{}}
-setupAutocomplete('fromCity','fromSuggestions','china');setupAutocomplete('toCity','toSuggestions','russia');
+setupAutocomplete('fromCity','fromSuggestions','asia');setupAutocomplete('toCity','toSuggestions','russia');
 
 document.addEventListener('click',e=>{$$('.suggestions').forEach(box=>{if(!e.target.closest('.autocomplete'))box.classList.remove('open')})});
 ['fromCity','toCity'].forEach(id=>$('#'+id)?.addEventListener('blur',()=>setTimeout(autoDistance,120)));
@@ -278,10 +307,10 @@ function haversineKm(a,b){const R=6371,rad=x=>x*Math.PI/180;const dLat=rad(b[0]-
 async function resolveCityCoordinates(city,target){
  if(Array.isArray(city)&&Number.isFinite(Number(city[6]))&&Number.isFinite(Number(city[7])))return [Number(city[6]),Number(city[7])];
  const q=cityName(city); if(!q)return null;
- const local=cities.filter(c=>target==='china'?c[5]==='cn':c[5]==='ru');
+ const local=cities.filter(c=>target==='asia'?ASIA_CODES.has(c[5]):c[5]==='ru');
  const hit=local.find(c=>[c[0],c[1],c[2]].some(v=>normalize(v)===normalize(q))) || local.find(c=>[c[0],c[1],c[2]].some(v=>normalize(v).startsWith(normalize(q))));
  if(hit&&Number.isFinite(Number(hit[6]))&&Number.isFinite(Number(hit[7])))return [Number(hit[6]),Number(hit[7])];
- try{const url=`/api/cities?q=${encodeURIComponent(q)}&country=${target==='china'?'CN':'RU'}&limit=5`;const r=await fetch(url);if(!r.ok)return null;const d=await r.json();const x=(d.results||[]).find(v=>{const cc=String(v.country_code||'').toUpperCase();return (target==='china'?cc==='CN':cc==='RU')&&Number.isFinite(Number(v.latitude))&&Number.isFinite(Number(v.longitude))}) || (d.results||[]).find(v=>Number.isFinite(Number(v.latitude))&&Number.isFinite(Number(v.longitude)));return x?[Number(x.latitude),Number(x.longitude)]:null}catch{return null}
+ try{const url=`/api/cities?q=${encodeURIComponent(q)}&limit=8`;const r=await fetch(url);if(!r.ok)return null;const d=await r.json();const x=(d.results||[]).find(v=>{const cc=String(v.country_code||'').toUpperCase();return (target==='asia'?ASIA_CODES.has(cc.toLowerCase()):cc==='RU')&&Number.isFinite(Number(v.latitude))&&Number.isFinite(Number(v.longitude))}) || (d.results||[]).find(v=>Number.isFinite(Number(v.latitude))&&Number.isFinite(Number(v.longitude)));return x?[Number(x.latitude),Number(x.longitude)]:null}catch{return null}
 }
 let distanceRequestId=0;
 async function autoDistance(){
@@ -404,17 +433,18 @@ async function loadCurrency(){
 
 function isUrgentNews(n){const x=normalize(String(n.title||'')+' '+String(n.description||'')).toLowerCase();return /(закон|законодатель|таможенн|пошлин|тариф|ставк.*пошлин|запрет|ограничен|санкц|лиценз|сертификат|обязательн|вступ(ил|ает).*сил|изменен.*правил|customs|tariff|duty|ban|restriction|regulation|law|licen[cs]|mandatory|sanction)/i.test(x)}
 let newsCache=[];
-function renderNewsItems(items){const box=$('#newsList');if(!box)return;box.innerHTML='';items.forEach((n,i)=>{const a=document.createElement('button');a.type='button';a.className='news-item'+(isUrgentNews(n)?' news-urgent':'');a.innerHTML=`${n.image?`<img class="news-thumb" src="${escapeHtml(n.image)}" alt="" loading="eager">`:`<span class="news-thumb news-placeholder">✦</span>`}<span class="news-item-copy">${isUrgentNews(n)?'<em class="news-urgent-badge">'+(lang==='ru'?'СРОЧНО':lang==='en'?'URGENT':'紧急')+'</em>':''}<strong>${escapeHtml(n.title)}</strong><small>${escapeHtml(n.source||'')} · ${n.date?new Date(n.date).toLocaleDateString(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':'en-US'):''}</small></span>`;a.onclick=()=>openArticle(n);box.appendChild(a)})}
+function cleanNewsText(s=''){const t=document.createElement('div');t.innerHTML=String(s);return (t.textContent||t.innerText||'').replace(/\s+/g,' ').trim()}
+function renderNewsItems(items){const box=$('#newsList');if(!box)return;box.innerHTML='';items.forEach((n,i)=>{const a=document.createElement('button');a.type='button';a.className='news-item'+(isUrgentNews(n)?' news-urgent':'');a.innerHTML=`${n.image?`<img class="news-thumb" src="${escapeHtml(n.image)}" alt="" loading="eager">`:`<span class="news-thumb news-placeholder">✦</span>`}<span class="news-item-copy">${isUrgentNews(n)?'<em class="news-urgent-badge">'+(lang==='ru'?'СРОЧНО':lang==='en'?'URGENT':'紧急')+'</em>':''}<strong>${escapeHtml(cleanNewsText(n.title))}</strong><small>${escapeHtml(n.source||'')} · ${n.date?new Date(n.date).toLocaleDateString(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':'en-US'):''}</small></span>`;a.onclick=()=>openArticle(n);box.appendChild(a)})}
 async function loadNews(){
-  const box=$('#newsList'); if(newsCache.length){renderNewsItems(newsCache);return} box.innerHTML='';
-  try{const r=await fetch('/api/news',{cache:'no-store'});const d=await r.json();newsCache=d.items||[];if(!newsCache.length){box.innerHTML=`<div class="news-loading">${tr('noNews')}</div>`;return}renderNewsItems(newsCache)}catch{box.innerHTML=`<div class="news-loading">${tr('noNews')}</div>`}
+  const box=$('#newsList'); if(!box)return; if(newsCache.length){renderNewsItems(newsCache);return} box.innerHTML='';
+  const items=await prefetchNews(); if(!items.length){box.innerHTML=`<div class="news-loading">${tr('noNews')}</div>`;return} renderNewsItems(items);
 }
 function escapeHtml(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function renderArticleMarkdown(text=''){
   const safe=escapeHtml(text); return safe.replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').split(/\n\s*\n/).map(p=>p.trim()?`<p>${p.replace(/\n/g,'<br>')}</p>`:'').join('');
 }
 async function openArticle(n){
- currentArticleNews=n;showView('article');const box=$('#articleContent');const urgent=isUrgentNews(n);const title=n.title||'';const desc=n.description||'';const source=n.source||'';const img=n.image||'';
+ currentArticleNews=n;showView('article');const box=$('#articleContent');const urgent=isUrgentNews(n);const title=cleanNewsText(n.title||'');const desc=cleanNewsText(n.description||'');const source=cleanNewsText(n.source||'');const img=n.image||'';
  const L=lang==='ru'?{what:'Что произошло',impact:'Что это меняет для логистики',scheme:'Схема влияния',law:'Правовой статус',watch:'Что проверить перед отправкой',source:'Источник',note:'Материал структурирован автоматически. Для юридически значимых решений проверяйте первоисточник.'}:lang==='en'?{what:'What happened',impact:'What it means for logistics',scheme:'Impact map',law:'Legal status',watch:'What to check before shipment',source:'Source',note:'This article is structured automatically. Check the primary source for legally significant decisions.'}:{what:'发生了什么',impact:'对物流意味着什么',scheme:'影响图',law:'法律状态',watch:'发货前检查',source:'来源',note:'本文自动整理。涉及法律的重要决定请核对原始来源。'};
  const flow=lang==='ru'?['Изменение','Документы / тариф','Таможня','Срок / стоимость']:lang==='en'?['Change','Documents / tariff','Customs','Time / cost']:['变化','文件 / 关税','海关','时间 / 成本'];
  const status=urgent?(lang==='ru'?'СРОЧНО · ЗАКОН / ТАМОЖНЯ':lang==='en'?'URGENT · LAW / CUSTOMS':'紧急 · 法律 / 海关'):(lang==='ru'?'ЛОГИСТИКА / РЫНОК':lang==='en'?'LOGISTICS / MARKET':'物流 / 市场');
