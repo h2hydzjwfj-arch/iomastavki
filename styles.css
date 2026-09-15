@@ -766,3 +766,13 @@ body.weather-night .moon{animation:none!important}
 body.weather-night .moon,body.weather-sun .sun{animation:none!important;transform:none!important;}
 .topbar>.theme-controls,#themeToggleButton{animation:none!important;transform:none!important;translate:none!important;rotate:none!important;transition:none!important;will-change:auto!important;}
 .topbar>.theme-controls:hover,#themeToggleButton:hover,#themeToggleButton:active{transform:none!important;}
+
+/* IOMASTAVKA v21: stable left control rail */
+.topbar>.hamsa-button,.topbar>.theme-controls,.topbar>.dollar-button,.topbar>.customs-button{position:fixed!important;left:18px!important;width:40px!important;height:40px!important;margin:0!important;z-index:5000!important;transform:none!important;animation:none!important;transition:none!important;}
+.topbar>.hamsa-button{top:calc(50% - 90px)!important;}
+.topbar>.theme-controls{top:calc(50% - 30px)!important;display:block!important;}
+.topbar>.dollar-button{top:calc(50% + 30px)!important;}
+.topbar>.customs-button{top:calc(50% + 90px)!important;}
+.topbar>.theme-controls button,#themeToggleButton{width:40px!important;height:40px!important;transform:none!important;animation:none!important;transition:none!important;}
+.topbar>.hamsa-button:hover,.topbar>.hamsa-button:active,.topbar>.dollar-button:hover,.topbar>.dollar-button:active,.topbar>.customs-button:hover,.topbar>.customs-button:active,.topbar>.theme-controls button:hover,.topbar>.theme-controls button:active,#themeToggleButton:hover,#themeToggleButton:active{transform:none!important;animation:none!important;}
+@media(max-width:650px){.topbar>.hamsa-button,.topbar>.theme-controls,.topbar>.dollar-button,.topbar>.customs-button{left:10px!important;width:38px!important;height:38px!important}.topbar>.hamsa-button{top:calc(50% - 72px)!important}.topbar>.theme-controls{top:calc(50% - 24px)!important}.topbar>.dollar-button{top:calc(50% + 24px)!important}.topbar>.customs-button{top:calc(50% + 72px)!important}.topbar>.theme-controls button,#themeToggleButton{width:38px!important;height:38px!important}}

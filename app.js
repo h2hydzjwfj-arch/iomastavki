@@ -125,7 +125,7 @@ function companyModes(company){
   const found=agentDirectory.filter(a=>a.company===company).flatMap(a=>a.modes||[]);
   return [...new Set(found.concat(rates[company]?.modes||[]))];
 }
-async function loadAgents(){try{const r=await fetch('/api/agents',{cache:'no-store',credentials:'same-origin'});if(!r.ok)return;const d=await r.json();if(Array.isArray(d.records)){const seen=new Set(agentDirectory.map(a=>[normalizeTextCompany(a.company),normalizeTextCompany(a.contact),normalizeTextCompany(a.email),normalizeTextCompany(a.phone)].join('|')));d.records.forEach(a=>{const k=[normalizeTextCompany(a.company),normalizeTextCompany(a.contact),normalizeTextCompany(a.email),normalizeTextCompany(a.phone)].join('|');if(!seen.has(k)){agentDirectory.push(a);seen.add(k)}});renderForwarderMenu();renderDirectory();}}catch{renderForwarderMenu();renderDirectory();}}
+async function loadAgents(){try{const r=await fetch('/api/agents',{cache:'no-store',credentials:'same-origin'});const d=r.ok?await r.json():null;if(Array.isArray(d?.records)&&d.records.length){const seen=new Set(agentDirectory.map(a=>[normalizeTextCompany(a.company),normalizeTextCompany(a.contact),normalizeTextCompany(a.email),normalizeTextCompany(a.phone)].join('|')));d.records.forEach(a=>{const k=[normalizeTextCompany(a.company),normalizeTextCompany(a.contact),normalizeTextCompany(a.email),normalizeTextCompany(a.phone)].join('|');if(!seen.has(k)){agentDirectory.push(a);seen.add(k)}})}}catch{}renderForwarderMenu();renderDirectory();}
 function allForwarderNames(){return [...new Set(agentDirectory.map(a=>a.company).filter(Boolean).concat(Object.keys(rates)))];}
 function forwarderModes(name){return companyModes(name)}
 function filteredAgents(){return agentDirectory.filter(a=>{
@@ -283,7 +283,7 @@ function openAgentImporter(){
 function setTheme(mode){document.body.classList.toggle('manual-dark',mode==='dark');document.body.classList.toggle('manual-light',mode==='light');localStorage.setItem('iomastavka_theme',mode);const b=$('#themeToggleButton'),i=$('#themeIcon');if(i)i.textContent=mode==='dark'?'☾':'☀';if(b){b.title=mode==='dark'?tr('themeLight'):tr('themeDark');b.setAttribute('aria-label',b.title);}}
 let newsPrefetchPromise=null;
 function prefetchNews(){if(newsCache.length)return Promise.resolve(newsCache);if(newsPrefetchPromise)return newsPrefetchPromise;const fallback=[{title:'Китай — Россия: что проверить перед расчётом мультимодальной перевозки',link:'',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Incoterms, габариты, объёмный вес, терминальные расходы и документы.'},{title:'ТН ВЭД и импорт: какие данные собрать до запроса ставки',link:'',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Описание товара, код ТН ВЭД, инвойс, упаковка, разрешительные документы и базис поставки.'},{title:'ЖД, море или авиа: как выбрать транспорт из Китая',link:'',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Сравнение сроков, расчётного веса и структуры стоимости.'}];newsPrefetchPromise=fetch('/api/news',{cache:'no-store',credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('news');return r.json()}).then(d=>{newsCache=Array.isArray(d.items)&&d.items.length?d.items:fallback;return newsCache}).catch(()=>{newsCache=fallback;return newsCache});return newsPrefetchPromise}
-prefetchNews();
+prefetchNews().then(items=>{if(items.length&&document.getElementById('newsView')?.classList.contains('open'))renderNewsItems(items)});
 
 const views={home:'#homeView',calculator:'#calculatorView',assistant:'#assistantView',forwarders:'#forwardersView',news:'#newsView',article:'#articleView',tarotView:'#tarotView',customsView:'#customsView'};
 function showView(name){
@@ -542,7 +542,8 @@ let newsCache=[];
 function cleanNewsText(s=''){const t=document.createElement('div');t.innerHTML=String(s);return (t.textContent||t.innerText||'').replace(/\s+/g,' ').trim()}
 function renderNewsItems(items){const box=$('#newsList');if(!box)return;box.innerHTML='';items.forEach((n,i)=>{const a=document.createElement('button');a.type='button';a.className='news-item'+(isUrgentNews(n)?' news-urgent':'');a.innerHTML=`${n.image?`<img class="news-thumb" src="${escapeHtml(n.image)}" alt="" loading="eager">`:`<span class="news-thumb news-placeholder">✦</span>`}<span class="news-item-copy">${isUrgentNews(n)?'<em class="news-urgent-badge">'+(lang==='ru'?'СРОЧНО':lang==='en'?'URGENT':'紧急')+'</em>':''}<strong>${escapeHtml(cleanNewsText(n.title))}</strong><small>${escapeHtml(n.source||'')} · ${n.date?new Date(n.date).toLocaleDateString(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':'en-US'):''}</small></span>`;a.onclick=()=>openArticle(n);box.appendChild(a)})}
 async function loadNews(){
-  const box=$('#newsList'); if(!box)return; if(newsCache.length){renderNewsItems(newsCache);return} box.innerHTML='';
+  const box=$('#newsList'); if(!box)return; if(newsCache.length){renderNewsItems(newsCache);return} box.innerHTML=`<div class="news-loading">${tr('newsLoading')}</div>`;
+  try{const r=await fetch('/api/news',{cache:'no-store'});const d=r.ok?await r.json():null;const items=Array.isArray(d?.items)?d.items:[];newsCache=items.length?items:newsCache; if(newsCache.length){renderNewsItems(newsCache);return}}catch{}
   const items=await prefetchNews(); if(!items.length){box.innerHTML=`<div class="news-loading">${tr('noNews')}</div>`;return} renderNewsItems(items);
 }
 function escapeHtml(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
