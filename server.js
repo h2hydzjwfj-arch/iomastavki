@@ -186,7 +186,8 @@ function parseRss(xml) {
     const x=m[1];
     const pick=(tag)=>{ const z=x.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`,'i')); return z ? stripHtml(z[1]) : ''; };
     const link = pick('link');
-    return { title:pick('title'), link, date:pick('pubDate'), source:pick('source'), description:pick('description') };
+    const media=(x.match(/<media:(?:content|thumbnail)[^>]+url=[\"']([^\"']+)/i)||[])[1] || (x.match(/<enclosure[^>]+url=[\"']([^\"']+)/i)||[])[1] || '';
+    return { title:pick('title'), link, date:pick('pubDate'), source:pick('source'), description:pick('description'), image:media };
   }).filter(x=>x.title && x.link);
 }
 async function fetchNews() {
@@ -209,6 +210,46 @@ app.get('/api/news', async (req,res) => {
     const items = (Date.now()-newsCache.at < 6*60*60*1000 && newsCache.items.length) ? newsCache.items : await fetchNews();
     res.json({ok:true, updatedAt:newsCache.at, items});
   } catch { res.status(502).json({ok:false,error:'news unavailable',items:[]}); }
+});
+
+
+function langName(code){return code==='zh'?'Chinese':code==='en'?'English':'Russian';}
+app.post('/api/realtime/call', async (req,res)=>{
+  const key=process.env.OPENAI_API_KEY; if(!key)return res.status(503).json({ok:false,error:'AI key not configured'});
+  const sdp=String(req.body?.sdp||''); if(!sdp)return res.status(400).json({ok:false,error:'SDP offer required'});
+  const language=String(req.body?.language||'ru'); const context=req.body?.context||{};
+  const instructions=`You are iomastavka, a calm expert logistics assistant for China/Asia to Russia. Speak naturally like a premium OpenAI voice assistant. Respond in ${langName(language)} unless the user asks for another language. Keep answers concise but useful. You can discuss logistics, Incoterms, customs, transport, rates, cities and the calculator context. Never invent rates. Current calculator context: ${JSON.stringify(context)}`;
+  try{
+    const form=new FormData(); form.append('sdp',sdp); form.append('session',new Blob([JSON.stringify({type:'realtime',model:process.env.OPENAI_REALTIME_MODEL||'gpt-realtime-2.1',instructions,output_modalities:['audio'],audio:{input:{turn_detection:{type:'server_vad',create_response:true,interrupt_response:true}},output:{voice:process.env.OPENAI_REALTIME_VOICE||'marin'}}})],{type:'application/json'}),'session.json');
+    const r=await fetch('https://api.openai.com/v1/realtime/calls',{method:'POST',headers:{Authorization:`Bearer ${key}`},body:form});
+    const text=await r.text(); if(!r.ok)return res.status(r.status).json({ok:false,error:text||'Realtime call failed'});
+    res.json({ok:true,sdp:text});
+  }catch(e){res.status(502).json({ok:false,error:e.message||'Realtime unavailable'});}
+});
+
+async function fetchArticleSource(url){
+  if(!/^https?:\/\//i.test(url))return '';
+  try{const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0'},signal:AbortSignal.timeout(7000)});if(!r.ok)return '';const html=await r.text();return stripHtml(html).slice(0,18000);}catch{return '';}
+}
+function parseLooseJson(text){try{return JSON.parse(text)}catch{const a=text.indexOf('{'),b=text.lastIndexOf('}');if(a>=0&&b>a)return JSON.parse(text.slice(a,b+1));throw new Error('Invalid article JSON')}}
+app.post('/api/news/article', async(req,res)=>{
+  const key=process.env.OPENAI_API_KEY;if(!key)return res.status(503).json({ok:false,error:'AI key not configured'});
+  const title=String(req.body?.title||'').trim(); if(!title)return res.status(400).json({ok:false,error:'Article title required'});
+  const language=String(req.body?.language||'ru'); const sourceText=await fetchArticleSource(String(req.body?.link||''));
+  const model=process.env.OPENAI_MODEL||'gpt-5.6-luna';
+  const prompt=`Create a beautiful study article from the supplied news item. Language: ${langName(language)}. Do not tell the reader to visit another site. Explain the event, logistics/customs implications, key terms, practical takeaways and a short "what to watch next" section. Make it useful for someone learning international logistics. 700-1000 words. Return ONLY JSON with keys title, subtitle, content, podcast. content must be markdown text with headings; podcast is a natural spoken script under 3500 characters. Preserve factual uncertainty and never invent numbers not supported by the source. News title: ${title}. Source: ${String(req.body?.source||'')}. Description: ${String(req.body?.description||'')}. Source page text (may be empty): ${sourceText}`;
+  try{
+    const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model,input:[{role:'user',content:prompt}],max_output_tokens:2200})});
+    const d=await r.json();if(!r.ok)return res.status(r.status).json({ok:false,error:d?.error?.message||'Article generation failed'});
+    const out=d.output_text||((d.output||[]).flatMap(o=>o.content||[]).map(c=>c.text||c.value||'').filter(Boolean).join('\\n'));
+    const a=parseLooseJson(out); a.source=String(req.body?.source||''); a.image=String(req.body?.image||''); res.json({ok:true,article:a});
+  }catch(e){res.status(502).json({ok:false,error:e.message||'Article unavailable'});}
+});
+app.post('/api/news/article/audio', async(req,res)=>{
+  const key=process.env.OPENAI_API_KEY;if(!key)return res.status(503).json({ok:false,error:'AI key not configured'});
+  const input=String(req.body?.text||'').trim().slice(0,4096);if(!input)return res.status(400).json({ok:false,error:'Text required'});
+  const language=String(req.body?.language||'ru');
+  try{const r=await fetch('https://api.openai.com/v1/audio/speech',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model:'gpt-4o-mini-tts',voice:process.env.OPENAI_TTS_VOICE||'onyx',input,response_format:'mp3',speed:.94,instructions:`Professional male narrator. Warm, confident, cinematic documentary style. Speak clearly in ${langName(language)}, with natural pauses and calm authority.`})});if(!r.ok)return res.status(r.status).json({ok:false,error:await r.text()||'TTS failed'});res.set('Content-Type','audio/mpeg');res.set('Cache-Control','no-store');res.send(Buffer.from(await r.arrayBuffer()));}catch(e){res.status(502).json({ok:false,error:e.message||'TTS unavailable'});}
 });
 
 app.post('/api/login', (req,res) => {
