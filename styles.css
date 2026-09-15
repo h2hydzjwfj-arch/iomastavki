@@ -738,3 +738,13 @@ body.manual-dark .eyebrow{color:#ffe8a0!important;}
 .view-layer{cursor:default!important;}
 .view-layer.open{background:rgba(3,21,36,.06);}
 body.manual-dark .view-layer.open{background:rgba(2,10,25,.28);}
+
+/* FINAL STABILITY OVERRIDES — 2026-09-15 */
+.tarot-card.tarot-reveal-stable{opacity:1!important;transform:none!important;filter:none!important;animation:none!important}
+.tarot-shell.tarot-ready .tarot-card.tarot-reveal-stable{opacity:1!important}
+.tarot-shell.tarot-closing .tarot-card.tarot-reveal-stable{animation:tarotQuietOut .38s ease-in both!important}
+/* keep the moon smooth: no transform animation on the weather moon */
+.moon{animation:none!important;transition:opacity 1.2s ease,filter 1.2s ease,box-shadow 1.2s ease!important;will-change:opacity,filter,box-shadow!important}
+body.weather-night .moon{animation:none!important}
+/* preserve all article/news/directory surfaces even when a module returns late */
+.news-list,.directory-table-wrap,.chat-messages,.article-shell,.article-body{overscroll-behavior:contain}

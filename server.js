@@ -231,6 +231,14 @@ app.get('/api/news', async (req,res) => {
 
 
 function langName(code){return code==='zh'?'Chinese':code==='en'?'English':'Russian';}
+
+function openAIModel(preferred){
+  const m=String(preferred||'').trim();
+  // The web app must not try to call the internal ChatGPT model name.
+  if(m && !/luna|mini-test|local/i.test(m)) return m;
+  return 'gpt-5';
+}
+
 app.post('/api/realtime/call', async (req,res)=>{
   const key=process.env.OPENAI_API_KEY; if(!key)return res.status(503).json({ok:false,error:'AI key not configured'});
   const sdp=String(req.body?.sdp||''); if(!sdp)return res.status(400).json({ok:false,error:'SDP offer required'});
@@ -260,7 +268,7 @@ app.post('/api/news/article', async(req,res)=>{
   const key=process.env.OPENAI_API_KEY;if(!key)return res.status(503).json({ok:false,error:'AI key not configured'});
   const title=String(req.body?.title||'').trim(); if(!title)return res.status(400).json({ok:false,error:'Article title required'});
   const language=String(req.body?.language||'ru'); const sourceText=await fetchArticleSource(String(req.body?.link||''));
-  const model=process.env.OPENAI_MODEL||'gpt-5.6-luna';
+  const model=openAIModel(process.env.OPENAI_MODEL);
   const prompt=`Create a beautiful, self-contained study article from the supplied news item. If the source page text is empty or inaccessible, use the supplied title and description only and clearly avoid unsupported specifics; still produce a useful explanatory article rather than an error. Language: ${langName(language)}. Do not tell the reader to visit another site. Explain the event, logistics/customs implications, key terms, practical takeaways and a short "what to watch next" section. Make it useful for someone learning international logistics. 700-1000 words. Return ONLY JSON with keys title, subtitle, content, podcast. content must be markdown text with headings; podcast is a natural spoken script under 3500 characters. Preserve factual uncertainty and never invent numbers not supported by the source. News title: ${title}. Source: ${String(req.body?.source||'')}. Description: ${String(req.body?.description||'')}. Source page text (may be empty): ${sourceText}`;
   try{
     const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model,input:[{role:'user',content:prompt}],max_output_tokens:2200})});
@@ -307,7 +315,7 @@ app.post('/api/agents/import', auth, async (req,res) => {
   if(!text) return res.status(400).json({ok:false,error:'Пустой текст'});
   const system=`Ты извлекаешь данные экспедиторов из текста КП, писем, прайс-листов и контактных листов. Верни ТОЛЬКО валидный JSON-массив объектов без markdown. Поля каждого объекта: company, contact, phone, email, site, modes, transport, notes. modes допускаются только rail, road, air, sea, multimodal. transport — массив строк на языке исходного текста. Не придумывай данные. Если один и тот же человек/компания встречается несколько раз, объедини очевидные дубли. Если данных нет, оставь пустую строку/массив.`;
   try{
-    const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model:process.env.OPENAI_MODEL||'gpt-5.6-luna',input:[{role:'system',content:system},{role:'user',content:text.slice(0,140000)}],max_output_tokens:1400})});
+    const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model:openAIModel(process.env.OPENAI_MODEL),input:[{role:'system',content:system},{role:'user',content:text.slice(0,140000)}],max_output_tokens:1400})});
     const d=await r.json(); if(!r.ok)return res.status(r.status).json({ok:false,error:d?.error?.message||'AI request failed'});
     let raw=d.output_text||''; if(!raw&&Array.isArray(d.output))raw=d.output.flatMap(o=>o.content||[]).map(c=>c.text||'').join('');
     raw=raw.replace(/^```json\s*/,'').replace(/\s*```$/,'').trim(); const parsed=JSON.parse(raw); const incoming=Array.isArray(parsed)?parsed:[];
@@ -385,7 +393,16 @@ app.post('/api/customs/check', auth, async (req,res) => {
   try{
     const r=await fetch(sourceUrl,{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0'},redirect:'follow'});
     const html=await r.text();
-    const text=html.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ').trim().slice(0,18000);
+    let text=html.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ').trim().slice(0,18000);
+    if(text.length < 180 || /вход|логин|captcha|доступ запрещен/i.test(text)){
+      // The current FTS site may return a shell/login page to server-side requests.
+      // Pull the public EAEU nomenclature dataset from the Russian tax authority as a fallback,
+      // while clearly telling the AI which source is secondary.
+      try{
+        const fr=await fetch('https://www.nalog.gov.ru/rn77/program/5961290/',{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0'}});
+        if(fr.ok){const fh=await fr.text(); const ft=fh.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ').trim(); text='ФТС search page did not expose code-specific text. Public EAEU TN VED dataset reference: '+ft.slice(0,14000);}
+      }catch{}
+    }
     const key=process.env.OPENAI_API_KEY;
     if(!key){ return res.json({ok:true,code,title:'Информация ФТС',analysis:'Официальная страница ФТС найдена, но OPENAI_API_KEY не настроен для автоматического разбора.',sourceUrl}); }
     const model=process.env.OPENAI_MODEL || 'gpt-5.6-luna';
@@ -403,7 +420,7 @@ app.post('/api/customs/check', auth, async (req,res) => {
 app.post('/api/ai', async (req,res) => {
   const key=process.env.OPENAI_API_KEY;
   if(!key) return res.status(503).json({ok:false,error:'AI key not configured'});
-  const model=process.env.OPENAI_MODEL || 'gpt-5.6-luna';
+  const model=openAIModel(process.env.OPENAI_MODEL);
   const message=String(req.body?.message||'').trim();
   const history=Array.isArray(req.body?.history)?req.body.history.slice(-10):[];
   const context=req.body?.context&&typeof req.body.context==='object'?req.body.context:{};
