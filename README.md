@@ -1,9 +1,13 @@
 # iomastavka
-Render-ready freight calculator.
 
-Environment variables:
-- `OPENWEATHER_API_KEY` — OpenWeather key (keep it only in Render Environment Variables)
-- `SESSION_SECRET` — random session secret
-- `ADMIN_PASSWORD_HASH` — optional scrypt hash; default demo password is `123UUn456TT78*`
+Render deployment package.
 
-Start command: `npm start`
+Environment variables already used by the app:
+- OPENAI_API_KEY — AI, КП/PDF/file analysis, speech
+- OPENWEATHER_API_KEY — weather
+- OPENAI_MODEL — optional, defaults to gpt-5.6-luna
+- OPENAI_TRANSCRIBE_MODEL — optional
+- OPENAI_TTS_VOICE — optional
+- RATES_FILE — optional persistent path for the rate database (recommended when using a Render Persistent Disk, e.g. /data/rates.json)
+
+AI can import rate information from text or attached PDF/Excel/Word/TXT files. Rates are stored in data/rates.json by default. On Render, the default filesystem is ephemeral; for permanent rate history, mount a Render Persistent Disk and set RATES_FILE=/data/rates.json.
