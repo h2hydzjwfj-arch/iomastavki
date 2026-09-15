@@ -99,3 +99,10 @@ body.weather-night .weather-scene{background:linear-gradient(180deg,#071827 0%,#
  .view-layer > .directory-panel > .view-close,.view-layer > .assistant-shell > .close-button,.view-layer > .article-shell > .view-close,.view-layer > .calculator-card > .view-close {left:12px !important;top:12px !important;}
  .voice-orb-stage {left:50% !important;top:50% !important;}
 }
+/* Article reader: a real full-page reading experience, not a popup. */
+#articleView{padding:0!important;align-items:stretch!important;justify-content:stretch!important;background:rgba(247,252,255,.98)!important;z-index:80!important;overflow:auto!important}
+#articleView .article-shell{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;height:auto!important;min-height:100svh!important;max-height:none!important;margin:0!important;border:0!important;border-radius:0!important;background:#f9fdff!important;box-shadow:none!important;overflow:visible!important}
+#articleView .article-close{position:fixed!important;left:20px!important;top:20px!important;width:38px!important;height:38px!important;border-radius:50%!important;z-index:100!important;background:rgba(235,238,241,.96)!important;box-shadow:0 5px 18px rgba(30,60,75,.12)!important}
+#articleView .article-hero{min-height:min(52vh,560px)}
+#articleView .article-body{max-width:900px;padding:46px 32px 70px}
+@media(max-width:650px){#articleView .article-close{left:14px!important;top:14px!important}#articleView .article-body{padding:30px 20px 50px}#articleView .article-hero{min-height:420px}}
