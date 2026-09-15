@@ -228,13 +228,18 @@ prefetchNews();
 
 const views={home:'#homeView',calculator:'#calculatorView',assistant:'#assistantView',forwarders:'#forwardersView',news:'#newsView',article:'#articleView',tarotView:'#tarotView'};
 function showView(name){
-  Object.entries(views).forEach(([key,sel])=>{const el=$(sel);if(!el)return;const open=key===name;el.classList.toggle('open',open);el.setAttribute('aria-hidden',String(!open));});
-  document.body.classList.toggle('view-open',name!=='home');
-  if(name==='forwarders')renderDirectory();
-  if(name==='news')loadNews();
-  if(name==='assistant')setTimeout(()=>$('#assistantInput')?.focus(),350);
+  const target=views[name]?name:'home';
+  Object.entries(views).forEach(([key,sel])=>{
+    const el=$(sel); if(!el)return;
+    const open=key===target;
+    el.classList.toggle('open',open);
+    el.setAttribute('aria-hidden',String(!open));
+  });
+  document.body.classList.toggle('view-open',target!=='home');
+  if(target==='forwarders')renderDirectory();
+  if(target==='news')loadNews();
+  if(target==='assistant')setTimeout(()=>$('#assistantInput')?.focus(),120);
 }
-$$('[data-open-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.openView)));
 $$('[data-close-view]').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.closeView==='tarotView')closeTarot();else showView('home')}));
 document.querySelector('#tarotView')?.addEventListener('click',e=>{if(e.target.id==='tarotView'||e.target.id==='tarotShell')closeTarot()});
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#tarotView')?.classList.contains('open'))closeTarot();else if(e.key==='Escape')showView('home')});
@@ -428,7 +433,11 @@ async function loadCurrency(){
     $('#usdRate').textContent=fmt(d.items?.USD?.value);
     $('#eurRate').textContent=fmt(d.items?.EUR?.value);
     $('#cnyRate').textContent=fmt(d.items?.CNY?.value);$('#homeCny').textContent=fmt(d.items?.CNY?.value);$('#homeUsd').textContent=fmt(d.items?.USD?.value);$('#homeEur').textContent=fmt(d.items?.EUR?.value);
-  }catch{['usdRate','eurRate','cnyRate','homeCny','homeUsd','homeEur'].forEach(id=>{const el=$('#'+id);if(el&&el.textContent==='—')el.title='Курс временно недоступен'});}
+    try{localStorage.setItem('iomastavka_currency_cache',JSON.stringify(d.items||{}))}catch{}
+  }catch{
+    try{const c=JSON.parse(localStorage.getItem('iomastavka_currency_cache')||'{}');const fmt=x=>x==null?'—':fmtNum(x);$('#usdRate').textContent=fmt(c.USD?.value);$('#eurRate').textContent=fmt(c.EUR?.value);$('#cnyRate').textContent=fmt(c.CNY?.value);$('#homeCny').textContent=fmt(c.CNY?.value);$('#homeUsd').textContent=fmt(c.USD?.value);$('#homeEur').textContent=fmt(c.EUR?.value)}catch{}
+    ['usdRate','eurRate','cnyRate','homeCny','homeUsd','homeEur'].forEach(id=>{const el=$('#'+id);if(el&&el.textContent==='—')el.title='Курс временно недоступен'});
+  }
 }
 
 function isUrgentNews(n){const x=normalize(String(n.title||'')+' '+String(n.description||'')).toLowerCase();return /(закон|законодатель|таможенн|пошлин|тариф|ставк.*пошлин|запрет|ограничен|санкц|лиценз|сертификат|обязательн|вступ(ил|ает).*сил|изменен.*правил|customs|tariff|duty|ban|restriction|regulation|law|licen[cs]|mandatory|sanction)/i.test(x)}

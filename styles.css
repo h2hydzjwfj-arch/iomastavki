@@ -443,3 +443,43 @@ body.manual-dark .article-mini-table th{color:#bde7ec!important}body.manual-dark
 .topbar .dollar-button{position:relative!important;left:auto!important;top:auto!important;width:var(--control-size)!important;height:var(--control-size)!important;margin:0 0 0 10px!important;flex:0 0 var(--control-size);z-index:102!important}
 .topbar .brand{pointer-events:none}
 @media(max-width:650px){.topbar{--control-size:36px}.topbar .theme-controls{margin-left:8px!important}.topbar .dollar-button{margin-left:8px!important}}
+
+/* FILE 11 — calm space-night theme and robust window presentation */
+body.manual-dark{
+  --ink:#fff7d6;--muted:#d6c99e;--line:rgba(255,226,137,.18);
+  background:
+    radial-gradient(circle at 20% 12%,rgba(47,92,166,.30),transparent 28%),
+    radial-gradient(circle at 82% 28%,rgba(33,137,151,.18),transparent 26%),
+    linear-gradient(145deg,#050b19 0%,#07162c 48%,#092b3b 100%)!important;
+  color:#fff8dc!important;
+}
+body.manual-dark:after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background-image:radial-gradient(circle at 15% 22%,rgba(255,236,164,.8) 0 1px,transparent 1.5px),radial-gradient(circle at 73% 18%,rgba(255,239,176,.65) 0 1px,transparent 1.5px),radial-gradient(circle at 91% 67%,rgba(255,226,137,.6) 0 1px,transparent 1.5px),radial-gradient(circle at 44% 82%,rgba(255,239,176,.45) 0 1px,transparent 1.5px);background-size:280px 240px,360px 310px,420px 370px,500px 430px;opacity:.38}
+body.manual-dark .topbar,body.manual-dark .app-shell{position:relative;z-index:1}
+body.manual-dark .brand{color:#ffe9a6!important;text-shadow:0 0 20px rgba(255,214,111,.12)}
+body.manual-dark .hero-copy .eyebrow{color:#f1d98c!important}
+body.manual-dark .hero-copy h1{color:#fff2bd!important;text-shadow:0 0 24px rgba(255,220,128,.16)}
+body.manual-dark .hero-copy p{color:#e9ddb7!important}
+body.manual-dark .service-card,body.manual-dark .calculator-card,body.manual-dark .directory-panel,body.manual-dark .assistant-shell,body.manual-dark .agent-import-shell{background:linear-gradient(145deg,rgba(8,25,49,.94),rgba(9,48,63,.94))!important;border-color:rgba(255,221,132,.18)!important;color:#fff6d0!important;box-shadow:0 28px 90px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,231,155,.08)!important}
+body.manual-dark .service-text b,body.manual-dark .calculator-card h1,body.manual-dark .directory-head h2,body.manual-dark .assistant-head h2,body.manual-dark .section-title,body.manual-dark .dimensions-head{color:#fff1bd!important}
+body.manual-dark .service-text small,body.manual-dark .field label,body.manual-dark .directory-head p,body.manual-dark .assistant-head small,body.manual-dark .home-status,body.manual-dark .home-currency span{color:#d9cfad!important}
+body.manual-dark input,body.manual-dark textarea,body.manual-dark .fake-select{background:rgba(5,20,37,.96)!important;color:#fff7d6!important;border-color:rgba(255,221,132,.22)!important}
+body.manual-dark input::placeholder,body.manual-dark textarea::placeholder{color:#9e9a83!important}
+body.manual-dark .currency-item,body.manual-dark .home-currency{background:linear-gradient(145deg,#102c4a,#0c4554)!important;color:#fff2bb!important;border:1px solid rgba(255,220,125,.28)!important;box-shadow:0 10px 34px rgba(0,0,0,.28)!important}
+body.manual-dark .currency-item b,body.manual-dark .home-currency b{color:#ffe9a2!important;text-shadow:0 0 10px rgba(255,218,121,.12)}
+body.manual-dark .result,body.manual-dark .recommendation,body.manual-dark .dimensions,body.manual-dark .auto-calc-strip>div{background:rgba(8,29,48,.92)!important;color:#fff2c5!important;border-color:rgba(255,220,128,.16)!important}
+body.manual-dark .result-grid span{background:#123750!important;color:#ddcfaa!important}body.manual-dark .result-grid b{color:#fff0b8!important}
+body.manual-dark .directory-table-wrap{background:#071d31!important;border-color:rgba(255,221,132,.2)!important}.manual-dark .directory-table th{background:#123d56!important;color:#ffeab0!important}.manual-dark .directory-table td{background:#0a2940!important;color:#eee2bd!important;border-bottom-color:rgba(255,221,132,.11)!important}.manual-dark .directory-table tr:hover td{background:#104158!important}
+body.manual-dark .chat-bubble.assistant{background:#10374b!important;color:#f3e8c5!important}.manual-dark .thinking-active{color:#f0d786!important}
+body.manual-dark .theme-controls button,body.manual-dark .dollar-button{background:rgba(17,53,76,.92)!important;color:#ffe9a7!important;border-color:rgba(255,220,127,.28)!important}
+body.manual-dark .logout{background:rgba(17,51,70,.9)!important;color:#f6e9bf!important}
+body.manual-dark .hover-menu,body.manual-dark .suggestions{background:#071c2d!important;color:#f4e8c5!important;border-color:rgba(255,220,127,.2)!important}.manual-dark .hover-item,.manual-dark .suggestions button{color:#f1e4c0!important}.manual-dark .hover-item:hover{background:#123c52!important;color:#ffe7a0!important}
+body.manual-dark .article-shell{background:linear-gradient(145deg,#06172b,#0a3142)!important;color:#f5e9c4!important}.manual-dark .article-body h1,.manual-dark .article-body h2,.manual-dark .article-body h3,.manual-dark .article-title h1{color:#fff0b5!important}.manual-dark .article-body p,.manual-dark .article-checklist,.manual-dark .article-source{color:#e0d5b3!important}.manual-dark .article-visual-card,.manual-dark .article-video-card,.manual-dark .flow-step{background:linear-gradient(145deg,#0d3046,#0d4554)!important;color:#f2e6c0!important;border-color:rgba(255,221,132,.16)!important}
+/* Hamsa: stable alignment and permanent golden eye shimmer */
+.topbar{display:flex!important;align-items:center!important}.topbar>.hamsa-button{flex:0 0 var(--control-size,40px)!important}.topbar .theme-controls{margin-left:10px!important}.topbar .dollar-button{position:relative!important;left:auto!important;top:auto!important;margin-left:10px!important;z-index:103!important}.hamsa-eye{transform-origin:40px 35px!important;animation:hamsaEyeGlow 2.4s ease-in-out infinite!important}.hamsa-dot{animation:hamsaDotGlow 2.4s ease-in-out infinite!important}@keyframes hamsaEyeGlow{0%,100%{opacity:.68;filter:drop-shadow(0 0 1px rgba(255,214,90,.18))}50%{opacity:1;filter:drop-shadow(0 0 7px rgba(255,214,90,.9))}}@keyframes hamsaDotGlow{0%,100%{fill:#8bb1c0}50%{fill:#ffe19a;filter:drop-shadow(0 0 6px rgba(255,215,102,.95))}}
+/* Tarot: no jump, no spin; a short, quiet materialization */
+.tarot-shell{overflow:hidden!important}.tarot-card{will-change:opacity,transform!important;transform:translateZ(0)!important}.tarot-shell.tarot-ready .tarot-card{animation:tarotMaterialize .56s cubic-bezier(.22,.78,.22,1) .38s both!important}@keyframes tarotMaterialize{0%{opacity:0;transform:translate3d(0,5px,0) scale(.985);filter:blur(1.5px)}70%{opacity:.96;transform:translate3d(0,-1px,0) scale(1.002);filter:blur(.25px)}100%{opacity:1;transform:translate3d(0,0,0) scale(1);filter:none}}
+.tarot-shell.tarot-closing .tarot-card{animation:tarotQuietOut .38s ease-in both!important}@keyframes tarotQuietOut{0%{opacity:1;transform:translate3d(0,0,0) scale(1)}100%{opacity:0;transform:translate3d(0,3px,0) scale(.992);filter:blur(1px)}}
+.tarot-diamond{animation:tarotDiamond 2.1s ease-in-out infinite!important}@keyframes tarotDiamond{0%,100%{opacity:.55;filter:drop-shadow(0 0 2px rgba(255,226,142,.15));transform:scale(.97)}45%{opacity:1;filter:drop-shadow(0 0 7px rgba(255,235,166,.95)) drop-shadow(0 0 18px rgba(255,201,74,.55));transform:scale(1.07)}54%{opacity:.72;transform:scale(1)}68%{opacity:.95;filter:drop-shadow(0 0 5px rgba(255,232,157,.78));transform:scale(1.03)}}
+body.manual-dark .tarot-shell{background:radial-gradient(circle at 50% 30%,rgba(29,79,117,.46),rgba(3,10,24,.97) 72%)!important}.tarot-card h2,.tarot-card p,.tarot-meta{color:#fff1bd!important}.tarot-card .tarot-label{color:#dfcb91!important}
+/* Window navigation must remain clickable above the decorative scene. */
+.view-layer{z-index:200!important}.view-layer.open{pointer-events:auto!important}.weather-scene{z-index:0!important}.topbar{z-index:400!important}
