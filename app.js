@@ -7,8 +7,8 @@ const I18N = {
   zh:{title:'计算货物参数',from:'起运地',to:'目的地',cargo:'货物',weight:'重量，公斤',pieces:'件数',distance:'距离，公里',auto:'自动',dimensions:'单件尺寸',volumeAll:'体积 — 所有件',length:'长度',width:'宽度',height:'高度',forwarder:'货运代理',transport:'运输方式',incoterms:'贸易术语',dimWeight:'体积重量',chooseForwarder:'选择货运代理',chooseTransport:'选择运输方式',selected:'货运代理',none:'未选择',calculate:'计算',agents:'货运代理',assistant:'AI 助手',assistantSub:'咨询物流问题',assistantHelp:'可以直接输入路线、运价、贸易术语、清关或体积重量问题。',send:'发送',news:'新闻',newsSub:'物流 · 中国 · 海关',logout:'退出',thinking:'思考中…',aiOff:'AI 尚未连接。请在 Render 添加 OPENAI_API_KEY。',newsLoading:'正在加载新闻…',noNews:'暂时没有新闻。',weatherError:'天气暂时不可用。',todayDate:'15.09.2026'}
 };
 
-const modes={air:{ru:'Авиа',en:'Air',zh:'空运',factor:167},road:{ru:'Авто',en:'Road',zh:'公路',factor:400},rail:{ru:'ЖД',en:'Rail',zh:'铁路',factor:500},sea:{ru:'Море',en:'Sea',zh:'海运',factor:1000},multimodal:{ru:'Море + ЖД',en:'Sea + Rail',zh:'海运+铁路',factor:1000}};
-const modeGroups=[['rail','ЖД'],['road','Авто'],['air','Авиа'],['sea','Море'],['multimodal','Море + ЖД']];
+const modes={air:{ru:'Авиа',en:'Air',zh:'空运',factor:167},road:{ru:'Авто',en:'Road',zh:'公路',factor:400},rail:{ru:'ЖД',en:'Rail',zh:'铁路',factor:500},sea:{ru:'Море',en:'Sea',zh:'海运',factor:1000}};
+const modeGroups=[['rail','ЖД'],['road','Авто'],['air','Авиа'],['sea','Море']];
 let lang=localStorage.getItem('iomastavka_lang')||'ru';
 let rates={}; let selectedForwarder=''; let selectedMode=''; let selectedFactor=167;
 let dimensionUnit='mm';
@@ -47,9 +47,8 @@ function companyModes(company){
 function allForwarderNames(){return [...new Set(agentDirectory.map(a=>a.company).filter(Boolean).concat(Object.keys(rates)))];}
 function forwarderModes(name){return companyModes(name)}
 function filteredAgents(){return agentDirectory.filter(a=>{
-  const ms=a.modes||[];
-  if(!selectedMode)return true;
-  return ms.includes(selectedMode) || (selectedMode==='sea'&&ms.includes('multimodal')) || (selectedMode==='rail'&&ms.includes('multimodal'));
+  const modes=a.modes||[];
+  return !selectedMode || modes.includes(selectedMode) || (selectedMode==='sea'&&modes.includes('multimodal')) || (selectedMode==='rail'&&modes.includes('multimodal'));
 })}
 function renderForwarderMenu(){
  const menu=$('#forwarderMenu'); if(!menu)return; menu.innerHTML='';
@@ -117,16 +116,13 @@ function cityMatches(q,target){
  const x=normalize(q).trim(); const list=cities.filter(c=>target==='china'?c[5]==='cn':c[5]==='ru'); if(!x)return [];
  return list.map(c=>{const fields=[c[0],c[1],c[2]];let score=99;fields.forEach((f,i)=>{const n=normalize(f);if(n.startsWith(x))score=Math.min(score,i);else if(n.includes(x))score=Math.min(score,10+i)});return {c,score}}).filter(o=>o.score<99).sort((a,b)=>a.score-b.score||a.c[0].localeCompare(b.c[0],'ru')).slice(0,20).map(o=>o.c)
 }
-function renderSuggestions(box,list,input,target){box.innerHTML='';list.forEach(c=>{const d=document.createElement('button');d.type='button';d.innerHTML=`<strong>${c[lang==='zh'?2:lang==='en'?1:0]}</strong><small>${lang==='zh'?c[1]:c[2]} · ${c[3]} · ${c[4]}</small>`;d.onclick=()=>{input.value=lang==='zh'?c[2]:lang==='en'?c[1]:c[0];box.classList.remove('open');if(inputIdForTarget(target)==='fromCity')selectedCities.from=c;else selectedCities.to=c;autoDistance()};box.appendChild(d)});box.classList.toggle('open',list.length>0)}
-function inputIdForTarget(target){return target==='china'?'fromCity':'toCity'}
+function renderSuggestions(box,list,input,target){box.innerHTML='';list.forEach(c=>{const d=document.createElement('button');d.type='button';d.innerHTML=`<strong>${c[lang==='zh'?2:lang==='en'?1:0]}</strong><small>${lang==='zh'?c[1]:c[2]} · ${c[3]} · ${c[4]}</small>`;d.onclick=()=>{input.value=lang==='zh'?c[2]:lang==='en'?c[1]:c[0];box.classList.remove('open');autoDistance()};box.appendChild(d)});box.classList.toggle('open',list.length>0)}
 function setupAutocomplete(inputId,boxId,target){const input=$('#'+inputId),box=$('#'+boxId);input.addEventListener('input',()=>{const q=input.value.trim();renderSuggestions(box,cityMatches(q,target),input,target);if(q.length>=1)fetchGeo(q,target,box,input)});input.addEventListener('focus',()=>{const q=input.value.trim();renderSuggestions(box,q?cityMatches(q,target):[],input,target)});}
 async function fetchGeo(q,target,box,input){try{const url=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json`;const r=await fetch(url);const data=await r.json();if(input.value.trim()!==q)return;const remote=(data.results||[]).filter(x=>target==='china'?x.country_code==='CN':x.country_code==='RU').map(x=>[x.name,x.name,x.name,x.admin1||'',x.country||'',x.country_code]);const local=cityMatches(q,target);const merged=[...local,...remote].filter((v,i,a)=>a.findIndex(x=>normalize(x[1])===normalize(v[1]))===i);renderSuggestions(box,merged.slice(0,20),input,target)}catch{}}
 setupAutocomplete('fromCity','fromSuggestions','china');setupAutocomplete('toCity','toSuggestions','russia');
 
 document.addEventListener('click',e=>{$$('.suggestions').forEach(box=>{if(!e.target.closest('.autocomplete'))box.classList.remove('open')})});
-function haversineKm(a,b){const R=6371,rad=x=>x*Math.PI/180;const dLat=rad(b[0]-a[0]),dLon=rad(b[1]-a[1]);const q=Math.sin(dLat/2)**2+Math.cos(rad(a[0]))*Math.cos(rad(b[0]))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(q))}
-async function resolveCityCoordinates(city,target){if(Array.isArray(city)&&Number.isFinite(Number(city[6]))&&Number.isFinite(Number(city[7])))return [Number(city[6]),Number(city[7])];const q=cityName(city);if(!q)return null;try{const url=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`;const r=await fetch(url);if(!r.ok)return null;const d=await r.json();const x=(d.results||[]).find(v=>target==='china'?v.country_code==='CN':v.country_code==='RU');return x?[x.latitude,x.longitude]:null}catch{return null}}
-async function autoDistance(){const a=selectedCities.from||cityMatches($('#fromCity').value,'china')[0];const b=selectedCities.to||cityMatches($('#toCity').value,'russia')[0];if(!a||!b){return}const [ca,cb]=await Promise.all([resolveCityCoordinates(a,'china'),resolveCityCoordinates(b,'russia')]);if(!ca||!cb)return;const km=Math.round(haversineKm(ca,cb));$('#distance').value=km;$('#distance').dataset.auto='1';}
+function autoDistance(){const a=cityMatches($('#fromCity').value,'china')[0],b=cityMatches($('#toCity').value,'russia')[0];if(a&&b){const known={'Иу|Москва':7600,'Циндао|Москва':7400,'Шанхай|Москва':7900,'Шэньчжэнь|Москва':8200,'Гуанчжоу|Москва':8100,'Пекин|Москва':7600,'Сеул|Москва':6700,'Мумбаи|Москва':5200};const key=`${a[0]}|${b[0]}`;if(known[key])$('#distance').value=known[key]}}
 
 function fitsContainer(dims, container){
  const sorted=[...dims].sort((a,b)=>b-a), c=[...container].sort((a,b)=>b-a);
@@ -173,12 +169,8 @@ async function loadCurrency(){
 
 async function loadNews(){const box=$('#newsList');box.innerHTML=`<div class="news-loading">${tr('newsLoading')}</div>`;try{const r=await fetch('/api/news');const d=await r.json();if(!d.items?.length){box.innerHTML=`<div class="news-loading">${tr('noNews')}</div>`;return}box.innerHTML='';d.items.forEach(n=>{const a=document.createElement('a');a.href=n.link;a.target='_blank';a.rel='noopener noreferrer';a.className='news-item';a.innerHTML=`<strong>${n.title}</strong><small>${n.source||''} · ${n.date?new Date(n.date).toLocaleDateString(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':'en-US'):''}</small>`;box.appendChild(a)})}catch{box.innerHTML=`<div class="news-loading">${tr('noNews')}</div>`}}
 
-function setTimeWeather(){const h=Number(new Intl.DateTimeFormat('en-US',{timeZone:'Europe/Moscow',hour:'numeric',hour12:false}).format(new Date()));document.body.classList.remove('weather-night','weather-sun','weather-cloud','weather-rain','weather-snow','weather-storm');document.body.classList.add(h<6||h>=20?'weather-night':'weather-sun')}
-function applyWeatherVisual(d){document.body.classList.remove('weather-night','weather-sun','weather-cloud','weather-rain','weather-snow','weather-storm');const now=Math.floor(Date.now()/1000);const night=d.sunrise&&d.sunset?(now<d.sunrise||now>d.sunset):false;const main=d.main||'';const icon=d.icon||'';document.body.classList.add(night?'weather-night':main==='Thunderstorm'?'weather-storm':main==='Rain'||main==='Drizzle'?'weather-rain':main==='Snow'?'weather-snow':main==='Clouds'?'weather-cloud':'weather-sun');document.documentElement.style.setProperty('--weather-clouds',Math.min(1,(Number(d.clouds)||0)/100));document.documentElement.style.setProperty('--weather-wind',Math.min(1,(Number(d.wind)||0)/18));document.documentElement.style.setProperty('--weather-temp',Number(d.temp)||0);document.documentElement.dataset.weatherIcon=icon;}
-async function checkWeather(){try{const cfg=await fetch('/api/config',{cache:'no-store'}).then(r=>r.json());if(!cfg.weatherConfigured){setTimeWeather();return}const wr=await fetch('/api/weather',{cache:'no-store'});if(!wr.ok)throw new Error('weather');const d=await wr.json();applyWeatherVisual(d)}catch{setTimeWeather()}}
-async function backgroundRefresh(){await Promise.allSettled([checkWeather(),loadRates(),loadCurrency()]);}
-checkWeather();setInterval(checkWeather,5*60*1000);
-loadRates();renderIncoterms();renderFactors();applyLang();$('#currencyDate').textContent=formatToday();loadCurrency();setInterval(loadCurrency,30*60*1000);
-setInterval(()=>fetch('/api/health',{cache:'no-store'}).catch(()=>{}),2*60*1000);
-setInterval(()=>{fetch('/api/news',{cache:'no-store'}).catch(()=>{})},30*60*1000);
-window.addEventListener('error',e=>{console.warn('iomastavka:',e.error||e.message)});window.addEventListener('unhandledrejection',e=>{console.warn('iomastavka promise:',e.reason)});
+function setTimeWeather(){const h=Number(new Intl.DateTimeFormat('en-US',{timeZone:'Europe/Moscow',hour:'numeric',hour12:false}).format(new Date()));document.body.classList.remove('weather-night','weather-sun','weather-cloud','weather-rain','weather-snow');document.body.classList.add(h<6||h>=20?'weather-night':'weather-sun')}
+async function checkWeather(){try{const cfg=await fetch('/api/config').then(r=>r.json());if(!cfg.weatherConfigured){setTimeWeather();return}const wr=await fetch('/api/weather');if(!wr.ok){setTimeWeather();return}const d=await wr.json();document.body.classList.remove('weather-night','weather-sun','weather-cloud','weather-rain','weather-snow');const h=Number(new Intl.DateTimeFormat('en-US',{timeZone:'Europe/Moscow',hour:'numeric',hour12:false}).format(new Date()));if(h<6||h>=20)document.body.classList.add('weather-night');else if(['Rain','Drizzle','Thunderstorm'].includes(d.main))document.body.classList.add('weather-rain');else if(d.main==='Snow')document.body.classList.add('weather-snow');else if(d.main==='Clouds')document.body.classList.add('weather-cloud');else document.body.classList.add('weather-sun')}catch{setTimeWeather()}}
+checkWeather();setInterval(checkWeather,10*60*1000);
+
+loadRates();renderIncoterms();renderFactors();applyLang();$('#currencyDate').textContent=formatToday();loadCurrency();setInterval(loadCurrency,60*60*1000);
