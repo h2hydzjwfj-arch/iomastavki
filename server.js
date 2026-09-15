@@ -222,8 +222,14 @@ app.post('/api/realtime/call', async (req,res)=>{
   try{
     const form=new FormData(); form.append('sdp',sdp); form.append('session',new Blob([JSON.stringify({type:'realtime',model:process.env.OPENAI_REALTIME_MODEL||'gpt-realtime-2.1',instructions,output_modalities:['audio'],audio:{input:{turn_detection:{type:'server_vad',create_response:true,interrupt_response:true}},output:{voice:process.env.OPENAI_REALTIME_VOICE||'marin'}}})],{type:'application/json'}),'session.json');
     const r=await fetch('https://api.openai.com/v1/realtime/calls',{method:'POST',headers:{Authorization:`Bearer ${key}`},body:form});
-    const text=await r.text(); if(!r.ok)return res.status(r.status).json({ok:false,error:text||'Realtime call failed'});
-    res.json({ok:true,sdp:text});
+    const text=await r.text();
+    if(!r.ok) {
+      let message=text||'Realtime call failed';
+      try { const parsed=JSON.parse(text); message=parsed?.error?.message||parsed?.error||message; } catch {}
+      return res.status(r.status).json({ok:false,error:message});
+    }
+    // The Realtime WebRTC endpoint returns the SDP answer as plain text.
+    res.status(200).type('application/sdp').send(text);
   }catch(e){res.status(502).json({ok:false,error:e.message||'Realtime unavailable'});}
 });
 

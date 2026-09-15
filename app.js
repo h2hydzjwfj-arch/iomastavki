@@ -292,8 +292,8 @@ async function startRealtime(){
   const btn=$('#voiceButton');
   try{
     btn.classList.add('listening'); $('#voiceOrb')?.classList.add('listening'); setVoiceUI(true,tr('listen'));
-    const tokenResp=await fetch('/api/realtime/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({language:lang,context:getCalculatorContext()})});
-    const session=await tokenResp.json(); if(!tokenResp.ok)throw new Error(session.error||'Realtime unavailable');
+    // The WebRTC offer is sent directly to the server. There is no separate
+    // /api/realtime/session endpoint in this architecture.
     rtcPC=new RTCPeerConnection();
     rtcAudio=new Audio(); rtcAudio.autoplay=true;
     rtcPC.ontrack=e=>{rtcAudio.srcObject=e.streams[0];};
@@ -304,8 +304,15 @@ async function startRealtime(){
     rtcDC.onmessage=e=>handleRealtimeEvent(JSON.parse(e.data));
     const offer=await rtcPC.createOffer(); await rtcPC.setLocalDescription(offer);
     const answerResp=await fetch('/api/realtime/call',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sdp:offer.sdp,language:lang,context:getCalculatorContext()})});
-    const answer=await answerResp.json(); if(!answerResp.ok)throw new Error(answer.error||'Realtime connection failed');
-    await rtcPC.setRemoteDescription({type:'answer',sdp:answer.sdp});
+    const answerText=await answerResp.text();
+    if(!answerResp.ok) {
+      let message=answerText||'Realtime connection failed';
+      try { const parsed=JSON.parse(answerText); message=parsed.error||message; } catch {}
+      throw new Error(message);
+    }
+    // OpenAI returns a raw SDP answer, not JSON.
+    if(!answerText.includes('v=0')) throw new Error('Invalid Realtime SDP answer');
+    await rtcPC.setRemoteDescription({type:'answer',sdp:answerText});
   }catch(e){stopRealtime();setVoiceUI(false,e.message||tr('unavailable'));}
 }
 function handleRealtimeEvent(ev){
