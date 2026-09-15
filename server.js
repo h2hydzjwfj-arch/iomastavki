@@ -74,13 +74,7 @@ app.get('/api/weather', async (req,res) => {
     const r = await fetch(u);
     const d = await r.json();
     if (!r.ok) return res.status(r.status).json({ok:false,error:d.message||'weather error'});
-    res.json({
-      ok:true,
-      main:d.weather?.[0]?.main || 'Clear',
-      description:d.weather?.[0]?.description || '',
-      temp:d.main?.temp,
-      city:d.name || 'Москва'
-    });
+    res.json({ok:true, main:d.weather?.[0]?.main||'Clear', description:d.weather?.[0]?.description||'', icon:d.weather?.[0]?.icon||'01d', temp:d.main?.temp, feelsLike:d.main?.feels_like, humidity:d.main?.humidity, pressure:d.main?.pressure, wind:d.wind?.speed, clouds:d.clouds?.all, visibility:d.visibility, rain1h:d.rain?.['1h']||0, snow1h:d.snow?.['1h']||0, sunrise:d.sys?.sunrise||0, sunset:d.sys?.sunset||0, city:d.name||'Москва'});
   } catch { res.status(502).json({ok:false,error:'weather unavailable'}); }
 });
 
