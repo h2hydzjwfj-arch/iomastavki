@@ -1,6 +1,25 @@
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
+// Emergency navigation binding: keep the main windows clickable even if a later
+// optional module fails during startup. Event delegation is intentionally early.
+document.addEventListener('click', (e) => {
+  const trigger = e.target.closest?.('[data-open-view]');
+  if (trigger) {
+    const name = trigger.getAttribute('data-open-view');
+    const target = document.getElementById(name === 'calculator' ? 'calculatorView' : name === 'assistant' ? 'assistantView' : name === 'forwarders' ? 'forwardersView' : name === 'news' ? 'newsView' : name === 'article' ? 'articleView' : name === 'tarotView' ? 'tarotView' : 'homeView');
+    if (target) {
+      document.querySelectorAll('.view-layer').forEach(v => { v.classList.remove('open'); v.setAttribute('aria-hidden','true'); });
+      target.classList.add('open'); target.setAttribute('aria-hidden','false');
+      document.body.classList.toggle('view-open', name !== 'home');
+      if(name === 'forwarders' && typeof renderDirectory === 'function') renderDirectory();
+      if(name === 'news' && typeof loadNews === 'function') loadNews();
+      if(name === 'assistant') setTimeout(()=>document.querySelector('#assistantInput')?.focus(),120);
+      e.preventDefault();
+    }
+  }
+}, true);
+
 const I18N = {
   ru:{title:'Расчёт ставки',from:'Откуда',to:'Куда',cargo:'ГРУЗ',weight:'Вес, кг',pieces:'Количество мест',distance:'Расстояние, км',auto:'Автоматически',dimensions:'ГАБАРИТЫ ОДНОГО МЕСТА',volumeAll:'Объём — по всем местам',length:'Длина',width:'Ширина',height:'Высота',forwarder:'Экспедитор',transport:'Вид транспорта',incoterms:'Условия поставки',dimWeight:'Объёмный вес',chooseForwarder:'Выберите экспедитора',chooseTransport:'Выберите транспорт',selected:'ЭКСПЕДИТОР',none:'Не выбран',calculate:'Рассчитать',agents:'Экспедиторы',assistant:'ИИ-ассистент',assistantSub:'Спросите что угодно по логистике',assistantHelp:'Можно писать обычным языком: маршрут, ставка, Incoterms, таможня, расчёт веса или новая ставка.',send:'Отправить',news:'Новости',newsSub:'Логистика · Китай · Таможня',logout:'Выйти',thinking:'Думаю над вашим ответом…',aiOff:'ИИ не подключён. Добавьте OPENAI_API_KEY в Render.',newsLoading:'Загружаю новости…',noNews:'Новости пока недоступны.',weatherError:'Погода временно недоступна.',todayDate:'15.09.2026 г.',home:'Главная',heroEyebrow:'ЛОГИСТИКА · КИТАЙ → РОССИЯ',heroText:'Точный расчёт. Умный помощник.\nВсё необходимое для работы с грузом — в одном месте.',tileRates:'Расчёт ставок',tileRatesSub:'Маршрут, ставка и транспорт',tileAI:'AI-ассистент',tileAISub:'Текстом или голосом',tileAgents:'Экспедиторы',tileAgentsSub:'Контакты и направления перевозок',tileNews:'Новости ВЭД',tileNewsSub:'Китай · логистика · таможня',directoryEyebrow:'СПРАВОЧНИК',directorySub:'Поставщики и контакты по направлениям.',intelligence:'ИНТЕЛЛЕКТ',assistantSub2:'Логистика, расчёты и ВЭД — голосом или текстом.',attach:'Файл',fileHint:'Файл можно добавить вместе с сообщением',voice:'Микрофон',intelligenceFeed:'ИНФОРМАЦИОННАЯ ЛЕНТА',newsSub2:'Китай · логистика · таможня',chargeWeight:'Расчётный вес',company:'Компания',contact:'Контакт',phone:'Телефон',email:'Email',website:'Сайт',directions:'Направления',note:'Примечание',all:'Все',close:'Закрыть',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Автоматически по транспорту',transportRail:'ЖД',transportRoad:'Авто',transportAir:'Авиа',transportSea:'Море',transportMulti:'Море + ЖД',menu:'Меню',ready:'Готов к разговору',listen:'Слушаю…',transcribe:'Расшифровываю…',recognized:'Речь распознана',fail:'Не удалось распознать голос',mic:'Нет доступа к микрофону',unavailable:'Голос недоступен',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'ЦБ РФ',articleLoading:'Готовлю статью…',articleError:'Не удалось подготовить статью.',articleListen:'Аудиоподкаст',articlePlay:'Слушать',articlePause:'Пауза',articleSource:'Материал подготовлен на основе новости',articleBack:'К новостям',autoVolumeLabel:'Объём',autoVolumetricLabel:'Объёмный вес',factorLabel:'Фактор',themeLight:'Светлая тема',themeDark:'Тёмная тема',themeToggle:'Сменить тему'},
   en:{title:'Rate calculation',from:'From',to:'To',cargo:'CARGO',weight:'Weight, kg',pieces:'Pieces',distance:'Distance, km',auto:'Automatic',dimensions:'DIMENSIONS OF ONE PIECE',volumeAll:'Volume — all pieces',length:'Length',width:'Width',height:'Height',forwarder:'Forwarder',transport:'Transport',incoterms:'Incoterms',dimWeight:'Volumetric weight',chooseForwarder:'Choose forwarder',chooseTransport:'Choose transport',selected:'FORWARDER',none:'Not selected',calculate:'Calculate',agents:'Forwarders',assistant:'AI assistant',assistantSub:'Ask anything about logistics',assistantHelp:'Write naturally: route, rate, Incoterms, customs, weight calculation or a new rate.',send:'Send',news:'News',newsSub:'Logistics · China · Customs',logout:'Log out',thinking:'Thinking about your answer…',aiOff:'AI is not connected. Add OPENAI_API_KEY in Render.',newsLoading:'Loading news…',noNews:'News are temporarily unavailable.',weatherError:'Weather is temporarily unavailable.',todayDate:'15.09.2026',home:'Home',heroEyebrow:'LOGISTICS · CHINA → RUSSIA',heroText:'Precise calculation. Smart assistant.\nEverything you need for cargo work — in one place.',tileRates:'Rate calculation',tileRatesSub:'Route, rate and transport',tileAI:'AI assistant',tileAISub:'Text or voice',tileAgents:'Forwarders',tileAgentsSub:'Contacts and transport directions',tileNews:'Trade news',tileNewsSub:'China · logistics · customs',directoryEyebrow:'DIRECTORY',directorySub:'Suppliers and contacts by transport direction.',intelligence:'INTELLIGENCE',assistantSub2:'Logistics, rates and foreign trade — by voice or text.',attach:'File',fileHint:'Attach a file with your message',voice:'Microphone',intelligenceFeed:'NEWS FEED',newsSub2:'China · logistics · customs',chargeWeight:'Chargeable weight',company:'Company',contact:'Contact',phone:'Phone',email:'Email',website:'Website',directions:'Directions',note:'Note',all:'All',close:'Close',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Automatic by transport',transportRail:'Rail',transportRoad:'Road',transportAir:'Air',transportSea:'Sea',transportMulti:'Sea + Rail',menu:'Menu',ready:'Ready to talk',listen:'Listening…',transcribe:'Transcribing…',recognized:'Speech recognized',fail:'Could not recognize speech',mic:'Microphone access denied',unavailable:'Voice unavailable',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'CBR',articleLoading:'Preparing article…',articleError:'Could not prepare the article.',articleListen:'Audio podcast',articlePlay:'Listen',articlePause:'Pause',articleSource:'Prepared from the selected news item',articleBack:'Back to news',autoVolumeLabel:'Volume',autoVolumetricLabel:'Volumetric weight',factorLabel:'Factor',themeLight:'Light theme',themeDark:'Dark theme',themeToggle:'Switch theme'},
@@ -141,11 +160,38 @@ function showTarot(){
   const shell=$('#tarotShell'), card=$('.tarot-card');
   if(!shell||!card)return;
   shell.classList.remove('tarot-ready','tarot-closing');
-  card.classList.remove('tarot-reveal');
-  const cards=[{s:'♌',t:{ru:'Солнце',en:'The Sun',zh:'太阳'},d:{ru:'Сегодня твоя карта — Солнце. День про ясность, движение и уверенный шаг вперёд. Не усложняй то, что уже понятно.',en:'Your card today is The Sun. A day for clarity, movement and a confident step forward. Do not complicate what is already clear.',zh:'今天的牌是太阳。适合清晰、行动和自信前进。已经明确的事情不要再复杂化。'}},{s:'✦',t:{ru:'Звезда',en:'The Star',zh:'星星'},d:{ru:'Сегодня твоя карта — Звезда. Хороший день для идеи, которая давно ждёт своего момента. Дай ей пространство.',en:'Your card today is The Star. A good day for an idea that has been waiting for its moment. Give it space.',zh:'今天的牌是星星。适合让等待已久的想法获得空间。'}},{s:'☽',t:{ru:'Луна',en:'The Moon',zh:'月亮'},d:{ru:'Сегодня твоя карта — Луна. Не спеши с выводами: часть картины проявится позже. Доверься наблюдательности.',en:'Your card today is The Moon. Do not rush to conclusions; part of the picture will appear later. Trust observation.',zh:'今天的牌是月亮。不要急于下结论，部分答案会稍后出现。相信观察。'}}];
-  const day=new Date(); const idx=(day.getFullYear()*10000+(day.getMonth()+1)*100+day.getDate())%cards.length; const c=cards[idx];
-  $('#tarotSymbol').textContent=c.s; $('#tarotTitle').textContent=c.t[lang]; $('#tarotText').textContent=c.d[lang];
-  requestAnimationFrame(()=>{shell.classList.add('tarot-ready'); startTarotDust(false);});
+  const deck=[
+    ['0','Шут','The Fool','Новый цикл','Сегодня стоит дать место новому: небольшому шагу, идее или разговору, который давно откладывался.'],
+    ['I','Маг','The Magician','Инициатива','Сегодня многое зависит от твоего первого действия. Не жди идеального момента — используй то, что уже есть.'],
+    ['II','Верховная Жрица','The High Priestess','Интуиция','Не вся информация должна быть получена сразу. Сегодня полезнее наблюдать, чем торопиться с выводами.'],
+    ['III','Императрица','The Empress','Рост','Хороший день для того, что должно постепенно приносить результат: работа, идея, отношения или проект.'],
+    ['IV','Император','The Emperor','Опора','Сегодня сила в структуре. Разложи задачи по местам и не позволяй чужой суете управлять твоим ритмом.'],
+    ['V','Иерофант','The Hierophant','Знание','Полезный ответ сегодня может прийти через человека с опытом, документ или уже проверенный путь.'],
+    ['VI','Влюблённые','The Lovers','Выбор','День про выбор между двумя направлениями. Смотри не только на выгоду, но и на то, куда тебя действительно тянет.'],
+    ['VII','Колесница','The Chariot','Движение','День хорошо подходит для дороги, переговоров и решительного движения к конкретной цели.'],
+    ['VIII','Сила','Strength','Спокойная сила','Сегодня не нужно доказывать силу громкостью. Мягкая уверенность окажется сильнее давления.'],
+    ['IX','Отшельник','The Hermit','Фокус','Убери лишний шум и закончи одну важную вещь. Ясность сегодня приходит через концентрацию.'],
+    ['X','Колесо Фортуны','Wheel of Fortune','Поворот','Ситуация может неожиданно поменять направление. Оставь немного пространства для удачного поворота.'],
+    ['XI','Справедливость','Justice','Баланс','Сегодня особенно важно проверять цифры, документы и договорённости. Точность сыграет на твоей стороне.'],
+    ['XII','Повешенный','The Hanged Man','Пауза','Если что-то не двигается, не обязательно давить сильнее. Иногда смена взгляда быстрее приводит к решению.'],
+    ['XIII','Смерть','Death','Обновление','Это не про плохое событие, а про завершение старого этапа. Освободив место, ты увидишь следующий шаг.'],
+    ['XIV','Умеренность','Temperance','Ритм','Сегодня тебе особенно полезен ровный темп: без рывков, перегруза и попытки сделать всё одновременно.'],
+    ['XV','Дьявол','The Devil','Освобождение','Заметь, что забирает внимание больше, чем заслуживает. Не каждая срочность действительно твоя.'],
+    ['XVI','Башня','The Tower','Перестройка','Неожиданная перемена может оказаться полезной, если не держаться за то, что уже перестало работать.'],
+    ['XVII','Звезда','The Star','Надежда','Хороший день для идеи, которая ещё не принесла результат, но уже показывает направление. Продолжай.'],
+    ['XVIII','Луна','The Moon','Наблюдение','Не спеши верить первому впечатлению. Часть картины станет понятнее чуть позже.'],
+    ['XIX','Солнце','The Sun','Ясность','Одна из самых светлых карт. Сегодня хорошо говорить прямо, действовать уверенно и не усложнять очевидное.'],
+    ['XX','Суд','Judgement','Решение','Сегодня может появиться момент, когда старый вопрос наконец попросит окончательного ответа.'],
+    ['XXI','Мир','The World','Завершение','Хороший знак для закрытия этапа, результата и перехода на следующий уровень.']
+  ];
+  // Birth data is used as a stable personal seed; this is a tarot-style daily reading, not a claim of scientific prediction.
+  const birthSeed=21*1000000+8*10000+2004*10+16+20;
+  const d=new Date(); const daySeed=d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
+  const idx=Math.abs((birthSeed*31+daySeed*17+21))%deck.length; const c=deck[idx];
+  $('#tarotSymbol').textContent=c[0]==='XIX'?'☉':c[0]==='XVII'?'✦':c[0]==='XVIII'?'☽':'♌';
+  $('#tarotTitle').textContent=lang==='ru'?c[1]:lang==='en'?c[2]:c[1];
+  $('#tarotText').textContent=lang==='ru'?`${c[3]} — ${c[4]}`:lang==='en'?`${c[2]} — ${c[4]}`:`${c[1]} — ${c[4]}`;
+  requestAnimationFrame(()=>{shell.classList.add('tarot-ready');startTarotDust(false);});
 }
 function startTarotDust(reverse=false){
   const canvas=$('#tarotDustCanvas'), shell=$('#tarotShell'); if(!canvas||!shell)return;

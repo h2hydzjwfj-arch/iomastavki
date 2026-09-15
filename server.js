@@ -124,7 +124,7 @@ app.get('/api/currency', async (req,res) => {
       if(!r.ok) throw new Error('CBR unavailable');
       const xml=await r.text(); const items={};
       for(const code of ['USD','EUR','CNY']){
-        const m=xml.match(new RegExp(`<Valute[^>]*ID=\"[^\"]+\"[\s\S]*?<CharCode>${code}<\/CharCode>[\s\S]*?<Nominal>([^<]+)<\/Nominal>[\s\S]*?<Value>([^<]+)<\/Value>[\s\S]*?<\/Valute>`));
+        const m=xml.match(new RegExp('<Valute[^>]*>[\\s\\S]*?<CharCode>'+code+'<\\/CharCode>[\\s\\S]*?<Nominal>([^<]+)<\\/Nominal>[\\s\\S]*?<Value>([^<]+)<\\/Value>[\\s\\S]*?<\\/Valute>'));
         if(m) items[code]={nominal:Number(m[1].replace(',','.'))||1,value:Number(m[2].replace(',','.'))};
       }
       if(Object.keys(items).length<3) throw new Error('Incomplete rates');
