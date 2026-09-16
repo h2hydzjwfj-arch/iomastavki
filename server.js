@@ -110,8 +110,20 @@ app.get('/', (req,res) => res.sendFile(path.join(ROOT, 'index.html')));
 app.get('/app.js', (req,res) => res.sendFile(path.join(ROOT, 'app.js')));
 app.get('/styles.css', (req,res) => res.sendFile(path.join(ROOT, 'styles.css')));
 app.get('/api/health', (req,res) => res.json({ ok: true }));
-app.get('/api/version', (req,res) => res.json({ok:true,version:'32',build:'IOMASTAVKA_FILE_32'}));
+app.get('/api/version', (req,res) => res.json({ok:true,version:'33',build:'IOMASTAVKA_FILE_33'}));
 app.get('/api/config', (req,res) => res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.OPENAI_API_KEY), ftsConfigured: Boolean(process.env.API_CLOUD_FTS_TOKEN) }));
+app.get('/api/weather', async (req,res) => {
+  const key=process.env.OPENWEATHER_API_KEY;
+  if(!key) return res.status(503).json({ok:false,error:'OPENWEATHER_API_KEY is not configured'});
+  try{
+    const url='https://api.openweathermap.org/data/2.5/weather?lat=55.7558&lon=37.6173&appid='+encodeURIComponent(key)+'&units=metric&lang=ru';
+    const r=await fetch(url,{headers:{'User-Agent':'iomastavka/33'},signal:AbortSignal.timeout(8000)});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d?.message||'OpenWeather error');
+    const w=d.weather?.[0]||{};
+    res.json({ok:true,main:w.main||'',description:w.description||'',icon:w.icon||'',temp:d.main?.temp,clouds:d.clouds?.all||0,wind:d.wind?.speed||0,dt:d.dt,sunrise:d.sys?.sunrise,sunset:d.sys?.sunset,city:d.name||'Москва'});
+  }catch(e){res.status(502).json({ok:false,error:e.message||'weather unavailable'});}
+});
 
 app.get('/api/currency', async (req,res) => {
   const parseCbrXml=(xml)=>{
@@ -603,24 +615,21 @@ app.post('/api/ai', async (req,res) => {
   const system=`Ты AI-ассистент сайта iomastavka — специализированный помощник по международной логистике, ВЭД, Китай/Азия → Россия, ставкам, маршрутам, Incoterms, таможне, документам и анализу КП. Отвечай на языке интерфейса пользователя, если он не попросил другой язык. Для tr используй естественный турецкий язык. Не выдумывай ставки и таможенные данные. Для свежих фактов используй web search только когда он действительно доступен. Исторические ставки из базы ниже помечай как исторические/ориентировочные, если срок не подтверждён. Текущий расчётный вес: ${chargeableKg.toFixed(1)} кг. Фактор: ${factor} кг/м³. База ставок: ${JSON.stringify(relevantRates)}. Контекст калькулятора: ${JSON.stringify(context)}.`;
   const input=[{role:'developer',content:system},...history.map(x=>({role:x.role==='assistant'?'assistant':'user',content:String(x.content||'')})),{role:'user',content:message}];
   try{
-    // First make a plain Responses request. This is the reliable path even if web search is unavailable for the account/model.
-    let out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL||'gpt-5.6-luna',input,max_output_tokens:1400});
-    // Only after a plain request fails, retry with web search.
-    if(out.error){
-      out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL||'gpt-5.6-luna',input,tools:[{type:'web_search'}],max_output_tokens:1400});
+    const preferred=process.env.OPENAI_MODEL||'gpt-4.1-mini';
+    // Use Chat Completions first for maximum compatibility with existing Render/OpenAI accounts.
+    const chat=await chatCompletionsRequest({key,preferred,input,max_tokens:1400});
+    if(!chat.error) return res.json({ok:true,text:chat.text});
+    let out=await responsesRequest({key,preferred,input,max_output_tokens:1400});
+    if(!out.error){
+      const text=responseText(out.d);
+      if(text) return res.json({ok:true,text});
     }
-    if(out.error){
-      const chat=await chatCompletionsRequest({key,preferred:process.env.OPENAI_MODEL||'gpt-5.6-luna',input,max_tokens:1400});
-      if(chat.error)return res.status(chat.error.status||502).json({ok:false,error:chat.error.error||'AI request failed'});
-      return res.json({ok:true,text:chat.text});
+    out=await responsesRequest({key,preferred,input,tools:[{type:'web_search'}],max_output_tokens:1400});
+    if(!out.error){
+      const text=responseText(out.d);
+      if(text) return res.json({ok:true,text});
     }
-    const text=responseText(out.d);
-    if(!text){
-      const chat=await chatCompletionsRequest({key,preferred:process.env.OPENAI_MODEL||'gpt-5.6-luna',input,max_tokens:1400});
-      if(chat.error)return res.status(chat.error.status||502).json({ok:false,error:chat.error.error||'OpenAI returned an empty response'});
-      return res.json({ok:true,text:chat.text});
-    }
-    res.json({ok:true,text});
+    return res.status(502).json({ok:false,error:chat.error?.error||'OpenAI не вернул ответ'});
   }catch(e){res.status(502).json({ok:false,error:e.message||'AI unavailable'});}
 });
 

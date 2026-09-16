@@ -30,12 +30,6 @@ const $$ = s => [...document.querySelectorAll(s)];
     if(e.target.classList?.contains('view-layer') && e.target.classList.contains('open')){close();}
   }, true);
   window.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
-  // Always show a useful last-resort currency until the live CBR request completes.
-  const seed=()=>{
-    const values={homeCny:'12.5353',homeUsd:'84.3363',homeEur:'97.7626',cnyRate:'12.5353',usdRate:'84.3363',eurRate:'97.7626'};
-    Object.entries(values).forEach(([id,val])=>{const el=document.getElementById(id);if(el && (!el.textContent || el.textContent==='—'))el.textContent=val});
-  };
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',seed,{once:true}); else seed();
 })();
 
 const I18N = {
@@ -174,16 +168,22 @@ document.addEventListener('click',e=>{$$('.hover-menu').forEach(m=>{if(!e.target
 // Navigation controls. Keep a single source of truth to avoid duplicate handlers.
 (() => {
   const dock=$('#controlDock'), tools=$('#controlTools'), launcher=$('#controlLauncher');
-  const reveal=()=>{if(!dock)return;dock.classList.add('open');dock.setAttribute('aria-expanded','true');tools?.setAttribute('aria-hidden','false')};
-  const collapse=()=>{if(!dock)return;dock.classList.remove('open');dock.setAttribute('aria-expanded','false');tools?.setAttribute('aria-hidden','true')};
-  // Desktop: moving onto the single round button reveals exactly four tools.
-  // Moving the pointer outside the four tools collapses them back to one button.
-  dock?.addEventListener('mouseenter',reveal);
-  dock?.addEventListener('mouseleave',collapse);
-  // Touch/keyboard fallback.
-  launcher?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();dock?.classList.contains('open')?collapse():reveal()});
-  document.addEventListener('click',e=>{if(dock?.classList.contains('open')&&!e.target.closest('#controlDock'))collapse()});
+  if(!dock)return;
+  let closeTimer=null;
+  const reveal=()=>{clearTimeout(closeTimer);dock.classList.add('open');dock.setAttribute('aria-expanded','true');tools?.setAttribute('aria-hidden','false')};
+  const collapse=()=>{clearTimeout(closeTimer);closeTimer=setTimeout(()=>{dock.classList.remove('open');dock.setAttribute('aria-expanded','false');tools?.setAttribute('aria-hidden','true')},90)};
+  const cancel=()=>clearTimeout(closeTimer);
+  // The dock owns an invisible hover corridor covering the launcher and all four tools.
+  // Therefore the launcher can disappear without causing mouseleave while the pointer
+  // travels to the customs/Hamsa/theme/import buttons.
+  dock.addEventListener('mouseenter',reveal);
+  dock.addEventListener('mouseleave',collapse);
+  tools?.addEventListener('mouseenter',reveal);
+  tools?.addEventListener('mouseleave',collapse);
+  launcher?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();dock.classList.contains('open')?collapse():reveal()});
+  document.addEventListener('click',e=>{if(dock.classList.contains('open')&&!e.target.closest('#controlDock'))collapse()});
   document.addEventListener('focusin',e=>{if(e.target.closest?.('#controlDock'))reveal()});
+  dock.addEventListener('pointerenter',cancel);
 })();
 $('#customsButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.__iomaOpenView?.('customsView')});
 $('#customsCheck')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();checkCustomsCode()});
@@ -628,20 +628,29 @@ initVoice();
 // News panel: обновляется с серверного RSS-кэша.
 function formatToday(){const p=new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Moscow',day:'2-digit',month:'2-digit',year:'numeric'}).formatToParts(new Date());const d=Object.fromEntries(p.map(x=>[x.type,x.value]));return `${d.day}.${d.month}.${d.year} г.`}
 async function loadCurrency(){
-  const paint=(items)=>{const fmt=x=>x==null?'—':fmtNum(x);if(items?.USD?.value!=null){$('#usdRate').textContent=fmt(items.USD.value);$('#homeUsd').textContent=fmt(items.USD.value)}if(items?.EUR?.value!=null){$('#eurRate').textContent=fmt(items.EUR.value);$('#homeEur').textContent=fmt(items.EUR.value)}if(items?.CNY?.value!=null){$('#cnyRate').textContent=fmt(items.CNY.value);$('#homeCny').textContent=fmt(items.CNY.value)}};
+  const paint=(items)=>{
+    const get=k=>Number(items?.[k]?.value);
+    const fmt=v=>Number.isFinite(v)?v.toFixed(4):'—';
+    const vals={CNY:fmt(get('CNY')),USD:fmt(get('USD')),EUR:fmt(get('EUR'))};
+    ['cnyRate','homeCny'].forEach(id=>{const el=$('#'+id);if(el)el.textContent=vals.CNY});
+    ['usdRate','homeUsd'].forEach(id=>{const el=$('#'+id);if(el)el.textContent=vals.USD});
+    ['eurRate','homeEur'].forEach(id=>{const el=$('#'+id);if(el)el.textContent=vals.EUR});
+  };
   try{
-    const r=await fetch('/api/currency',{credentials:'same-origin',cache:'no-store'});
-    if(!r.ok) throw new Error('currency');
+    const r=await fetch('/api/currency?ts='+Date.now(),{credentials:'same-origin',cache:'no-store'});
     const d=await r.json();
-    $('#currencyDate').textContent=formatToday(); paint(d.items||{});
-    try{localStorage.setItem('iomastavka_currency_cache',JSON.stringify(d.items||{}))}catch{}
-  }catch{
-    try{const c=JSON.parse(localStorage.getItem('iomastavka_currency_cache')||'{}'); if(Object.keys(c).length){paint(c);return}}catch{}
-    // Official Bank of Russia values for 15.09.2026 as a last-resort display fallback.
-    // They are replaced automatically as soon as /api/currency becomes available again.
-    const fallback={CNY:{nominal:1,value:12.5353},USD:{nominal:1,value:84.3363},EUR:{nominal:1,value:97.7626}};
-    paint(fallback);
-    $('#currencyDate').textContent='15.09.2026';
+    if(!r.ok||!d.ok)throw new Error(d.error||'currency');
+    paint(d.items||{});
+    const date=String(d.date||'').replace(/T.*$/,'');
+    $('#currencyDate').textContent=date||formatToday();
+    try{localStorage.setItem('iomastavka_currency_cache',JSON.stringify({date:d.date,items:d.items}))}catch{}
+  }catch(e){
+    try{
+      const c=JSON.parse(localStorage.getItem('iomastavka_currency_cache')||'null');
+      if(c?.items){paint(c.items);$('#currencyDate').textContent=(c.date||'')||'последнее полученное значение';return;}
+    }catch{}
+    ['cnyRate','homeCny','usdRate','homeUsd','eurRate','homeEur'].forEach(id=>{const el=$('#'+id);if(el)el.textContent='—'});
+    $('#currencyDate').textContent='Курс ЦБ временно недоступен';
   }
 }
 
@@ -680,7 +689,19 @@ async function openArticle(n){
  box.innerHTML=`<div class="article-hero">${img?`<img src="${escapeHtml(img)}" alt="" loading="eager">`:`<div class="article-art"><div class="article-art-grid"></div><div class="article-art-route">CHINA <span>→</span> CUSTOMS <span>→</span> RUSSIA</div></div>`}<div class="article-hero-shade"></div><div class="article-title"><span class="eyebrow">${escapeHtml(status)}</span><h1>${escapeHtml(title)}</h1><p>${escapeHtml(source)}${n.date?' · '+escapeHtml(new Date(n.date).toLocaleDateString(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':'en-US')):''}</p></div></div><div class="article-body"><div class="article-tags"><span class="article-tag ${urgent?'urgent':''}">${escapeHtml(status)}</span></div><h2>${L.what}</h2><p>${escapeHtml(desc||title)}</p><h2>${L.impact}</h2><p>${escapeHtml(lang==='ru'?'Проверьте базис поставки, код ТН ВЭД, документы, ограничения, дату вступления изменений в силу и возможное влияние на срок и стоимость.':lang==='en'?'Check Incoterms, HS code, documents, restrictions, effective date and the possible impact on transit time and cost.':'检查贸易术语、HS编码、文件、限制措施、生效日期以及对运输时间和成本的影响。')}</p><h2>${L.scheme}</h2><div class="article-flow">${flow.map((x,i)=>`<div class="flow-step"><span>${i+1}</span><b>${escapeHtml(x)}</b></div>${i<flow.length-1?'<div class="flow-arrow">→</div>':''}`).join('')}</div>${n.video?`<div class="article-video-card"><div class="eyebrow">${lang==='ru'?'ВИДЕО ИЗ ИСТОЧНИКА':lang==='en'?'SOURCE VIDEO':'来源视频'}</div>${/youtube\.com|youtu\.be/i.test(n.video)?`<iframe class="article-video-frame" src="${escapeHtml(n.video)}" title="video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`:`<video controls playsinline preload="metadata" src="${escapeHtml(n.video)}"></video>`}</div>`:''}${Array.isArray(n.images)&&n.images.length>1?`<div class="article-gallery">${n.images.slice(0,4).map(x=>`<img src="${escapeHtml(x)}" loading="lazy" alt="">`).join('')}</div>`:''}<div class="article-visual-grid"><div class="article-visual-card"><h3>${lang==='ru'?'Карта маршрута и точки контроля':lang==='en'?'Route & control points':'路线与控制点'}</h3><div class="route-map"><i class="route-node n1"></i><i class="route-node n2"></i><i class="route-node n3"></i><span class="route-label l1">CHINA</span><span class="route-label l2">TRANSIT</span><span class="route-label l3">RUSSIA</span></div></div><div class="article-visual-card"><h3>${lang==='ru'?'Ключевые параметры':lang==='en'?'Key parameters':'关键参数'}</h3><table class="article-mini-table"><thead><tr><th>${lang==='ru'?'Параметр':lang==='en'?'Parameter':'参数'}</th><th>${lang==='ru'?'Проверка':lang==='en'?'Check':'检查'}</th></tr></thead><tbody><tr><td>Incoterms</td><td>EXW / FOB / FCA / DDP</td></tr><tr><td>HS / ТН ВЭД</td><td>${urgent?'⚠️ '+(lang==='ru'?'обязательно':'required'):'✓'}</td></tr><tr><td>${lang==='ru'?'Срок':lang==='en'?'Validity':'有效期'}</td><td>${urgent?'⚠️':'✓'}</td></tr><tr><td>${lang==='ru'?'Документы':lang==='en'?'Documents':'文件'}</td><td>Invoice · PL · permits</td></tr></tbody></table></div></div><div class="article-visual-card"><h3>${lang==='ru'?'Визуальная динамика факторов':lang==='en'?'Factor dynamics':'因素动态'}</h3><div class="bar-chart"><i></i><i></i><i></i><i></i><i></i></div></div><div class="law-panel ${urgent?'urgent':''}"><b>${L.law}</b><span>${escapeHtml(urgent?(lang==='ru'?'Проверить дату вступления в силу и официальный источник.':lang==='en'?'Verify the effective date and official source.':'核对生效日期和官方来源。'):(lang==='ru'?'Обычная новость; юридический статус автоматически не присваивается.':lang==='en'?'Regular news; no legal status is assigned automatically.':'普通新闻；不会自动赋予法律效力。'))}</span></div><h2>${L.watch}</h2><ul class="article-checklist"><li>Incoterms / HS code</li><li>${lang==='ru'?'Ограничения и документы':lang==='en'?'Restrictions and documents':'限制措施和文件'}</li><li>${lang==='ru'?'Срок действия и дата вступления':lang==='en'?'Validity and effective date':'有效期和生效日期'}</li></ul><div class="article-source"><b>${L.source}:</b> ${escapeHtml(source||'RSS')}<br>${escapeHtml(L.note)}</div><section class="podcast-card"><div><span class="eyebrow">${tr('articleListen')}</span><h3>${escapeHtml(title)}</h3></div><button id="articleAudioBtn" class="podcast-button">▶ ${tr('articlePlay')}</button></section></div>`;
  $('#articleAudioBtn').onclick=()=>{const u=new SpeechSynthesisUtterance(`${title}. ${desc}`);u.lang=voiceLang();u.rate=.95;window.speechSynthesis.cancel();window.speechSynthesis.speak(u);};
 }
-function applyWeatherVisual(d){document.body.classList.remove('weather-night','weather-sun','weather-cloud','weather-rain','weather-snow','weather-storm');const now=Math.floor(Date.now()/1000);const night=d.sunrise&&d.sunset?(now<d.sunrise||now>d.sunset):false;const main=d.main||'';const icon=d.icon||'';document.body.classList.add(night?'weather-night':main==='Thunderstorm'?'weather-storm':main==='Rain'||main==='Drizzle'?'weather-rain':main==='Snow'?'weather-snow':main==='Clouds'?'weather-cloud':'weather-sun');document.documentElement.style.setProperty('--weather-clouds',Math.min(1,(Number(d.clouds)||0)/100));document.documentElement.style.setProperty('--weather-wind',Math.min(1,(Number(d.wind)||0)/18));document.documentElement.style.setProperty('--weather-temp',Number(d.temp)||0);document.documentElement.dataset.weatherIcon=icon;const weatherNames={Clear:{ru:'Ясно',en:'Clear',tr:'Açık',zh:'晴'},Clouds:{ru:'Облачно',en:'Cloudy',tr:'Bulutlu',zh:'多云'},Rain:{ru:'Дождь',en:'Rain',tr:'Yağmur',zh:'下雨'},Drizzle:{ru:'Морось',en:'Drizzle',tr:'Çiseleme',zh:'毛毛雨'},Snow:{ru:'Снег',en:'Snow',tr:'Kar',zh:'下雪'},Thunderstorm:{ru:'Гроза',en:'Thunderstorm',tr:'Gök gürültülü fırtına',zh:'雷雨'},Mist:{ru:'Туман',en:'Mist',tr:'Sis',zh:'雾'},Fog:{ru:'Туман',en:'Fog',tr:'Sis',zh:'雾'}};const hw=$('#homeWeatherText');if(hw)hw.textContent=`${weatherNames[main]?.[lang]||main}${d.temp!=null?' · '+Math.round(d.temp)+'°':''}`;const hs=$('#homeRouteStatus');if(hs&&$('#distance')?.value)hs.textContent=lang==='ru'?`Маршрут · ${Number($('#distance').value).toLocaleString('ru-RU')} км`:lang==='en'?`Route · ${Number($('#distance').value).toLocaleString('en-US')} km`:`路线 · ${Number($('#distance').value).toLocaleString('zh-CN')} 公里`;}
+function setTimeWeather(){
+  const now=new Date();
+  const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Moscow',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(now);
+  const hour=Number(parts.find(x=>x.type==='hour')?.value||0);
+  const minute=Number(parts.find(x=>x.type==='minute')?.value||0);
+  const minutes=hour*60+minute;
+  const night=minutes<6*60 || minutes>=19*60;
+  document.body.classList.remove('weather-night','weather-sun','weather-cloud','weather-rain','weather-snow','weather-storm');
+  document.body.classList.add(night?'weather-night':'weather-sun');
+  const hw=$('#homeWeatherText');
+  if(hw)hw.textContent=night?'Ночь':'День';
+}
+function applyWeatherVisual(d){document.body.classList.remove('weather-night','weather-sun','weather-cloud','weather-rain','weather-snow','weather-storm');const now=Math.floor(Date.now()/1000);const night=(d.icon&&/[n]$/.test(String(d.icon))) || (d.sunrise&&d.sunset?(now<d.sunrise||now>d.sunset):false);const main=d.main||'';const icon=d.icon||'';document.body.classList.add(night?'weather-night':main==='Thunderstorm'?'weather-storm':main==='Rain'||main==='Drizzle'?'weather-rain':main==='Snow'?'weather-snow':main==='Clouds'?'weather-cloud':'weather-sun');document.documentElement.style.setProperty('--weather-clouds',Math.min(1,(Number(d.clouds)||0)/100));document.documentElement.style.setProperty('--weather-wind',Math.min(1,(Number(d.wind)||0)/18));document.documentElement.style.setProperty('--weather-temp',Number(d.temp)||0);document.documentElement.dataset.weatherIcon=icon;const weatherNames={Clear:{ru:'Ясно',en:'Clear',tr:'Açık',zh:'晴'},Clouds:{ru:'Облачно',en:'Cloudy',tr:'Bulutlu',zh:'多云'},Rain:{ru:'Дождь',en:'Rain',tr:'Yağmur',zh:'下雨'},Drizzle:{ru:'Морось',en:'Drizzle',tr:'Çiseleme',zh:'毛毛雨'},Snow:{ru:'Снег',en:'Snow',tr:'Kar',zh:'下雪'},Thunderstorm:{ru:'Гроза',en:'Thunderstorm',tr:'Gök gürültülü fırtına',zh:'雷雨'},Mist:{ru:'Туман',en:'Mist',tr:'Sis',zh:'雾'},Fog:{ru:'Туман',en:'Fog',tr:'Sis',zh:'雾'}};const hw=$('#homeWeatherText');if(hw)hw.textContent=`${weatherNames[main]?.[lang]||main}${d.temp!=null?' · '+Math.round(d.temp)+'°':''}`;const hs=$('#homeRouteStatus');if(hs&&$('#distance')?.value)hs.textContent=lang==='ru'?`Маршрут · ${Number($('#distance').value).toLocaleString('ru-RU')} км`:lang==='en'?`Route · ${Number($('#distance').value).toLocaleString('en-US')} km`:`路线 · ${Number($('#distance').value).toLocaleString('zh-CN')} 公里`;}
 async function checkWeather(){try{const cfg=await fetch('/api/config',{cache:'no-store'}).then(r=>r.json());if(!cfg.weatherConfigured){setTimeWeather();return}const wr=await fetch('/api/weather',{cache:'no-store'});if(!wr.ok)throw new Error('weather');const d=await wr.json();applyWeatherVisual(d)}catch{setTimeWeather()}}
 async function backgroundRefresh(){await Promise.allSettled([checkWeather(),loadRates(),loadCurrency()]);}
 updateCityPlaceholders();

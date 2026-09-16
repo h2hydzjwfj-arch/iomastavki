@@ -1,4 +1,4 @@
-IOMASTAVKA FILE 24
+IOMASTAVKA FILE 33
 
 Важно: токен API-CLOUD не вшивается в GitHub/ZIP. На Render добавьте переменную окружения API_CLOUD_FTS_TOKEN со своим токеном.
 

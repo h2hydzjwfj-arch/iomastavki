@@ -893,3 +893,15 @@ body.manual-dark .chat-bubble.assistant{background:#103c50!important;color:#e6f7
 .news-item-copy{min-width:0}.news-item-copy strong{font-size:13px!important}.news-item-copy small{font-size:9px!important}
 .news-urgent{border-color:rgba(206,55,55,.32)!important;background:rgba(255,241,241,.72)!important}.news-urgent-badge{display:inline-block;margin-bottom:4px;padding:3px 6px;border-radius:6px;background:#c93434;color:#fff;font-size:8px;font-style:normal;font-weight:800;letter-spacing:.08em}
 body.manual-dark .news-item{background:#0c3347!important;border-color:rgba(120,215,225,.14)!important;color:#eaf8fa!important}.manual-dark .news-item-copy small{color:#a9c9d0!important}.manual-dark .news-urgent{background:#4a2025!important;border-color:#bd565d!important}
+
+
+/* IOMASTAVKA v33 — stable hover corridor for the left tool launcher. */
+.control-dock::before{content:"";position:absolute;left:-18px;top:-118px;width:88px;height:250px;border-radius:44px;pointer-events:auto;background:transparent}
+.control-dock{isolation:isolate}
+.control-tools{z-index:2!important}
+.control-launcher{z-index:3!important}
+.control-dock.open .control-launcher{pointer-events:none!important}
+@media(max-width:650px){.control-dock::before{left:-12px;top:-106px;width:68px;height:228px}}
+/* Never display the daytime sun when the body is explicitly in night state. */
+body.weather-night .sun{opacity:0!important;visibility:hidden!important}
+body.weather-night .moon{opacity:1!important;visibility:visible!important}
