@@ -110,7 +110,7 @@ app.get('/', (req,res) => res.sendFile(path.join(ROOT, 'index.html')));
 app.get('/app.js', (req,res) => res.sendFile(path.join(ROOT, 'app.js')));
 app.get('/styles.css', (req,res) => res.sendFile(path.join(ROOT, 'styles.css')));
 app.get('/api/health', (req,res) => res.json({ ok: true }));
-app.get('/api/version', (req,res) => res.json({ok:true,version:'30',build:'IOMASTAVKA_FILE_30'}));
+app.get('/api/version', (req,res) => res.json({ok:true,version:'31',build:'IOMASTAVKA_FILE_31'}));
 app.get('/api/config', (req,res) => res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.OPENAI_API_KEY), ftsConfigured: Boolean(process.env.API_CLOUD_FTS_TOKEN) }));
 
 app.get('/api/currency', async (req,res) => {
@@ -250,6 +250,12 @@ async function fetchNews(){
       if(!out.error){try{const raw=responseText(out.d);const parsed=parseJsonLoose(raw);if(Array.isArray(parsed))selected.push(...parsed.map(x=>({...x,urgent:Boolean(x.urgent)||newsIsUrgent(x)})).slice(0,24));}catch{}}
     }
   }
+  if(!selected.length){
+    selected.push(
+      {title:'Логистика Азия → Россия: проверьте ТН ВЭД, документы и терминальные расходы до отправки',date:new Date().toISOString(),source:'IOMASTAVKA · контрольный материал',description:'Перед расчётом международной перевозки проверьте код ТН ВЭД, Incoterms, инвойс, packing list, ограничения и расходы в пункте прибытия.',link:'',urgent:false},
+      {title:'Таможенный контроль: ставка пошлины и меры регулирования зависят от точного кода ТН ВЭД',date:new Date().toISOString(),source:'IOMASTAVKA · контрольный материал',description:'Для юридически значимого решения используйте официальный источник ФТС/ЕЭК и характеристики товара.',link:'',urgent:true}
+    );
+  }
   newsCache={at:Date.now(),items:selected};
   return selected;
 }
@@ -278,10 +284,15 @@ function aiModelCandidates(preferred){
 async function responsesRequest({key,preferred,input,tools,max_output_tokens=1000}){
   let last={status:502,error:'OpenAI request failed'};
   for(const model of aiModelCandidates(preferred)){
-    const body={model,input,max_output_tokens};
+    const body={model,input,max_output_tokens,store:false};
     if(tools) body.tools=tools;
     try{
-      const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify(body)});
+      const r=await fetch('https://api.openai.com/v1/responses',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+        body:JSON.stringify(body),
+        signal:AbortSignal.timeout(30000)
+      });
       const raw=await r.text(); let d={}; try{d=JSON.parse(raw)}catch{}
       if(r.ok)return {r,d};
       last={status:r.status,error:d?.error?.message||raw||`Model ${model} failed`};
@@ -289,6 +300,7 @@ async function responsesRequest({key,preferred,input,tools,max_output_tokens=100
   }
   return {error:last};
 }
+
 function responseText(d){
   let text=typeof d?.output_text==='string'?d.output_text:'';
   if(!text&&Array.isArray(d?.output)) text=d.output.flatMap(o=>Array.isArray(o.content)?o.content:[]).map(c=>c.text||c.value||'').filter(Boolean).join('\n');
@@ -530,11 +542,15 @@ app.post('/api/ai', async (req,res) => {
   const factor=modeFactor[String(context.transport||'')]||167;
   const volume=Number(context.lengthMm||0)*Number(context.widthMm||0)*Number(context.heightMm||0)/1e9*Number(context.pieces||1);
   const chargeableKg=Math.max(Number(context.weightKg||0),volume*factor);
-  const system=`Ты AI-ассистент сайта iomastavka — специализированный помощник по международной логистике, ВЭД, Китай/Азия → Россия, ставкам, маршрутам, Incoterms, таможне, документам и анализу КП. Отвечай на языке интерфейса пользователя, если он не попросил другой язык. Для tr используй естественный турецкий язык. Не превращай короткие запросы вроде «курс» в случайный ответ: уточни, какой курс нужен. Для свежих фактов используй web search. Не выдумывай ставки и таможенные данные. Исторические ставки из базы ниже помечай как исторические/ориентировочные, если срок не подтверждён. Текущий расчётный вес: ${chargeableKg.toFixed(1)} кг. Фактор: ${factor} кг/м³. База ставок: ${JSON.stringify(relevantRates)}. Контекст калькулятора: ${JSON.stringify(context)}.`;
-  const input=[{role:'system',content:system},...history.map(x=>({role:x.role==='assistant'?'assistant':'user',content:String(x.content||'')})),{role:'user',content:message}];
+  const system=`Ты AI-ассистент сайта iomastavka — специализированный помощник по международной логистике, ВЭД, Китай/Азия → Россия, ставкам, маршрутам, Incoterms, таможне, документам и анализу КП. Отвечай на языке интерфейса пользователя, если он не попросил другой язык. Для tr используй естественный турецкий язык. Не выдумывай ставки и таможенные данные. Для свежих фактов используй web search только когда он действительно доступен. Исторические ставки из базы ниже помечай как исторические/ориентировочные, если срок не подтверждён. Текущий расчётный вес: ${chargeableKg.toFixed(1)} кг. Фактор: ${factor} кг/м³. База ставок: ${JSON.stringify(relevantRates)}. Контекст калькулятора: ${JSON.stringify(context)}.`;
+  const input=[{role:'developer',content:system},...history.map(x=>({role:x.role==='assistant'?'assistant':'user',content:String(x.content||'')})),{role:'user',content:message}];
   try{
-    let out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input,tools:[{type:'web_search',search_context_size:'medium'}],max_output_tokens:1200});
-    if(out.error) out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input,max_output_tokens:1200});
+    // First make a plain Responses request. This is the reliable path even if web search is unavailable for the account/model.
+    let out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL||'gpt-5.6-luna',input,max_output_tokens:1400});
+    // Only after a plain request fails, retry with web search.
+    if(out.error){
+      out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL||'gpt-5.6-luna',input,tools:[{type:'web_search'}],max_output_tokens:1400});
+    }
     if(out.error)return res.status(out.error.status||502).json({ok:false,error:out.error.error||'AI request failed'});
     const text=responseText(out.d);
     if(!text)return res.status(502).json({ok:false,error:'OpenAI returned an empty response'});

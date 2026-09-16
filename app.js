@@ -114,6 +114,7 @@ $$('[data-i18n-placeholder]').forEach(el=>el.placeholder=tr(el.dataset.i18nPlace
  $$('.close-button').forEach(el=>{el.setAttribute('aria-label',tr('close'));el.setAttribute('title',tr('close'))});
  $$('.lang').forEach(b=>b.classList.toggle('active',b.dataset.lang===lang)); localStorage.setItem('iomastavka_lang',lang); setTheme(localStorage.getItem('iomastavka_theme')||'light');
  setDimensionLabels(); renderForwarderMenu(); renderTransportMenu(); renderIncoterms(); renderFactors();
+ if($('#chatMessages')&&!$('#chatMessages').children.length){addChat('assistant',lang==='ru'?'Привет! Я готов помочь с логистикой, ВЭД, ставками, таможней и ТН ВЭД.':lang==='en'?'Hello! I can help with logistics, foreign trade, rates, customs and HS codes.':lang==='tr'?'Merhaba! Lojistik, dış ticaret, fiyatlar, gümrük ve GTİP konusunda yardımcı olabilirim.':'你好！我可以帮助你处理物流、外贸、费率、海关和HS编码。',false);}
  renderSuggestions($('#fromSuggestions'),$('#fromCity').value.trim()?cityMatches($('#fromCity').value,'asia'):[],$('#fromCity'),'asia');
  renderSuggestions($('#toSuggestions'),$('#toCity').value.trim()?cityMatches($('#toCity').value,'russia'):[],$('#toCity'),'russia');
  $('#currencyDate').textContent=formatToday();
@@ -174,6 +175,8 @@ document.addEventListener('click',e=>{$$('.hover-menu').forEach(m=>{if(!e.target
 $('#controlLauncher')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const dock=$('#controlDock'),tools=$('#controlTools');const open=dock?.classList.toggle('open');if(dock)dock.setAttribute('aria-expanded',String(!!open));if(tools)tools.setAttribute('aria-hidden',String(!open));});
 document.addEventListener('click',e=>{const dock=$('#controlDock');if(dock?.classList.contains('open')&&!e.target.closest('#controlDock')){dock.classList.remove('open');dock.setAttribute('aria-expanded','false');$('#controlTools')?.setAttribute('aria-hidden','true')}});
 $('#customsButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.__iomaOpenView?.('customsView')});
+$('#customsCheck')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();checkCustomsCode()});
+$('#customsCode')?.addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,10);clearTimeout(window.__customsTimer);if(e.target.value.length===10)window.__customsTimer=setTimeout(()=>checkCustomsCode(),250);});
 $('#menuButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();showTarot()});
 $('#agentImportButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openAgentImporter()});
 $('#logoutButton')?.addEventListener('click',async()=>{try{await fetch('/api/logout',{method:'POST'})}finally{location.href='/'}});
@@ -462,8 +465,38 @@ async function sendAI(fromVoice=false){
  if(!fromVoice){try{window.speechSynthesis?.cancel()}catch{}}
  const input=$('#assistantInput'), msg=input.value.trim(), files=[...($('#aiFile')?.files||[])];
  if(!msg&&!files.length){setAIThinking(false);addChat('assistant',lang==='tr'?'Bir soru yazın veya dosya ekleyin.':lang==='en'?'Write a question or attach a file.':'Напишите вопрос или прикрепите файл.',false);return;}
- const shown=msg||(files.length?`📎 ${files.map(f=>f.name).join(', ')}`:''); addChat('user',shown,false); setAIThinking(true);
- try{let docs=[];for(const f of files){const text=await extractAttachment(f);docs.push({name:f.name,text});}let imported=0;for(const d of docs){const recs=await parseRatesLocally(d.text,d.name);if(recs.length)imported+=await importLocalRates(recs)}if(imported)await loadRates();const action=detectRequestedAction(msg);let instruction=msg||'Проанализируй прикрепленный файл и дай краткий полезный результат.';if(action==='rates'&&docs.length)instruction+=' Считай файл КП/ставками: выдели перевозчика, маршруты, транспорт, базис, цены, валюту, срок действия и ограничения. Скажи, какие ставки сохранены.';if(action==='numbers')instruction+=' Извлеки только важные цифры и подпиши, что каждая означает.';if(action==='translate')instruction+=` Переведи содержимое файла на ${lang==='ru'?'русский':lang==='en'?'английский':lang==='tr'?'турецкий':'китайский'} язык.`;if(action==='structure')instruction+=' Структурируй данные в удобные списки/таблицу.';const fileContext=docs.length?docs.map(d=>`\n--- ФАЙЛ: ${d.name} ---\n${d.text}`).join('\n'):'';const finalMessage=instruction+fileContext+(imported?`\n\nВ базу ставок уже сохранено записей: ${imported}. Учитывай их в ответе.`:'');const r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:finalMessage,history:chatHistory.slice(-10),context:getCalculatorContext(),language:lang,web:true})});const raw=await r.text();let d={};try{d=JSON.parse(raw)}catch{throw new Error(raw||'AI unavailable')}if(!r.ok||!d.ok)throw new Error(d.error||'AI unavailable');const text=String(d.text||'').trim()||'Не удалось получить ответ.';setAIThinking(false);addChat('assistant',text,fromVoice);chatHistory.push({role:'user',content:finalMessage},{role:'assistant',content:text});chatHistory=chatHistory.slice(-12);if(input)input.value='';if($('#aiFile'))$('#aiFile').value='';if($('#fileNames'))$('#fileNames').textContent=tr('fileHint')}catch(e){const msg=e?.message||'Не удалось обработать запрос';setAIThinking(false,msg);addChat('assistant',(lang==='tr'?'Yanıt alınamadı: ':lang==='en'?'Could not get a response: ':'Не удалось получить ответ: ')+msg,false)}}
+ const shown=msg||(files.length?`📎 ${files.map(f=>f.name).join(', ')}`:'');
+ addChat('user',shown,false); setAIThinking(true);
+ if($('#assistantStatus'))$('#assistantStatus').textContent=lang==='ru'?'Отправляю запрос ассистенту…':lang==='en'?'Sending to the assistant…':lang==='tr'?'Asistana gönderiliyor…':'正在发送…';
+ try{
+   let docs=[];
+   for(const f of files){const text=await extractAttachment(f);docs.push({name:f.name,text});}
+   let imported=0;
+   for(const d of docs){const recs=await parseRatesLocally(d.text,d.name);if(recs.length)imported+=await importLocalRates(recs)}
+   if(imported)await loadRates();
+   const action=detectRequestedAction(msg);
+   let instruction=msg||'Проанализируй прикрепленный файл и дай краткий полезный результат.';
+   if(action==='rates'&&docs.length)instruction+=' Считай файл КП/ставками: выдели перевозчика, маршруты, транспорт, базис, цены, валюту, срок действия и ограничения. Скажи, какие ставки сохранены.';
+   if(action==='numbers')instruction+=' Извлеки только важные цифры и подпиши, что каждая означает.';
+   if(action==='translate')instruction+=` Переведи содержимое файла на ${lang==='ru'?'русский':lang==='en'?'английский':lang==='tr'?'турецкий':'китайский'} язык.`;
+   if(action==='structure')instruction+=' Структурируй данные в удобные списки/таблицу.';
+   const fileContext=docs.length?docs.map(d=>`\n--- ФАЙЛ: ${d.name} ---\n${d.text}`).join('\n'):'';
+   const finalMessage=instruction+fileContext+(imported?`\n\nВ базу ставок уже сохранено записей: ${imported}. Учитывай их в ответе.`:'');
+   const r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({message:finalMessage,history:chatHistory.slice(-10),context:getCalculatorContext(),language:lang,web:true})});
+   const raw=await r.text(); let d={}; try{d=JSON.parse(raw)}catch{throw new Error(raw||'AI unavailable')}
+   if(!r.ok||!d.ok)throw new Error(d.error||`AI HTTP ${r.status}`);
+   const text=String(d.text||'').trim()||'Не удалось получить ответ.';
+   setAIThinking(false);addChat('assistant',text,fromVoice);
+   chatHistory.push({role:'user',content:finalMessage},{role:'assistant',content:text});chatHistory=chatHistory.slice(-12);
+   if(input)input.value='';if($('#aiFile'))$('#aiFile').value='';if($('#fileNames'))$('#fileNames').textContent=tr('fileHint');
+   if($('#assistantStatus'))$('#assistantStatus').textContent=tr('ready');
+ }catch(e){
+   const err=String(e?.message||'Не удалось обработать запрос');
+   setAIThinking(false,err);
+   addChat('assistant',(lang==='tr'?'Yanıt alınamadı: ':lang==='en'?'Could not get a response: ':'Не удалось получить ответ: ')+err,false);
+ }
+}
+
 $('#aiFile')?.addEventListener('change',e=>{const fs=[...e.target.files],el=$('#fileNames');if(el)el.textContent=fs.length?fs.map(f=>f.name).join(' · '):tr('fileHint')});
 // Reliable send binding: works with mouse, touch and Enter and cannot be blocked by a nested handler.
 document.addEventListener('click',e=>{const b=e.target.closest?.('#sendAI');if(!b)return;e.preventDefault();e.stopPropagation();Promise.resolve(sendAI(false)).catch(err=>console.warn('AI send:',err));},true);
@@ -580,15 +613,22 @@ function renderNewsItems(items){const box=$('#newsList');if(!box)return;box.inne
 async function loadNews(){
   const box=$('#newsList'); if(!box)return;
   const fallback=[
-    {title:'Китай → Россия: что проверить перед расчётом мультимодальной перевозки',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Incoterms, ТН ВЭД, габариты, объёмный вес, документы и терминальные расходы.',link:''},
-    {title:'ТН ВЭД и импорт: какие данные собрать до запроса ставки',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Описание товара, код ТН ВЭД, инвойс, упаковка, разрешительные документы и базис поставки.',link:''},
-    {title:'ЖД, море или авиа: как выбрать транспорт из Китая',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Сравнение сроков, расчётного веса и структуры стоимости.',link:''}
+    {title:'Логистика Азия → Россия: что проверить до расчёта перевозки',date:new Date().toISOString(),source:'IOMASTAVKA',description:'ТН ВЭД, Incoterms, инвойс, packing list, объёмный вес, документы и терминальные расходы.',link:'',urgent:false},
+    {title:'Таможенные изменения: проверяйте код ТН ВЭД и дату вступления требований в силу',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Для обязательных требований, запретов, маркировки и ставок ориентируйтесь на ФТС России, ЕЭК и нормативные акты.',link:'',urgent:true},
+    {title:'ЖД, море или авиа из Азии: сравнение сроков и структуры стоимости',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Расчётный вес, контейнерная ставка, терминальные расходы и срок транзита влияют на итоговую стоимость.',link:'',urgent:false}
   ];
   if(newsCache.length){renderNewsItems(newsCache);return;}
-  box.innerHTML=`<div class="news-loading">${tr('newsLoading')}</div>`;
-  try{const r=await fetch('/api/news',{cache:'no-store'});const d=r.ok?await r.json():null;const items=Array.isArray(d?.items)?d.items:[];if(items.length){newsCache=items;renderNewsItems(items);return;}}catch{}
-  newsCache=fallback; renderNewsItems(fallback);
+  // Never show an empty panel while the live feed is loading.
+  renderNewsItems(fallback);
+  try{
+    const r=await fetch('/api/news',{cache:'no-store',credentials:'same-origin'});
+    const d=r.ok?await r.json():null;
+    const items=Array.isArray(d?.items)?d.items:[];
+    if(items.length){newsCache=items;renderNewsItems(items);return;}
+  }catch{}
+  newsCache=fallback;renderNewsItems(fallback);
 }
+
 function escapeHtml(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function renderArticleMarkdown(text=''){
   const safe=escapeHtml(text); return safe.replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').split(/\n\s*\n/).map(p=>p.trim()?`<p>${p.replace(/\n/g,'<br>')}</p>`:'').join('');
