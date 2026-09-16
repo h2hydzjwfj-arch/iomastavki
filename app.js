@@ -16,7 +16,15 @@ const $$ = s => [...document.querySelectorAll(s)];
   window.__iomaOpenView=open; window.__iomaCloseViews=close;
   document.addEventListener('click',(e)=>{
     const trigger=e.target.closest?.('[data-open-view]');
-    if(trigger){ const name=trigger.getAttribute('data-open-view'); if(open(name)){e.preventDefault();e.stopPropagation();return;} }
+    if(trigger){ const name=trigger.getAttribute('data-open-view'); if(open(name)){
+      // This capture handler is the single navigation entry point.  Do not let it
+      // bypass the view-specific loaders (the old version stopped propagation
+      // before showView() could load the directory/news content).
+      if(name==='forwarders' && typeof renderDirectory==='function') renderDirectory();
+      if(name==='news' && typeof loadNews==='function') loadNews();
+      if(name==='assistant') setTimeout(()=>$('#assistantInput')?.focus(),120);
+      e.preventDefault(); e.stopPropagation(); return;
+    } }
     const closeBtn=e.target.closest?.('[data-close-view],.view-close');
     if(closeBtn){ close(); e.preventDefault(); e.stopPropagation(); return; }
     if(e.target.classList?.contains('view-layer') && e.target.classList.contains('open')){close();}
