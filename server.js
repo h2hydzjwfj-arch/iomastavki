@@ -110,7 +110,7 @@ app.get('/', (req,res) => res.sendFile(path.join(ROOT, 'index.html')));
 app.get('/app.js', (req,res) => res.sendFile(path.join(ROOT, 'app.js')));
 app.get('/styles.css', (req,res) => res.sendFile(path.join(ROOT, 'styles.css')));
 app.get('/api/health', (req,res) => res.json({ ok: true }));
-app.get('/api/version', (req,res) => res.json({ok:true,version:'31',build:'IOMASTAVKA_FILE_31'}));
+app.get('/api/version', (req,res) => res.json({ok:true,version:'32',build:'IOMASTAVKA_FILE_32'}));
 app.get('/api/config', (req,res) => res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.OPENAI_API_KEY), ftsConfigured: Boolean(process.env.API_CLOUD_FTS_TOKEN) }));
 
 app.get('/api/currency', async (req,res) => {
@@ -281,6 +281,21 @@ function aiModelCandidates(preferred){
   const first=openAIModel(preferred);
   return [...new Set([first,'gpt-5','gpt-4.1-mini','gpt-4o-mini'])];
 }
+async function chatCompletionsRequest({key,preferred,input,max_tokens=1400}){
+  const models=aiModelCandidates(preferred);
+  let last={status:502,error:'OpenAI chat request failed'};
+  for(const model of models){
+    try{
+      const messages=input.map(x=>({role:x.role==='developer'?'system':x.role==='assistant'?'assistant':'user',content:typeof x.content==='string'?x.content:String(x.content||'')}));
+      const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model,messages,max_tokens,temperature:.25}),signal:AbortSignal.timeout(30000)});
+      const raw=await r.text();let d={};try{d=JSON.parse(raw)}catch{}
+      if(r.ok){const text=d?.choices?.[0]?.message?.content?.trim();if(text)return {text};last={status:502,error:'OpenAI returned an empty response'};continue;}
+      last={status:r.status,error:d?.error?.message||raw||`Model ${model} failed`};
+    }catch(e){last={status:502,error:e.message||'OpenAI unavailable'};}
+  }
+  return {error:last};
+}
+
 async function responsesRequest({key,preferred,input,tools,max_output_tokens=1000}){
   let last={status:502,error:'OpenAI request failed'};
   for(const model of aiModelCandidates(preferred)){
@@ -482,49 +497,92 @@ app.post('/api/customs/check', async (req,res) => {
   const key=process.env.OPENAI_API_KEY;
   let alta=null;
   try{ alta=await fetchAltaTnved(code); }catch{}
-  const baseFacts=alta?`Публичная справочная страница Альта-Софт для кода ${code}: название=${alta.title}; импортная пошлина=${alta.duty}; НДС=${alta.vat}; акциз=${alta.excise}; источник=${alta.url}.`:'Публичную страницу Альта-Софт получить не удалось.';
+
+  const fallback = (note='') => ({
+    ok:true, code,
+    title:alta?.title || `ТН ВЭД ЕАЭС ${code}`,
+    customs:{
+      code,
+      description:alta?.title || 'Не удалось определить краткое описание',
+      duty:alta?.duty || 'Не подтверждено',
+      vat:alta?.vat || 'Не подтверждено',
+      customsFee:'Рассчитывается по таможенной стоимости и виду декларации',
+      excise:alta?.excise || 'Не облагается / не подтверждено',
+      extraFees:'Не выявлены / требуется проверка по характеристикам товара',
+      marking:'Зависит от конкретного товара и характеристик',
+      permits:'Требуется отдельная проверка',
+      restrictions:'Требуется отдельная проверка',
+      sourceUrls:[alta?.url,'https://customs.gov.ru'].filter(Boolean),
+      note: note || 'Для юридически значимого решения проверьте официальный источник ФТС и документы на товар.'
+    }
+  });
+
   if(!key){
     if(!alta) return res.status(503).json({ok:false,error:'OPENAI_API_KEY не настроен на сервере и справочная страница ТН ВЭД недоступна'});
-    return res.json({ok:true,code,title:alta.title,analysis:`КОД: ${code}\nОПИСАНИЕ: ${alta.title}\nИМПОРТНАЯ ПОШЛИНА: ${alta.duty}\nНДС: ${alta.vat}\nАКЦИЗ: ${alta.excise}\nТАМОЖЕННЫЙ СБОР: требуется рассчитать по таможенной стоимости; ставка зависит от вида декларации и действующих правил\nЧЕСТНЫЙ ЗНАК: зависит от конкретного товара и его характеристик — требуется отдельная проверка\nРАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: зависят от товара\nЗАПРЕТЫ И ОГРАНИЧЕНИЯ: требуется отдельная проверка\nЕДИНИЦА ИЗМЕРЕНИЯ: требуется уточнение по полной тарифной позиции\nДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: ${baseFacts}\nИСТОЧНИКИ: ${alta.url}\nПРИМЕЧАНИЕ: окончательная классификация и применяемые меры зависят от точных характеристик товара и документов.`,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
+    return res.json(fallback());
   }
-  const prompt=`Ты — специалист по ВЭД и таможенному оформлению РФ/ЕАЭС. Проверь РОВНО код ТН ВЭД ${code}. Не заменяй его похожим кодом. Пользователь специально просит проверить код через официальный сайт ФТС России customs.gov.ru.
 
-ПОРЯДОК ПРОВЕРКИ:
-1) Сначала используй web search с разрешённым доменом customs.gov.ru и ищи сведения именно по коду ${code}. Это главный источник для ответа. Ищи ставки/меры таможенно-тарифного и нетарифного регулирования, платежи, ограничения и связанные материалы ФТС.
-2) Затем проверь ЕЭК и официальные нормативные акты ЕАЭС/РФ, если на customs.gov.ru недостаточно данных или требуется подтвердить актуальность ставки.
-3) Альта-Софт используй только как дополнительный справочный источник, а не вместо ФТС.
-4) Не выдумывай данные. Если официальный сайт не содержит конкретной ставки или она зависит от условий, так и напиши.
-5) Таможенный сбор нельзя назвать одной фиксированной суммой без таможенной стоимости и применимого вида декларации — укажи правило и что нужно для расчёта.
-6) Отдельно проверь Честный ЗНАК, разрешительные документы, запреты/ограничения и единицу измерения.
+  const baseFacts=alta?`Дополнительный справочный источник Alta-Soft: название=${alta.title}; импортная пошлина=${alta.duty}; НДС=${alta.vat}; акциз=${alta.excise}; URL=${alta.url}.`:'Справочную страницу Alta-Soft получить не удалось.';
+  const prompt=`Ты — специалист по ВЭД и таможенному оформлению РФ/ЕАЭС. Проверь РОВНО код ТН ВЭД ${code}. Не заменяй его похожим кодом.
 
-${baseFacts}
+Главный источник: официальный сайт ФТС России и его поддомены customs.gov.ru. Используй web search по customs.gov.ru, затем при необходимости ЕЭК и официальные нормативные акты ЕАЭС/РФ. Alta-Soft используй только как дополнительный справочник.
 
-Ответ строго:
-КОД: ${code}
-ОПИСАНИЕ: ...
-ИМПОРТНАЯ ПОШЛИНА: ...
-НДС: ...
-АКЦИЗ: ...
-ТАМОЖЕННЫЙ СБОР: ...
-ЧЕСТНЫЙ ЗНАК: ТРЕБУЕТСЯ / НЕ ТРЕБУЕТСЯ / ЗАВИСИТ ОТ ХАРАКТЕРИСТИК — почему
-РАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: ...
-ЗАПРЕТЫ И ОГРАНИЧЕНИЯ: ...
-ЕДИНИЦА ИЗМЕРЕНИЯ: ...
-ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: ...
-ИСТОЧНИКИ: ...
-ПРИМЕЧАНИЕ: окончательная классификация и применяемые меры зависят от точных характеристик товара и документов.`;
+Пользователю НЕ нужен длинный текст. Верни ТОЛЬКО JSON-объект без markdown строго с полями:
+{
+  "code":"${code}",
+  "description":"очень короткое понятное описание товара, 3-8 слов",
+  "duty":"только ставка импортной пошлины, например 5% / 10% / 0% или понятное условие",
+  "vat":"ставка НДС или условие",
+  "customsFee":"таможенный сбор: конкретная сумма только если её можно определить; иначе кратко напиши правило расчёта",
+  "excise":"акциз или Не облагается",
+  "extraFees":"только реально применимые специальные платежи/сборы (например радиосбор); если не выявлены — Не выявлены",
+  "marking":"Честный ЗНАК: требуется / не требуется / зависит — кратко",
+  "permits":"кратко: нужны ли разрешительные документы",
+  "restrictions":"кратко: запреты/ограничения или Не выявлены",
+  "unit":"единица измерения/дополнение, если важно",
+  "sources":["только URL источников, которые реально использовал"],
+  "note":"одно короткое примечание о зависимости от характеристик товара/условий"
+}
+
+Правила:
+- Не выдумывай данные.
+- Если ставка не найдена именно для ${code}, напиши "Не подтверждено".
+- Таможенный сбор нельзя выдавать как фиксированную сумму без таможенной стоимости и условий декларирования.
+- Если специальный сбор (например радиочастотный/утилизационный и т.п.) зависит от характеристик, напиши это прямо.
+- Описание должно быть коротким, не копируй длинную тарифную формулировку.
+- Пользователь в первую очередь должен увидеть ЦИФРУ импортной пошлины.
+
+${baseFacts}`;
+
   try{
-    let out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL||'gpt-5.6-luna',input:prompt,tools:[{type:'web_search',filters:{allowed_domains:['customs.gov.ru']}}],max_output_tokens:3500});
-    if(out.error) out=await responsesRequest({key,preferred:'gpt-5.6-luna',input:prompt,tools:[{type:'web_search',filters:{allowed_domains:['customs.gov.ru','eec.eaeunion.org','pravo.gov.ru']}}],max_output_tokens:3500});
-    if(out.error) out=await responsesRequest({key,preferred:'gpt-5.6-luna',input:prompt,tools:[{type:'web_search'}],max_output_tokens:3500});
-    if(out.error){
-      if(alta) return res.json({ok:true,code,title:alta.title,analysis:`КОД: ${code}\nОПИСАНИЕ: ${alta.title}\nИМПОРТНАЯ ПОШЛИНА: ${alta.duty}\nНДС: ${alta.vat}\nАКЦИЗ: ${alta.excise}\nТАМОЖЕННЫЙ СБОР: требуется рассчитать по таможенной стоимости и виду декларации\nЧЕСТНЫЙ ЗНАК: требуется отдельная проверка по характеристикам товара\nРАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: требуется отдельная проверка\nЗАПРЕТЫ И ОГРАНИЧЕНИЯ: требуется отдельная проверка\nЕДИНИЦА ИЗМЕРЕНИЯ: уточнить по тарифной позиции\nДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: ${baseFacts}\nИСТОЧНИКИ: ${alta.url}\nПРИМЕЧАНИЕ: ответ сформирован из доступной справочной страницы; для юридически значимых решений проверьте первоисточник.`,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
-      return res.status(out.error.status||502).json({ok:false,error:out.error.error||'Не удалось проверить код ТН ВЭД'});
-    }
-    const text=responseText(out.d); if(!text) throw new Error('Пустой ответ от справочного сервиса');
-    res.json({ok:true,code,title:`ТН ВЭД ЕАЭС ${code}`,analysis:text,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
+    let out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL||'gpt-5.6-luna',input:prompt,tools:[{type:'web_search',filters:{allowed_domains:['customs.gov.ru']}}],max_output_tokens:1800});
+    if(out.error) out=await responsesRequest({key,preferred:'gpt-5.6-luna',input:prompt,tools:[{type:'web_search',filters:{allowed_domains:['customs.gov.ru','eec.eaeunion.org','pravo.gov.ru']}}],max_output_tokens:1800});
+    if(out.error) out=await responsesRequest({key,preferred:'gpt-5.6-luna',input:prompt,tools:[{type:'web_search'}],max_output_tokens:1800});
+    if(out.error) return res.json(fallback(`Не удалось получить расширенную проверку через AI: ${out.error.error||'неизвестная ошибка'}`));
+    const text=responseText(out.d);
+    if(!text) return res.json(fallback('Пустой ответ справочного сервиса.'));
+    let parsed;
+    try{ parsed=parseJsonLoose(text); }catch{ return res.json(fallback('Ответ источника получен в нечитаемом формате.')); }
+    const customs={
+      code,
+      description:String(parsed.description||alta?.title||'Не определено').trim(),
+      duty:String(parsed.duty||alta?.duty||'Не подтверждено').trim(),
+      vat:String(parsed.vat||alta?.vat||'Не подтверждено').trim(),
+      customsFee:String(parsed.customsFee||'Рассчитывается по таможенной стоимости и виду декларации').trim(),
+      excise:String(parsed.excise||alta?.excise||'Не облагается / не подтверждено').trim(),
+      extraFees:String(parsed.extraFees||'Не выявлены').trim(),
+      marking:String(parsed.marking||'Требуется проверка').trim(),
+      permits:String(parsed.permits||'Требуется проверка').trim(),
+      restrictions:String(parsed.restrictions||'Требуется проверка').trim(),
+      unit:String(parsed.unit||'').trim(),
+      sourceUrls:Array.isArray(parsed.sources)?parsed.sources.filter(x=>/^https?:\/\//i.test(String(x))).slice(0,6):[],
+      note:String(parsed.note||'').trim()
+    };
+    if(alta?.url && !customs.sourceUrls.includes(alta.url)) customs.sourceUrls.push(alta.url);
+    if(!customs.sourceUrls.some(x=>/customs\.gov\.ru/i.test(x))) customs.sourceUrls.unshift('https://customs.gov.ru');
+    res.json({ok:true,code,title:customs.description,customs});
   }catch(e){
-    if(alta) return res.json({ok:true,code,title:alta.title,analysis:`КОД: ${code}\nОПИСАНИЕ: ${alta.title}\nИМПОРТНАЯ ПОШЛИНА: ${alta.duty}\nНДС: ${alta.vat}\nАКЦИЗ: ${alta.excise}\nТАМОЖЕННЫЙ СБОР: требуется рассчитать по таможенной стоимости и виду декларации\nЧЕСТНЫЙ ЗНАК: требуется отдельная проверка по характеристикам товара\nРАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: требуется отдельная проверка\nЗАПРЕТЫ И ОГРАНИЧЕНИЯ: требуется отдельная проверка\nЕДИНИЦА ИЗМЕРЕНИЯ: уточнить по тарифной позиции\nДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: ${baseFacts}\nИСТОЧНИКИ: ${alta.url}\nПРИМЕЧАНИЕ: ${e.message}`,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
+    if(alta) return res.json(fallback(e.message||'Ошибка расширенной проверки'));
     res.status(502).json({ok:false,error:e.message||'Ошибка проверки ТН ВЭД'});
   }
 });
@@ -551,9 +609,17 @@ app.post('/api/ai', async (req,res) => {
     if(out.error){
       out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL||'gpt-5.6-luna',input,tools:[{type:'web_search'}],max_output_tokens:1400});
     }
-    if(out.error)return res.status(out.error.status||502).json({ok:false,error:out.error.error||'AI request failed'});
+    if(out.error){
+      const chat=await chatCompletionsRequest({key,preferred:process.env.OPENAI_MODEL||'gpt-5.6-luna',input,max_tokens:1400});
+      if(chat.error)return res.status(chat.error.status||502).json({ok:false,error:chat.error.error||'AI request failed'});
+      return res.json({ok:true,text:chat.text});
+    }
     const text=responseText(out.d);
-    if(!text)return res.status(502).json({ok:false,error:'OpenAI returned an empty response'});
+    if(!text){
+      const chat=await chatCompletionsRequest({key,preferred:process.env.OPENAI_MODEL||'gpt-5.6-luna',input,max_tokens:1400});
+      if(chat.error)return res.status(chat.error.status||502).json({ok:false,error:chat.error.error||'OpenAI returned an empty response'});
+      return res.json({ok:true,text:chat.text});
+    }
     res.json({ok:true,text});
   }catch(e){res.status(502).json({ok:false,error:e.message||'AI unavailable'});}
 });

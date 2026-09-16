@@ -172,8 +172,19 @@ function renderFactors(){selectedFactor=selectedMode&&modes[selectedMode]?modes[
 document.addEventListener('click',e=>{$$('.hover-menu').forEach(m=>{if(!e.target.closest('.hover-select'))m.classList.remove('open')})});
 
 // Navigation controls. Keep a single source of truth to avoid duplicate handlers.
-$('#controlLauncher')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const dock=$('#controlDock'),tools=$('#controlTools');const open=dock?.classList.toggle('open');if(dock)dock.setAttribute('aria-expanded',String(!!open));if(tools)tools.setAttribute('aria-hidden',String(!open));});
-document.addEventListener('click',e=>{const dock=$('#controlDock');if(dock?.classList.contains('open')&&!e.target.closest('#controlDock')){dock.classList.remove('open');dock.setAttribute('aria-expanded','false');$('#controlTools')?.setAttribute('aria-hidden','true')}});
+(() => {
+  const dock=$('#controlDock'), tools=$('#controlTools'), launcher=$('#controlLauncher');
+  const reveal=()=>{if(!dock)return;dock.classList.add('open');dock.setAttribute('aria-expanded','true');tools?.setAttribute('aria-hidden','false')};
+  const collapse=()=>{if(!dock)return;dock.classList.remove('open');dock.setAttribute('aria-expanded','false');tools?.setAttribute('aria-hidden','true')};
+  // Desktop: moving onto the single round button reveals exactly four tools.
+  // Moving the pointer outside the four tools collapses them back to one button.
+  dock?.addEventListener('mouseenter',reveal);
+  dock?.addEventListener('mouseleave',collapse);
+  // Touch/keyboard fallback.
+  launcher?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();dock?.classList.contains('open')?collapse():reveal()});
+  document.addEventListener('click',e=>{if(dock?.classList.contains('open')&&!e.target.closest('#controlDock'))collapse()});
+  document.addEventListener('focusin',e=>{if(e.target.closest?.('#controlDock'))reveal()});
+})();
 $('#customsButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.__iomaOpenView?.('customsView')});
 $('#customsCheck')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();checkCustomsCode()});
 $('#customsCode')?.addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,10);clearTimeout(window.__customsTimer);if(e.target.value.length===10)window.__customsTimer=setTimeout(()=>checkCustomsCode(),250);});
@@ -526,25 +537,53 @@ function renderDirectory(){
  }
 }
 
-// Customs code checker: submit to the server, which uses FTS-first web research plus OpenAI for structured analysis.
+// Customs code checker: compact decision-oriented summary.
 async function checkCustomsCode(){
   const input=$('#customsCode'), status=$('#customsStatus'), result=$('#customsResult');
   const code=String(input?.value||'').replace(/\D/g,'').slice(0,10);
-  if(!code||code.length<4){if(status)status.textContent=lang==='tr'?'En az 4 hane girin.':lang==='en'?'Enter at least 4 digits.':'Введите минимум 4 цифры кода ТН ВЭД.';return;}
-  if(status)status.textContent=lang==='tr'?'Kod kontrol ediliyor…':lang==='en'?'Checking code…':'Проверяю код…';
+  if(!code||code.length!==10){if(status)status.textContent='Введите полный 10-значный код ТН ВЭД ЕАЭС.';return;}
+  if(status)status.textContent='Проверяю код по доступным материалам ФТС и ЕАЭС…';
   if(result){result.classList.add('hidden');result.innerHTML='';}
   try{
     const r=await fetch('/api/customs/check',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({code})});
     const raw=await r.text();let d={};try{d=JSON.parse(raw)}catch{throw new Error(raw||'Не удалось получить ответ')}
-    if(r.status===401)throw new Error(lang==='tr'?'Oturum süresi doldu. Uygulamaya tekrar girin.':lang==='en'?'Session expired. Please log in again.':'Сессия авторизации истекла. Перезайдите в приложение.');
+    if(r.status===401)throw new Error('Сессия авторизации истекла. Перезайдите в приложение.');
     if(!r.ok||!d.ok)throw new Error(d.error||'Не удалось получить информацию по коду');
-    if(status)status.textContent=lang==='tr'?`Kod ${d.code||code} kontrol edildi`:lang==='en'?`Code ${d.code||code} checked`:`Код ${d.code||code} проверен`;
-    if(result){const raw=String(d.analysis||(lang==='tr'?'Bilgi bulunamadı.':lang==='en'?'No information found.':'Информация не найдена.')); const lines=raw.split(/\n+/).map(x=>x.trim()).filter(Boolean); const labels=['КОД','ОПИСАНИЕ','ИМПОРТНАЯ ПОШЛИНА','НДС','АКЦИЗ','ТАМОЖЕННЫЙ СБОР','ЧЕСТНЫЙ ЗНАК','РАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ','ЗАПРЕТЫ И ОГРАНИЧЕНИЯ','ЕДИНИЦА ИЗМЕРЕНИЯ','ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ','ИСТОЧНИКИ','ПРИМЕЧАНИЕ']; const cards=lines.map(line=>{const m=line.match(/^([^:]{2,45}):\s*(.*)$/); if(!m||!labels.includes(m[1].toUpperCase())) return `<div class="customs-free-line">${escapeHtml(line)}</div>`; const cls=m[1].toUpperCase()==='ЧЕСТНЫЙ ЗНАК'?' customs-marking':''; return `<div class="customs-info-card${cls}"><div class="customs-info-label">${escapeHtml(m[1])}</div><div class="customs-info-value">${escapeHtml(m[2])}</div></div>`}).join(''); result.innerHTML=`<div class="customs-result-title">${escapeHtml(d.title||('ТН ВЭД '+code))}</div><div class="customs-result-grid">${cards}</div>`;result.classList.remove('hidden')}
-  }catch(e){if(status)status.textContent=e.message||(lang==='tr'?'Kontrol hatası':lang==='en'?'Check error':'Ошибка проверки');}
+    const c=d.customs||{};
+    const esc=escapeHtml;
+    const sources=(c.sourceUrls||[]).filter(Boolean);
+    const sourceLinks=sources.map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(/customs\.gov\.ru/i.test(u)?'ФТС России':/eec\.eaeunion\.org/i.test(u)?'ЕЭК':/alta\.ru/i.test(u)?'Альта-Софт':'Источник')}</a>`).join(' · ');
+    const value=(v, fallback='Не подтверждено')=>esc(String(v||fallback));
+    const duty=String(c.duty||'Не подтверждено');
+    const dutyClass=/\b(\d+(?:[.,]\d+)?)\s*%/.test(duty)?' is-rate':'';
+    const extra=(c.extraFees||'').trim();
+    const secondary=[
+      ['НДС',c.vat],['Таможенный сбор',c.customsFee],['Акциз',c.excise],
+      ['Спецсборы',extra],['Честный ЗНАК',c.marking],['Разрешения',c.permits],['Ограничения',c.restrictions]
+    ].filter(([,v])=>String(v||'').trim());
+    if(status)status.textContent=`Код ${code} проверен`;
+    if(result){
+      result.innerHTML=`
+        <div class="customs-compact-head">
+          <div><span class="eyebrow">ТН ВЭД ЕАЭС</span><strong>${esc(code)}</strong><p>${value(c.description,'Описание не определено')}</p></div>
+        </div>
+        <div class="customs-primary-grid">
+          <div class="customs-primary-card duty-card${dutyClass}"><span>ИМПОРТНАЯ ПОШЛИНА</span><b>${value(duty)}</b></div>
+          <div class="customs-primary-card"><span>НДС</span><b>${value(c.vat)}</b></div>
+          <div class="customs-primary-card"><span>ТАМОЖЕННЫЙ СБОР</span><b class="small-value">${value(c.customsFee)}</b></div>
+        </div>
+        <div class="customs-secondary-grid">${secondary.map(([label,v])=>`<div class="customs-secondary-card"><span>${esc(label)}</span><p>${value(v)}</p></div>`).join('')}</div>
+        ${c.unit?`<div class="customs-note-row"><b>Единица:</b> ${value(c.unit)}</div>`:''}
+        ${c.note?`<div class="customs-note-row"><b>Важно:</b> ${value(c.note)}</div>`:''}
+        <div class="customs-sources"><b>Источники:</b> ${sourceLinks||'<span>не указаны</span>'}</div>`;
+      result.classList.remove('hidden');
+    }
+  }catch(e){if(status)status.textContent=e.message||'Ошибка проверки';}
 }
 $('#customsCheck')?.addEventListener('click',e=>{e.preventDefault();checkCustomsCode()});
 $('#customsCode')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();checkCustomsCode()}});
-let customsAutoTimer=null; $('#customsCode')?.addEventListener('input',()=>{const v=$('#customsCode').value.replace(/\D/g,''); if(v.length===10){clearTimeout(customsAutoTimer);customsAutoTimer=setTimeout(checkCustomsCode,250);}});
+let customsAutoTimer=null;
+$('#customsCode')?.addEventListener('input',()=>{const v=$('#customsCode').value.replace(/\D/g,'');if(v.length===10){clearTimeout(customsAutoTimer);customsAutoTimer=setTimeout(checkCustomsCode,350)}});
 
 // Voice: use native SpeechRecognition when available; otherwise record audio and transcribe via OpenAI.
 let recognition=null,voiceListening=false,voiceAutoSpeak=true,voiceFinalBuffer='',mediaRecorder=null,mediaChunks=[];
