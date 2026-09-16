@@ -1,20 +1,33 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#78a8c3"><title>iomastavka</title><link rel="stylesheet" href="/styles.css?v=20260915-v27">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#78a8c3"><title>iomastavka</title><link rel="stylesheet" href="/styles.css?v=20260916-v28">
 </head>
 <body>
 <div id="weatherScene" class="weather-scene" aria-hidden="true"><div class="stars"></div><div class="sun"></div><div class="moon"></div><div class="cloud cloud-a"></div><div class="cloud cloud-b"></div><div class="rain"></div><div class="snow"></div><div class="wave wave-back"></div><div class="wave wave-mid"></div><div class="wave wave-front"></div></div>
 <header class="topbar">
-  <button id="menuButton" class="hamsa-button" data-i18n-aria="menu" aria-label="Menu" title="Menu">
-    <svg viewBox="0 0 80 80" aria-hidden="true">
-      <path class="hamsa-palm" d="M25 56c-4-5-7-10-9-16l-6-16c-1-4 1-7 5-8 3 0 5 2 7 6l4 9V13c0-4 2-7 6-7s6 3 6 7v12V9c0-4 2-7 6-7s6 3 6 7v17V13c0-4 2-7 6-7s6 3 6 7v20l4-9c1-3 4-5 7-3 3 1 4 4 3 7l-7 19c-2 6-7 11-14 13v8H31v-8c-2-1-4-2-6-4z"/>
-      <path class="hamsa-eye" d="M49 35c-5-7-14-7-19 0 5 7 14 7 19 0z"/><circle class="hamsa-dot" cx="40" cy="35" r="2.1"/>
-      <path class="finger f1" d="M28 15v17"/><path class="finger f2" d="M40 10v22"/><path class="finger f3" d="M52 14v18"/><path class="finger f4" d="M64 25v12"/>
-    </svg>
-  </button>
-  <div class="theme-controls" aria-label="Theme"><button id="themeToggleButton" type="button" title="Theme" aria-label="Theme"><span id="themeIcon">☀</span></button></div>
-  <button id="agentImportButton" class="dollar-button" type="button" aria-label="Обновить экспедиторов" title="Обновить экспедиторов">$</button><button id="customsButton" class="customs-button" type="button" aria-label="Проверка ТН ВЭД" title="Проверка ТН ВЭД">🛃</button>
+  <div id="controlDock" class="control-dock">
+    <button id="controlLauncher" class="control-launcher" type="button" aria-label="Инструменты" aria-expanded="false" title="Инструменты"><span>✦</span></button>
+    <div id="controlTools" class="control-tools" aria-hidden="true">
+      <button id="menuButton" class="hamsa-button control-tool" data-i18n-aria="menu" aria-label="Меню" title="Меню">
+        <svg viewBox="0 0 80 80" aria-hidden="true">
+          <path class="hamsa-palm" d="M25 56c-4-5-7-10-9-16l-6-16c-1-4 1-7 5-8 3 0 5 2 7 6l4 9V13c0-4 2-7 6-7s6 3 6 7v12V9c0-4 2-7 6-7s6 3 6 7v17V13c0-4 2-7 6-7s6 3 6 7v20l4-9c1-3 4-5 7-3 3 1 4 4 3 7l-7 19c-2 6-7 11-14 13v8H31v-8c-2-1-4-2-6-4z"/>
+          <path class="hamsa-eye" d="M49 35c-5-7-14-7-19 0 5 7 14 7 19 0z"/><circle class="hamsa-dot" cx="40" cy="35" r="2.1"/>
+          <path class="finger f1" d="M28 15v17"/><path class="finger f2" d="M40 10v22"/><path class="finger f3" d="M52 14v18"/><path class="finger f4" d="M64 25v12"/>
+        </svg>
+      </button>
+      <button id="themeToggleButton" class="theme-controls control-tool" type="button" title="Тема" aria-label="Тема"><span id="themeIcon">☀</span></button>
+      <button id="agentImportButton" class="dollar-button control-tool" type="button" aria-label="Обновить экспедиторов" title="Обновить экспедиторов">$</button>
+      <button id="customsButton" class="customs-button control-tool" type="button" aria-label="Проверка ТН ВЭД" title="Проверка ТН ВЭД">
+        <svg class="customs-officer-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M14 19h20l-2-7-3 2-4-4-4 4-3-2-4 7Z"/>
+          <circle cx="24" cy="23" r="7"/>
+          <path d="M15 42c1-8 4-12 9-12s8 4 9 12M19 34l5 4 5-4M11 42h26"/>
+          <path d="M20.5 23h.1M27.4 23h.1M21 27c1.8 1.4 4.2 1.4 6 0"/>
+        </svg>
+      </button>
+    </div>
+  </div>
   <div class="brand" aria-label="iomastavka"><span>i</span><span>o</span><span>m</span><span>a</span><span>s</span><span>t</span><span>a</span><span>v</span><span>k</span><span>a</span></div>
   <div class="top-actions"><span class="live-pill"><i></i> LIVE</span><button class="lang active" data-lang="ru">🇷🇺</button><button class="lang" data-lang="en">🇬🇧</button><button class="lang" data-lang="zh">🇨🇳</button><button class="lang" data-lang="tr">🇹🇷</button><button id="logoutButton" class="logout" data-i18n="logout">Выйти</button></div>
 </header>
@@ -49,6 +62,6 @@
 <section id="customsView" class="view-layer" aria-hidden="true"><div class="customs-shell"><button class="close-button view-close" data-close-view="customsView" aria-label="Закрыть" title="Закрыть">×</button><div class="customs-head"><span class="eyebrow" data-i18n="customsEyebrow">ТАМОЖЕННЫЙ КОНТРОЛЬ</span><h2 data-i18n="customsTitle">Проверка ТН ВЭД</h2><p data-i18n="customsHelp">Укажите код ТН ВЭД ЕАЭС — я автоматически проверю пошлину, НДС, сборы, маркировку и другие меры.</p></div><div class="customs-form"><input id="customsCode" inputmode="numeric" maxlength="10" placeholder="Например, 8467890000" data-i18n-placeholder="customsPlaceholder"><button id="customsCheck" class="calculate" type="button" data-i18n="customsCheck">Проверить код</button></div><div id="customsStatus" class="customs-status"></div><div id="customsResult" class="customs-result hidden"></div></div></section>
 <section id="articleView" class="view-layer" aria-hidden="true"><article class="article-shell"><button class="close-button view-close" data-close-view="article" data-i18n-aria="close" aria-label="Закрыть" title="Закрыть">×</button><div id="articleContent"></div></article></section>
 </main>
-<script src="/app.js?v=20260915-v23"></script>
+<script src="/app.js?v=20260916-v28"></script>
 
 </body></html>

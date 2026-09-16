@@ -110,31 +110,39 @@ app.get('/', (req,res) => res.sendFile(path.join(ROOT, 'index.html')));
 app.get('/app.js', (req,res) => res.sendFile(path.join(ROOT, 'app.js')));
 app.get('/styles.css', (req,res) => res.sendFile(path.join(ROOT, 'styles.css')));
 app.get('/api/health', (req,res) => res.json({ ok: true }));
-app.get('/api/version', (req,res) => res.json({ok:true,version:'27',build:'IOMASTAVKA_FILE_27'}));
+app.get('/api/version', (req,res) => res.json({ok:true,version:'28',build:'IOMASTAVKA_FILE_28'}));
 app.get('/api/config', (req,res) => res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.OPENAI_API_KEY), ftsConfigured: Boolean(process.env.API_CLOUD_FTS_TOKEN) }));
 
 app.get('/api/currency', async (req,res) => {
-  try {
-    let data=null;
-    try {
-      const r=await fetch('https://www.cbr-xml-daily.ru/daily_json.js',{headers:{'User-Agent':'iomastavka/1.0'}});
-      if(r.ok) data=await r.json();
-    } catch {}
-    if(!data){
-      const r=await fetch('https://www.cbr.ru/scripts/XML_daily.asp',{headers:{'User-Agent':'iomastavka/1.0'}});
-      if(!r.ok) throw new Error('CBR unavailable');
-      const xml=await r.text(); const items={};
-      for(const code of ['USD','EUR','CNY']){
-        const m=xml.match(new RegExp('<Valute[^>]*>[\\s\\S]*?<CharCode>'+code+'<\\/CharCode>[\\s\\S]*?<Nominal>([^<]+)<\\/Nominal>[\\s\\S]*?<Value>([^<]+)<\\/Value>[\\s\\S]*?<\\/Valute>'));
-        if(m) items[code]={nominal:Number(m[1].replace(',','.'))||1,value:Number(m[2].replace(',','.'))};
-      }
-      if(Object.keys(items).length<3) throw new Error('Incomplete rates');
-      return res.json({ok:true,date:new Date().toISOString(),items});
+  const parseCbrXml=(xml)=>{
+    const items={};
+    const blocks=xml.match(/<Valute\b[\s\S]*?<\/Valute>/gi)||[];
+    for(const block of blocks){
+      const code=(block.match(/<CharCode>([^<]+)<\/CharCode>/i)||[])[1];
+      if(!['USD','EUR','CNY'].includes(code))continue;
+      const nominal=(block.match(/<Nominal>([^<]+)<\/Nominal>/i)||[])[1];
+      const value=(block.match(/<Value>([^<]+)<\/Value>/i)||[])[1];
+      if(value)items[code]={nominal:Number(String(nominal||'1').replace(',','.'))||1,value:Number(String(value).replace(',','.'))};
     }
-    const items={}; for(const code of ['USD','EUR','CNY']){const x=data.Valute?.[code];if(x?.Value)items[code]={nominal:x.Nominal||1,value:Number(x.Value)}}
-    if(!items.USD||!items.EUR||!items.CNY) throw new Error('Incomplete rates');
-    res.json({ok:true,date:data.Date||new Date().toISOString(),items});
-  } catch(e){res.status(502).json({ok:false,error:'CBR unavailable'});}
+    const date=(xml.match(/<ValCurs[^>]*Date="([^"]+)"/i)||[])[1]||new Date().toISOString();
+    return {date,items};
+  };
+  try{
+    // Primary source: Bank of Russia official daily XML.
+    const official=await fetch('https://www.cbr.ru/scripts/XML_daily.asp',{headers:{'User-Agent':'iomastavka/2.0'},signal:AbortSignal.timeout(8000)});
+    if(official.ok){
+      const parsed=parseCbrXml(await official.text());
+      if(parsed.items.USD&&parsed.items.EUR&&parsed.items.CNY)return res.json({ok:true,source:'cbr.ru',date:parsed.date,items:parsed.items});
+    }
+    // Fallback mirror, still derived from CBR daily data.
+    const mirror=await fetch('https://www.cbr-xml-daily.ru/daily_json.js',{headers:{'User-Agent':'iomastavka/2.0'},signal:AbortSignal.timeout(8000)});
+    if(mirror.ok){
+      const data=await mirror.json(),items={};
+      for(const code of ['USD','EUR','CNY']){const x=data.Valute?.[code];if(x?.Value)items[code]={nominal:x.Nominal||1,value:Number(x.Value)}}
+      if(items.USD&&items.EUR&&items.CNY)return res.json({ok:true,source:'cbr-xml-daily.ru',date:data.Date||new Date().toISOString(),items});
+    }
+    throw new Error('CBR unavailable');
+  }catch(e){res.status(502).json({ok:false,error:'CBR unavailable'});}
 });
 
 const CITY_ALIASES = {
@@ -184,6 +192,68 @@ app.get('/api/geocode', async (req,res) => {
     res.json({ok:true,results});
   }catch{res.status(502).json({ok:false,error:'geocode unavailable',results:[]});}
 });
+
+
+function stripHtml(html='') {
+  return String(html)
+    .replace(/<script[\s\S]*?<\/script>/gi,' ')
+    .replace(/<style[\s\S]*?<\/style>/gi,' ')
+    .replace(/<[^>]+>/g,' ')
+    .replace(/&nbsp;/gi,' ')
+    .replace(/&amp;/gi,'&').replace(/&quot;/gi,'"').replace(/&#39;/gi,"'")
+    .replace(/&lt;/gi,'<').replace(/&gt;/gi,'>')
+    .replace(/\s+/g,' ').trim();
+}
+function xmlUnescape(s=''){return stripHtml(String(s)).replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16)));}
+function newsIsUrgent(item={}) {
+  const text=String(item.title||'')+' '+String(item.description||'');
+  return /(обязательн|вступ(ает|ил).*сил|запрет|ограничен|пошлин|тариф|таможенн|маркиров|санкц|лиценз|сертификат|электронн.*транспортн|транспортн.*накладн|law|mandatory|ban|restriction|customs|duty|tariff|sanction|licen[cs]|certificate)/i.test(text);
+}
+async function fetchRss(url, sourceName){
+  try{
+    const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0 iomastavka news/28'},signal:AbortSignal.timeout(9000)});
+    if(!r.ok)return [];
+    const xml=await r.text(); const items=[];
+    const blocks=xml.match(/<item[\s\S]*?<\/item>/gi)||[];
+    for(const block of blocks.slice(0,20)){
+      const title=(block.match(/<title[^>]*>([\s\S]*?)<\/title>/i)||[])[1]||'';
+      const link=(block.match(/<link[^>]*>([\s\S]*?)<\/link>/i)||[])[1]||'';
+      const desc=(block.match(/<description[^>]*>([\s\S]*?)<\/description>/i)||[])[1]||'';
+      const pub=(block.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/i)||[])[1]||'';
+      const t=xmlUnescape(title), l=xmlUnescape(link).trim(), d=xmlUnescape(desc);
+      if(!t)continue;
+      const date=Date.parse(pub); items.push({title:t,link:l,date:Number.isFinite(date)?new Date(date).toISOString():new Date().toISOString(),source:sourceName,description:d.slice(0,500)});
+    }
+    return items;
+  }catch{return []}
+}
+async function fetchNews(){
+  const queries=[
+    ['https://news.google.com/rss/search?q='+encodeURIComponent('логистика Китай Россия таможня')+'&hl=ru&gl=RU&ceid=RU:ru','Логистика · Китай / Россия'],
+    ['https://news.google.com/rss/search?q='+encodeURIComponent('таможня ЕАЭС пошлина маркировка')+'&hl=ru&gl=RU&ceid=RU:ru','Таможня · ЕАЭС'],
+    ['https://news.google.com/rss/search?q='+encodeURIComponent('электронная транспортная накладная Россия')+'&hl=ru&gl=RU&ceid=RU:ru','Транспортные документы · Россия'],
+    ['https://news.google.com/rss/search?q='+encodeURIComponent('China Russia freight rail sea air logistics')+'&hl=en&gl=US&ceid=US:en','Asia logistics']
+  ];
+  const lists=await Promise.all(queries.map(([u,s])=>fetchRss(u,s)));
+  let all=lists.flat();
+  // Keep recent items first and remove duplicate headlines.
+  const seen=new Set();
+  all=all.filter(x=>{const k=normalizeText(x.title);if(!k||seen.has(k))return false;seen.add(k);return true});
+  all.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const recent=all.filter(x=>Date.now()-new Date(x.date).getTime()<=14*24*60*60*1000);
+  const selected=(recent.length?recent:all).slice(0,24).map(x=>({...x,urgent:newsIsUrgent(x)}));
+  if(!selected.length){
+    const key=process.env.OPENAI_API_KEY;
+    if(key){
+      const prompt=`Собери 10 свежих новостей за последние 7 дней для сайта iomastavka: международная логистика Азия/Китай→Россия, перевозки, ВЭД, таможня ЕАЭС/РФ, документы и обязательные требования. Приоритет: официальные источники ФТС/ЕЭК/Минтранс/правительство, затем надежные отраслевые СМИ. Верни только JSON-массив объектов: title,link,date,source,description,urgent. urgent=true только для реально значимых изменений правил, запретов, пошлин, обязательных требований или таможенных решений. Текущая дата: ${new Date().toISOString()}`;
+      const out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input:[{role:'user',content:prompt}],tools:[{type:'web_search',search_context_size:'medium'}],max_output_tokens:2200});
+      if(!out.error){try{const raw=responseText(out.d);const parsed=parseJsonLoose(raw);if(Array.isArray(parsed))selected.push(...parsed.map(x=>({...x,urgent:Boolean(x.urgent)||newsIsUrgent(x)})).slice(0,24));}catch{}}
+    }
+  }
+  newsCache={at:Date.now(),items:selected};
+  return selected;
+}
+const newsCache={at:0,items:[]};
 
 app.get('/api/news', async (req,res) => {
   try {

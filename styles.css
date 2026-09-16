@@ -785,3 +785,25 @@ body.weather-night .moon,body.weather-sun .sun{animation:none!important;transfor
 .customs-marking{grid-column:1/-1}
 .customs-free-line{grid-column:1/-1;font-size:13px;line-height:1.5;padding:4px 2px}
 @media(max-width:700px){.customs-result-grid{grid-template-columns:1fr}.customs-marking{grid-column:auto}}
+
+/* File 28 — compact tool launcher: one round button, four animated tools */
+.control-dock{position:fixed;left:18px;top:50%;transform:translateY(-50%);z-index:7000;display:flex;flex-direction:column;align-items:center;pointer-events:none}
+.control-launcher{pointer-events:auto;width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,.9);background:rgba(255,255,255,.78);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 12px 34px rgba(34,101,132,.16),inset 0 1px 0 rgba(255,255,255,.95);color:#1d607e;font-size:19px;font-weight:800;display:grid;place-items:center;cursor:pointer;transition:transform .28s ease,box-shadow .28s ease,background .28s ease}
+.control-launcher:hover{transform:scale(1.06);box-shadow:0 15px 38px rgba(34,101,132,.23),0 0 18px rgba(91,194,215,.16)}
+.control-launcher span{display:block;transition:transform .35s ease}
+.control-dock.open .control-launcher span{transform:rotate(135deg)}
+.control-tools{position:absolute;bottom:58px;display:flex;flex-direction:column;gap:10px;align-items:center;pointer-events:none}
+.control-tool{position:relative!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;transform:translateY(14px) scale(.72)!important;margin:0!important;width:40px!important;height:40px!important;min-width:40px!important;border-radius:50%!important;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s ease,transform .28s cubic-bezier(.2,.8,.2,1),visibility 0s linear .28s!important;display:grid!important;place-items:center!important;background:rgba(255,255,255,.84)!important;border:1px solid rgba(255,255,255,.94)!important;box-shadow:0 10px 28px rgba(38,103,130,.15),inset 0 1px 0 rgba(255,255,255,.95)!important;color:#236782!important}
+.control-dock.open .control-tools{pointer-events:auto}
+.control-dock.open .control-tool{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0) scale(1)!important;transition-delay:calc(var(--tool-i,0) * 35ms)!important}
+.control-tool:hover{transform:translateY(-2px) scale(1.06)!important}
+.control-tool svg{width:22px;height:22px}
+.control-tool .hamsa-palm{fill:none;stroke:#236782;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.control-tool .hamsa-eye,.control-tool .finger{fill:none;stroke:#236782;stroke-width:2.6;stroke-linecap:round}
+.control-tool .hamsa-dot{fill:#236782}
+.customs-officer-icon{fill:none!important;stroke:#236782;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.customs-officer-icon circle{fill:none}
+.control-tools .control-tool:nth-child(1){--tool-i:0}.control-tools .control-tool:nth-child(2){--tool-i:1}.control-tools .control-tool:nth-child(3){--tool-i:2}.control-tools .control-tool:nth-child(4){--tool-i:3}
+body.manual-dark .control-launcher,body.manual-dark .control-tool{background:rgba(8,34,52,.92)!important;border-color:rgba(154,221,231,.28)!important;color:#e8f8fa!important;box-shadow:0 12px 34px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.07)!important}
+body.manual-dark .control-tool .hamsa-palm,body.manual-dark .control-tool .hamsa-eye,body.manual-dark .control-tool .finger{stroke:#dceff1!important}body.manual-dark .control-tool .hamsa-dot{fill:#dceff1!important}body.manual-dark .customs-officer-icon{stroke:#dceff1!important}
+@media(max-width:650px){.control-dock{left:10px}.control-launcher{width:42px;height:42px}.control-tools{bottom:53px}.control-tool{width:38px!important;height:38px!important;min-width:38px!important}}

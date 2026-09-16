@@ -163,6 +163,8 @@ function renderFactors(){selectedFactor=selectedMode&&modes[selectedMode]?modes[
 document.addEventListener('click',e=>{$$('.hover-menu').forEach(m=>{if(!e.target.closest('.hover-select'))m.classList.remove('open')})});
 
 // Navigation controls. Keep a single source of truth to avoid duplicate handlers.
+$('#controlLauncher')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const dock=$('#controlDock'),tools=$('#controlTools');const open=dock?.classList.toggle('open');if(dock)dock.setAttribute('aria-expanded',String(!!open));if(tools)tools.setAttribute('aria-hidden',String(!open));});
+document.addEventListener('click',e=>{const dock=$('#controlDock');if(dock?.classList.contains('open')&&!e.target.closest('#controlDock')){dock.classList.remove('open');dock.setAttribute('aria-expanded','false');$('#controlTools')?.setAttribute('aria-hidden','true')}});
 $('#customsButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.__iomaOpenView?.('customsView')});
 $('#menuButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();showTarot()});
 $('#agentImportButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openAgentImporter()});
@@ -563,7 +565,7 @@ async function loadCurrency(){
   }
 }
 
-function isUrgentNews(n){const x=normalize(String(n.title||'')+' '+String(n.description||'')).toLowerCase();return /(закон|законодатель|таможенн|пошлин|тариф|ставк.*пошлин|запрет|ограничен|санкц|лиценз|сертификат|обязательн|вступ(ил|ает).*сил|изменен.*правил|customs|tariff|duty|ban|restriction|regulation|law|licen[cs]|mandatory|sanction)/i.test(x)}
+function isUrgentNews(n){if(n&&n.urgent===true)return true;const x=normalize(String(n?.title||'')+' '+String(n?.description||'')).toLowerCase();return /(обязательн|вступ(ил|ает).*сил|запрет|ограничен|повышен.*пошлин|снижен.*пошлин|изменен.*правил|нов.*пошлин|маркировк.*обяз|электронн.*транспортн|санкц|лицензир|mandatory|effective.*date|ban|restriction|duty.*increase|tariff.*change|regulation|sanction|licen[cs])/i.test(x)}
 let newsCache=[];
 function cleanNewsText(s=''){const t=document.createElement('div');t.innerHTML=String(s);return (t.textContent||t.innerText||'').replace(/\s+/g,' ').trim()}
 function renderNewsItems(items){const box=$('#newsList');if(!box)return;box.innerHTML='';items.forEach((n,i)=>{const a=document.createElement('button');a.type='button';a.className='news-item'+(isUrgentNews(n)?' news-urgent':'');a.innerHTML=`${n.image?`<img class="news-thumb" src="${escapeHtml(n.image)}" alt="" loading="eager">`:`<span class="news-thumb news-placeholder">✦</span>`}<span class="news-item-copy">${isUrgentNews(n)?'<em class="news-urgent-badge">'+(lang==='ru'?'СРОЧНО':lang==='en'?'URGENT':'紧急')+'</em>':''}<strong>${escapeHtml(cleanNewsText(n.title))}</strong><small>${escapeHtml(n.source||'')} · ${n.date?new Date(n.date).toLocaleDateString(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':'en-US'):''}</small></span>`;a.onclick=()=>openArticle(n);box.appendChild(a)})}
