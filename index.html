@@ -1,67 +1,38 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#78a8c3"><title>iomastavka</title><link rel="stylesheet" href="/styles.css?v=20260916-v33">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>iomastavka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=1">
 </head>
 <body>
-<div id="weatherScene" class="weather-scene" aria-hidden="true"><div class="stars"></div><div class="sun"></div><div class="moon"></div><div class="cloud cloud-a"></div><div class="cloud cloud-b"></div><div class="rain"></div><div class="snow"></div><div class="wave wave-back"></div><div class="wave wave-mid"></div><div class="wave wave-front"></div></div>
-<header class="topbar">
-  <div id="controlDock" class="control-dock">
-    <button id="controlLauncher" class="control-launcher" type="button" aria-label="Инструменты" aria-expanded="false" title="Инструменты"><span>✦</span></button>
-    <div id="controlTools" class="control-tools" aria-hidden="true">
-      <button id="menuButton" class="hamsa-button control-tool" data-i18n-aria="menu" aria-label="Меню" title="Меню">
-        <svg viewBox="0 0 80 80" aria-hidden="true">
-          <path class="hamsa-palm" d="M25 56c-4-5-7-10-9-16l-6-16c-1-4 1-7 5-8 3 0 5 2 7 6l4 9V13c0-4 2-7 6-7s6 3 6 7v12V9c0-4 2-7 6-7s6 3 6 7v17V13c0-4 2-7 6-7s6 3 6 7v20l4-9c1-3 4-5 7-3 3 1 4 4 3 7l-7 19c-2 6-7 11-14 13v8H31v-8c-2-1-4-2-6-4z"/>
-          <path class="hamsa-eye" d="M49 35c-5-7-14-7-19 0 5 7 14 7 19 0z"/><circle class="hamsa-dot" cx="40" cy="35" r="2.1"/>
-          <path class="finger f1" d="M28 15v17"/><path class="finger f2" d="M40 10v22"/><path class="finger f3" d="M52 14v18"/><path class="finger f4" d="M64 25v12"/>
-        </svg>
-      </button>
-      <button id="themeToggleButton" class="theme-controls control-tool" type="button" title="Тема" aria-label="Тема"><span id="themeIcon">☀</span></button>
-      <button id="agentImportButton" class="dollar-button control-tool" type="button" aria-label="Обновить экспедиторов" title="Обновить экспедиторов">$</button>
-      <button id="customsButton" class="customs-button control-tool" type="button" aria-label="Проверка ТН ВЭД" title="Проверка ТН ВЭД">
-        <svg class="customs-officer-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <path d="M14 19h20l-2-7-3 2-4-4-4 4-3-2-4 7Z"/>
-          <circle cx="24" cy="23" r="7"/>
-          <path d="M15 42c1-8 4-12 9-12s8 4 9 12M19 34l5 4 5-4M11 42h26"/>
-          <path d="M20.5 23h.1M27.4 23h.1M21 27c1.8 1.4 4.2 1.4 6 0"/>
-        </svg>
-      </button>
-    </div>
-  </div>
-  <div class="brand" aria-label="iomastavka"><span>i</span><span>o</span><span>m</span><span>a</span><span>s</span><span>t</span><span>a</span><span>v</span><span>k</span><span>a</span></div>
-  <div class="top-actions"><span class="live-pill"><i></i> LIVE</span><button class="lang active" data-lang="ru">🇷🇺</button><button class="lang" data-lang="en">🇬🇧</button><button class="lang" data-lang="zh">🇨🇳</button><button class="lang" data-lang="tr">🇹🇷</button><button id="logoutButton" class="logout" data-i18n="logout">Выйти</button></div>
-</header>
-<main class="app-shell">
-<section id="homeView" class="home-view">
-  <div class="hero-copy"><span class="eyebrow" data-i18n="heroEyebrow">ЛОГИСТИКА · КИТАЙ → РОССИЯ</span><h1>iomastavka</h1><p data-i18n="heroText">Точный расчёт. Умный помощник.<br>Всё необходимое для работы с грузом — в одном месте.</p></div>
-  <div class="quick-grid">
-    <button class="service-card service-main" data-open-view="calculator"><span class="service-icon icon-route">↗</span><span class="service-text"><b data-i18n="tileRates">Расчёт ставок</b><small data-i18n="tileRatesSub">Маршрут, ставка и транспорт</small></span><span class="service-arrow">→</span></button>
-    <button class="service-card" data-open-view="assistant"><span class="service-icon icon-ai">✦</span><span class="service-text"><b data-i18n="tileAI">AI-ассистент</b><small data-i18n="tileAISub">Текстом или голосом</small></span><span class="service-arrow">→</span></button>
-    <button class="service-card" data-open-view="forwarders"><span class="service-icon icon-box">◈</span><span class="service-text"><b data-i18n="tileAgents">Экспедиторы</b><small data-i18n="tileAgentsSub">Контакты и направления перевозок</small></span><span class="service-arrow">→</span></button>
-    <button class="service-card" data-open-view="news"><span class="service-icon icon-news">≡</span><span class="service-text"><b data-i18n="tileNews">Новости ВЭД</b><small data-i18n="tileNewsSub">Китай · логистика · таможня</small></span><span class="service-arrow">→</span></button>
-  </div>
-  <div class="home-status"><div><span class="status-dot"></span><span id="homeWeatherText">Погода обновляется</span></div><div id="homeRouteStatus">Расстояние появится после выбора двух городов</div><div class="home-currency"><span data-i18n="currencyCny">CNY</span><b id="homeCny">12.535</b><span data-i18n="currencyUsd">USD</span><b id="homeUsd">84.336</b><span data-i18n="currencyEur">EUR</span><b id="homeEur">97.763</b></div></div>
-</section>
-
-<section id="calculatorView" class="view-layer" aria-hidden="true"><section class="card calculator-card" id="calculator"><button class="close-button view-close" data-close-view="calculator" data-i18n-aria="close" aria-label="Закрыть" title="Закрыть">×</button>
-<h1 data-i18n="title">Расчёт маршрута</h1>
-<div class="route"><div class="field autocomplete"><label data-i18n="from">Откуда</label><input id="fromCity" autocomplete="off" placeholder="Город в Китае"><div id="fromSuggestions" class="suggestions"></div></div><div class="route-arrow">→</div><div class="field autocomplete"><label data-i18n="to">Куда</label><input id="toCity" autocomplete="off" placeholder="Город в России"><div id="toSuggestions" class="suggestions"></div></div></div>
-<div class="section-title"><span data-i18n="cargo">ГРУЗ</span></div>
-<div class="grid three"><div class="field"><label data-i18n="weight">Вес, кг</label><input id="weight" type="number" min="0" placeholder="0"></div><div class="field"><label data-i18n="pieces">Количество мест</label><input id="pieces" type="number" min="1" placeholder="1"></div><div class="field"><label data-i18n="distance">Расстояние, км</label><input id="distance" type="number" min="0" placeholder="0"></div></div><div class="auto-calc-strip"><div><span data-i18n="autoVolumeLabel">Объём</span><b id="autoVolume">0 m³</b></div><div><span data-i18n="autoVolumetricLabel">Объёмный вес</span><b id="autoVolumetricWeight">0 kg</b></div><div><span data-i18n="factorLabel">Фактор</span><b id="autoFactor">167 kg/m³</b></div></div>
-<div class="dimensions"><div id="containerWarning" class="container-warning hidden"></div><div class="dimensions-head"><span id="dimensionsTitle" data-i18n="dimensions">ГАБАРИТЫ ОДНОГО МЕСТА, мм</span><div class="unit-switch" aria-label="Единицы измерения"><button type="button" class="unit-choice active" data-unit="mm">мм</button><button type="button" class="unit-choice" data-unit="cm">см</button><button type="button" class="unit-choice" data-unit="m">м</button></div></div><div class="grid three"><div class="field"><label data-i18n="length">Длина <span class="dimension-unit-label">мм</span></label><input id="length" type="number" min="0" placeholder="0"></div><div class="field"><label data-i18n="width">Ширина <span class="dimension-unit-label">мм</span></label><input id="width" type="number" min="0" placeholder="0"></div><div class="field"><label data-i18n="height">Высота <span class="dimension-unit-label">мм</span></label><input id="height" type="number" min="0" placeholder="0"></div></div></div>
-<div class="grid four centered-three"><div class="field hover-select"><label data-i18n="forwarder">Экспедитор</label><button class="fake-select" id="forwarderBtn"><span data-i18n="chooseForwarder">Выберите экспедитора</span><b>⌄</b></button><div class="hover-menu" id="forwarderMenu"></div></div><div class="field hover-select"><label data-i18n="transport">Вид транспорта</label><button class="fake-select" id="transportBtn"><span data-i18n="chooseTransport">Выберите транспорт</span><b>⌄</b></button><div class="hover-menu" id="transportMenu"></div></div><div class="field hover-select"><label data-i18n="incoterms">Условия поставки</label><button class="fake-select" id="incotermBtn"><span>EXW</span><b>⌄</b></button><div class="hover-menu" id="incotermMenu"></div></div></div>
-<div id="recommendation" class="recommendation hidden"></div><button id="calculate" class="calculate" data-i18n="calculate">Рассчитать</button><div id="result" class="result hidden"></div>
-<div id="currencyBar" class="currency-bar" aria-live="polite"><span class="currency-title"><span id="currencyDate">15.09.2026</span></span><span class="currency-item"><span data-i18n="oneCny">1 CNY</span> - <b id="cnyRate">12.535</b> ₽</span><span class="currency-item"><span data-i18n="oneUsd">1 USD</span> - <b id="usdRate">84.336</b> ₽</span><span class="currency-item"><span data-i18n="oneEur">1 EUR</span> - <b id="eurRate">97.763</b> ₽</span><span class="currency-source" data-i18n="cbr">CBR</span></div></section></section>
-
-<section id="forwardersView" class="view-layer" aria-hidden="true"><div class="directory-panel"><button class="close-button view-close" data-close-view="forwarders" data-i18n-aria="close" aria-label="Закрыть" title="Закрыть">×</button><div class="directory-head"><div><span class="eyebrow" data-i18n="directoryEyebrow">СПРАВОЧНИК</span><h2 data-i18n="agents">Экспедиторы</h2><p data-i18n="directorySub">Поставщики и контакты по направлениям.</p></div><div class="directory-filters" id="directoryFilters"></div></div><div class="directory-table-wrap"><table class="directory-table"><thead><tr><th data-i18n="company">Компания</th><th data-i18n="contact">Контакт</th><th data-i18n="phone">Телефон</th><th data-i18n="email">Email</th><th data-i18n="website">Сайт</th><th data-i18n="directions">Направления</th><th data-i18n="note">Примечание</th></tr></thead><tbody id="directoryGrid"></tbody></table></div></div></section>
-
-<section id="assistantView" class="view-layer" aria-hidden="true"><div class="assistant-shell"><button class="close-button" data-close-view="assistant" data-i18n-aria="close" aria-label="Закрыть" title="Закрыть">×</button><div class="assistant-head"><div><span class="eyebrow" data-i18n="intelligence">ИНТЕЛЛЕКТ</span><h2 data-i18n="assistant">AI-ассистент</h2><small data-i18n="assistantSub2">Логистика, расчёты и ВЭД — голосом или текстом.</small></div></div><div class="voice-orb-stage"><div class="voice-orb" id="voiceOrb" aria-hidden="true"><span></span><span></span><span></span></div></div><div id="chatMessages" class="chat-messages"></div><div class="voice-state" id="voiceState">Готов к разговору</div><div class="chat-compose"><div class="attachment-row"><label class="attach-button icon-only" for="aiFile" aria-label="Прикрепить файл" title="Прикрепить файл"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 12.5 14.9 6.1a3.3 3.3 0 0 1 4.7 4.7l-8.9 8.9a5 5 0 0 1-7.1-7.1l9.2-9.2a2.9 2.9 0 0 1 4.1 4.1l-8.8 8.8a1.4 1.4 0 0 1-2-2l7.9-7.9"/></svg></label><input id="aiFile" type="file" accept=".pdf,.txt,.csv,.xlsx,.xls,.doc,.docx,.rtf,.json,.png,.jpg,.jpeg,.webp" multiple><span id="fileNames" class="file-names" data-i18n="fileHint">Файл можно добавить вместе с сообщением</span></div><textarea id="assistantInput" placeholder="Напишите сообщение или отправьте КП со ставкой…"></textarea><div class="compose-actions"><button id="voiceButton" class="voice-button icon-only" type="button" data-i18n-aria="voice" aria-label="Микрофон" title="Микрофон"><svg class="mic-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="8" height="12" rx="4"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg></button><button id="sendAI" class="assistant-save" data-i18n="send">Отправить</button></div></div><div id="assistantStatus"></div></div></section>
-
-<section id="newsView" class="view-layer" aria-hidden="true"><div class="directory-panel news-shell"><button class="close-button view-close" data-close-view="news" data-i18n-aria="close" aria-label="Закрыть" title="Закрыть">×</button><div class="directory-head"><div><span class="eyebrow" data-i18n="intelligenceFeed">ИНФОРМАЦИОННАЯ ЛЕНТА</span><h2 data-i18n="news">Новости ВЭД</h2><p data-i18n="newsSub2">Китай · логистика · таможня</p></div></div><div id="newsList" class="news-list"></div></div></section>
-<section id="tarotView" class="view-layer" aria-hidden="true"><div id="tarotShell" class="tarot-shell"><canvas id="tarotDustCanvas" class="tarot-dust-canvas" aria-hidden="true"></canvas><button class="close-button view-close" data-close-view="tarotView" data-i18n-aria="close" aria-label="Закрыть" title="Закрыть">×</button><div class="tarot-card"><div class="tarot-particles" aria-hidden="true"></div><div class="tarot-stars"><span class="tarot-diamond">✦</span></div><div class="tarot-label">IOMASTAVKA · TODAY</div><div id="tarotSymbol" class="tarot-symbol">♌</div><h2 id="tarotTitle">Сегодня</h2><p id="tarotText"></p><div class="tarot-meta">21.08.2004 · 16:20 · Нижний Новгород</div></div></div></section>
-<section id="customsView" class="view-layer" aria-hidden="true"><div class="customs-shell"><button class="close-button view-close" data-close-view="customsView" aria-label="Закрыть" title="Закрыть">×</button><div class="customs-head"><span class="eyebrow" data-i18n="customsEyebrow">ТАМОЖЕННЫЙ КОНТРОЛЬ</span><h2 data-i18n="customsTitle">Проверка ТН ВЭД</h2><p data-i18n="customsHelp">Укажите код ТН ВЭД ЕАЭС — я автоматически проверю пошлину, НДС, сборы, маркировку и другие меры.</p></div><div class="customs-form"><input id="customsCode" inputmode="numeric" maxlength="10" placeholder="Например, 8467890000" data-i18n-placeholder="customsPlaceholder"><button id="customsCheck" class="calculate" type="button" data-i18n="customsCheck">Проверить код</button></div><div id="customsStatus" class="customs-status"></div><div id="customsResult" class="customs-result hidden"></div></div></section>
-<section id="articleView" class="view-layer" aria-hidden="true"><article class="article-shell"><button class="close-button view-close" data-close-view="article" data-i18n-aria="close" aria-label="Закрыть" title="Закрыть">×</button><div id="articleContent"></div></article></section>
+<div id="sky" class="sky"><div class="sun"></div><div class="moon"></div><div class="stars"></div><div class="cloud cloud-a"></div><div class="cloud cloud-b"></div><div class="rain"></div><div class="snow"></div><div class="wave wave-1"></div><div class="wave wave-2"></div></div>
+<header class="topbar"><div class="brand-small">iomastavka</div><div class="top-actions"><span id="liveDot">● LIVE</span><button data-lang="ru">🇷🇺</button><button data-lang="en">🇬🇧</button><button data-lang="zh">🇨🇳</button><button data-lang="tr">🇹🇷</button><button id="logout">Выйти</button></div></header>
+<main class="home">
+  <section class="hero"><div class="eyebrow">ЛОГИСТИКА · КИТАЙ → РОССИЯ</div><h1>iomastavka</h1><p>Точный расчёт. Умный помощник.<br>Всё необходимое для работы с грузом — в одном месте.</p></section>
+  <section class="cards">
+    <button class="main-card" data-open="rates"><span class="card-icon">↗</span><span><b>Расчёт ставок</b><small>Маршрут, ставка и транспорт</small></span><i>→</i></button>
+    <button class="main-card" data-open="assistant"><span class="card-icon">✦</span><span><b>AI-ассистент</b><small>Текстом или голосом</small></span><i>→</i></button>
+    <button class="main-card" data-open="agents"><span class="card-icon">◇</span><span><b>Экспедиторы</b><small>Контакты и направления перевозок</small></span><i>→</i></button>
+    <button class="main-card" data-open="news"><span class="card-icon">≡</span><span><b>Новости ВЭД</b><small>Китай · логистика · таможня</small></span><i>→</i></button>
+  </section>
+  <div class="rates-ticker" id="cbrTicker"><span>CNY —</span><strong>—</strong><span>USD —</span><strong>—</strong><span>EUR —</span><strong>—</strong><em id="cbrDate">обновление…</em></div>
 </main>
-<script src="/app.js?v=20260916-v33"></script>
 
+<!-- hover launcher: one button OR four buttons, never five -->
+<div id="launcherZone" class="launcher-zone">
+  <div id="launcherSingle" class="launcher-single" aria-label="Инструменты">✦</div>
+  <div id="launcherTools" class="launcher-tools" aria-hidden="true">
+    <button data-tool="rates" title="Расчёт ставок">↗</button>
+    <button data-tool="theme" title="Светлая / тёмная тема">☼</button>
+    <button data-tool="tarot" title="Карта дня">✋</button>
+    <button data-tool="customs" title="ТН ВЭД / таможня">♜</button>
+  </div>
+</div>
+
+<div id="modal" class="modal hidden"><div class="modal-shell"><button class="close" id="modalClose">×</button><div id="modalBody"></div></div></div>
+<div id="toast" class="toast"></div>
+<script src="/app.js?v=1" defer></script>
 </body></html>
