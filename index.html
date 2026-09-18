@@ -5,11 +5,11 @@
 <title>iomastavka</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=1">
+<link rel="stylesheet" href="/styles.css?v=2">
 </head>
 <body>
 <div id="sky" class="sky"><div class="sun"></div><div class="moon"></div><div class="stars"></div><div class="cloud cloud-a"></div><div class="cloud cloud-b"></div><div class="rain"></div><div class="snow"></div><div class="wave wave-1"></div><div class="wave wave-2"></div></div>
-<header class="topbar"><div class="brand-small">iomastavka</div><div class="top-actions"><span id="liveDot">● LIVE</span><button data-lang="ru">🇷🇺</button><button data-lang="en">🇬🇧</button><button data-lang="zh">🇨🇳</button><button data-lang="tr">🇹🇷</button><button id="logout">Выйти</button></div></header>
+<header class="topbar"><div class="brand-small">iomastavka</div><div class="top-actions"><span id="liveDot">● LIVE</span></div></header>
 <main class="home">
   <section class="hero"><div class="eyebrow">ЛОГИСТИКА · КИТАЙ → РОССИЯ</div><h1>iomastavka</h1><p>Точный расчёт. Умный помощник.<br>Всё необходимое для работы с грузом — в одном месте.</p></section>
   <section class="cards">
@@ -21,18 +21,19 @@
   <div class="rates-ticker" id="cbrTicker"><span>CNY —</span><strong>—</strong><span>USD —</span><strong>—</strong><span>EUR —</span><strong>—</strong><em id="cbrDate">обновление…</em></div>
 </main>
 
-<!-- hover launcher: one button OR four buttons, never five -->
+<!-- единый лаунчер: 1 кнопка, при наведении — ровно 4 инструмента -->
 <div id="launcherZone" class="launcher-zone">
   <div id="launcherSingle" class="launcher-single" aria-label="Инструменты">✦</div>
   <div id="launcherTools" class="launcher-tools" aria-hidden="true">
-    <button data-tool="rates" title="Расчёт ставок">↗</button>
-    <button data-tool="theme" title="Светлая / тёмная тема">☼</button>
     <button data-tool="tarot" title="Карта дня">✋</button>
+    <button data-tool="theme" id="themeBtn" title="Тёмная / светлая тема">☀️</button>
+    <button data-tool="ratesUpdate" title="Обновление ставок от экспедиторов">↻</button>
     <button data-tool="customs" title="ТН ВЭД / таможня">♜</button>
   </div>
 </div>
 
 <div id="modal" class="modal hidden"><div class="modal-shell"><button class="close" id="modalClose">×</button><div id="modalBody"></div></div></div>
 <div id="toast" class="toast"></div>
-<script src="/app.js?v=1" defer></script>
-</body></html>
+<script src="/app.js?v=2" defer></script>
+</body>
+</html>

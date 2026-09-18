@@ -1,18 +1,28 @@
-# iomastavka — File №1
+# iomastavka — v2.1
 
-Clean rebuild for Render.
+## Что исправлено в этой версии
+- **Курсы ЦБ РФ**: основной источник cbr.ru + автоматическое зеркало cbr-xml-daily.ru (Render сидит на зарубежных IP, cbr.ru часто блокирует их — поэтому дата замирала). Кэш «последний удачный» — данные не пропадают.
+- **Новости ВЭД**: только RSS-ленты, доступные из-за рубежа (Google News по 5 тематикам + ФТС), дедупликация, сортировка по дате, красная пометка критичных (пошлины, запреты, маркировка, санкции, ЭТрН…), картинки с Pexels по теме новости. Лента обновляется каждые 10 минут и после «сна» Render.
+- **AI-ассистент**: полная цепочка сообщение → сервер → OpenAI → ответ; диктовка с автоматической отправкой; кнопка озвучки ответов 🔊/🔇.
+- **ТН ВЭД**: результат за 3 секунды — пошлина, НДС, сбор, акциз, Честный Знак, разрешительные документы (СС/ДС/отказное письмо…), «что сделать», источники, уровень уверенности.
+- **Обновление ставок (новое)**: левая кнопка ↻ → вставьте текст КП или файл (.txt/.csv/.json) → AI извлекает маршруты/цены → справочник ставок обновляется и сохраняется на диске.
+- **Экспедиторы**: данные читаются и из `/data`, и из корня репо (на старой версии сервер падал, если папки `data` не было — из-за этого всё «было пустым»).
+- **Единая логика**: с верхней панели убраны отдельные кнопки (языки/выход). Слева — одна кнопка ✦, при наведении ровно 4: ✋ Карта дня · ☀️/🌙 тема · ↻ обновление ставок · ♜ таможня.
+- **Тема**: иконка и фон теперь следят за реальным временем суток (погода OpenWeather + fallback по локальному часу) — солнце вечером больше не показывается.
 
-## Stack
-- HTML — structure
-- CSS — interface, responsive layout and animation
-- Vanilla JavaScript — application logic
-- Node.js + Express — server APIs
+## Deploy на Render
+1. Замените файлы в репозитории этими (server.js, app.js, index.html, styles.css, package.json).
+2. `agents.json` и `rates.json` можно держать в корне **или** в папке `data/` — сервер найдёт их в обоих местах.
+3. Env-переменные в Render:
+   - `OPENAI_API_KEY` — обязательна (AI-чат, ТН ВЭД, парсинг ставок)
+   - `OPENWEATHER_API_KEY` — опционально (живое небо/ночь)
+   - `OPENAI_MODEL` — опционально (по умолчанию `gpt-5.6-luna`)
+4. Start command: `node server.js`. Node >= 18.
 
-## Render environment
-- `OPENAI_API_KEY` — required for AI assistant and web-assisted customs analysis
-- `OPENWEATHER_API_KEY` — required for live Moscow weather/background
-- Optional `OPENAI_MODEL` (default `gpt-5.6-luna`)
-
-Start command: `node server.js`
-
-No API keys are stored in the repository.
+## API
+- `GET /api/cbr` — курсы ЦБ (live + кэш)
+- `GET /api/news` — лента новостей с `important` и `image`
+- `POST /api/ai` — чат `{message, history}`
+- `POST /api/customs/check` — `{code: "10 цифр"}`
+- `POST /api/rates/update` — `{text: "КП экспедитора"}` → AI-парсинг
+- `GET /api/rates`, `GET /api/agents`, `GET /api/weather`
