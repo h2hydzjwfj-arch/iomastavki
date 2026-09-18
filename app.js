@@ -415,41 +415,11 @@ function containerFitWarning(){
 $$('.unit-choice').forEach(b=>b.addEventListener('click',()=>setDimensionUnit(b.dataset.unit)));
 updateDimensionUnitUI();
 containerFitWarning();
-
-// Расчётная ставка: если в базе нет сохранённой ставки экспедитора — считаем индикативную цену.
-function autoPickMode(weight,volume){
-  if(weight>0&&weight<150&&volume<1.5)return 'air';
-  if(weight>0&&weight<2500&&volume<12)return 'road';
-  if(volume>=24)return 'sea';
-  return 'rail';
-}
-const INDICATIVE_TARIFFS={rail:{perKg:0.65,min:380},road:{perKg:1.35,min:260},air:{perKg:5.8,min:120},sea:{perKg:0.32,min:650},multimodal:{perKg:0.75,min:500}};
-function usdToRub(u){const r=parseFloat(String($('#usdRate')?.textContent||'').replace(/[\s\u00a0]/g,'').replace(',','.'));return (Number.isFinite(r)&&r>0?r:84.3)*u}
-function computeIndicativeRate(charge,volume,km){
-  const mode=selectedMode&&modes[selectedMode]?selectedMode:autoPickMode(charge,volume);
-  const t=INDICATIVE_TARIFFS[mode]||INDICATIVE_TARIFFS.rail;
-  const kmFactor=1+Math.min(.6,Math.max(0,((km||0)-4500)/9000));
-  const priceUsd=Math.max(charge*t.perKg*kmFactor,t.min);
-  return {mode,priceUsd,priceRub:usdToRub(priceUsd),tariff:t};
-}
-$('#calculate').onclick=async()=>{const weight=Number($('#weight').value)||0,pieces=Number($('#pieces').value)||1,[l,w,h]=dimensionsMm();
- if(!selectedMode){const _am=autoPickMode(weight,(l*w*h/1e9)*pieces);selectedMode=_am;selectedFactor=modes[_am].factor;const _tb=$('#transportBtn span');if(_tb)_tb.textContent=modeName(_am);updateAutoVolume();}
- selectedFactor=selectedMode&&modes[selectedMode]?modes[selectedMode].factor:167;renderFactors();const volume=l*w*h/1e9*pieces,volumetric=volume*selectedFactor,charge=Math.max(weight,volumetric);
- const result=$('#result');result.classList.remove('hidden');result.innerHTML=`<div class="result-loading">${lang==='ru'?'Ищу подходящую ставку…':lang==='en'?'Finding a matching rate…':'正在寻找匹配的运价…'}</div>`;containerFitWarning();
- try{
-  const qs=new URLSearchParams({from:$('#fromCity').value.trim(),to:$('#toCity').value.trim(),mode:selectedMode||'',distance:$('#distance').value||''});
-  const r=await fetch('/api/rates/recommend?'+qs.toString());const d=await r.json();
-  const rows=(d.matches||[]).filter(x=>Number.isFinite(Number(x.rate)));const best=rows[0];
-  const fmtMoney=n=>new Intl.NumberFormat(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':'en-US',{maximumFractionDigits:0}).format(Math.round(Number(n)));
-  const fmtMoney3=n=>new Intl.NumberFormat(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':'en-US',{maximumFractionDigits:3}).format(Number(n));
-  const chinese=x=>/中国|china|chinese|\.cn$/i.test(String(x?.company||'')+' '+String(x?.source||'')+' '+String(x?.notes||''));
-  let html='';
-  if(best){let price=Number(best.rate);let commission=0;if(chinese(best)){commission=price*.05;price+=commission}
-   html=`<div class="result-price-window"><div class="result-kicker">${lang==='ru'?'РАСЧЁТ ПЕРЕВОЗКИ':lang==='en'?'TRANSPORT QUOTE':'运输报价'}</div><div class="result-price">${fmtMoney3(price)} <span>${escapeHtml(best.currency||'USD')}</span></div><div class="result-meta"><b>${escapeHtml(best.company||'—')}</b> · ${escapeHtml(best.basis||'shipment')} · ${escapeHtml(best.mode||selectedMode||'—')}</div><div class="result-grid"><span>${lang==='ru'?'Грузовой вес':'Chargeable weight'}<b>${fmtNum(charge)} kg</b></span><span>${lang==='ru'?'Объём':'Volume'}<b>${fmtNum(volume)} m³</b></span><span>${lang==='ru'?'Расстояние':'Distance'}<b>${fmtNum(Number($('#distance').value)||0)} km</b></span><span>${lang==='ru'?'Ставка':'Base rate'}<b>${fmtMoney3(best.rate)} ${escapeHtml(best.currency||'')}</b></span></div>${commission?`<div class="commission-note">+ 5% ${lang==='ru'?'комиссия китайского перевозчика уже включена':'Chinese carrier transfer commission included'}</div>`:''}<div class="terminal-warning">⚠️ ${lang==='ru'?'Обязательно уточнить терминальные расходы в пункте прибытия.':lang==='en'?'Confirm terminal charges at destination.':'务必确认目的地的码头费用。'}</div>${best.notes?`<div class="result-notes">${escapeHtml(best.notes)}</div>`:''}</div>`}
-  else{
-   const ind=computeIndicativeRate(charge,volume,Number($('#distance').value)||0);const t=ind.tariff;
-   html=`<div class="result-price-window"><div class="result-kicker">${lang==='ru'?'РАСЧЁТНАЯ СТАВКА (ОЦЕНОЧНО)':lang==='en'?'ESTIMATED RATE':'估算运价'}</div><div class="result-price">${fmtMoney(ind.priceUsd)} <span>USD</span></div><div class="result-meta"><b>${modeName(ind.mode)}</b> · ${lang==='ru'?'индикативный расчёт по тарифу':lang==='en'?'indicative tariff calculation':'按费率估算'} · ≈ ${fmtMoney(ind.priceRub)} RUB</div><div class="result-grid"><span>${lang==='ru'?'Грузовой вес':'Chargeable weight'}<b>${fmtNum(charge)} kg</b></span><span>${lang==='ru'?'Объём':'Volume'}<b>${fmtNum(volume)} m³</b></span><span>${lang==='ru'?'Расстояние':'Distance'}<b>${fmtNum(Number($('#distance').value)||0)} km</b></span><span>${lang==='ru'?'Тариф':'Tariff'}<b>${t.perKg} USD/kg</b></span></div><div class="commission-note">${lang==='ru'?'Если у экспедитора есть сохранённая ставка по этому маршруту — она покажется вместо расчёта.':lang==='en'?'A saved forwarder rate for this route replaces the estimate.':'如有已保存的代理运价，将优先显示。'}</div><div class="terminal-warning">⚠️ ${lang==='ru'?'Оценочная ставка. Точную цену подтверждает экспедитор: терминальные расходы, сборы и сроки уточняйте до отправки.':lang==='en'?'Indicative rate. Confirm the final price with a forwarder before shipment.':'估算运价。请在发货前与货运代理确认最终价格。'}</div></div>`}
-  result.innerHTML=html;
+$('#calculate').onclick=async()=>{const weight=Number($('#weight').value)||0,pieces=Number($('#pieces').value)||1,[l,w,h]=dimensionsMm();selectedFactor=selectedMode&&modes[selectedMode]?modes[selectedMode].factor:167;renderFactors();const volume=l*w*h/1e9*pieces,volumetric=volume*selectedFactor,charge=Math.max(weight,volumetric);const result=$('#result');result.classList.remove('hidden');result.innerHTML=`<div class="result-loading">${lang==='ru'?'Ищу подходящую ставку…':lang==='en'?'Finding a matching rate…':'正在寻找匹配的运价…'}</div>`;containerFitWarning();
+ try{const qs=new URLSearchParams({from:$('#fromCity').value.trim(),to:$('#toCity').value.trim(),mode:selectedMode||'',distance:$('#distance').value||''});const r=await fetch('/api/rates/recommend?'+qs.toString());const d=await r.json();const rows=(d.matches||[]).filter(x=>Number.isFinite(Number(x.rate)));const best=rows[0];const fmtMoney=n=>new Intl.NumberFormat(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':'en-US',{maximumFractionDigits:3}).format(Number(n));const chinese=x=>/中国|china|chinese|\.cn$/i.test(String(x?.company||'')+' '+String(x?.source||'')+' '+String(x?.notes||''));let html='';
+ if(best){let price=Number(best.rate);let commission=0;if(chinese(best)){commission=price*.05;price+=commission}html=`<div class="result-price-window"><div class="result-kicker">${lang==='ru'?'РАСЧЁТ ПЕРЕВОЗКИ':lang==='en'?'TRANSPORT QUOTE':'运输报价'}</div><div class="result-price">${fmtMoney(price)} <span>${escapeHtml(best.currency||'USD')}</span></div><div class="result-meta"><b>${escapeHtml(best.company||'—')}</b> · ${escapeHtml(best.basis||'shipment')} · ${escapeHtml(best.mode||selectedMode||'—')}</div><div class="result-grid"><span>${lang==='ru'?'Грузовой вес':'Chargeable weight'}<b>${fmtNum(charge)} kg</b></span><span>${lang==='ru'?'Объём':'Volume'}<b>${fmtNum(volume)} m³</b></span><span>${lang==='ru'?'Расстояние':'Distance'}<b>${fmtNum(Number($('#distance').value)||0)} km</b></span><span>${lang==='ru'?'Ставка':'Base rate'}<b>${fmtMoney(best.rate)} ${escapeHtml(best.currency||'')}</b></span></div>${commission?`<div class="commission-note">+ 5% ${lang==='ru'?'комиссия китайского перевозчика уже включена':'Chinese carrier transfer commission included'}</div>`:''}<div class="terminal-warning">⚠️ ${lang==='ru'?'Обязательно уточнить терминальные расходы в пункте прибытия.':lang==='en'?'Confirm terminal charges at destination.':'务必确认目的地的码头费用。'}</div>${best.notes?`<div class="result-notes">${escapeHtml(best.notes)}</div>`:''}</div>`}
+ else {html=`<div class="result-price-window"><div class="result-kicker">${lang==='ru'?'СТАВКА НЕ НАЙДЕНА':lang==='en'?'NO MATCHING RATE':'未找到匹配运价'}</div><div class="result-price muted">—</div><p>${lang==='ru'?'В базе нет однозначной ставки для этого маршрута. Я не буду придумывать цену. Добавьте КП или выберите экспедитора/транспорт с сохранённой ставкой.':lang==='en'?'There is no unambiguous saved rate for this route. I will not invent a price. Add a quote or choose a forwarder/transport with a saved rate.':'数据库中没有该路线的明确运价，不会虚构价格。请添加报价或选择已有运价的代理商/运输方式。'}</p><div class="terminal-warning">⚠️ ${lang==='ru'?'Даже при найденной ставке обязательно уточнять терминальные расходы в пункте прибытия.':lang==='en'?'Always confirm destination terminal charges.':'务必确认目的地码头费用。'}</div></div>`}
+ result.innerHTML=html;
  }catch(e){result.innerHTML=`<div class="result-price-window"><div class="result-kicker">${lang==='ru'?'НЕ УДАЛОСЬ РАССЧИТАТЬ':lang==='en'?'CALCULATION ERROR':'计算失败'}</div><p>${escapeHtml(e.message||'Ошибка')}</p></div>`}
  showRecommendation(selectedForwarder);setTimeout(()=>{$('#result')?.addEventListener('click',e=>{if(e.target===e.currentTarget||e.target.closest('.result-price-window')===null)e.currentTarget.classList.add('hidden')},{once:false})},0)};
 
