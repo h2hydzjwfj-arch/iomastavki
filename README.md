@@ -1,21 +1,18 @@
-# iomastavka — File №1 (functional restore)
+# iomastavka — File №1
 
-Clean rebuild for Render. **Дизайн не тронут** — починена только работа.
+Clean rebuild for Render.
 
-## Что работает
-- **Таможня (ТН ВЭД)** — `/api/customs/check` работает **без OpenAI**: парсинг реальных данных alta.ru + расчёт таможенного сбора по шкале Совета ЕЭК № 51 (при вводе таможенной стоимости) + подсказки по «Честному знаку». Кэш 24 ч.
-- **AI-ассистент** — переведён на `chat/completions` (дешевле/стабильнее). Требуется действующий ключ и баланс OpenAI — иначе придёт понятное сообщение об ошибке.
-- **Новости** — лента как раньше, но статьи открываются **внутри сайта** (`/api/news/read` — сервер забирает и чистит текст; если сайт не отдал текст, есть кнопка оригинала).
-- **Ставки** — форма ввода своих расчётов (сохраняются в браузере) + таблица справочных ставок с поиском и фильтром по виду перевозки.
-- **Карта Фатимы** — персональная карта дня по дате рождения (хранится в браузере), с анимацией растворения.
-- **Экспедиторы** — добавлен фильтр по виду перевозки.
-- Курсы ЦБ, погода — без изменений.
+## Stack
+- HTML — structure
+- CSS — interface, responsive layout and animation
+- Vanilla JavaScript — application logic
+- Node.js + Express — server APIs
 
 ## Render environment
-- `OPENAI_API_KEY` — для AI-ассистента (должен быть баланс, иначе ассистент честно сообщит об этом)
-- `OPENWEATHER_API_KEY` — для живой погоды/фона
-- Optional `OPENAI_MODEL` (по умолчанию `gpt-4o-mini`)
+- `OPENAI_API_KEY` — required for AI assistant and web-assisted customs analysis
+- `OPENWEATHER_API_KEY` — required for live Moscow weather/background
+- Optional `OPENAI_MODEL` (default `gpt-5.6-luna`)
 
 Start command: `node server.js`
 
-Данные: `data/agents.json`, `data/rates.json` (если папки `data` нет — читаются из корня).
+No API keys are stored in the repository.
