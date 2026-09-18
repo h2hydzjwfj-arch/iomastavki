@@ -445,23 +445,34 @@ function relevantRateRecords(db, context){
 
 async function fetchAltaTnved(code){
   const url=`https://www.alta.ru/tnved/code/${encodeURIComponent(code)}/`;
-  const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0','Accept':'text/html,application/xhtml+xml'}});
+  const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36 iomastavka/1.0','Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8','Accept-Language':'ru-RU,ru;q=0.9'},signal:AbortSignal.timeout(9000)});
   if(!r.ok) throw new Error(`Alta HTTP ${r.status}`);
   const html=await r.text();
-  const text=html.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/&quot;/gi,'"').replace(/&amp;/gi,'&').replace(/\s+/g,' ').trim();
-  if(!new RegExp(`\\b${code}\\b`).test(text)) throw new Error('TN VED code not found');
-  const titleMatch=text.match(new RegExp(`Код ТН ВЭД\\s*${code}\\s+(.+?)\\s+Информация по товарному коду`, 'i'));
-  const dutyMatch=text.match(/Базовая ставка таможенной пошлины\\s+([^]+?)\\s+НДС/i);
-  const vatMatch=text.match(/НДС\\s+([^]+?)\\s+Экспорт/i);
-  const exciseMatch=text.match(/Акциз\\s+([^]+?)\\s+Не облагается|Акциз\\s+([^]+?)(?:\\s+Ставки|\\s+Особенности)/i);
-  return {
-    source:'Alta-Soft',url,code,
-    title:titleMatch?.[1]?.trim()||`ТН ВЭД ЕАЭС ${code}`,
-    duty:dutyMatch?.[1]?.trim()||'Не удалось извлечь из страницы',
-    vat:vatMatch?.[1]?.trim()||'Не удалось извлечь из страницы',
-    excise:(exciseMatch?.[1]||exciseMatch?.[2]||'Не удалось извлечь из страницы').trim(),
-    text
-  };
+  const text=html.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/&quot;/gi,'"').replace(/&amp;/gi,'&').replace(/&#39;/gi,"'").replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/\s+/g,' ').trim();
+  if(!new RegExp(`(^|[^0-9])${code}([^0-9]|$)`).test(text)) throw new Error('TN VED code not found');
+  const pick=(re)=>{const m=text.match(re);return m?(m[1]||m[2]||'').trim():''};
+  const title=pick(new RegExp(`Код ТН ВЭД\\s*${code}\\s+(.+?)\\s+(?:Информация по товарному коду|$)`,'i'))||`ТН ВЭД ЕАЭС ${code}`;
+  const duty=pick(/Базовая ставка таможенной пошлины\s+(.+?)\s+(?:Ставка НДС|НДС|Таможенный сбор|Акциз)/i)||'см. Единый таможенный тариф ЕАЭС';
+  const vat=pick(/Ставка НДС\s+(.+?)\s+(?:Акциз|Таможенный сбор|Ставки|Особенности|Требования|Единица измерения)/i)||pick(/\bНДС\s+(.+?)\s+(?:Акциз|Таможенный сбор)/i)||'20% (стандартная ставка РФ, уточнить)';
+  const excise=pick(/Акциз\s+(.+?)\s+(?:Не облагается|Таможенный сбор|Ставки|Особенности|Требования|Единица измерения)/i)||'не облагается (уточнить по товару)';
+  const unit=pick(/Единица измерения\s+(.+?)\s+(?:Таможенный сбор|Ставки|Особенности|Требования|Информация|$)/i);
+  const marking=/честн(ый|ого)\s*знак/i.test(text)?'По справочным данным возможна обязательная маркировка «Честный ЗНАК» — проверьте по характеристикам товара':'По справочным данным маркировка не указана';
+  return {source:'Alta-Soft',url,code,title,duty,vat,excise,unit,marking,text:text.slice(0,120000)};
+}
+function altaStructuredAnalysis(code,alta){
+  return `КОД: ${code}
+ОПИСАНИЕ: ${alta.title}
+ИМПОРТНАЯ ПОШЛИНА: ${alta.duty}
+НДС: ${alta.vat}
+АКЦИЗ: ${alta.excise}
+ТАМОЖЕННЫЙ СБОР: зависит от таможенной стоимости и вида декларации; для расчёта нужна таможенная (инвойсная) стоимость товара
+ЧЕСТНЫЙ ЗНАК: ${alta.marking}
+РАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: зависят от товара: сертификат/декларация соответствия ТР ТС, разрешение ФСБ (шифровка/радиоэлектроника), лицензии Минпромторга/Минсельхоза, фитосанитарный контроль — проверяются отдельно по характеристикам
+ЗАПРЕТЫ И ОГРАНИЧЕНИЯ: проверьте санкционные меры и технические регламенты ЕАЭС для вашего товара и страны происхождения
+ЕДИНИЦА ИЗМЕРЕНИЯ: ${alta.unit||'уточнить по полной тарифной позиции'}
+ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: Справочные данные Альта-Софт по коду ${code}. Ставки ориентировочные и зависят от страны происхождения и характеристик товара.
+ИСТОЧНИКИ: ${alta.url}
+ПРИМЕЧАНИЕ: окончательная классификация и применяемые меры зависят от точных характеристик товара и документов.`;
 }
 
 app.post('/api/customs/check', async (req,res) => {
@@ -470,24 +481,28 @@ app.post('/api/customs/check', async (req,res) => {
   const key=process.env.OPENAI_API_KEY;
   let alta=null;
   try{ alta=await fetchAltaTnved(code); }catch{}
-  const baseFacts=alta?`Публичная справочная страница Альта-Софт для кода ${code}: название=${alta.title}; импортная пошлина=${alta.duty}; НДС=${alta.vat}; акциз=${alta.excise}; источник=${alta.url}.`:'Публичную страницу Альта-Софт получить не удалось.';
+  const baseFacts=alta?`Справочная страница Альта-Софт по коду ${code}: название=${alta.title}; импортная пошлина=${alta.duty}; НДС=${alta.vat}; акциз=${alta.excise}; единица измерения=${alta.unit||'нет данных'}; маркировка=${alta.marking}; источник=${alta.url}.`:'Публичную страницу Альта-Софт получить не удалось.';
   if(!key){
     if(!alta) return res.status(503).json({ok:false,error:'OPENAI_API_KEY не настроен на сервере и справочная страница ТН ВЭД недоступна'});
-    return res.json({ok:true,code,title:alta.title,analysis:`КОД: ${code}\nОПИСАНИЕ: ${alta.title}\nИМПОРТНАЯ ПОШЛИНА: ${alta.duty}\nНДС: ${alta.vat}\nАКЦИЗ: ${alta.excise}\nТАМОЖЕННЫЙ СБОР: требуется рассчитать по таможенной стоимости; ставка зависит от вида декларации и действующих правил\nЧЕСТНЫЙ ЗНАК: зависит от конкретного товара и его характеристик — требуется отдельная проверка\nРАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: зависят от товара\nЗАПРЕТЫ И ОГРАНИЧЕНИЯ: требуется отдельная проверка\nЕДИНИЦА ИЗМЕРЕНИЯ: требуется уточнение по полной тарифной позиции\nДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: ${baseFacts}\nИСТОЧНИКИ: ${alta.url}\nПРИМЕЧАНИЕ: окончательная классификация и применяемые меры зависят от точных характеристик товара и документов.`,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
+    return res.json({ok:true,code,title:alta.title,analysis:altaStructuredAnalysis(code,alta),apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
   }
-  const prompt=`Ты — специалист по ВЭД и таможенному оформлению РФ/ЕАЭС. Проверь РОВНО код ТН ВЭД ${code}. Не заменяй его похожим кодом. Пользователь специально просит проверить код через официальный сайт ФТС России customs.gov.ru.
+  const prompt=`Ты — специалист по ВЭД и таможенному оформлению РФ/ЕАЭС. Проверь РОВНО код ТН ВЭД ${code}. Не заменяй его похожим кодом. Пользователь ввозит товар В РФ ИЗ КИТАЯ.
 
-ПОРЯДОК ПРОВЕРКИ:
-1) Сначала используй web search с разрешённым доменом customs.gov.ru и ищи сведения именно по коду ${code}. Это главный источник для ответа. Ищи ставки/меры таможенно-тарифного и нетарифного регулирования, платежи, ограничения и связанные материалы ФТС.
-2) Затем проверь ЕЭК и официальные нормативные акты ЕАЭС/РФ, если на customs.gov.ru недостаточно данных или требуется подтвердить актуальность ставки.
-3) Альта-Софт используй только как дополнительный справочный источник, а не вместо ФТС.
-4) Не выдумывай данные. Если официальный сайт не содержит конкретной ставки или она зависит от условий, так и напиши.
-5) Таможенный сбор нельзя назвать одной фиксированной суммой без таможенной стоимости и применимого вида декларации — укажи правило и что нужно для расчёта.
-6) Отдельно проверь Честный ЗНАК, разрешительные документы, запреты/ограничения и единицу измерения.
+ОБЯЗАТЕЛЬНО укажи:
+1) Импортную пошлину: точную ставку из Единого таможенного тарифа ЕАЭС (в % от таможенной стоимости или в EUR/ед. при специфической ставке). Если ставка зависит от условий — перечисли варианты.
+2) НДС: ставку импортного НДС (20%, 10% или 0%).
+3) Акциз: облагается или нет.
+4) Таможенный сбор: правило расчёта (зависит от таможенной стоимости; для льгот/электронного декларирования ставки снижены) и что нужно для расчёта. Не называй фиксированную сумму без стоимости.
+5) Честный ЗНАК: ТРЕБУЕТСЯ / НЕ ТРЕБУЕТСЯ / ЗАВИСИТ ОТ ХАРАКТЕРИСТИК — и почему.
+6) Разрешительные документы: сертификат/декларация соответствия ТР ТС, лицензии (ФСБ, Минпромторг, Минсельхоз), фитосанитарный контроль, СГР и т.п.
+7) Запреты и ограничения: санкционные меры, запреты на ввоз, лицензирование для этого кода.
+8) Единицу измерения по коду.
 
 ${baseFacts}
 
-Ответ строго:
+ПОРЯДОК ПРОВЕРКИ: сначала web search с разрешённым доменом customs.gov.ru по коду ${code}; затем eec.eaeunion.org и pravo.gov.ru. Альта-Софт — только дополнительный источник. Не выдумывай данные: если официальный сайт не содержит конкретной ставки или она зависит от условий, так и напиши.
+
+Ответ строго строками:
 КОД: ${code}
 ОПИСАНИЕ: ...
 ИМПОРТНАЯ ПОШЛИНА: ...
@@ -506,13 +521,13 @@ ${baseFacts}
     if(out.error) out=await responsesRequest({key,preferred:'gpt-5.6-luna',input:prompt,tools:[{type:'web_search',filters:{allowed_domains:['customs.gov.ru','eec.eaeunion.org','pravo.gov.ru']}}],max_output_tokens:3500});
     if(out.error) out=await responsesRequest({key,preferred:'gpt-5.6-luna',input:prompt,tools:[{type:'web_search'}],max_output_tokens:3500});
     if(out.error){
-      if(alta) return res.json({ok:true,code,title:alta.title,analysis:`КОД: ${code}\nОПИСАНИЕ: ${alta.title}\nИМПОРТНАЯ ПОШЛИНА: ${alta.duty}\nНДС: ${alta.vat}\nАКЦИЗ: ${alta.excise}\nТАМОЖЕННЫЙ СБОР: требуется рассчитать по таможенной стоимости и виду декларации\nЧЕСТНЫЙ ЗНАК: требуется отдельная проверка по характеристикам товара\nРАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: требуется отдельная проверка\nЗАПРЕТЫ И ОГРАНИЧЕНИЯ: требуется отдельная проверка\nЕДИНИЦА ИЗМЕРЕНИЯ: уточнить по тарифной позиции\nДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: ${baseFacts}\nИСТОЧНИКИ: ${alta.url}\nПРИМЕЧАНИЕ: ответ сформирован из доступной справочной страницы; для юридически значимых решений проверьте первоисточник.`,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
+      if(alta) return res.json({ok:true,code,title:alta.title,analysis:altaStructuredAnalysis(code,alta),apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
       return res.status(out.error.status||502).json({ok:false,error:out.error.error||'Не удалось проверить код ТН ВЭД'});
     }
     const text=responseText(out.d); if(!text) throw new Error('Пустой ответ от справочного сервиса');
-    res.json({ok:true,code,title:`ТН ВЭД ЕАЭС ${code}`,analysis:text,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
+    res.json({ok:true,code,title:alta?.title||`ТН ВЭД ЕАЭС ${code}`,analysis:text,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
   }catch(e){
-    if(alta) return res.json({ok:true,code,title:alta.title,analysis:`КОД: ${code}\nОПИСАНИЕ: ${alta.title}\nИМПОРТНАЯ ПОШЛИНА: ${alta.duty}\nНДС: ${alta.vat}\nАКЦИЗ: ${alta.excise}\nТАМОЖЕННЫЙ СБОР: требуется рассчитать по таможенной стоимости и виду декларации\nЧЕСТНЫЙ ЗНАК: требуется отдельная проверка по характеристикам товара\nРАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: требуется отдельная проверка\nЗАПРЕТЫ И ОГРАНИЧЕНИЯ: требуется отдельная проверка\nЕДИНИЦА ИЗМЕРЕНИЯ: уточнить по тарифной позиции\nДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: ${baseFacts}\nИСТОЧНИКИ: ${alta.url}\nПРИМЕЧАНИЕ: ${e.message}`,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
+    if(alta) return res.json({ok:true,code,title:alta.title,analysis:altaStructuredAnalysis(code,alta),apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
     res.status(502).json({ok:false,error:e.message||'Ошибка проверки ТН ВЭД'});
   }
 });
