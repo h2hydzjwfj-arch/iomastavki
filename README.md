@@ -22,3 +22,7 @@ Render environment variables expected:
 - optional OPENAI_MODEL
 
 Run: `node server.js`
+
+
+## Render upload safety
+`server.js` can load `agents.json` and `rates.json` from either `data/` or the project root. Root copies are included so the app still starts if Render/GitHub upload does not preserve the `data/` folder.
