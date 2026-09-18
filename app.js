@@ -1,6 +1,6 @@
 const $ = (s,root=document)=>root.querySelector(s);
 const $$ = (s,root=document)=>[...root.querySelectorAll(s)];
-const state={theme:localStorage.getItem('theme')||'light',chat:[],weather:null,cbr:null};
+const state={theme:localStorage.getItem('theme')||'light',lang:localStorage.getItem('lang')||'ru',chat:[],weather:null,cbr:null,rates:null};
 const modal=$('#modal'), body=$('#modalBody');
 
 function toast(t){const x=$('#toast');x.textContent=t;x.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>x.classList.remove('show'),3200)}
@@ -12,11 +12,19 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal.classList.co
 
 document.body.classList.toggle('dark',state.theme==='dark');
 
-/* ---------- ночь: по данным погоды, fallback — по локальному времени ---------- */
-function localNight(){const h=new Date().getHours();return h>=20||h<7}
-function applyNight(night){document.documentElement.classList.toggle('night',night);$('#sky').classList.toggle('night',night);$('#themeBtn').textContent=night?'🌙':'☀️'}
-applyNight(localNight());
+/* ---------- перевод главной страницы RU / EN / ZH / TR ---------- */
+const I18N={
+ ru:{tag:'ЛОГИСТИКА · КИТАЙ → РОССИЯ',hero:'Точный расчёт. Умный помощник.<br>Всё необходимое для работы с грузом — в одном месте.',c1t:'Расчёт ставок',c1s:'Маршрут, ставка и транспорт',c2t:'AI-ассистент',c2s:'Текстом или голосом',c3t:'Экспедиторы',c3s:'Контакты и направления перевозок',c4t:'Новости ВЭД',c4s:'Китай · логистика · таможня',upd:'обновление…',lang:'Язык интерфейса: Русский'},
+ en:{tag:'LOGISTICS · CHINA → RUSSIA',hero:'Accurate rates. Smart assistant.<br>Everything you need for your cargo — in one place.',c1t:'Rate calculator',c1s:'Route, rate and transport',c2t:'AI assistant',c2s:'Text or voice',c3t:'Freight forwarders',c3s:'Contacts and shipping lanes',c4t:'FTZ news',c4s:'China · logistics · customs',upd:'updating…',lang:'Interface language: English'},
+ zh:{tag:'物流 · 中国 → 俄罗斯',hero:'精准报价，智能助手。<br>货运所需的一切，尽在一处。',c1t:'运费计算',c1s:'路线、运价与运输方式',c2t:'AI 助手',c2s:'文字或语音',c3t:'货运代理',c3s:'联系方式与运输线路',c4t:'外贸新闻',c4s:'中国 · 物流 · 海关',upd:'更新中…',lang:'界面语言：中文'},
+ tr:{tag:'LOJİSTİK · ÇİN → RUSYA',hero:'Doğru fiyat. Akıllı asistan.<br>Kargo için gereken her şey tek yerde.',c1t:'Fiyat hesaplama',c1s:'Rota, fiyat ve taşıma',c2t:'AI asistan',c2s:'Metin veya sesli',c3t:'Taşımacılar',c3s:'İletişim ve güzergâhlar',c4t:'DTÖ haberleri',c4s:'Çin · lojistik · gümrük',upd:'güncelleniyor…',lang:'Arayüz dili: Türkçe'},
+};
+function applyLang(l){state.lang=l;localStorage.setItem('lang',l);const d=I18N[l]||I18N.ru;$$('[data-i18n]').forEach(el=>{if(d[el.dataset.i18n])el.textContent=d[el.dataset.i18n]});$$('[data-i18n-html]').forEach(el=>{if(d[el.dataset.i18nHtml])el.innerHTML=d[el.dataset.i18nHtml]})}
+$$('[data-lang]').forEach(b=>b.onclick=()=>{applyLang(b.dataset.lang);toast((I18N[b.dataset.lang]||I18N.ru).lang)});
+applyLang(state.lang);
 
+/* ---------- небо: как было у вас — день со светом; ночь/дождь только по погоде ---------- */
+function applyNight(night){document.documentElement.classList.toggle('night',night);$('#sky').classList.toggle('night',night);$('#themeBtn').textContent=night?'🌙':'☀️'}
 async function loadCBR(){
   try{const r=await fetch('/api/cbr',{cache:'no-store'});const j=await r.json();if(!j.ok)throw Error(j.error);
     state.cbr=j.data;
@@ -25,8 +33,7 @@ async function loadCBR(){
 }
 async function loadWeather(){
   try{const r=await fetch('/api/weather',{cache:'no-store'});const j=await r.json();if(!j.ok)throw Error(j.error);state.weather=j.data;
-    const night=(state.weather.isNight!=null)?state.weather.isNight:localNight();
-    applyNight(night);
+    if(state.weather.isNight!=null)applyNight(state.weather.isNight);
     const c=(state.weather.condition||'').toLowerCase();
     $('#sky').classList.toggle('rainy',/rain|drizzle|thunder/.test(c));
     $('#sky').classList.toggle('snowy',/snow/.test(c));
@@ -35,21 +42,31 @@ async function loadWeather(){
 loadCBR();loadWeather();
 setInterval(loadCBR,15*60*1000);setInterval(loadWeather,5*60*1000);
 
+/* ---------- «набухающий шарик» на карточках ---------- */
+$$('.main-card').forEach(card=>{
+  card.addEventListener('mousemove',e=>{const r=card.getBoundingClientRect();card.style.setProperty('--mx',(e.clientX-r.left)+'px');card.style.setProperty('--my',(e.clientY-r.top)+'px')});
+});
+
 function modalHead(k,t,p){return `<div class="modal-head"><div class="eyebrow">${k}</div><h2>${t}</h2><p>${p}</p></div>`}
 
-/* ---------- экспедиторы ---------- */
+/* ---------- экспедиторы: таблица + мгновенный показ из кэша ---------- */
 async function openAgents(){
- openModal(modalHead('СПРАВОЧНИК','Экспедиторы','Загрузка контактов…')+`<div class="panel"><input id="agentSearch" style="width:100%;padding:13px;border:1px solid #d6e8ef;border-radius:14px" placeholder="Поиск компании, контакта, телефона, e-mail…"><div id="agentGrid" class="agent-grid" style="margin-top:12px"></div></div>`);
+ openModal(modalHead('СПРАВОЧНИК','Экспедиторы','Загрузка контактов…')+`<div class="panel"><input id="agentSearch" style="width:100%;padding:13px;border:1px solid #d6e8ef;border-radius:14px" placeholder="Поиск компании, контакта, телефона, e-mail…"><div id="agentWrap" style="margin-top:12px;overflow:auto;max-height:56vh"><div class="status">Загружаю…</div></div></div>`);
+ let cached=null;try{cached=JSON.parse(sessionStorage.getItem('agentsCache')||'null')}catch(e){}
+ if(cached&&cached.length){renderAgents(cached)}
  try{const j=await (await fetch('/api/agents')).json();if(!j.ok)throw Error(j.error);
    const rec=j.records||[];
+   sessionStorage.setItem('agentsCache',JSON.stringify(rec));
    $('.modal-head p').textContent=`${rec.length} контактов · фильтр по направлению и виду перевозки`;
    renderAgents(rec);
    $('#agentSearch').oninput=e=>renderAgents(rec.filter(a=>(a.company+' '+a.contact+' '+a.email+' '+a.phone+' '+(a.transport||[]).join(' ')+' '+(a.notes||'')).toLowerCase().includes(e.target.value.toLowerCase())));
- }catch(e){toast('Не удалось загрузить экспедиторов: '+e.message)}
+ }catch(e){if(!cached)toast('Не удалось загрузить экспедиторов: '+e.message)}
 }
-function renderAgents(list){const g=$('#agentGrid');if(!g)return;g.innerHTML=list.map(a=>`<article class="agent"><strong>${esc(a.company)}</strong><div class="muted">${esc(a.contact||'Контакт не указан')}</div><div style="margin-top:9px">${a.phone?`☎ ${esc(a.phone)}<br>`:''}${a.email?`✉ <a href="mailto:${esc(a.email)}">${esc(a.email)}</a><br>`:''}${a.site?`↗ <a href="${/^https?:/.test(a.site)?esc(a.site):'https://'+esc(a.site)}" target="_blank" rel="noreferrer">${esc(a.site)}</a>`:''}</div><div class="muted" style="margin-top:8px">${esc((a.transport||[]).join(' · '))}</div><div class="muted">${esc(a.notes||'')}</div></article>`).join('')||'<div class="status">Ничего не найдено.</div>'}
+function renderAgents(list){const w=$('#agentWrap');if(!w)return;
+ w.innerHTML=`<table class="agent-table"><thead><tr><th>Компания</th><th>Контакт</th><th>Телефон</th><th>E-mail</th><th>Виды перевозок</th><th>Примечания</th></tr></thead><tbody>${list.map(a=>`<tr><td><b>${esc(a.company)}</b>${a.site?`<br><a href="${/^https?:/.test(a.site)?esc(a.site):'https://'+esc(a.site)}" target="_blank" rel="noreferrer">${esc(a.site)}</a>`:''}</td><td>${esc(a.contact||'—')}</td><td>${a.phone?esc(a.phone):'—'}</td><td>${a.email?`<a href="mailto:${esc(a.email)}">${esc(a.email)}</a>`:'—'}</td><td>${esc((a.transport||[]).join(', '))}</td><td>${esc(a.notes||'')}</td></tr>`).join('')}</tbody></table>`||'<div class="status">Ничего не найдено.</div>';
+}
 
-/* ---------- новости с картинками ---------- */
+/* ---------- новости: ваш список + фото Pexels + красная пометка ---------- */
 function openNews(){
  openModal(modalHead('ИНФОРМАЦИОННАЯ ЛЕНТА','Новости ВЭД','Свежие события по таможне, ВЭД, перевозкам и Азии · обновляется ежедневно')+'<div id="newsList" class="news-list"><div class="status">Загружаю свежую ленту…</div></div>');
  fetch('/api/news',{cache:'no-store'}).then(r=>r.json()).then(j=>{
@@ -68,25 +85,27 @@ function openAssistant(){
  $('#mic').onclick=voiceInput;
 }
 function renderChat(){const c=$('#chat');if(!c)return;c.innerHTML=state.chat.length?state.chat.map(m=>`<div class="bubble ${m.role==='user'?'user':'ai'}">${esc(m.content)}</div>`).join(''):'<div class="status" style="text-align:center;margin-top:30px">Готов к разговору. Задайте вопрос по логистике или ВЭД — текстом или голосом (🎙).</div>';c.scrollTop=c.scrollHeight}
+async function askAI(message,history){
+  const r=await fetch('/api/ai',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message,history:history||[]})});
+  const j=await r.json();if(!j.ok)throw Error(j.error);return j.answer;
+}
 async function sendAI(){
  const el=$('#msg');if(!el)return;const text=el.value.trim();if(!text)return;
  state.chat.push({role:'user',content:text});el.value='';renderChat();
  const send=$('#send');send.disabled=true;send.textContent='…';
- try{
-   const r=await fetch('/api/ai',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message:text,history:state.chat.slice(-9,-1)})});
-   const j=await r.json();if(!j.ok)throw Error(j.error);
-   state.chat.push({role:'assistant',content:j.answer});renderChat();
- }catch(e){state.chat.push({role:'assistant',content:'Не удалось получить ответ: '+e.message});renderChat()}
+ try{const answer=await askAI(text,state.chat.slice(-9,-1));state.chat.push({role:'assistant',content:answer});renderChat()}
+ catch(e){state.chat.push({role:'assistant',content:aiErrorText(e.message)});renderChat()}
  finally{send.disabled=false;send.textContent='Отправить'}
 }
+function aiErrorText(m){if(/credit|billing|insufficient/i.test(m))return '⚠️ У вашего OpenAI-аккаунта закончились кредиты. Пополните баланс: platform.openai.com/settings/organization/billing — после этого ассистент заработает. Сайт и остальные функции работают штатно.';return 'Не удалось получить ответ: '+m}
 function voiceInput(){
  if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){toast('Диктовка не поддерживается этим браузером (нужен Chrome/Edge)');return}
  const R=window.SpeechRecognition||window.webkitSpeechRecognition;const r=new R();
- r.lang='ru-RU';r.interimResults=false;
+ r.lang=state.lang==='en'?'en-US':state.lang==='tr'?'tr-TR':state.lang==='zh'?'zh-CN':'ru-RU';r.interimResults=false;
  r.onstart=()=>{$('#mic').textContent='👂';toast('Слушаю… говорите вопрос')};
  r.onerror=e=>{$('#mic').textContent='🎙';toast(e.error==='not-allowed'?'Разрешите доступ к микрофону':'Не удалось распознать речь')};
  r.onend=()=>{const m=$('#mic');if(m)m.textContent='🎙'};
- r.onresult=e=>{const t=e.results[0][0].transcript;const msg=$('#msg');if(!msg)return;msg.value=t;msg.focus();setTimeout(sendAI,150)}; /* автоматическая отправка */
+ r.onresult=e=>{const t=e.results[0][0].transcript;const msg=$('#msg');if(!msg)return;msg.value=t;msg.focus();setTimeout(sendAI,150)};
  r.start();
 }
 
@@ -126,14 +145,70 @@ async function checkTN(){
  }catch(e){out.innerHTML='<div class="status">Ошибка проверки: '+esc(e.message)+'</div>'}
 }
 
-/* ---------- ставки: привычная таблица + обновление через AI ---------- */
-function openRates(){
- openModal(modalHead('РАСЧЁТ','Ставки перевозки','Сохранённые ориентиры · обновляются через левую кнопку ↻')+'<div id="ratesPanel" class="panel">Загрузка…</div>');
- fetch('/api/rates').then(r=>r.json()).then(j=>{
-   const rec=j.records||[];
-   $('#ratesPanel').innerHTML=`<div class="rate-grid">${rec.map(x=>`<div class="rate-row"><strong>${esc(x.from)} → ${esc(x.to)} · ${esc(x.mode)}</strong><span>${x.rate} ${esc(x.currency)} · ${esc(x.container||'')} · ${esc(x.transitDays||'')} дней · ${esc(x.company||'')}</span></div>`).join('')||'<div class="status">Ставок пока нет — загрузите КП экспедиторов кнопкой ↻ слева.</div>'}</div><p class="status">Обновлено: ${new Date(j.updatedAt).toLocaleString('ru-RU')} · записей: ${rec.length}. Всегда уточняйте терминальные расходы в пункте прибытия.</p>`;
- }).catch(e=>{$('#ratesPanel').innerHTML='<div class="status">Не удалось загрузить ставки.</div>'});
+/* ---------- ставки: калькулятор с полями + сохранённые ставки ---------- */
+async function ensureRates(){if(state.rates)return state.rates;const j=await (await fetch('/api/rates')).json();state.rates=j;return j}
+async function openRates(){
+ openModal(modalHead('РАСЧЁТ','Расчёт ставок','Введите параметры груза — покажу сохранённые ставки по маршруту, либо оценит AI')+`
+  <div class="panel">
+    <div class="calc-grid">
+      <label>Откуда (Китай)<input id="cFrom" list="chinaCities" placeholder="Shanghai"></label>
+      <datalist id="chinaCities"><option>Shanghai</option><option>Qingdao</option><option>Ningbo</option><option>Nansha</option><option>Xiamen</option><option>Shenzhen</option><option>Guangzhou</option><option>Beijing</option><option>Chengdu</option><option>Chongqing</option></datalist>
+      <label>Куда (Россия)<input id="cTo" list="ruCities" placeholder="Москва"></label>
+      <datalist id="ruCities"><option>Москва</option><option>Санкт-Петербург</option><option>Екатеринбург</option><option>Новосибирск</option><option>Минск</option><option>Владивосток</option><option>Казань</option><option>Ростов-на-Дону</option></datalist>
+      <label>Тип<div class="sel"><select id="cType"><option value="">Любой</option><option>40HC</option><option>20DC</option><option>Сборный LCL</option><option>Авто сборный</option></select></div></label>
+      <label>Вес, кг<input id="cWeight" inputmode="decimal" placeholder="напр. 12000"></label>
+      <label>Объём, м³<input id="cVol" inputmode="decimal" placeholder="напр. 58"></label>
+      <label>Кол-во мест<input id="cQty" inputmode="numeric" placeholder="напр. 12"></label>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap">
+      <button class="primary" id="calcBtn">Рассчитать</button>
+      <span id="calcStatus" class="status" style="margin:0"></span>
+    </div>
+  </div>
+  <div id="calcResult" class="customs-result"></div>
+  <div class="panel" style="margin-top:14px"><div id="savedRatesHead" class="status" style="margin:0 0 10px">Сохранённые ставки…</div><div id="savedRates" class="rate-grid"></div></div>`);
+ try{
+   const j=await ensureRates();const rec=j.records||[];
+   $('#savedRatesHead').textContent=`Сохранённые ставки · ${rec.length} записей · обновлено ${new Date(j.updatedAt).toLocaleString('ru-RU')}`;
+   $('#savedRates').innerHTML=rec.map(x=>`<div class="rate-row"><strong>${esc(x.from)} → ${esc(x.to)} · ${esc(x.mode)}</strong><span>${x.rate} ${esc(x.currency)} · ${esc(x.container||'')} · ${esc(x.transitDays||'')} дней · ${esc(x.company||'')}</span></div>`).join('')||'<div class="status">Ставок пока нет — загрузите КП экспедиторов кнопкой ↻ слева.</div>';
+ }catch(e){$('#savedRates').innerHTML='<div class="status">Не удалось загрузить ставки.</div>'}
+ $('#calcBtn').onclick=calcRates;
+ ['cFrom','cTo'].forEach(id=>$('#'+id).addEventListener('keydown',e=>{if(e.key==='Enter')calcRates()}));
 }
+async function calcRates(){
+ const from=$('#cFrom').value.trim(),to=$('#cTo').value.trim(),type=$('#cType').value;
+ const weight=parseFloat(($('#cWeight').value||'').replace(',','.'))||0;
+ const vol=parseFloat(($('#cVol').value||'').replace(',','.'))||0;
+ const qty=parseInt($('#cQty').value)||0;
+ const out=$('#calcResult'),st=$('#calcStatus');
+ if(!from||!to){toast('Укажите город отправления и прибытия');return}
+ st.textContent='Подбираю ставки…';
+ try{
+   const j=state.rates||await ensureRates();const rec=j.records||[];
+   const norm=s=>s.toLowerCase().replace(/[^a-zа-я0-9]/gi,'');
+   const nf=norm(from),nt=norm(to);
+   let hits=rec.filter(x=>norm(x.from).includes(nf)||nf.includes(norm(x.from))).filter(x=>norm(x.to).includes(nt)||nt.includes(norm(x.to)));
+   if(type)hits=hits.filter(x=>{const c=(x.container||'').toLowerCase();const t=type.toLowerCase();return t==='сборный lcl'?c.includes('lcl')||!c:c.includes(t.replace('авто сборный',''))});
+   hits=hits.sort((a,b)=>a.rate-b.rate).slice(0,6);
+   const cargo=[weight?`вес ${weight} кг`:'',vol?`объём ${vol} м³`:'',qty?`мест: ${qty}`:''].filter(Boolean).join(', ');
+   if(hits.length){
+     out.innerHTML=`<div class="panel"><div class="status" style="margin:0 0 10px">По маршруту «${esc(from)} → ${esc(to)}»${cargo?` · ${esc(cargo)}`:''} найдено ${hits.length}:</div><div class="rate-grid">${hits.map((x,i)=>`<div class="rate-row ${i===0?'best':''}"><strong>${i===0?'⭐ ':''}${esc(x.from)} → ${esc(x.to)} · ${esc(x.mode)}</strong><span>${x.rate} ${esc(x.currency)} · ${esc(x.container||'')} · ${esc(x.transitDays||'')} дней · ${esc(x.company||'')}${weight&&/40/.test(x.container||'')?` · ≈ ${(x.rate/26000).toFixed(2)} USD/кг (ориентир)`:''}</span></div>`).join('')}</div><p class="status">Ставка индикативная — уточняйте терминальные расходы в пункте прибытия.</p></div>`;
+     st.textContent='Готово';
+   }else{
+     out.innerHTML=`<div class="panel"><div class="status" style="margin:0">По маршруту «${esc(from)} → ${esc(to)}» в справочнике ставок нет. Могу спросить AI-оценку:</div><div style="margin-top:10px"><button class="primary" id="askAI">Спросить AI-ассистента</button></div><div id="aiEst" class="status"></div></div>`;
+     st.textContent='';
+     $('#askAI').onclick=async()=>{
+       const btn=$('#askAI');btn.disabled=true;btn.textContent='Спрашиваю…';
+       try{
+         const ans=await askAI(`Оцени ставку перевозки ${from} → ${to}${type?', тип: '+type:''}${cargo?', '+cargo:''}. Дай краткий ориентир по цене и срокам, укажи, что это оценка, и посоветуй запросить КП у экспедиторов из справочника.`);
+         $('#aiEst').innerHTML='<br>'+esc(ans);btn.textContent='Готово';
+       }catch(e){$('#aiEst').textContent=aiErrorText(e.message);btn.disabled=false;btn.textContent='Спросить AI-ассистента'}
+     };
+   }
+ }catch(e){st.textContent='Ошибка: '+e.message}
+}
+
+/* ---------- обновление ставок через AI (кнопка ↻) ---------- */
 function openRatesUpdate(){
  openModal(modalHead('ОБНОВЛЕНИЕ','Ставки от экспедиторов','Вставьте текст КП или загрузите файл (.txt / .csv / .json) — AI извлечёт маршруты и цены и обновит справочник')+`
    <div class="panel rates-update">
@@ -153,8 +228,8 @@ function openRatesUpdate(){
      const r=await fetch('/api/rates/update',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text})});
      const j=await r.json();if(!j.ok)throw Error(j.error);
      o.textContent=`Готово: +${j.added} новых, ${j.updated} обновлено. Всего записей: ${j.total}.`;
-     toast('Ставки обновлены');
-   }catch(e){o.textContent='Ошибка: '+e.message;toast('Не удалось обновить ставки')}
+     state.rates=null;toast('Ставки обновлены');
+   }catch(e){o.textContent='Ошибка: '+aiErrorText(e.message);toast('Не удалось обновить ставки')}
    finally{btn.disabled=false;btn.textContent='Обновить через AI'}
  };
 }

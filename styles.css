@@ -8,9 +8,31 @@ body.dark{--ink:#e9f7fb;--muted:#9cbac8;--glass:rgba(12,39,58,.68)}body.dark .to
 @keyframes float{to{transform:translateX(calc(100vw + 700px))}}@keyframes wave{50%{transform:translateX(2%) scaleY(1.12)}}@keyframes twinkle{to{opacity:.3;transform:scale(1.02)}}@keyframes rain{to{background-position:-40px 100px}}@keyframes snow{to{background-position:40px 140px}}
 @media(max-width:760px){.top-actions span{display:none}.home{width:min(100% - 24px,560px);padding-top:35px}.hero h1{font-size:44px}.cards{grid-template-columns:1fr}.main-card{min-height:120px}.launcher-zone{left:8px}.modal{padding:10px}.modal-shell{max-height:94vh;padding:28px 18px;border-radius:24px}.agent-grid,.customs-summary,.rate-grid{grid-template-columns:1fr}.composer{grid-template-columns:46px 1fr 88px}.news-list{max-height:none}.rates-ticker{font-size:10px}.rates-ticker strong{font-size:17px}}
 
-/* --- v2.1 additions: картинки в новостях, форма обновления ставок (ваше оформление сохранено) --- */
+/* --- v3 additions (ваше оформление сохранено полностью) --- */
+/* «набухающий шарик» на карточках */
+.main-card{position:relative;overflow:hidden}
+.main-card::before{content:"";position:absolute;left:var(--mx,50%);top:var(--my,50%);width:30px;height:30px;border-radius:50%;background:radial-gradient(circle,rgba(120,199,228,.6),rgba(120,199,228,.15) 45%,transparent 70%);transform:translate(-50%,-50%) scale(0);transition:transform .45s ease,opacity .3s;pointer-events:none;opacity:0}
+.main-card:hover::before{transform:translate(-50%,-50%) scale(30);opacity:1}
+.main-card>*{position:relative;z-index:1}
+/* таблица экспедиторов */
+.agent-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px}
+.agent-table th{position:sticky;top:0;background:#f2f9fc;color:#4f7d93;text-align:left;padding:10px 12px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;border-bottom:2px solid #d6e8ef;z-index:2}
+.agent-table td{padding:11px 12px;border-bottom:1px solid #e6f0f5;vertical-align:top;line-height:1.45}
+.agent-table tr:hover td{background:#f4fafc}
+.agent-table a{color:#227ea6;text-decoration:none;word-break:break-all}
+/* калькулятор ставок */
+.calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.calc-grid label{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6f8da0}
+.calc-grid input,.calc-grid select{width:100%;margin-top:6px;padding:12px 14px;border:1px solid #d5e7ee;border-radius:14px;font:inherit;font-size:15px;background:#fff;color:var(--ink)}
+.calc-grid .sel{position:relative}
+.rate-row.best{border-color:#7fc4de;background:#eef9fd}
+/* картинки в новостях */
 .news-item{display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:center}
 .news-thumb{width:110px;height:76px;object-fit:cover;border-radius:12px}
 .rates-update textarea{width:100%;min-height:180px;resize:vertical;padding:14px;border:1px solid #d5e7ee;border-radius:15px;font:inherit;font-size:14px;line-height:1.5}
 body.dark .rates-update textarea{background:#17384b;color:#fff;border-color:#2c5569}
-@media(max-width:760px){.news-item{grid-template-columns:84px 1fr;padding:12px}.news-thumb{width:84px;height:60px}}
+body.dark .agent-table th{background:#1a4258;border-color:#2c5569}
+body.dark .agent-table td{border-color:#2c5569}
+body.dark .agent-table tr:hover td{background:#1c4459}
+body.dark .calc-grid input,body.dark .calc-grid select{background:#17384b;color:#fff;border-color:#2c5569}
+@media(max-width:760px){.calc-grid{grid-template-columns:1fr 1fr}.news-item{grid-template-columns:84px 1fr;padding:12px}.news-thumb{width:84px;height:60px}}
