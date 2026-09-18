@@ -1,7 +1,6 @@
 {
-  "name": "iomastavka",
-  "version": "2.1.0",
-  "private": true,
-  "engines": { "node": ">=18" },
-  "scripts": { "start": "node server.js" }
+  "name":"iomastavka",
+  "version":"2.0.0",
+  "private":true,
+  "scripts":{"start":"node server.js"}
 }

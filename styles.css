@@ -7,32 +7,7 @@
 body.dark{--ink:#e9f7fb;--muted:#9cbac8;--glass:rgba(12,39,58,.68)}body.dark .topbar,body.dark .hero p{color:#bdd1db}body.dark .main-card,body.dark .rates-ticker{background:rgba(12,39,58,.7)}body.dark .modal-shell{background:#102c3e;color:#e9f7fb}body.dark .panel,body.dark .agent,body.dark .news-item,body.dark .metric,body.dark .rate-row{background:#15384d;border-color:#2c5569;color:#e9f7fb}body.dark .bubble.ai{background:#1c4459;color:#e8f7fb}body.dark .composer textarea{background:#17384b;color:#fff}
 @keyframes float{to{transform:translateX(calc(100vw + 700px))}}@keyframes wave{50%{transform:translateX(2%) scaleY(1.12)}}@keyframes twinkle{to{opacity:.3;transform:scale(1.02)}}@keyframes rain{to{background-position:-40px 100px}}@keyframes snow{to{background-position:40px 140px}}
 @media(max-width:760px){.top-actions span{display:none}.home{width:min(100% - 24px,560px);padding-top:35px}.hero h1{font-size:44px}.cards{grid-template-columns:1fr}.main-card{min-height:120px}.launcher-zone{left:8px}.modal{padding:10px}.modal-shell{max-height:94vh;padding:28px 18px;border-radius:24px}.agent-grid,.customs-summary,.rate-grid{grid-template-columns:1fr}.composer{grid-template-columns:46px 1fr 88px}.news-list{max-height:none}.rates-ticker{font-size:10px}.rates-ticker strong{font-size:17px}}
-
-/* --- v3 additions (ваше оформление сохранено полностью) --- */
-/* «набухающий шарик» на карточках */
-.main-card{position:relative;overflow:hidden}
-.main-card::before{content:"";position:absolute;left:var(--mx,50%);top:var(--my,50%);width:30px;height:30px;border-radius:50%;background:radial-gradient(circle,rgba(120,199,228,.6),rgba(120,199,228,.15) 45%,transparent 70%);transform:translate(-50%,-50%) scale(0);transition:transform .45s ease,opacity .3s;pointer-events:none;opacity:0}
-.main-card:hover::before{transform:translate(-50%,-50%) scale(30);opacity:1}
-.main-card>*{position:relative;z-index:1}
-/* таблица экспедиторов */
-.agent-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px}
-.agent-table th{position:sticky;top:0;background:#f2f9fc;color:#4f7d93;text-align:left;padding:10px 12px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;border-bottom:2px solid #d6e8ef;z-index:2}
-.agent-table td{padding:11px 12px;border-bottom:1px solid #e6f0f5;vertical-align:top;line-height:1.45}
-.agent-table tr:hover td{background:#f4fafc}
-.agent-table a{color:#227ea6;text-decoration:none;word-break:break-all}
-/* калькулятор ставок */
-.calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.calc-grid label{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6f8da0}
-.calc-grid input,.calc-grid select{width:100%;margin-top:6px;padding:12px 14px;border:1px solid #d5e7ee;border-radius:14px;font:inherit;font-size:15px;background:#fff;color:var(--ink)}
-.calc-grid .sel{position:relative}
-.rate-row.best{border-color:#7fc4de;background:#eef9fd}
-/* картинки в новостях */
-.news-item{display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:center}
-.news-thumb{width:110px;height:76px;object-fit:cover;border-radius:12px}
-.rates-update textarea{width:100%;min-height:180px;resize:vertical;padding:14px;border:1px solid #d5e7ee;border-radius:15px;font:inherit;font-size:14px;line-height:1.5}
-body.dark .rates-update textarea{background:#17384b;color:#fff;border-color:#2c5569}
-body.dark .agent-table th{background:#1a4258;border-color:#2c5569}
-body.dark .agent-table td{border-color:#2c5569}
-body.dark .agent-table tr:hover td{background:#1c4459}
-body.dark .calc-grid input,body.dark .calc-grid select{background:#17384b;color:#fff;border-color:#2c5569}
-@media(max-width:760px){.calc-grid{grid-template-columns:1fr 1fr}.news-item{grid-template-columns:84px 1fr;padding:12px}.news-thumb{width:84px;height:60px}}
+/* 2.2 merge additions */
+.wide-input,.rates-text{width:100%;padding:13px 15px;border:1px solid #d6e8ef;border-radius:14px;font:inherit}.rates-text{min-height:190px;margin-top:12px;resize:vertical}.file-line{display:flex;align-items:center;gap:10px;padding:8px 4px;color:#7893a2;font-size:12px}.file-line input{display:none}.file-button{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#eef7fa;border:1px solid #d4e7ef;color:#278db9;cursor:pointer;font-size:18px}.calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.calc-grid label{font-size:12px;font-weight:700;color:#557689;position:relative}.calc-grid input,.calc-grid select{width:100%;margin-top:6px;padding:12px 13px;border:1px solid #d6e8ef;border-radius:13px;background:#fff;font:inherit;color:#173f55}.sel select{appearance:auto}.calc-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}.secondary{border:1px solid #c9e1eb;border-radius:15px;background:#eef8fb;color:#247da2;padding:12px 16px;font-weight:800;cursor:pointer}.auto-calc-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.auto-calc-strip>div{padding:12px 14px;border-radius:16px;background:#eef8fb;border:1px solid #d7ebf2}.auto-calc-strip span{display:block;font-size:10px;color:#7893a2;text-transform:uppercase;letter-spacing:.12em}.auto-calc-strip b{display:block;margin-top:5px;font-size:16px;color:#174f6a}.saved-panel{margin-top:14px}.city-suggestions{display:none;position:absolute;z-index:20;left:0;right:0;top:72px;background:#fff;border:1px solid #d6e8ef;border-radius:14px;box-shadow:0 15px 35px rgba(20,80,105,.15);overflow:hidden}.city-suggestions.show{display:block}.city-suggestions button{display:block;width:100%;text-align:left;border:0;background:#fff;padding:10px 12px;color:#214e65;cursor:pointer}.city-suggestions button:hover{background:#eef8fb}.city-suggestions small{display:block;color:#8ca2ad;font-size:9px}.rate-row.best{border-color:#9bd7e8;background:#f1fbfe}.rate-row small{display:block;color:#8aa0ac;font-size:10px;margin-top:7px}.source-list a{color:#237fa6;text-decoration:none}.news-item{display:flex;gap:14px;align-items:flex-start}.news-thumb{width:115px;height:78px;object-fit:cover;border-radius:12px;flex:none}.hamsa-mini svg{width:24px;height:24px;fill:none;stroke:#277fa3;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}.manual-night #sky{background:linear-gradient(145deg,#071b31,#102f4c 55%,#1d4660)}.manual-night .sun{opacity:0}.manual-night .moon{opacity:.92}.manual-night .stars{opacity:.7}.manual-night .cloud{opacity:.45}
+body.dark .wide-input,body.dark .rates-text,body.dark .calc-grid input,body.dark .calc-grid select{background:#17384b;color:#fff;border-color:#2c5569}body.dark .secondary,.manual-night .secondary{background:#173f54;color:#cfeaf4;border-color:#3d687b}body.dark .auto-calc-strip>div{background:#173f54;border-color:#2c5569}.chat-empty{padding:30px}
+@media(max-width:760px){.calc-grid{grid-template-columns:1fr 1fr}.auto-calc-strip{grid-template-columns:1fr}.news-thumb{width:90px;height:64px}.city-suggestions{top:68px}}

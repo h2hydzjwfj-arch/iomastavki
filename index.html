@@ -5,35 +5,34 @@
 <title>iomastavka</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=3">
+<link rel="stylesheet" href="/styles.css?v=2.2.0">
 </head>
 <body>
 <div id="sky" class="sky"><div class="sun"></div><div class="moon"></div><div class="stars"></div><div class="cloud cloud-a"></div><div class="cloud cloud-b"></div><div class="rain"></div><div class="snow"></div><div class="wave wave-1"></div><div class="wave wave-2"></div></div>
-<header class="topbar"><div class="brand-small">iomastavka</div><div class="top-actions"><span id="liveDot">● LIVE</span><button data-lang="ru" title="Русский">🇷🇺</button><button data-lang="en" title="English">🇬🇧</button><button data-lang="zh" title="中文">🇨🇳</button><button data-lang="tr" title="Türkçe">🇹🇷</button></div></header>
+<header class="topbar"><div class="brand-small">iomastavka</div><div class="top-actions"><span id="liveDot">● LIVE</span><button data-lang="ru">🇷🇺</button><button data-lang="en">🇬🇧</button><button data-lang="zh">🇨🇳</button><button data-lang="tr">🇹🇷</button><button id="logout">Выйти</button></div></header>
 <main class="home">
-  <section class="hero"><div class="eyebrow" data-i18n="tag">ЛОГИСТИКА · КИТАЙ → РОССИЯ</div><h1>iomastavka</h1><p data-i18n-html="hero">Точный расчёт. Умный помощник.<br>Всё необходимое для работы с грузом — в одном месте.</p></section>
+  <section class="hero"><div class="eyebrow">ЛОГИСТИКА · КИТАЙ → РОССИЯ</div><h1>iomastavka</h1><p>Точный расчёт. Умный помощник.<br>Всё необходимое для работы с грузом — в одном месте.</p></section>
   <section class="cards">
-    <button class="main-card" data-open="rates"><span class="card-icon">↗</span><span><b data-i18n="c1t">Расчёт ставок</b><small data-i18n="c1s">Маршрут, ставка и транспорт</small></span><i>→</i></button>
-    <button class="main-card" data-open="assistant"><span class="card-icon">✦</span><span><b data-i18n="c2t">AI-ассистент</b><small data-i18n="c2s">Текстом или голосом</small></span><i>→</i></button>
-    <button class="main-card" data-open="agents"><span class="card-icon">◇</span><span><b data-i18n="c3t">Экспедиторы</b><small data-i18n="c3s">Контакты и направления перевозок</small></span><i>→</i></button>
-    <button class="main-card" data-open="news"><span class="card-icon">≡</span><span><b data-i18n="c4t">Новости ВЭД</b><small data-i18n="c4s">Китай · логистика · таможня</small></span><i>→</i></button>
+    <button class="main-card" data-open="rates"><span class="card-icon">↗</span><span><b>Расчёт ставок</b><small>Маршрут, ставка и транспорт</small></span><i>→</i></button>
+    <button class="main-card" data-open="assistant"><span class="card-icon">✦</span><span><b>AI-ассистент</b><small>Текстом или голосом</small></span><i>→</i></button>
+    <button class="main-card" data-open="agents"><span class="card-icon">◇</span><span><b>Экспедиторы</b><small>Контакты и направления перевозок</small></span><i>→</i></button>
+    <button class="main-card" data-open="news"><span class="card-icon">≡</span><span><b>Новости ВЭД</b><small>Китай · логистика · таможня</small></span><i>→</i></button>
   </section>
-  <div class="rates-ticker" id="cbrTicker"><span>CNY —</span><strong>—</strong><span>USD —</span><strong>—</strong><span>EUR —</span><strong>—</strong><em id="cbrDate" data-i18n="upd">обновление…</em></div>
+  <div class="rates-ticker" id="cbrTicker"><span>CNY —</span><strong>—</strong><span>USD —</span><strong>—</strong><span>EUR —</span><strong>—</strong><em id="cbrDate">обновление…</em></div>
 </main>
 
-<!-- единый лаунчер: 1 кнопка, при наведении — ровно 4 инструмента -->
+<!-- hover launcher: one button OR four buttons, never five -->
 <div id="launcherZone" class="launcher-zone">
   <div id="launcherSingle" class="launcher-single" aria-label="Инструменты">✦</div>
   <div id="launcherTools" class="launcher-tools" aria-hidden="true">
-    <button data-tool="tarot" title="Карта дня">✋</button>
-    <button data-tool="theme" id="themeBtn" title="Тёмная / светлая тема">☀️</button>
-    <button data-tool="ratesUpdate" title="Обновление ставок от экспедиторов">↻</button>
+    <button data-tool="rates" title="Расчёт ставок">↻</button>
+    <button data-tool="theme" title="Светлая / тёмная тема">☼</button>
+    <button data-tool="tarot" class="hamsa-mini" title="Карта дня"><svg viewBox="0 0 80 80" aria-hidden="true"><path d="M25 56c-4-5-7-10-9-16l-6-16c-1-4 1-7 5-8 3 0 5 2 7 6l4 9V13c0-4 2-7 6-7s6 3 6 7v12V9c0-4 2-7 6-7s6 3 6 7v17V13c0-4 2-7 6-7s6 3 6 7v20l4-9c1-3 4-5 7-3 3 1 4 4 3 7l-7 19c-2 6-7 11-14 13v8H31v-8c-2-1-4-2-6-4z"/><path d="M49 35c-5-7-14-7-19 0 5 7 14 7 19 0z"/><circle cx="40" cy="35" r="2.1"/></svg></button>
     <button data-tool="customs" title="ТН ВЭД / таможня">♜</button>
   </div>
 </div>
 
 <div id="modal" class="modal hidden"><div class="modal-shell"><button class="close" id="modalClose">×</button><div id="modalBody"></div></div></div>
 <div id="toast" class="toast"></div>
-<script src="/app.js?v=3" defer></script>
-</body>
-</html>
+<script src="/app.js?v=2.2.0" defer></script>
+</body></html>

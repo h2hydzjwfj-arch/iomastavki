@@ -1,233 +1,41 @@
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
-const { URL } = require('url');
-
-const PORT = Number(process.env.PORT || 10000);
-const ROOT = __dirname;
-const DATA = path.join(ROOT, 'data');
-if (!fs.existsSync(DATA)) fs.mkdirSync(DATA, { recursive: true });
-
-/* ---------- data loading (works whether json is in /data or repo root) ---------- */
-function loadJson(rel, fallback) {
-  for (const base of [DATA, ROOT]) {
-    const f = path.join(base, rel);
-    try { if (fs.existsSync(f)) return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { console.error('JSON load failed:', f, e.message); }
-  }
-  console.warn('Using in-memory fallback for', rel);
-  return fallback;
-}
-let agents = loadJson('agents.json', []);
-let rates = loadJson('rates.json', { version: 2, updatedAt: new Date().toISOString(), records: [] });
-function saveRates() {
-  rates.updatedAt = new Date().toISOString();
-  fs.writeFileSync(path.join(DATA, 'rates.json'), JSON.stringify(rates, null, 2));
-}
-
-/* ---------- caches: always serve last-good data instead of failing ---------- */
-const cache = { cbr: { at: 0, data: null }, weather: { at: 0, data: null }, news: { at: 0, data: null } };
-const MODELS = [process.env.OPENAI_MODEL || 'gpt-5.6-luna', 'gpt-5.1', 'gpt-5', 'gpt-4.1-mini'].filter((v, i, a) => v && a.indexOf(v) === i);
-
-function send(res, status, type, body) { res.writeHead(status, { 'content-type': type, 'cache-control': 'no-store', 'access-control-allow-origin': '*' }); res.end(body); }
-function json(res, status, obj) { send(res, status, 'application/json; charset=utf-8', JSON.stringify(obj)); }
-function readBody(req) { return new Promise((resolve, reject) => { let s = ''; req.on('data', c => { s += c; if (s.length > 2e6) { req.destroy(); reject(new Error('body too large')); } }); req.on('end', () => { try { resolve(s ? JSON.parse(s) : {}); } catch (e) { reject(e); } }); req.on('error', reject); }); }
-function xmlTag(x, n) { const m = x.match(new RegExp(`<${n}(?:\\s[^>]*)?>([\\s\\S]*?)</${n}>`, 'i')); return m ? m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim() : ''; }
-function getText(url, timeout = 9000) { return fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(timeout), headers: { 'user-agent': 'Mozilla/5.0 (compatible; iomastavka/2.1; +https://iomastavki.onrender.com)' } }).then(async r => { if (!r.ok) throw Error(`HTTP ${r.status}`); return r.text(); }); }
-
-/* ---------- AI ---------- */
-async function ai(input, { web = false, instructions = '' } = {}) {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw Error('OPENAI_API_KEY не настроен на Render');
-  let last = '';
-  for (const model of MODELS) {
-    try {
-      const body = { model, input, instructions, max_output_tokens: 1200 };
-      if (web) body.tools = [{ type: 'web_search', search_context_size: 'low' }];
-      const r = await fetch('https://api.openai.com/v1/responses', { method: 'POST', headers: { 'authorization': `Bearer ${key}`, 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(web ? 25000 : 15000) });
-      const j = await r.json();
-      if (!r.ok) { last = j?.error?.message || `OpenAI HTTP ${r.status}`; continue; }
-      if (j.output_text) return j.output_text;
-      const t = (j.output || []).flatMap(x => x.content || []).filter(x => x.type === 'output_text').map(x => x.text).join('\n');
-      if (t) return t;
-      last = 'Пустой ответ от модели';
-    } catch (e) { last = e.message; }
-  }
-  throw Error(last || 'AI недоступен');
-}
-function extractJson(raw) {
-  const m = String(raw).match(/\{[\s\S]*\}/);
-  if (!m) throw Error('Модель не вернула JSON');
-  return JSON.parse(m[0].replace(/^```json\s*/i, '').replace(/```$/,'').trim());
-}
-
-/* ---------- CBR: primary cbr.ru, mirror cbr-xml-daily.ru for foreign IPs ---------- */
-async function cbr() {
-  if (cache.cbr.data && Date.now() - cache.cbr.at < 15 * 60e3) return cache.cbr.data;
-  let d = null;
-  try {
-    const x = await getText('https://www.cbr.ru/scripts/XML_daily.asp', 8000);
-    const vs = {};
-    for (const b of x.match(/<Valute[\s\S]*?<\/Valute>/gi) || []) { const c = xmlTag(b, 'CharCode'); if (c) vs[c] = Number(xmlTag(b, 'Value').replace(',', '.')) / Number(xmlTag(b, 'Nominal') || 1); }
-    if (!vs.USD || !vs.EUR || !vs.CNY) throw Error('CBR xml incomplete');
-    d = { date: xmlTag(x, 'Date'), usd: vs.USD, eur: vs.EUR, cny: vs.CNY, source: 'Банк России' };
-  } catch (e) {
-    const j = JSON.parse(await getText('https://www.cbr-xml-daily.ru/daily_json.js', 8000));
-    const V = j.Valute; const g = c => V[c].Value / V[c].Nominal;
-    d = { date: (j.Date || '').slice(0, 10).split('-').reverse().join('.'), usd: g('USD'), eur: g('EUR'), cny: g('CNY'), source: 'Банк России (зеркало)', mirror: true };
-  }
-  d.fetchedAt = new Date().toISOString();
-  cache.cbr = { at: Date.now(), data: d };
-  return d;
-}
-async function cbrSafe() { try { return { data: await cbr(), stale: false }; } catch (e) { if (cache.cbr.data) return { data: cache.cbr.data, stale: true }; throw e; } }
-
-/* ---------- weather ---------- */
-async function weather() {
-  if (cache.weather.data && Date.now() - cache.weather.at < 5 * 60e3) return cache.weather.data;
-  const key = process.env.OPENWEATHER_API_KEY;
-  if (!key) return { configured: false, isNight: null, condition: 'unknown', city: 'Москва' };
-  const r = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=Moscow,RU&appid=${encodeURIComponent(key)}&units=metric&lang=ru`, { signal: AbortSignal.timeout(8000) });
-  const j = await r.json();
-  if (!r.ok || j.cod !== 200) throw Error(j.message || 'weather error');
-  const now = Math.floor(Date.now() / 1000);
-  const d = { configured: true, city: 'Москва', condition: j.weather?.[0]?.main || 'Clouds', description: j.weather?.[0]?.description || '', temp: Math.round(j.main?.temp), isNight: now < j.sys.sunrise || now >= j.sys.sunset, sunrise: j.sys.sunrise, sunset: j.sys.sunset, updatedAt: new Date().toISOString() };
-  cache.weather = { at: Date.now(), data: d };
-  return d;
-}
-
-/* ---------- news: Google News RSS (works from anywhere) + ФТС; Pexels images ---------- */
-function parseRss(xml, source) {
-  const blocks = xml.match(/<item[\s\S]*?<\/item>/gi) || [];
-  return blocks.slice(0, 30).map(b => ({ title: xmlTag(b, 'title'), url: xmlTag(b, 'link') || xmlTag(b, 'guid'), publishedAt: xmlTag(b, 'pubDate') ? new Date(xmlTag(b, 'pubDate')).toISOString() : new Date().toISOString(), source })).filter(x => x.title && x.url);
-}
-function important(t) { return /(запрет|огранич|пошлин|ставк|повыш|снижен|обязател|электронн|маркиров|честн(ый|ого) знак|санкц|квот|утилизац|таможен|ндс|акциз|сертифик|декларац|накладн|ЭТрН|ЭДО|лиценз|ответственн|штраф|кодекс)/i.test(t); }
-const PEXELS = [
-  [/таможн|декларац|пошлин|импорт|экспорт/i, 'https://images.pexels.com/photos/1450101499163-c8848c66ca85/pexels-photo-1450101499163-c8848c66ca85.jpeg?auto=compress&cs=tinysrgb&w=600'],
-  [/контейнер|порт|морск|судн/i, 'https://images.pexels.com/photos/1494412574643-ff11b0a5c1c3/pexels-photo-1494412574643-ff11b0a5c1c3.jpeg?auto=compress&cs=tinysrgb&w=600'],
-  [/ж\/д|железн|поезд|рейл|вагон/i, 'https://images.pexels.com/photos/1474487548417-781cb71495f3/pexels-photo-1474487548417-781cb71495f3.jpeg?auto=compress&cs=tinysrgb&w=600'],
-  [/авиа|самол/i, 'https://images.pexels.com/photos/1436491865332-7a61a109cc05/pexels-photo-1436491865332-7a61a109cc05.jpeg?auto=compress&cs=tinysrgb&w=600'],
-  [/склад|хранен/i, 'https://images.pexels.com/photos/1586528116311-ad8dd3c8310d/pexels-photo-1586528116311-ad8dd3c8310d.jpeg?auto=compress&cs=tinysrgb&w=600'],
-  [/санкц|запрет|огранич|суд|право|юрид/i, 'https://images.pexels.com/photos/1486406146926-c627a92ad1ab/pexels-photo-1486406146926-c627a92ad1ab.jpeg?auto=compress&cs=tinysrgb&w=600'],
-  [/грузовик|авто|дорог/i, 'https://images.pexels.com/photos/1427549/pexels-photo-1427549.jpeg?auto=compress&cs=tinysrgb&w=600'],
-];
-const PEXELS_DEFAULT = 'https://images.pexels.com/photos/1454165804606-c3d57bc86b40/pexels-photo-1454165804606-c3d57bc86b40.jpeg?auto=compress&cs=tinysrgb&w=600';
-function newsImage(title) { for (const [re, u] of PEXELS) if (re.test(title)) return u; return PEXELS_DEFAULT; }
-
-async function news() {
-  if (cache.news.data && Date.now() - cache.news.at < 10 * 60e3) return cache.news.data;
-  const q = s => 'https://news.google.com/rss/search?q=' + encodeURIComponent(s) + '&hl=ru&gl=RU&ceid=RU:ru';
-  const feeds = [
-    ['Google News · ВЭД и таможня', q('ВЭД таможня ТН ВЭД декларация')],
-    ['Google News · логистика Китай—Россия', q('логистика Китай Россия перевозки контейнер')],
-    ['Google News · право в логистике', q('транспортное право логистика ответственность договор перевозки')],
-    ['Google News · ФТС и грузы', q('ФТС грузы ввоз вывоз маркировка')],
-    ['Google News · рынок и ставки', q('ставки перевозки грузов рынок логистики')],
-    ['ФТС России', 'https://customs.gov.ru/press/federal/novosti'],
-  ];
-  let out = [];
-  for (const [src, url] of feeds) {
-    try {
-      const x = await getText(url, 8000);
-      if (url.includes('news.google')) { out.push(...parseRss(x, src)); }
-      else { for (const m of x.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)) { const title = m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(); if (title.length < 35 || !/(тамож|ВЭД|логист|перевоз|импорт|экспорт|ТН ВЭД|декларац|Китай|ЕАЭС)/i.test(title)) continue; let u = m[1]; if (u.startsWith('/')) u = 'https://customs.gov.ru' + u; if (/^https?:/.test(u)) out.push({ title, url: u, publishedAt: new Date().toISOString(), source: src }); } }
-    } catch (e) { console.warn('feed failed:', src, e.message); }
-  }
-  const seen = new Set();
-  out = out.filter(x => { const k = x.title.toLowerCase().slice(0, 90); if (seen.has(k)) return false; seen.add(k); return true; })
-    .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)).slice(0, 24)
-    .map(x => ({ ...x, important: important(x.title), image: newsImage(x.title) }));
-  const d = { items: out, updatedAt: new Date().toISOString() };
-  if (out.length) cache.news = { at: Date.now(), data: d };
-  return d;
-}
-async function newsSafe() { const d = await news(); if (d.items.length) return { data: d, stale: false }; if (cache.news.data) return { data: cache.news.data, stale: true }; return { data: d, stale: false }; }
-
-/* ---------- static ---------- */
-function staticFile(res, p) {
-  let f = p === '/' ? '/index.html' : p;
-  if (f.includes('..')) return json(res, 403, { ok: false });
-  const full = path.join(ROOT, f);
-  if (!fs.existsSync(full) || fs.statSync(full).isDirectory()) return json(res, 404, { ok: false, error: 'Not found' });
-  const ext = path.extname(full);
-  const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.ico': 'image/x-icon' };
-  send(res, 200, types[ext] || 'application/octet-stream', fs.readFileSync(full));
-}
-
-/* ---------- router ---------- */
-const server = http.createServer(async (req, res) => {
-  try {
-    const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`); const p = u.pathname;
-    if (req.method === 'GET' && p === '/api/version') return json(res, 200, { ok: true, version: '2.1.0', build: 'fix-cbr-news-ai-voice-rates' });
-    if (req.method === 'GET' && p === '/api/config') return json(res, 200, { ok: true, weatherConfigured: !!process.env.OPENWEATHER_API_KEY, aiConfigured: !!process.env.OPENAI_API_KEY });
-    if (req.method === 'GET' && p === '/api/agents') return json(res, 200, { ok: true, records: agents });
-    if (req.method === 'GET' && p === '/api/rates') return json(res, 200, { ok: true, ...rates });
-    if (req.method === 'GET' && p === '/api/cbr') { const r = await cbrSafe(); return json(res, 200, { ok: true, ...r }); }
-    if (req.method === 'GET' && p === '/api/weather') return json(res, 200, { ok: true, data: await weather() });
-    if (req.method === 'GET' && p === '/api/news') { const r = await newsSafe(); return json(res, 200, { ok: true, ...r }); }
-
-    if (req.method === 'POST' && p === '/api/ai') {
-      const b = await readBody(req);
-      const message = String(b.message || '').trim();
-      if (!message) return json(res, 400, { ok: false, error: 'Введите сообщение' });
-      const history = Array.isArray(b.history) ? b.history.slice(-8) : [];
-      const web = /(сегодня|сейчас|актуаль|последн|новост|курс|тамож|ТН ВЭД|ставк|запрет|огранич|Китай|Россия|ФТС|ЕАЭС)/i.test(message);
-      const input = [...history.map(x => ({ role: x.role === 'assistant' ? 'assistant' : 'user', content: String(x.content || '') })), { role: 'user', content: message }];
-      const answer = await ai(input, { web, instructions: 'Ты AI-ассистент iomastavka. Специализация: логистика, ВЭД, Китай—Россия, перевозки, Incoterms, документы, таможня и ТН ВЭД. Отвечай кратко и практично по-русски. Не выдумывай ставки и нормативные требования. Для актуальных вопросов используй веб-поиск. Для таможни приоритетны customs.gov.ru и eec.eaeunion.org.' });
-      return json(res, 200, { ok: true, answer });
-    }
-
-    if (req.method === 'POST' && p === '/api/customs/check') {
-      const b = await readBody(req);
-      const code = String(b.code || '').replace(/\D/g, '');
-      if (!/^\d{10}$/.test(code)) return json(res, 400, { ok: false, error: 'Введите ровно 10 цифр ТН ВЭД ЕАЭС' });
-      const prompt = `Проверь ТН ВЭД ЕАЭС ${code}. Используй веб-поиск, приоритет customs.gov.ru и eec.eaeunion.org. Верни строго JSON: {"code":"${code}","shortDescription":"краткое название до 100 символов","importDuty":"0%/5%/10%/… или неизвестно","vat":"20%/10% или неизвестно","customsFee":"сумма/правило или неизвестно","excise":"нет/ставка/неизвестно","honestSign":"да/нет/зависит/неизвестно","permitDocs":"кратко: СС / ДС / отказное письмо / нотификация / нет / зависит","restrictions":"кратко до 180 символов","actions":"3 коротких шага что сделать импортёру","sourceUrls":["https://..."],"confidence":"high|medium|low"}. Не выдумывай ставку.`;
-      try {
-        const raw = await ai(prompt, { web: true, instructions: 'Ты специалист по таможенному регулированию ЕАЭС. Только достоверные данные. Только JSON.' });
-        return json(res, 200, { ok: true, data: extractJson(raw) });
-      } catch (e) {
-        return json(res, 200, { ok: true, data: { code, shortDescription: 'Требуется уточнение описания товара', importDuty: 'Не подтверждено', vat: 'Не подтверждено', customsFee: 'По таможенной стоимости и виду декларации', excise: 'Не подтверждено', honestSign: 'Зависит от товара', permitDocs: 'Зависит от товара', restrictions: 'Требуется отдельная проверка характеристик и мер нетарифного регулирования', actions: '1) Уточнить описание и характеристики товара\n2) Проверить меры на eec.eaeunion.org\n3) Запросить разрешительные документы у поставщика', sourceUrls: ['https://customs.gov.ru/', 'https://eec.eaeunion.org/'], confidence: 'low', warning: e.message } });
-      }
-    }
-
-    if (req.method === 'POST' && p === '/api/rates/update') {
-      const b = await readBody(req);
-      const text = String(b.text || '').trim();
-      if (text.length < 20) return json(res, 400, { ok: false, error: 'Пришлите текст коммерческого предложения или таблицу ставок (не короче 20 символов)' });
-      const prompt = `Извлеки все ставки перевозки из текста экспедитора. Верни строго JSON: {"records":[{"company":"...","from":"город отправления","to":"город назначения","mode":"rail|road|sea|air|multimodal","incoterms":"FOB|EXW|FCA|CIF|DAP","container":"40HC|20DC|...","rate":число,"currency":"USD|CNY|RUB|EUR","basis":"container|kg|m3|wagon","transitDays":"30-35","validFrom":"YYYY-MM-DD","validUntil":"YYYY-MM-DD или null","notes":"..."}]}. Только факты из текста, ничего не выдумывай. Текст:\n${text.slice(0, 14000)}`;
-      const raw = await ai(prompt, { instructions: 'Ты парсер логистических ставок. Отвечай только JSON.' });
-      const parsed = extractJson(raw);
-      if (!Array.isArray(parsed.records) || !parsed.records.length) return json(res, 422, { ok: false, error: 'Не удалось извлечь ставки из текста. Проверьте, что в тексте есть маршруты и цены.' });
-      const norm = r => ({
-        company: String(r.company || 'Экспедитор').trim(),
-        from: String(r.from || '').trim(), to: String(r.to || '').trim(),
-        mode: ['rail', 'road', 'sea', 'air', 'multimodal'].includes(r.mode) ? r.mode : 'multimodal',
-        incoterms: String(r.incoterms || 'FOB').toUpperCase(),
-        container: String(r.container || '').trim(),
-        rate: Number(r.rate) || 0, currency: String(r.currency || 'USD').toUpperCase(),
-        basis: String(r.basis || 'container'), transitDays: String(r.transitDays || ''),
-        validFrom: String(r.validFrom || new Date().toISOString().slice(0, 10)),
-        validUntil: r.validUntil ? String(r.validUntil) : null,
-        source: 'Загружено пользователем (AI-парсинг)', sourceType: 'ai_parsed', approximateAfterValidity: true,
-        notes: String(r.notes || '').slice(0, 300),
-      });
-      const valid = parsed.records.map(norm).filter(r => r.from && r.to && r.rate > 0);
-      if (!valid.length) return json(res, 422, { ok: false, error: 'Ставки найдены, но без обязательных полей (маршрут/цена). Пришлите текст подробнее.' });
-      const key = r => [r.company, r.from, r.to, r.mode, r.container, r.incoterms].join('|').toLowerCase();
-      const map = new Map(rates.records.map(r => [key(r), r]));
-      let added = 0, updated = 0;
-      for (const r of valid) { if (map.has(key(r))) { updated++; } else { added++; } map.set(key(r), r); }
-      rates.records = [...map.values()];
-      saveRates();
-      return json(res, 200, { ok: true, added, updated, total: rates.records.length, updatedAt: rates.updatedAt });
-    }
-
-    return staticFile(res, p);
-  } catch (e) { console.error(e); return json(res, 502, { ok: false, error: e.message || 'Server error' }); }
-});
-
-/* warm caches daily-ish; on Render free tier this also refreshes after sleep */
-setInterval(() => cbr().catch(() => {}), 6 * 60 * 60e3);
-setInterval(() => news().catch(() => {}), 30 * 60e3);
-setInterval(() => weather().catch(() => {}), 30 * 60e3);
-
-server.listen(PORT, '0.0.0.0', () => console.log(`iomastavka 2.1 listening on ${PORT}`));
+const http=require('http');
+const fs=require('fs');
+const path=require('path');
+const {URL}=require('url');
+const PORT=Number(process.env.PORT||10000),ROOT=__dirname,DATA=path.join(ROOT,'data');
+const agents=JSON.parse(fs.readFileSync(path.join(DATA,'agents.json'),'utf8'));
+let rates=JSON.parse(fs.readFileSync(path.join(DATA,'rates.json'),'utf8'));
+const cache={cbr:{at:0,data:null},weather:{at:0,data:null},news:{at:0,data:null}};
+const MODELS=[process.env.OPENAI_MODEL||'gpt-5.6-luna','gpt-5.1','gpt-5','gpt-4.1-mini'].filter((v,i,a)=>v&&a.indexOf(v)===i);
+function send(res,status,type,body){res.writeHead(status,{'content-type':type,'cache-control':'no-store','access-control-allow-origin':'*'});res.end(body)}
+function json(res,status,obj){send(res,status,'application/json; charset=utf-8',JSON.stringify(obj))}
+function readBody(req){return new Promise((resolve,reject)=>{let s='';req.on('data',c=>{s+=c;if(s.length>2e6){req.destroy();reject(new Error('body too large'))}});req.on('end',()=>{try{resolve(s?JSON.parse(s):{})}catch(e){reject(e)}});req.on('error',reject)})}
+function xmlTag(x,n){const m=x.match(new RegExp(`<${n}(?:\\s[^>]*)?>([\\s\\S]*?)</${n}>`,'i'));return m?m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').trim():''}
+function getText(url,timeout=9000){return fetch(url,{redirect:'follow',signal:AbortSignal.timeout(timeout),headers:{'user-agent':'Mozilla/5.0 (compatible; iomastavka/2.2)'}}).then(async r=>{if(!r.ok)throw Error(`HTTP ${r.status}`);return r.text()})}
+function extractJson(raw){const m=String(raw).match(/\{[\s\S]*\}/);if(!m)throw Error('Модель не вернула JSON');return JSON.parse(m[0].replace(/^```json\s*/i,'').replace(/```$/,'').trim())}
+async function ai(input,{web=false,instructions=''}={}){const key=process.env.OPENAI_API_KEY;if(!key)throw Error('OPENAI_API_KEY не настроен на Render');let last='';for(const model of MODELS){try{const body={model,input,instructions,max_output_tokens:1200};if(web)body.tools=[{type:'web_search',search_context_size:'low'}];const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{authorization:`Bearer ${key}`,'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(web?25000:15000)});const j=await r.json();if(!r.ok){last=j?.error?.message||`OpenAI HTTP ${r.status}`;continue}if(j.output_text)return j.output_text;const t=(j.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==='output_text').map(x=>x.text).join('\n');if(t)return t;last='Пустой ответ от модели'}catch(e){last=e.message}}throw Error(last||'AI недоступен')}
+async function cbr(){if(cache.cbr.data&&Date.now()-cache.cbr.at<15*60e3)return cache.cbr.data;try{const x=await getText('https://www.cbr.ru/scripts/XML_daily.asp',8000),vs={};for(const b of x.match(/<Valute[\s\S]*?<\/Valute>/gi)||[]){const c=xmlTag(b,'CharCode');if(c)vs[c]=Number(xmlTag(b,'Value').replace(',','.'))/Number(xmlTag(b,'Nominal')||1)}if(!vs.USD||!vs.EUR||!vs.CNY)throw Error('CBR XML incomplete');const d={date:xmlTag(x,'Date'),usd:vs.USD,eur:vs.EUR,cny:vs.CNY,source:'Банк России',fetchedAt:new Date().toISOString()};cache.cbr={at:Date.now(),data:d};return d}catch(primary){const j=JSON.parse(await getText('https://www.cbr-xml-daily.ru/daily_json.js',8000)),V=j.Valute,g=c=>V[c].Value/V[c].Nominal;const d={date:(j.Date||'').slice(0,10).split('-').reverse().join('.'),usd:g('USD'),eur:g('EUR'),cny:g('CNY'),source:'Банк России (зеркало)',fetchedAt:new Date().toISOString()};cache.cbr={at:Date.now(),data:d};return d}}
+async function weather(){if(cache.weather.data&&Date.now()-cache.weather.at<5*60e3)return cache.weather.data;const key=process.env.OPENWEATHER_API_KEY;if(!key)return {configured:false,isNight:null,condition:'unknown',city:'Москва'};const r=await fetch(`https://api.openweathermap.org/data/2.5/weather?q=Moscow,RU&appid=${encodeURIComponent(key)}&units=metric&lang=ru`,{signal:AbortSignal.timeout(8000)}),j=await r.json();if(!r.ok||j.cod!==200)throw Error(j.message||'weather error');const now=Math.floor(Date.now()/1000),d={configured:true,city:'Москва',condition:j.weather?.[0]?.main||'Clouds',description:j.weather?.[0]?.description||'',temp:Math.round(j.main?.temp),isNight:now<j.sys.sunrise||now>=j.sys.sunset,sunrise:j.sys.sunrise,sunset:j.sys.sunset,updatedAt:new Date().toISOString()};cache.weather={at:Date.now(),data:d};return d}
+function parseRss(xml,source){return (xml.match(/<item[\s\S]*?<\/item>/gi)||[]).slice(0,30).map(b=>({title:xmlTag(b,'title'),url:xmlTag(b,'link')||xmlTag(b,'guid'),publishedAt:xmlTag(b,'pubDate')?new Date(xmlTag(b,'pubDate')).toISOString():new Date().toISOString(),source})).filter(x=>x.title&&x.url)}
+function important(t){return /(запрет|огранич|пошлин|ставк|повыш|снижен|обязател|электронн|маркиров|честн(ый|ого) знак|санкц|квот|утилизац|таможен|ндс|акциз|сертифик|декларац|накладн|ЭТрН|ЭДО|лиценз|штраф|ответственн)/i.test(t)}
+const PEXELS=[[/таможн|декларац|пошлин|импорт|экспорт/i,'https://images.pexels.com/photos/1450101499163-c8848c66ca85/pexels-photo-1450101499163-c8848c66ca85.jpeg?auto=compress&cs=tinysrgb&w=600'],[/контейнер|порт|морск|судн/i,'https://images.pexels.com/photos/1494412574643-ff11b0a5c1c3/pexels-photo-1494412574643-ff11b0a5c1c3.jpeg?auto=compress&cs=tinysrgb&w=600'],[/ж\/д|железн|поезд|рейл|вагон/i,'https://images.pexels.com/photos/1474487548417-781cb71495f3/pexels-photo-1474487548417-781cb71495f3.jpeg?auto=compress&cs=tinysrgb&w=600'],[/авиа|самол/i,'https://images.pexels.com/photos/1436491865332-7a61a109cc05/pexels-photo-1436491865332-7a61a109cc05.jpeg?auto=compress&cs=tinysrgb&w=600'],[/грузовик|авто|дорог/i,'https://images.pexels.com/photos/1427549/pexels-photo-1427549.jpeg?auto=compress&cs=tinysrgb&w=600']];
+const PEXELS_DEFAULT='https://images.pexels.com/photos/1454165804606-c3d57bc86b40/pexels-photo-1454165804606-c3d57bc86b40.jpeg?auto=compress&cs=tinysrgb&w=600';
+function newsImage(title){for(const [re,u] of PEXELS)if(re.test(title))return u;return PEXELS_DEFAULT}
+async function news(){if(cache.news.data&&Date.now()-cache.news.at<10*60e3)return cache.news.data;const q=s=>'https://news.google.com/rss/search?q='+encodeURIComponent(s)+'&hl=ru&gl=RU&ceid=RU:ru';const feeds=[['Google News · ВЭД и таможня',q('ВЭД таможня ТН ВЭД декларация')],['Google News · логистика Китай—Россия',q('логистика Китай Россия перевозки контейнер')],['Google News · право в логистике',q('транспортное право логистика ответственность договор перевозки')],['ФТС России','https://customs.gov.ru/press/federal/novosti']];let out=[];for(const [src,url] of feeds){try{const x=await getText(url,8000);if(url.includes('news.google'))out.push(...parseRss(x,src));else for(const m of x.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)){const title=m[2].replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();if(title.length<35||!/(тамож|ВЭД|логист|перевоз|импорт|экспорт|ТН ВЭД|декларац|Китай|ЕАЭС)/i.test(title))continue;let u=m[1];if(u.startsWith('/'))u='https://customs.gov.ru'+u;if(/^https?:/.test(u))out.push({title,url:u,publishedAt:new Date().toISOString(),source:src})}}catch(e){}}
+const seen=new Set();out=out.filter(x=>{const k=x.title.toLowerCase().slice(0,100);if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>new Date(b.publishedAt)-new Date(a.publishedAt)).slice(0,24).map(x=>({...x,important:important(x.title),image:newsImage(x.title)}));const d={items:out,updatedAt:new Date().toISOString()};if(out.length)cache.news={at:Date.now(),data:d};return d}
+function saveRates(){rates.updatedAt=new Date().toISOString();fs.writeFileSync(path.join(DATA,'rates.json'),JSON.stringify(rates,null,2),'utf8')}
+function staticFile(res,p){let f=p==='/'?'/index.html':p;if(f.includes('..'))return json(res,403,{ok:false});const full=path.join(ROOT,f);if(!fs.existsSync(full)||fs.statSync(full).isDirectory())return json(res,404,{ok:false,error:'Not found'});const ext=path.extname(full),types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.ico':'image/x-icon'};send(res,200,types[ext]||'application/octet-stream',fs.readFileSync(full))}
+const server=http.createServer(async(req,res)=>{try{const u=new URL(req.url,`http://${req.headers.host||'localhost'}`),p=u.pathname;
+if(req.method==='GET'&&p==='/api/version')return json(res,200,{ok:true,version:'2.2.0-merge',build:'kimi-functions-plus-iomastavka-design'});
+if(req.method==='GET'&&p==='/api/config')return json(res,200,{ok:true,weatherConfigured:!!process.env.OPENWEATHER_API_KEY,aiConfigured:!!process.env.OPENAI_API_KEY});
+if(req.method==='GET'&&p==='/api/agents')return json(res,200,{ok:true,records:agents});
+if(req.method==='GET'&&p==='/api/rates')return json(res,200,{ok:true,...rates});
+if(req.method==='GET'&&p==='/api/cbr')return json(res,200,{ok:true,data:await cbr()});
+if(req.method==='GET'&&p==='/api/weather')return json(res,200,{ok:true,data:await weather()});
+if(req.method==='GET'&&p==='/api/news')return json(res,200,{ok:true,data:await news()});
+if(req.method==='POST'&&p==='/api/ai'){const b=await readBody(req),message=String(b.message||'').trim();if(!message)return json(res,400,{ok:false,error:'Введите сообщение'});const history=Array.isArray(b.history)?b.history.slice(-8):[];const web=/(сегодня|сейчас|актуаль|последн|новост|курс|тамож|ТН ВЭД|ставк|запрет|огранич|Китай|Россия|ФТС|ЕАЭС)/i.test(message);const input=[...history.map(x=>({role:x.role==='assistant'?'assistant':'user',content:String(x.content||'')})),{role:'user',content:message}];const answer=await ai(input,{web,instructions:'Ты AI-ассистент iomastavka. Специализация: логистика, ВЭД, Китай—Россия, перевозки, Incoterms, документы, таможня и ТН ВЭД. Отвечай кратко и практично по-русски. Не выдумывай ставки и нормативные требования. Для актуальных вопросов используй веб-поиск. Для таможни приоритетны customs.gov.ru и eec.eaeunion.org.'});return json(res,200,{ok:true,answer})}
+if(req.method==='POST'&&p==='/api/customs/check'){const b=await readBody(req),code=String(b.code||'').replace(/\D/g,'');if(!/^\d{10}$/.test(code))return json(res,400,{ok:false,error:'Введите ровно 10 цифр ТН ВЭД ЕАЭС'});const prompt=`Проверь ТН ВЭД ЕАЭС ${code}. Используй веб-поиск, приоритет customs.gov.ru и eec.eaeunion.org. Верни строго JSON: {"code":"${code}","shortDescription":"краткое название до 100 символов","importDuty":"0%/5%/10%/… или неизвестно","vat":"ставка или неизвестно","customsFee":"сумма/правило или неизвестно","excise":"нет/ставка/неизвестно","honestSign":"да/нет/зависит/неизвестно","permitDocs":"кратко","restrictions":"кратко до 180 символов","sourceUrls":["https://..."],"confidence":"high|medium|low"}. Не выдумывай ставку.`;try{return json(res,200,{ok:true,data:extractJson(await ai(prompt,{web:true,instructions:'Ты специалист по таможенному регулированию ЕАЭС. Только достоверные данные. Только JSON.'}))})}catch(e){return json(res,200,{ok:true,data:{code,shortDescription:'Требуется уточнение описания товара',importDuty:'Не подтверждено',vat:'Не подтверждено',customsFee:'По таможенной стоимости и виду декларации',excise:'Не подтверждено',honestSign:'Зависит от товара',permitDocs:'Зависит от товара',restrictions:'Требуется отдельная проверка характеристик и мер нетарифного регулирования',sourceUrls:['https://customs.gov.ru/','https://eec.eaeunion.org/'],confidence:'low',warning:e.message}})}}
+if(req.method==='POST'&&p==='/api/rates/update'){const b=await readBody(req),text=String(b.text||'').trim();if(text.length<20)return json(res,400,{ok:false,error:'Пришлите коммерческое предложение или таблицу ставок (не короче 20 символов)'});const prompt=`Извлеки все ставки перевозки из текста экспедитора. Верни строго JSON: {"records":[{"company":"...","from":"город отправления","to":"город назначения","mode":"rail|road|sea|air|multimodal","incoterms":"FOB|EXW|FCA|CIF|DAP","container":"40HC|20DC|...","rate":число,"currency":"USD|CNY|RUB|EUR","basis":"container|kg|m3|wagon","transitDays":"30-35","validFrom":"YYYY-MM-DD","validUntil":"YYYY-MM-DD или null","notes":"..."}]}. Только факты из текста, ничего не выдумывай.\nТекст:\n${text.slice(0,14000)}`;try{const parsed=extractJson(await ai(prompt,{instructions:'Ты парсер логистических ставок. Отвечай только JSON.'}));if(!Array.isArray(parsed.records)||!parsed.records.length)return json(res,422,{ok:false,error:'Не удалось извлечь ставки из текста'});const norm=r=>({company:String(r.company||'Экспедитор').trim(),from:String(r.from||'').trim(),to:String(r.to||'').trim(),mode:['rail','road','sea','air','multimodal'].includes(r.mode)?r.mode:'multimodal',incoterms:String(r.incoterms||'FOB').toUpperCase(),container:String(r.container||'').trim(),rate:Number(r.rate)||0,currency:String(r.currency||'USD').toUpperCase(),basis:String(r.basis||'container'),transitDays:String(r.transitDays||''),validFrom:String(r.validFrom||new Date().toISOString().slice(0,10)),validUntil:r.validUntil?String(r.validUntil):null,source:'Загружено пользователем (AI-парсинг)',sourceType:'ai_parsed',approximateAfterValidity:true,notes:String(r.notes||'').slice(0,300)});const valid=parsed.records.map(norm).filter(r=>r.from&&r.to&&r.rate>0);const key=r=>[r.company,r.from,r.to,r.mode,r.container,r.incoterms].join('|').toLowerCase();const map=new Map((rates.records||[]).map(r=>[key(r),r]));let added=0,updated=0;for(const r of valid){if(map.has(key(r)))updated++;else added++;map.set(key(r),r)}rates.records=[...map.values()];saveRates();return json(res,200,{ok:true,added,updated,total:rates.records.length,updatedAt:rates.updatedAt})}catch(e){return json(res,502,{ok:false,error:e.message})}}
+return staticFile(res,p)}catch(e){console.error(e);return json(res,502,{ok:false,error:e.message||'Server error'})}});
+setInterval(()=>cbr().catch(()=>{}),6*60*60e3);setInterval(()=>news().catch(()=>{}),30*60e3);setInterval(()=>weather().catch(()=>{}),30*60e3);
+server.listen(PORT,'0.0.0.0',()=>console.log(`iomastavka 2.2 listening on ${PORT}`));
