@@ -1,28 +1,21 @@
-# IOMASTAVKA — merged build 2.2
+# iomastavka — File №1 (functional restore)
 
-This build combines the current working IOMASTAVKA functionality with the blue glass / animated-sky visual design.
+Clean rebuild for Render. **Дизайн не тронут** — починена только работа.
 
-Included:
-- route/rate calculator with saved rates and historical-rate marking;
-- volumetric-weight factors: air 167, road 400, rail 500, sea 1000, multimodal 1000 kg/m³;
-- China/Russia/Asia city suggestions with typo assistance;
-- +5% China-carrier commission shown separately in quote results;
-- AI assistant with web search context and text-file context;
-- TN VED checker with concise duty/VAT/customs-fee/excise/marking/restriction output;
-- 41 forwarder contacts;
-- current CBR rates with mirror fallback;
-- Moscow weather with real sunrise/sunset day/night detection;
-- logistics/customs news with important-news markers;
-- AI parsing of uploaded rate quotations into the saved rate database;
-- responsive blue glass UI, animated sky, moon/sun, waves and the four-tool hover launcher.
+## Что работает
+- **Таможня (ТН ВЭД)** — `/api/customs/check` работает **без OpenAI**: парсинг реальных данных alta.ru + расчёт таможенного сбора по шкале Совета ЕЭК № 51 (при вводе таможенной стоимости) + подсказки по «Честному знаку». Кэш 24 ч.
+- **AI-ассистент** — переведён на `chat/completions` (дешевле/стабильнее). Требуется действующий ключ и баланс OpenAI — иначе придёт понятное сообщение об ошибке.
+- **Новости** — лента как раньше, но статьи открываются **внутри сайта** (`/api/news/read` — сервер забирает и чистит текст; если сайт не отдал текст, есть кнопка оригинала).
+- **Ставки** — форма ввода своих расчётов (сохраняются в браузере) + таблица справочных ставок с поиском и фильтром по виду перевозки.
+- **Карта Фатимы** — персональная карта дня по дате рождения (хранится в браузере), с анимацией растворения.
+- **Экспедиторы** — добавлен фильтр по виду перевозки.
+- Курсы ЦБ, погода — без изменений.
 
-Render environment variables expected:
-- OPENAI_API_KEY
-- OPENWEATHER_API_KEY
-- optional OPENAI_MODEL
+## Render environment
+- `OPENAI_API_KEY` — для AI-ассистента (должен быть баланс, иначе ассистент честно сообщит об этом)
+- `OPENWEATHER_API_KEY` — для живой погоды/фона
+- Optional `OPENAI_MODEL` (по умолчанию `gpt-4o-mini`)
 
-Run: `node server.js`
+Start command: `node server.js`
 
-
-## Render upload safety
-`server.js` can load `agents.json` and `rates.json` from either `data/` or the project root. Root copies are included so the app still starts if Render/GitHub upload does not preserve the `data/` folder.
+Данные: `data/agents.json`, `data/rates.json` (если папки `data` нет — читаются из корня).
