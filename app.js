@@ -1,6 +1,52 @@
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
+// --- Левая кнопка-док: открытие при наведении мыши ---
+(function(){
+  const dock = document.getElementById('controlDock');
+  const tools = document.getElementById('controlTools');
+  const launcher = document.getElementById('controlLauncher');
+  if(!dock) return;
+  dock.addEventListener('mouseenter', () => {
+    dock.classList.add('open');
+    if(tools) tools.setAttribute('aria-hidden','false');
+    if(launcher) launcher.setAttribute('aria-expanded','true');
+  });
+  dock.addEventListener('mouseleave', () => {
+    dock.classList.remove('open');
+    if(tools) tools.setAttribute('aria-hidden','true');
+    if(launcher) launcher.setAttribute('aria-expanded','false');
+  });
+})();
+
+// --- Загрузка КП / ставок из файла в калькуляторе ---
+(function(){
+  const fileInput = document.getElementById('rateFileUpload');
+  const statusEl = document.getElementById('rateUploadStatus');
+  if(!fileInput) return;
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    if(statusEl){ statusEl.textContent = 'Обрабатываю КП… Это может занять до 15 секунд.'; statusEl.style.color = '#78909f'; }
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const r = await fetch('/api/rates/import', { method: 'POST', body: formData });
+      const d = await r.json();
+      if (r.ok && d.ok) {
+        if(statusEl){ statusEl.textContent = 'Успешно! Добавлено ставок: ' + (d.added||0); statusEl.style.color = '#26704a'; }
+        try { await loadRates(); } catch(_) {}
+        setTimeout(()=>{ if(statusEl) statusEl.textContent=''; }, 6000);
+      } else {
+        throw new Error(d.error || 'Ошибка загрузки');
+      }
+    } catch (err) {
+      if(statusEl){ statusEl.textContent = 'Ошибка: ' + (err.message||err); statusEl.style.color = '#a94d4d'; }
+    }
+  });
+})();
+
+
 // HARDENED UI BOOT: these handlers are intentionally independent from the rest of the app.
 // If an optional module fails later, the core windows, close buttons and theme controls still work.
 (() => {
@@ -10,6 +56,13 @@ const $$ = s => [...document.querySelectorAll(s)];
     const target=document.getElementById(id); if(!target) return false;
     document.querySelectorAll('.view-layer').forEach(v=>{v.classList.remove('open');v.setAttribute('aria-hidden','true')});
     target.classList.add('open'); target.setAttribute('aria-hidden','false'); document.body.classList.add('view-open');
+        // Отрисовка содержимого при открытии вида
+    try {
+      if (name === 'forwarders' && typeof renderDirectory === 'function') renderDirectory();
+      if (name === 'news' && typeof loadNews === 'function') loadNews();
+      if (name === 'assistant') setTimeout(function(){ document.getElementById('assistantInput')?.focus(); }, 120);
+      if (name === 'customsView') setTimeout(function(){ document.getElementById('customsCode')?.focus(); }, 120);
+    } catch (err) { console.warn('view render:', err); }
     return true;
   };
   const close = () => { document.querySelectorAll('.view-layer').forEach(v=>{v.classList.remove('open');v.setAttribute('aria-hidden','true')}); document.body.classList.remove('view-open'); };
@@ -104,7 +157,7 @@ function applyLang(){
 $$('[data-i18n-placeholder]').forEach(el=>el.placeholder=tr(el.dataset.i18nPlaceholder));
  $('#menuButton')?.setAttribute('title',tr('menu')); $('#menuButton')?.setAttribute('aria-label',tr('menu'));
  $$('.close-button').forEach(el=>{el.setAttribute('aria-label',tr('close'));el.setAttribute('title',tr('close'))});
- $$('.lang').forEach(b=>b.classList.toggle('active',b.dataset.lang===lang)); localStorage.setItem('iomastavka_lang',lang); setTheme(localStorage.getItem('iomastavka_theme')||'light');
+ $$('.lang').forEach(b=>b.classList.toggle('active',b.dataset.lang===lang)); localStorage.setItem('iomastavka_lang',lang); 
  setDimensionLabels(); renderForwarderMenu(); renderTransportMenu(); renderIncoterms(); renderFactors();
  renderSuggestions($('#fromSuggestions'),$('#fromCity').value.trim()?cityMatches($('#fromCity').value,'asia'):[],$('#fromCity'),'asia');
  renderSuggestions($('#toSuggestions'),$('#toCity').value.trim()?cityMatches($('#toCity').value,'russia'):[],$('#toCity'),'russia');
@@ -285,6 +338,7 @@ function openAgentImporter(){
 }
 
 function setTheme(mode){document.body.classList.toggle('manual-dark',mode==='dark');document.body.classList.toggle('manual-light',mode==='light');localStorage.setItem('iomastavka_theme',mode);const b=$('#themeToggleButton'),i=$('#themeIcon');if(i)i.textContent=mode==='dark'?'☾':'☀';if(b){b.title=mode==='dark'?tr('themeLight'):tr('themeDark');b.setAttribute('aria-label',b.title);}}
+let newsCache=[];
 let newsPrefetchPromise=null;
 function prefetchNews(){if(newsCache.length)return Promise.resolve(newsCache);if(newsPrefetchPromise)return newsPrefetchPromise;const fallback=[{title:'Китай — Россия: что проверить перед расчётом мультимодальной перевозки',link:'',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Incoterms, габариты, объёмный вес, терминальные расходы и документы.'},{title:'ТН ВЭД и импорт: какие данные собрать до запроса ставки',link:'',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Описание товара, код ТН ВЭД, инвойс, упаковка, разрешительные документы и базис поставки.'},{title:'ЖД, море или авиа: как выбрать транспорт из Китая',link:'',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Сравнение сроков, расчётного веса и структуры стоимости.'}];newsPrefetchPromise=fetch('/api/news',{cache:'no-store',credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('news');return r.json()}).then(d=>{newsCache=Array.isArray(d.items)&&d.items.length?d.items:fallback;return newsCache}).catch(()=>{newsCache=fallback;return newsCache});return newsPrefetchPromise}
 prefetchNews().then(items=>{if(items.length&&document.getElementById('newsView')?.classList.contains('open'))renderNewsItems(items)});
@@ -566,7 +620,6 @@ async function loadCurrency(){
 }
 
 function isUrgentNews(n){if(n&&n.urgent===true)return true;const x=normalize(String(n?.title||'')+' '+String(n?.description||'')).toLowerCase();return /(обязательн|вступ(ил|ает).*сил|запрет|ограничен|повышен.*пошлин|снижен.*пошлин|изменен.*правил|нов.*пошлин|маркировк.*обяз|электронн.*транспортн|санкц|лицензир|mandatory|effective.*date|ban|restriction|duty.*increase|tariff.*change|regulation|sanction|licen[cs])/i.test(x)}
-let newsCache=[];
 function cleanNewsText(s=''){const t=document.createElement('div');t.innerHTML=String(s);return (t.textContent||t.innerText||'').replace(/\s+/g,' ').trim()}
 function renderNewsItems(items){const box=$('#newsList');if(!box)return;box.innerHTML='';items.forEach((n,i)=>{const a=document.createElement('button');a.type='button';a.className='news-item'+(isUrgentNews(n)?' news-urgent':'');a.innerHTML=`${n.image?`<img class="news-thumb" src="${escapeHtml(n.image)}" alt="" loading="eager">`:`<span class="news-thumb news-placeholder">✦</span>`}<span class="news-item-copy">${isUrgentNews(n)?'<em class="news-urgent-badge">'+(lang==='ru'?'СРОЧНО':lang==='en'?'URGENT':'紧急')+'</em>':''}<strong>${escapeHtml(cleanNewsText(n.title))}</strong><small>${escapeHtml(n.source||'')} · ${n.date?new Date(n.date).toLocaleDateString(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':'en-US'):''}</small></span>`;a.onclick=()=>openArticle(n);box.appendChild(a)})}
 async function loadNews(){
