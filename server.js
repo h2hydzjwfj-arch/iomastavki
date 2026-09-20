@@ -435,6 +435,13 @@ async function fetchRss(url, source){
 function isUrgent(t){ return /(обязательн|запрет|пошлин|таможенн|маркиров|лиценз|санкц|mandatory|ban|duty|tariff|customs|sanction)/i.test(String(t||'')); }
 async function fetchNews(){
   const queries = [
+    ['site:customs.gov.ru','ФТС России'],
+    ['site:eaeunion.org','ЕЭК'],
+    ['site:alta.ru','Альта-Софт'],
+    ['site:tks.ru','TKS.RU'],
+    ['site:logirus.ru','Логирус'],
+    ['site:rzd-partner.ru','РЖД-Партнёр'],
+    ['site:mintrans.gov.ru','Минтранс'],
     ['логистика Китай Россия','Логистика'],
     ['грузоперевозки Китай Россия','Грузоперевозки'],
     ['импорт из Китая в Россию','Импорт'],
@@ -442,9 +449,7 @@ async function fetchNews(){
     ['ТН ВЭД маркировка','ТН ВЭД'],
     ['контейнерные перевозки Китай','Контейнеры'],
     ['железнодорожные перевозки Китай Россия','Ж/Д'],
-    ['морские перевозки Азия','Море'],
-    ['логистика Индия Россия','Индия'],
-    ['логистика Корея Япония Россия','Азия']
+    ['морские перевозки Азия','Море']
   ];
   const urls = queries.map(function(q){
     return ['https://news.google.com/rss/search?q=' + encodeURIComponent(q[0]) + '&hl=ru&gl=RU&ceid=RU:ru', q[1]];
@@ -522,6 +527,85 @@ function countCachedArticles(){
   try { return fs.readdirSync(ARTICLE_CACHE_DIR).filter(function(f){ return f.endsWith('.json'); }).length; } catch(e){ return 0; }
 }
 console.log('[article-cache] dir=' + ARTICLE_CACHE_DIR + ' files=' + countCachedArticles());
+
+// ========== Загрузка полного текста статьи с источника ==========
+async function fetchFullArticle(url){
+  if (!/^https?:\/\//i.test(url)) return null;
+  try {
+    const r = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36' },
+      signal: AbortSignal.timeout(12000)
+    });
+    if (!r.ok) return null;
+    let html = await r.text();
+
+    // og:image
+    let image = '';
+    let m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+         || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    if (m) image = m[1];
+
+    // og:title
+    let title = '';
+    m = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)
+      || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    if (m) title = m[1].replace(/<[^>]+>/g, '').trim();
+
+    // og:description
+    let desc = '';
+    m = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i)
+      || html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i);
+    if (m) desc = m[1];
+
+    // Убираем мусор
+    html = html.replace(/<script[\s\S]*?<\/script>/gi, ' ')
+               .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+               .replace(/<nav[\s\S]*?<\/nav>/gi, ' ')
+               .replace(/<footer[\s\S]*?<\/footer>/gi, ' ')
+               .replace(/<aside[\s\S]*?<\/aside>/gi, ' ')
+               .replace(/<header[\s\S]*?<\/header>/gi, ' ')
+               .replace(/<form[\s\S]*?<\/form>/gi, ' ')
+               .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+               .replace(/<!--[\s\S]*?-->/g, ' ');
+
+    // Основной контент: article / main / body
+    let content = '';
+    let mA = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+    if (mA) content = mA[1];
+    else {
+      let mM = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
+      if (mM) content = mM[1];
+      else content = html;
+    }
+
+    // Параграфы
+    const paras = content.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) || [];
+    const clean = [];
+    for (let pi = 0; pi < paras.length; pi++){
+      let t = paras[pi].replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'").replace(/&laquo;/g, '«').replace(/&raquo;/g, '»')
+        .replace(/&mdash;/g, '—').replace(/&ndash;/g, '–').replace(/&hellip;/g, '…')
+        .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/\s+/g, ' ').trim();
+      if (t.length > 60) clean.push(t);
+    }
+
+    if (clean.length < 3) return null;
+
+    return {
+      title: title,
+      description: desc,
+      image: image,
+      content: clean.join('\n\n'),
+      sourceUrl: url,
+      paragraphs: clean.length
+    };
+  } catch(e){
+    console.warn('[full-article] ' + e.message);
+    return null;
+  }
+}
 
 async function fetchArticleSource(url){
   if (!/^https?:\/\//i.test(url)) return '';
@@ -857,6 +941,35 @@ app.post('/api/news/article', async function(req,res){
   // Используем link как первичный ключ, т.к. он уникален
   const cacheId = sourceLinkRaw || cleanTitle;
   console.log('[article] lookup id=' + cacheId.slice(0,60) + ' lang=' + language);
+
+  // 0. Если есть прямая ссылка — пробуем загрузить оригинал
+  if (sourceLinkRaw && language === 'ru'){
+    const orig = getCachedArticle(cacheId, 'orig');
+    if (orig){
+      console.log('[full-article] CACHE HIT original');
+      return res.json({ ok:true, article: orig, fromCache: true, isOriginal: true });
+    }
+    try {
+      console.log('[full-article] try original: ' + sourceLinkRaw.slice(0,80));
+      const full = await fetchFullArticle(sourceLinkRaw);
+      if (full && full.paragraphs >= 3){
+        const art = {
+          title: full.title || cleanTitle,
+          subtitle: full.description || '',
+          content: full.content,
+          podcast: '',
+          image: full.image || '',
+          source: sourceName,
+          sourceUrl: sourceLinkRaw,
+          isOriginal: true,
+          attribution: sourceName
+        };
+        saveCachedArticle(cacheId, 'orig', art);
+        console.log('[full-article] OK original, ' + full.paragraphs + ' paras');
+        return res.json({ ok:true, article: art, fromCache: false, isOriginal: true });
+      }
+    } catch(e){ console.warn('[full-article] fail: ' + e.message); }
+  }
 
   // 1. Проверяем кэш (на диске) — по ключу id+lang
   const cached = getCachedArticle(cacheId, language);

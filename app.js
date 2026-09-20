@@ -1012,8 +1012,10 @@ function renderArticleFull(a, n, urgent, source, title, dateStr, img, statusLabe
       (subtitle ? '<p class="article-subtitle">' + escapeHtml(subtitle) + '</p>' : '') +
       audioBtnHtml +
       contentHtml +
-      (sourceLink ? '<div class="article-source-link"><b>Источник:</b> <a href="' + escapeHtml(sourceLink) + '" target="_blank" rel="noopener">' + escapeHtml(source) + '</a></div>' : '') +
-      '<div class="article-source">Материал подготовлен ИИ. Проверяйте первоисточник.</div>' +
+      (sourceLink ? '<div class="article-source-link"><b>Источник:</b> <a href="' + escapeHtml(sourceLink) + '" target="_blank" rel="noopener">' + escapeHtml(source || sourceLink) + '</a></div>' : '') +
+      (a.isOriginal
+        ? '<div class="article-source">Материал опубликован по источнику: <b>' + escapeHtml(source || sourceLink || 'открытые данные') + '</b>. Полный текст доступен по ссылке выше.</div>'
+        : '<div class="article-source">Материал подготовлен ИИ. Проверяйте первоисточник.</div>') +
     '</div>';
   const btn = document.getElementById('articlePlayBtn');
   if (btn) btn.addEventListener('click', function(){ playArticleAudio(a, lang, btn); });
