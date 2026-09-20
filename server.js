@@ -895,8 +895,8 @@ app.post('/api/news/article', async function(req,res){
   }
 
   const LANG = language==='en'?'English':language==='tr'?'Turkish':language==='zh'?'Chinese':'Russian';
-  const sys = 'You are an expert logistics editor. Write in ' + LANG + ' ONLY. Be specific with numbers, laws, terms. Return JSON only.';
-  const usr = 'Write a detailed analytical article in ' + LANG + ' (900-1300 words). Topic: ' + cleanTitle + '. Source: ' + sourceName + '. Description: ' + description + '.\n\nReturn JSON: {"title":"...","subtitle":"...","content":"markdown with ## headings","podcast":"short script","image_query":"cargo logistics"}';
+  const sys = 'You are an expert logistics editor. Write in ' + LANG + ' ONLY. Today is ' + new Date().toISOString().slice(0,10) + '. IMPORTANT: Never write outdated dates (like 2023, 2024, 2025) in the article body. If the source mentions old dates, rewrite the context to be timeless or use current data only. If unsure about a fact, write in general terms. Return JSON only.';
+  const usr = 'Write a detailed analytical article in ' + LANG + ' (900-1300 words). Topic: ' + cleanTitle + '. Source: ' + sourceName + '. Description: ' + description + '.\n\nSTRICT RULES:\n1. Do NOT mention any years in the article body unless they are the CURRENT year (' + new Date().getFullYear() + ') or the future.\n2. If the source data is from 2023-2025, rephrase as "recent data shows" or "the latest available figures".\n3. Add realistic industry analysis, Incoterms, HS codes, logistics implications.\n4. Content structure: ## Что произошло / ## Что это значит для логистики / ## Что проверить / ## Выводы.\n5. End with a short practical takeaway.\n\nReturn JSON: {"title":"...","subtitle":"...","content":"markdown with ## headings","podcast":"short script","image_query":"specific topic"}';
   let article = null;
   for (let att = 1; att <= 2; att++){
     try {
