@@ -10,7 +10,7 @@
   /* Тема применяется до первой отрисовки — без вспышки светлой темы */
   (function(){try{var t=localStorage.getItem('iomastavka_theme');var d=t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content=d?'#0b2238':'#bfe6f8'}catch(e){}})();
 </script>
-<link rel="stylesheet" href="/styles.css?v=20260921-v201">
+<link rel="stylesheet" href="/styles.css?v=20260920-v200">
 </head>
 <body>
 <div id="weatherScene" class="weather-scene" aria-hidden="true"><div class="stars"></div><div class="sun"></div><div class="moon"></div><div class="cloud cloud-a"></div><div class="cloud cloud-b"></div><div class="rain"></div><div class="snow"></div><div class="wave wave-back"></div><div class="wave wave-mid"></div><div class="wave wave-front"></div></div>
@@ -27,7 +27,7 @@
     <button class="service-card service-main" data-open-view="calculator"><span class="service-icon icon-route"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H16a3.5 3.5 0 0 0 0-7H8a3.5 3.5 0 0 1 0-7h7.5"/></svg></span><span class="service-text"><b data-i18n="tileRates">Расчёт ставок</b><small data-i18n="tileRatesSub">Маршрут, ставка и транспорт</small></span><span class="service-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
     <button class="service-card" data-open-view="assistant"><span class="service-icon icon-ai"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span><span class="service-text"><b data-i18n="tileAI">AI-ассистент</b><small data-i18n="tileAISub">Текстом или голосом</small></span><span class="service-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
     <button class="service-card" data-open-view="forwarders"><span class="service-icon icon-box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></span><span class="service-text"><b data-i18n="tileAgents">Экспедиторы</b><small data-i18n="tileAgentsSub">Контакты и направления перевозок</small></span><span class="service-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
-    <button class="service-card" data-open-view="news"><span class="service-icon icon-news"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="13" height="16" rx="2"/><path d="M17 9h2a1 1 0 0 1 1 1v8a2 2 0 0 1-2 2"/><path d="M8 8h5M8 12h5M8 16h3"/></svg></span><span class="service-text"><b data-i18n="tileNews">Новости ВЭД</b><small data-i18n="tileNewsSub">Китай · логистика · таможня</small></span><span class="service-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button><button class="service-card" data-open-view="contract"><span class="service-icon icon-contract"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/><circle cx="17" cy="17" r="4"/><path d="M17 15v2l1 1"/></svg></span><span class="service-text"><b>Калькулятор контракта</b><small>Пошлина · НДС · фрахт · маржа · итог</small></span><span class="service-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button><button class="service-card" data-open-view="customsView"><span class="service-icon icon-shield"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5z"/><circle cx="12" cy="10" r="2.5"/><path d="M7 19c1-2.5 3-3.5 5-3.5s4 1 5 3.5"/></svg></span><span class="service-text"><b data-i18n="customsTitle">Проверка ТН ВЭД</b><small data-i18n="customsHelp">Пошлина, НДС, маркировка, документы</small></span><span class="service-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
+    <button class="service-card" data-open-view="news"><span class="service-icon icon-news"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="13" height="16" rx="2"/><path d="M17 9h2a1 1 0 0 1 1 1v8a2 2 0 0 1-2 2"/><path d="M8 8h5M8 12h5M8 16h3"/></svg></span><span class="service-text"><b data-i18n="tileNews">Новости ВЭД</b><small data-i18n="tileNewsSub">Китай · логистика · таможня</small></span><span class="service-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
   </div>
   <div class="home-status"><div><span class="status-dot"></span><span id="homeWeatherText">Погода обновляется</span></div><div id="homeRouteStatus">Расстояние появится после выбора двух городов</div><div class="home-currency"><span class="home-currency-date" id="homeCurrencyDate">19.09.2026</span><span data-i18n="currencyCny">CNY</span><b id="homeCny">12.535</b><span data-i18n="currencyUsd">USD</span><b id="homeUsd">84.336</b><span data-i18n="currencyEur">EUR</span><b id="homeEur">97.763</b></div></div>
 </section>
@@ -56,39 +56,6 @@
 <section id="newsView" class="view-layer" aria-hidden="true"><div class="directory-panel news-shell"><button class="close-button view-close" data-close-view="news" data-i18n-aria="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="directory-head"><div><span class="eyebrow" data-i18n="intelligenceFeed">ИНФОРМАЦИОННАЯ ЛЕНТА</span><h2 data-i18n="news">Новости ВЭД</h2><p data-i18n="newsSub2">Китай · логистика · таможня</p></div></div><div id="newsList" class="news-list"></div></div></section>
 <section id="tarotView" class="view-layer" aria-hidden="true"><div id="tarotShell" class="tarot-shell"><canvas id="tarotDustCanvas" class="tarot-dust-canvas" aria-hidden="true"></canvas><button class="close-button view-close" data-close-view="tarotView" data-i18n-aria="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="tarot-card"><div class="tarot-particles" aria-hidden="true"></div><div class="tarot-stars"><span class="tarot-diamond">✦</span></div><div class="tarot-label">IOMASTAVKA · TODAY</div><div id="tarotSymbol" class="tarot-symbol">♌</div><h2 id="tarotTitle">Сегодня</h2><p id="tarotText"></p><div class="tarot-meta">21.08.2004 · 16:20 · Нижний Новгород</div></div></div></section>
 <section id="customsView" class="view-layer" aria-hidden="true"><div class="customs-shell"><button class="close-button view-close" data-close-view="customsView" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="customs-head"><span class="eyebrow" data-i18n="customsEyebrow">ТАМОЖЕННЫЙ КОНТРОЛЬ</span><h2 data-i18n="customsTitle">Проверка ТН ВЭД</h2><p data-i18n="customsHelp">Укажите код ТН ВЭД ЕАЭС — я автоматически проверю пошлину, НДС, сборы, маркировку и другие меры.</p></div><div class="customs-form"><input id="customsCode" inputmode="numeric" maxlength="10" placeholder="Например, 8467890000" data-i18n-placeholder="customsPlaceholder"><button id="customsCheck" class="calculate" type="button" data-i18n="customsCheck">Проверить код</button></div><div id="customsStatus" class="customs-status"></div><div id="customsResult" class="customs-result hidden"></div></div></section>
-<section id="contractView" class="view-layer" aria-hidden="true"><div class="contract-shell"><button class="close-button view-close" data-close-view="contractView" data-i18n-aria="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-<div class="contract-head">
-  <span class="eyebrow">РАСЧЁТ КОНТРАКТА</span>
-  <h2>Импортный калькулятор</h2>
-  <p>Полный расчёт сделки: стоимость инвойса, фрахт, пошлины, НДС, таможенный сбор, налоги и маржа.</p>
-</div>
-
-<div class="contract-grid">
-  <div class="contract-inputs">
-    <div class="field"><label>Инвойс, ¥</label><input id="cfInvoice" type="number" min="0" step="100" placeholder="70296"></div>
-    <div class="field"><label>ТД, %</label><input id="cfTD" type="number" min="0" step="0.1" placeholder="0"></div>
-    <div class="field"><label>Пошлина, %</label><input id="cfDuty" type="number" min="0" step="0.1" placeholder="12.5"></div>
-    <div class="field"><label>Фрахт, ¥</label><input id="cfFreight" type="number" min="0" step="100" placeholder="25800"></div>
-    <div class="field"><label>Декларант, ₽</label><input id="cfDeclarant" type="number" min="0" step="500" placeholder="25000"></div>
-    <div class="field"><label>Страхование, %</label><input id="cfInsurance" type="number" min="0" step="0.01" placeholder="0.15"></div>
-    <div class="field"><label>НДС, %</label><input id="cfVAT" type="number" min="0" step="1" placeholder="22"></div>
-    <div class="field"><label>Прибыль, ¥</label><input id="cfProfit" type="number" min="0" step="100" placeholder="7519.6"></div>
-    <div class="field"><label>Курс юаня, ₽</label><input id="cfRate" type="number" min="0" step="0.0001" placeholder="12.567"></div>
-    <div class="field"><label>Комиссия за перевод, %</label><input id="cfTransferFee" type="number" min="0" step="0.1" placeholder="3"></div>
-    <div class="field"><label>Налоги, %</label><input id="cfTaxes" type="number" min="0" step="0.1" placeholder="2.2"></div>
-  </div>
-
-  <div class="contract-results" id="contractResults">
-    <div class="contract-placeholder">Введите данные слева — расчёт появится здесь автоматически</div>
-  </div>
-</div>
-
-<div class="contract-actions">
-  <button id="contractCalc" class="calculate" type="button">Рассчитать</button>
-  <button id="contractReset" class="attach-button" type="button">Сбросить</button>
-</div>
-</div></section>
-
 <section id="articleView" class="view-layer" aria-hidden="true"><article class="article-shell"><button class="close-button view-close" data-close-view="article" data-i18n-aria="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div id="articleContent"></div></article></section>
 </main>
 <script>
@@ -101,6 +68,6 @@
     }
   } catch(e){}
 </script>
-<script src="/app.js?v=20260921-v201" defer></script>
+<script src="/app.js?v=20260920-v200" defer></script>
 
 </body></html>

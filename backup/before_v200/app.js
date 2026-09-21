@@ -1,76 +1,47 @@
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
-// --- UI helpers: icons, toasts, understandable errors -----------------------
-const ICONS = {
-  check:'<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/>',
-  alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
-  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
-  ban:'<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>',
-  map:'<path d="M9 4 3 6.5v13L9 17l6 2.5 6-2.5v-13L15 7z"/><path d="M9 4v13M15 7v12.5"/>',
-  ship:'<path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1 .6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M19.4 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.9.9 5.3 2.8 7.8"/><path d="M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6"/><path d="M12 10v4M12 2v3"/>',
-  train:'<path d="M8 3.1V7a4 4 0 0 0 8 0V3.1"/><path d="m9 15-1-1M15 15l1-1"/><path d="M9 19c-2.8 0-5-2.2-5-5v-4a8 8 0 0 1 16 0v4c0 2.8-2.2 5-5 5Z"/><path d="m8 19-2 3M16 19l2 3"/>',
-  truck:'<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>',
-  plane:'<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
-  sparkle:'<path d="M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>'
-};
-function ico(name, cls = ''){ return '<svg class="ico' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || '') + '</svg>'; }
-
-function toast(msg, type = 'info', ms = 3800){
-  let host = document.getElementById('toastHost');
-  if (!host){
-    host = document.createElement('div');
-    host.id = 'toastHost'; host.className = 'toast-host';
-    host.setAttribute('role', 'status'); host.setAttribute('aria-live', 'polite');
-    document.body.appendChild(host);
-  }
-  const t = document.createElement('div');
-  t.className = 'toast toast-' + type;
-  t.innerHTML = ico(type === 'success' ? 'check' : type === 'error' ? 'alert' : 'info') + '<span></span>';
-  t.lastChild.textContent = msg;
-  host.appendChild(t);
-  while (host.children.length > 3) host.firstChild.remove();
-  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, ms);
-}
-
-function friendlyError(e){
-  const m = String((e && e.message) || e || '');
-  const L = (typeof lang !== 'undefined' && lang) || 'ru';
-  const T = {
-    net: {ru:'Нет связи с сервером. Проверьте интернет и повторите попытку.', en:'No connection to the server. Check your internet and try again.', tr:'Sunucuya bağlanılamadı. İnternetinizi kontrol edip tekrar deneyin.', zh:'无法连接服务器，请检查网络后重试。'},
-    generic: {ru:'Что-то пошло не так. Повторите попытку.', en:'Something went wrong. Please try again.', tr:'Bir şeyler ters gitti. Lütfen tekrar deneyin.', zh:'出了点问题，请重试。'}
-  };
-  if (/failed to fetch|networkerror|load failed|network request failed|fetch/i.test(m) || (typeof navigator !== 'undefined' && navigator.onLine === false)) return T.net[L] || T.net.ru;
-  return m.trim() || T.generic[L] || T.generic.ru;
-}
+// --- Левая кнопка-док: открытие при наведении мыши ---
+(function(){
+  const dock = document.getElementById('controlDock');
+  const tools = document.getElementById('controlTools');
+  const launcher = document.getElementById('controlLauncher');
+  if(!dock) return;
+  dock.addEventListener('mouseenter', () => {
+    dock.classList.add('open');
+    if(tools) tools.setAttribute('aria-hidden','false');
+    if(launcher) launcher.setAttribute('aria-expanded','true');
+  });
+  dock.addEventListener('mouseleave', () => {
+    dock.classList.remove('open');
+    if(tools) tools.setAttribute('aria-hidden','true');
+    if(launcher) launcher.setAttribute('aria-expanded','false');
+  });
+})();
 
 // --- Загрузка КП / ставок из файла в калькуляторе ---
 (function(){
   const fileInput = document.getElementById('rateFileUpload');
   const statusEl = document.getElementById('rateUploadStatus');
   if(!fileInput) return;
-  const setStatus = (t, kind) => { if(!statusEl) return; statusEl.textContent = t; statusEl.classList.toggle('is-ok', kind === 'ok'); statusEl.classList.toggle('is-error', kind === 'error'); };
   fileInput.addEventListener('change', async (e) => {
     const file = e.target.files && e.target.files[0];
     if(!file) return;
-    setStatus('Обрабатываю КП… Это может занять до 15 секунд.');
+    if(statusEl){ statusEl.textContent = 'Обрабатываю КП… Это может занять до 15 секунд.'; statusEl.style.color = '#78909f'; }
     const formData = new FormData();
     formData.append('file', file);
     try {
       const r = await fetch('/api/rates/import', { method: 'POST', body: formData });
       const d = await r.json();
       if (r.ok && d.ok) {
-        setStatus('');
-        toast('Ставки добавлены: ' + (d.added || 0), 'success');
+        if(statusEl){ statusEl.textContent = 'Успешно! Добавлено ставок: ' + (d.added||0); statusEl.style.color = '#26704a'; }
         try { await loadRates(); } catch(_) {}
+        setTimeout(()=>{ if(statusEl) statusEl.textContent=''; }, 6000);
       } else {
-        throw new Error(d.error || 'Не удалось загрузить файл');
+        throw new Error(d.error || 'Ошибка загрузки');
       }
     } catch (err) {
-      setStatus('');
-      toast(friendlyError(err), 'error', 5200);
-    } finally {
-      fileInput.value = '';
+      if(statusEl){ statusEl.textContent = 'Ошибка: ' + (err.message||err); statusEl.style.color = '#a94d4d'; }
     }
   });
 })();
@@ -79,13 +50,13 @@ function friendlyError(e){
 // HARDENED UI BOOT: these handlers are intentionally independent from the rest of the app.
 // If an optional module fails later, the core windows, close buttons and theme controls still work.
 (() => {
-  const viewMap = {calculator:'calculatorView',assistant:'assistantView',forwarders:'forwardersView',news:'newsView',article:'articleView',tarotView:'tarotView',customsView:'customsView',contract:'contractView'};
+  const viewMap = {calculator:'calculatorView',assistant:'assistantView',forwarders:'forwardersView',news:'newsView',article:'articleView',tarotView:'tarotView',customsView:'customsView'};
   const open = (name) => {
     const id=viewMap[name]; if(!id) return false;
     const target=document.getElementById(id); if(!target) return false;
     document.querySelectorAll('.view-layer').forEach(v=>{v.classList.remove('open');v.setAttribute('aria-hidden','true')});
     target.classList.add('open'); target.setAttribute('aria-hidden','false'); document.body.classList.add('view-open');
-    try{ if(!window.__iomaPushed){ history.pushState({ioma:1},''); window.__iomaPushed = true; } }catch(e){}
+    var _back = document.getElementById('backToNewsBtn'); if (_back) _back.style.display = 'inline-flex';
         // Отрисовка содержимого при открытии вида
     try {
       if (name === 'forwarders' && typeof renderDirectory === 'function') renderDirectory();
@@ -95,8 +66,7 @@ function friendlyError(e){
     } catch (err) { console.warn('view render:', err); }
     return true;
   };
-  const close = () => { document.querySelectorAll('.view-layer').forEach(v=>{v.classList.remove('open');v.setAttribute('aria-hidden','true')}); document.body.classList.remove('view-open'); if(window.__iomaPushed){ window.__iomaPushed = false; try{ if(history.state && history.state.ioma) history.back(); }catch(e){} } };
-  window.addEventListener('popstate', () => { if(window.__iomaPushed){ window.__iomaPushed = false; close(); } });
+  const close = () => { document.querySelectorAll('.view-layer').forEach(v=>{v.classList.remove('open');v.setAttribute('aria-hidden','true')}); document.body.classList.remove('view-open'); var _back = document.getElementById('backToNewsBtn'); if (_back) _back.style.display = 'none'; };
   window.__iomaOpenView=open; window.__iomaCloseViews=close;
   document.addEventListener('click',(e)=>{
     const trigger=e.target.closest?.('[data-open-view]');
@@ -115,7 +85,7 @@ function friendlyError(e){
 })();
 
 const I18N = {
-  ru:{title:'Расчёт ставки',from:'Откуда',to:'Куда',cargo:'ГРУЗ',weight:'Вес, кг',pieces:'Количество мест',distance:'Расстояние, км',auto:'Автоматически',dimensions:'ГАБАРИТЫ ОДНОГО МЕСТА',volumeAll:'Объём — по всем местам',length:'Длина',width:'Ширина',height:'Высота',forwarder:'Экспедитор',transport:'Вид транспорта',incoterms:'Условия поставки',dimWeight:'Объёмный вес',chooseForwarder:'Выберите экспедитора',chooseTransport:'Выберите транспорт',selected:'ЭКСПЕДИТОР',none:'Не выбран',calculate:'Рассчитать',agents:'Экспедиторы',assistant:'ИИ-ассистент',assistantSub:'Спросите что угодно по логистике',assistantHelp:'Можно писать обычным языком: маршрут, ставка, Incoterms, таможня, расчёт веса или новая ставка.',send:'Отправить',news:'Новости',newsSub:'Логистика · Китай · Таможня',logout:'Выйти',thinking:'Думаю над вашим ответом…',aiOff:'ИИ не подключён. Добавьте OPENAI_API_KEY в Render.',newsLoading:'Загружаю новости…',noNews:'Новости пока недоступны.',weatherError:'Погода временно недоступна.',todayDate:'15.09.2026 г.',home:'Главная',heroEyebrow:'ЛОГИСТИКА · КИТАЙ → РОССИЯ',heroText:'Точный расчёт. Умный помощник.\nВсё необходимое для работы с грузом — в одном месте.',tileRates:'Расчёт ставок',tileRatesSub:'Маршрут, ставка и транспорт',tileAI:'ИИ-ассистент',tileAISub:'Текстом или голосом',tileAgents:'Экспедиторы',tileAgentsSub:'Контакты и направления перевозок',tileNews:'Новости ВЭД',tileNewsSub:'Китай · логистика · таможня',directoryEyebrow:'СПРАВОЧНИК',directorySub:'Поставщики и контакты по направлениям.',intelligence:'ИНТЕЛЛЕКТ',assistantSub2:'Логистика, расчёты и ВЭД — голосом или текстом.',attach:'Файл',fileHint:'Файл можно добавить вместе с сообщением',voice:'Микрофон',intelligenceFeed:'ИНФОРМАЦИОННАЯ ЛЕНТА',newsSub2:'Китай · логистика · таможня',chargeWeight:'Расчётный вес',company:'Компания',contact:'Контакт',phone:'Телефон',email:'Email',website:'Сайт',directions:'Направления',note:'Примечание',all:'Все',close:'Закрыть',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Автоматически по транспорту',transportRail:'ЖД',transportRoad:'Авто',transportAir:'Авиа',transportSea:'Море',transportMulti:'Море + ЖД',menu:'Меню',ready:'Готов к разговору',listen:'Слушаю…',transcribe:'Расшифровываю…',recognized:'Речь распознана',fail:'Не удалось распознать голос',mic:'Нет доступа к микрофону',unavailable:'Голос недоступен',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'ЦБ РФ',articleLoading:'Готовлю статью…',articleError:'Не удалось подготовить статью.',articleListen:'Аудиоподкаст',articlePlay:'Слушать',articlePause:'Пауза',articleSource:'Материал подготовлен на основе новости',articleBack:'К новостям',autoVolumeLabel:'Объём',autoVolumetricLabel:'Объёмный вес',factorLabel:'Фактор',themeLight:'Светлая тема',themeDark:'Тёмная тема',themeToggle:'Сменить тему',customsEyebrow:'ТАМОЖЕННЫЙ КОНТРОЛЬ',customsTitle:'Проверка ТН ВЭД',customsHelp:'Укажите код ТН ВЭД ЕАЭС — я автоматически проверю пошлину, НДС, сборы, маркировку и другие меры.',customsPlaceholder:'Например, 8467890000',customsCheck:'Проверить код'},
+  ru:{title:'Расчёт ставки',from:'Откуда',to:'Куда',cargo:'ГРУЗ',weight:'Вес, кг',pieces:'Количество мест',distance:'Расстояние, км',auto:'Автоматически',dimensions:'ГАБАРИТЫ ОДНОГО МЕСТА',volumeAll:'Объём — по всем местам',length:'Длина',width:'Ширина',height:'Высота',forwarder:'Экспедитор',transport:'Вид транспорта',incoterms:'Условия поставки',dimWeight:'Объёмный вес',chooseForwarder:'Выберите экспедитора',chooseTransport:'Выберите транспорт',selected:'ЭКСПЕДИТОР',none:'Не выбран',calculate:'Рассчитать',agents:'Экспедиторы',assistant:'ИИ-ассистент',assistantSub:'Спросите что угодно по логистике',assistantHelp:'Можно писать обычным языком: маршрут, ставка, Incoterms, таможня, расчёт веса или новая ставка.',send:'Отправить',news:'Новости',newsSub:'Логистика · Китай · Таможня',logout:'Выйти',thinking:'Думаю над вашим ответом…',aiOff:'ИИ не подключён. Добавьте OPENAI_API_KEY в Render.',newsLoading:'Загружаю новости…',noNews:'Новости пока недоступны.',weatherError:'Погода временно недоступна.',todayDate:'15.09.2026 г.',home:'Главная',heroEyebrow:'ЛОГИСТИКА · КИТАЙ → РОССИЯ',heroText:'Точный расчёт. Умный помощник.\nВсё необходимое для работы с грузом — в одном месте.',tileRates:'Расчёт ставок',tileRatesSub:'Маршрут, ставка и транспорт',tileAI:'AI-ассистент',tileAISub:'Текстом или голосом',tileAgents:'Экспедиторы',tileAgentsSub:'Контакты и направления перевозок',tileNews:'Новости ВЭД',tileNewsSub:'Китай · логистика · таможня',directoryEyebrow:'СПРАВОЧНИК',directorySub:'Поставщики и контакты по направлениям.',intelligence:'ИНТЕЛЛЕКТ',assistantSub2:'Логистика, расчёты и ВЭД — голосом или текстом.',attach:'Файл',fileHint:'Файл можно добавить вместе с сообщением',voice:'Микрофон',intelligenceFeed:'ИНФОРМАЦИОННАЯ ЛЕНТА',newsSub2:'Китай · логистика · таможня',chargeWeight:'Расчётный вес',company:'Компания',contact:'Контакт',phone:'Телефон',email:'Email',website:'Сайт',directions:'Направления',note:'Примечание',all:'Все',close:'Закрыть',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Автоматически по транспорту',transportRail:'ЖД',transportRoad:'Авто',transportAir:'Авиа',transportSea:'Море',transportMulti:'Море + ЖД',menu:'Меню',ready:'Готов к разговору',listen:'Слушаю…',transcribe:'Расшифровываю…',recognized:'Речь распознана',fail:'Не удалось распознать голос',mic:'Нет доступа к микрофону',unavailable:'Голос недоступен',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'ЦБ РФ',articleLoading:'Готовлю статью…',articleError:'Не удалось подготовить статью.',articleListen:'Аудиоподкаст',articlePlay:'Слушать',articlePause:'Пауза',articleSource:'Материал подготовлен на основе новости',articleBack:'К новостям',autoVolumeLabel:'Объём',autoVolumetricLabel:'Объёмный вес',factorLabel:'Фактор',themeLight:'Светлая тема',themeDark:'Тёмная тема',themeToggle:'Сменить тему',customsEyebrow:'ТАМОЖЕННЫЙ КОНТРОЛЬ',customsTitle:'Проверка ТН ВЭД',customsHelp:'Укажите код ТН ВЭД ЕАЭС — я автоматически проверю пошлину, НДС, сборы, маркировку и другие меры.',customsPlaceholder:'Например, 8467890000',customsCheck:'Проверить код'},
 
   tr:{title:'Navlun Hesaplama',from:'Nereden',to:'Nereye',cargo:'KARGO',weight:'Ağırlık, kg',pieces:'Parça sayısı',distance:'Mesafe, km',auto:'Otomatik',dimensions:'TEK PARÇA ÖLÇÜLERİ',volumeAll:'Hacim — tüm parçalar',length:'Uzunluk',width:'Genişlik',height:'Yükseklik',forwarder:'Forwarder',transport:'Taşıma şekli',incoterms:'Teslim şekli',dimWeight:'Hacimsel ağırlık',chooseForwarder:'Forwarder seçin',chooseTransport:'Taşıma şeklini seçin',selected:'FORWARDER',none:'Seçilmedi',calculate:'Hesapla',agents:'Forwarderlar',assistant:'Yapay zekâ asistanı',assistantSub:'Lojistik hakkında sorun',assistantHelp:'Rota, navlun, Incoterms, gümrük, ağırlık hesabı veya yeni bir fiyatı doğal dille yazabilirsiniz.',send:'Gönder',news:'Haberler',newsSub:'Lojistik · Çin · Gümrük',logout:'Çıkış',thinking:'Yanıt hazırlanıyor…',aiOff:'Yapay zekâ bağlı değil. Render üzerinde OPENAI_API_KEY ekleyin.',newsLoading:'Haberler yükleniyor…',noNews:'Haberler şu anda kullanılamıyor.',weatherError:'Hava durumu geçici olarak kullanılamıyor.',todayDate:'15.09.2026',home:'Ana sayfa',heroEyebrow:'LOJİSTİK · ÇİN → RUSYA',heroText:'Doğru hesaplama. Akıllı asistan.\nKargo operasyonu için gereken her şey tek yerde.',tileRates:'Navlun hesaplama',tileRatesSub:'Rota, fiyat ve taşıma şekli',tileAI:'Yapay zekâ asistanı',tileAISub:'Metin veya ses',tileAgents:'Forwarderlar',tileAgentsSub:'İletişim bilgileri ve taşıma yönleri',tileNews:'Dış ticaret haberleri',tileNewsSub:'Çin · lojistik · gümrük',directoryEyebrow:'REHBER',directorySub:'Taşıma yönlerine göre tedarikçiler ve iletişim bilgileri.',intelligence:'ZEKA',assistantSub2:'Lojistik, hesaplamalar ve dış ticaret — sesli veya yazılı.',attach:'Dosya',fileHint:'Mesajınıza dosya ekleyebilirsiniz',voice:'Mikrofon',intelligenceFeed:'BİLGİ AKIŞI',newsSub2:'Çin · lojistik · gümrük',chargeWeight:'Hesaplanan ağırlık',company:'Şirket',contact:'Yetkili',phone:'Telefon',email:'E-posta',website:'Web sitesi',directions:'Yönler',note:'Not',all:'Tümü',close:'Kapat',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Taşıma şekline göre otomatik',transportRail:'Demiryolu',transportRoad:'Karayolu',transportAir:'Hava yolu',transportSea:'Deniz yolu',transportMulti:'Deniz + Demiryolu',menu:'Menü',ready:'Konuşmaya hazır',listen:'Dinliyorum…',transcribe:'Yazıya dökülüyor…',recognized:'Konuşma algılandı',fail:'Ses tanınamadı',mic:'Mikrofon erişimi yok',unavailable:'Ses kullanılamıyor',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'Rusya Merkez Bankası',articleLoading:'Makale hazırlanıyor…',articleError:'Makale hazırlanamadı.',articleListen:'Sesli podcast',articlePlay:'Dinle',articlePause:'Duraklat',articleSource:'Seçilen haber temel alınarak hazırlandı',articleBack:'Haberlere dön',autoVolumeLabel:'Hacim',autoVolumetricLabel:'Hacimsel ağırlık',factorLabel:'Faktör',themeLight:'Açık tema',themeDark:'Koyu tema',themeToggle:'Temayı değiştir',customsEyebrow:'GÜMRÜK KONTROLÜ',customsTitle:'GTİP KODU KONTROLÜ',customsHelp:'EAEU GTİP kodunu girin — gümrük vergisi, KDV, gümrük harçları, işaretleme ve diğer önlemler otomatik olarak kontrol edilir.',customsPlaceholder:'Örneğin 8467890000',customsCheck:'Kodu kontrol et'},  en:{title:'Rate calculation',from:'From',to:'To',cargo:'CARGO',weight:'Weight, kg',pieces:'Pieces',distance:'Distance, km',auto:'Automatic',dimensions:'DIMENSIONS OF ONE PIECE',volumeAll:'Volume — all pieces',length:'Length',width:'Width',height:'Height',forwarder:'Forwarder',transport:'Transport',incoterms:'Incoterms',dimWeight:'Volumetric weight',chooseForwarder:'Choose forwarder',chooseTransport:'Choose transport',selected:'FORWARDER',none:'Not selected',calculate:'Calculate',agents:'Forwarders',assistant:'AI assistant',assistantSub:'Ask anything about logistics',assistantHelp:'Write naturally: route, rate, Incoterms, customs, weight calculation or a new rate.',send:'Send',news:'News',newsSub:'Logistics · China · Customs',logout:'Log out',thinking:'Thinking about your answer…',aiOff:'AI is not connected. Add OPENAI_API_KEY in Render.',newsLoading:'Loading news…',noNews:'News are temporarily unavailable.',weatherError:'Weather is temporarily unavailable.',todayDate:'15.09.2026',home:'Home',heroEyebrow:'LOGISTICS · CHINA → RUSSIA',heroText:'Precise calculation. Smart assistant.\nEverything you need for cargo work — in one place.',tileRates:'Rate calculation',tileRatesSub:'Route, rate and transport',tileAI:'AI assistant',tileAISub:'Text or voice',tileAgents:'Forwarders',tileAgentsSub:'Contacts and transport directions',tileNews:'Trade news',tileNewsSub:'China · logistics · customs',directoryEyebrow:'DIRECTORY',directorySub:'Suppliers and contacts by transport direction.',intelligence:'INTELLIGENCE',assistantSub2:'Logistics, rates and foreign trade — by voice or text.',attach:'File',fileHint:'Attach a file with your message',voice:'Microphone',intelligenceFeed:'NEWS FEED',newsSub2:'China · logistics · customs',chargeWeight:'Chargeable weight',company:'Company',contact:'Contact',phone:'Phone',email:'Email',website:'Website',directions:'Directions',note:'Note',all:'All',close:'Close',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Automatic by transport',transportRail:'Rail',transportRoad:'Road',transportAir:'Air',transportSea:'Sea',transportMulti:'Sea + Rail',menu:'Menu',ready:'Ready to talk',listen:'Listening…',transcribe:'Transcribing…',recognized:'Speech recognized',fail:'Could not recognize speech',mic:'Microphone access denied',unavailable:'Voice unavailable',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'CBR',articleLoading:'Preparing article…',articleError:'Could not prepare the article.',articleListen:'Audio podcast',articlePlay:'Listen',articlePause:'Pause',articleSource:'Prepared from the selected news item',articleBack:'Back to news',autoVolumeLabel:'Volume',autoVolumetricLabel:'Volumetric weight',factorLabel:'Factor',themeLight:'Light theme',themeDark:'Dark theme',themeToggle:'Switch theme',customsEyebrow:'CUSTOMS CONTROL',customsTitle:'HS / TN VED CHECK',customsHelp:'Enter the EAEU TN VED code — I will automatically check duty, VAT, customs fees, marking and other measures.',customsPlaceholder:'For example, 8467890000',customsCheck:'Check code'},
   zh:{title:'运价计算',from:'起运地',to:'目的地',cargo:'货物',weight:'重量，公斤',pieces:'件数',distance:'距离，公里',auto:'自动',dimensions:'单件尺寸',volumeAll:'体积 — 所有件',length:'长度',width:'宽度',height:'高度',forwarder:'货运代理',transport:'运输方式',incoterms:'贸易术语',dimWeight:'体积重量',chooseForwarder:'选择货运代理',chooseTransport:'选择运输方式',selected:'货运代理',none:'未选择',calculate:'计算',agents:'货运代理',assistant:'AI 助手',assistantSub:'咨询物流问题',assistantHelp:'可以直接输入路线、运价、贸易术语、清关或体积重量问题。',send:'发送',news:'新闻',newsSub:'物流 · 中国 · 海关',logout:'退出',thinking:'正在组织答案…',aiOff:'AI 尚未连接。请在 Render 添加 OPENAI_API_KEY。',newsLoading:'正在加载新闻…',noNews:'暂时没有新闻。',weatherError:'天气暂时不可用。',todayDate:'15.09.2026',home:'首页',heroEyebrow:'物流 · 中国 → 俄罗斯',heroText:'精准报价。智能助手。\n货运工作所需的一切，都在这里。',tileRates:'运价计算',tileRatesSub:'路线、运价和运输方式',tileAI:'AI 助手',tileAISub:'文字或语音',tileAgents:'货运代理',tileAgentsSub:'联系方式和运输方向',tileNews:'外贸新闻',tileNewsSub:'中国 · 物流 · 海关',directoryEyebrow:'通讯录',directorySub:'按运输方向查看供应商和联系方式。',intelligence:'智能',assistantSub2:'物流、运价和外贸 — 支持语音或文字。',attach:'文件',fileHint:'可以随消息添加文件',voice:'麦克风',intelligenceFeed:'资讯',newsSub2:'中国 · 物流 · 海关',chargeWeight:'计费重量',company:'公司',contact:'联系人',phone:'电话',email:'邮箱',website:'网站',directions:'运输方向',note:'备注',all:'全部',close:'关闭',weatherUpdating:'',distanceWaiting:'',autoByTransport:'根据运输方式自动计算',transportRail:'铁路',transportRoad:'公路',transportAir:'空运',transportSea:'海运',transportMulti:'海运 + 铁路',menu:'菜单',ready:'准备好开始对话',listen:'正在听…',transcribe:'正在转写…',recognized:'已识别语音',fail:'无法识别语音',mic:'没有麦克风权限',unavailable:'语音不可用',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'中国人民银行',articleLoading:'正在准备文章…',articleError:'无法生成文章。',articleListen:'音频播客',articlePlay:'播放',articlePause:'暂停',articleSource:'根据所选新闻整理',articleBack:'返回新闻',autoVolumeLabel:'体积',autoVolumetricLabel:'体积重量',factorLabel:'换算系数',themeLight:'浅色主题',themeDark:'深色主题',themeToggle:'切换主题',customsEyebrow:'海关监管',customsTitle:'海关编码检查',customsHelp:'输入欧亚经济联盟海关编码 — 自动检查关税、增值税、海关费用、商品标记和其他措施。',customsPlaceholder:'例如 8467890000',customsCheck:'检查编码'}
@@ -176,7 +146,7 @@ function setDimensionLabels(){
  });
 }
 function applyLang(){
- document.documentElement.lang=lang;renderChatEmpty(true);
+ document.documentElement.lang=lang;
  $$('[data-i18n]').forEach(el=>{const key=el.dataset.i18n;if(key==='heroText')el.innerHTML=tr(key).replace(/\n/g,'<br>');else el.textContent=tr(key)});
  const ph=lang==='zh'?['中国城市','俄罗斯城市']:lang==='en'?['City in China','City in Russia']:lang==='tr'?['Çin şehri','Rusya şehri']:['Город в Китае','Город в России'];
  $('#fromCity').placeholder=ph[0]; $('#toCity').placeholder=ph[1]; $('#distance').placeholder='0';
@@ -223,7 +193,7 @@ function filteredAgents(){return agentDirectory.filter(a=>{
 })}
 function renderForwarderMenu(){
  const menu=$('#forwarderMenu'); if(!menu)return; menu.innerHTML='';
- const list=(()=>{const seen=new Set();return filteredAgents().filter(a=>{const k=normalizeTextCompany(a.company||'');if(!k||seen.has(k))return false;seen.add(k);return true})})();
+ const list=filteredAgents();
  list.forEach(agent=>{
    const b=document.createElement('button'); b.type='button'; b.className='hover-item agent-option';
    const main=document.createElement('strong'); main.textContent=agent.company;
@@ -246,15 +216,17 @@ function renderFactors(){selectedFactor=selectedMode&&modes[selectedMode]?modes[
 
 // Dropdowns work both by hover and by click/tap.
 ['forwarderBtn','transportBtn','incotermBtn'].forEach(id=>{const btn=$('#'+id);const menu=$('#'+id.replace('Btn','Menu'));if(btn&&menu)btn.addEventListener('click',e=>{e.stopPropagation();const open=menu.style.visibility==='visible'||menu.classList.contains('open');$$('.hover-menu').forEach(m=>m.classList.remove('open'));if(!open)menu.classList.add('open')})});
-document.addEventListener('click',e=>{$$('.hover-menu').forEach(m=>{if(!e.target.closest('.hover-select'))m.classList.remove('open')});if(!e.target.closest('.autocomplete'))$$('.suggestions.open').forEach(m=>m.classList.remove('open'))});
+document.addEventListener('click',e=>{$$('.hover-menu').forEach(m=>{if(!e.target.closest('.hover-select'))m.classList.remove('open')})});
 
 // Navigation controls. Keep a single source of truth to avoid duplicate handlers.
+$('#controlLauncher')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const dock=$('#controlDock'),tools=$('#controlTools');const open=dock?.classList.toggle('open');if(dock)dock.setAttribute('aria-expanded',String(!!open));if(tools)tools.setAttribute('aria-hidden',String(!open));});
+document.addEventListener('click',e=>{const dock=$('#controlDock');if(dock?.classList.contains('open')&&!e.target.closest('#controlDock')){dock.classList.remove('open');dock.setAttribute('aria-expanded','false');$('#controlTools')?.setAttribute('aria-hidden','true')}});
 $('#customsButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.__iomaOpenView?.('customsView')});
 $('#menuButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();showTarot()});
 $('#agentImportButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openAgentImporter()});
 $('#logoutButton')?.addEventListener('click',async()=>{try{await fetch('/api/logout',{method:'POST'})}finally{location.href='/'}});
 $('#themeToggleButton')?.addEventListener('click',()=>setTheme(document.body.classList.contains('manual-dark')?'light':'dark'));
-{ const __saved = localStorage.getItem('iomastavka_theme'); const __mq = window.matchMedia('(prefers-color-scheme: dark)'); setTheme(__saved || (__mq.matches ? 'dark' : 'light'), false); __mq.addEventListener?.('change', e => { if (!localStorage.getItem('iomastavka_theme')) setTheme(e.matches ? 'dark' : 'light', false); }); }
+setTheme(localStorage.getItem('iomastavka_theme')||'light');
 
 function showTarot(){
   showView('tarotView');
@@ -364,22 +336,11 @@ function startTarotDust(reverse=false){
 }
 
 function openAgentImporter(){
-  let v=$('#agentImportView'); if(!v){v=document.createElement('section');v.id='agentImportView';v.className='view-layer';v.innerHTML=`<div class="agent-import-shell"><button class="close-button" data-agent-import-close aria-label="Назад" title="Назад"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button><span class="eyebrow">ИМПОРТ ЭКСПЕДИТОРОВ</span><h2>Обновить справочник</h2><p>Вставь текст или прикрепи КП/контакты. ИИ выделит компании, контакты, телефоны, почты, сайты и направления и добавит их в справочник.</p><textarea id="agentImportText" placeholder="Вставь сюда текст…"></textarea><div class="agent-import-actions"><label class="attach-button icon-only" for="agentImportFile" title="Прикрепить файл"><svg viewBox="0 0 24 24"><path d="M8.5 12.5 14.9 6.1a3.3 3.3 0 0 1 4.7 4.7l-8.9 8.9a5 5 0 0 1-7.1-7.1l9.2-9.2a2.9 2.9 0 0 1 4.1 4.1l-8.8 8.8a1.4 1.4 0 0 1-2-2l7.9-7.9"/></svg></label><input id="agentImportFile" type="file" accept=".pdf,.txt,.csv,.xlsx,.xls,.docx,.rtf,.json,.png,.jpg,.jpeg,.webp"><button id="agentImportRun" class="calculate">Обновить справочник</button></div><div id="agentImportStatus"></div></div>`;document.querySelector('main').appendChild(v);v.querySelector('[data-agent-import-close]').onclick=()=>{v.classList.remove('open');document.body.classList.remove('view-open')};v.addEventListener('click',e=>{if(e.target===v){v.classList.remove('open');document.body.classList.remove('view-open')}});$('#agentImportFile').onchange=()=>{const f=$('#agentImportFile').files?.[0];if(f)$('#agentImportStatus').textContent=f.name};$('#agentImportRun').onclick=async()=>{const st=$('#agentImportStatus');st.textContent='Обрабатываю…';try{let text=$('#agentImportText').value.trim();const f=$('#agentImportFile').files?.[0];if(f)text+=(text?'\n\n':'')+await extractAttachment(f);if(!text)throw new Error('Добавь текст или файл');const r=await fetch('/api/agents/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Не удалось обновить');if(Array.isArray(d.records)&&d.records.length){agentDirectory=agentDirectory.concat(d.records);renderDirectory();}st.textContent=`Добавлено новых контактов: ${d.added||d.records?.length||0}`;setTimeout(()=>{v.classList.remove('open');document.body.classList.remove('view-open')},900)}catch(e){st.textContent=e.message||'Ошибка'}}}
-  v.classList.add('open');document.body.classList.add('view-open');
+  let v=$('#agentImportView'); if(!v){v=document.createElement('section');v.id='agentImportView';v.className='view-layer';v.innerHTML=`<div class="agent-import-shell"><button class="close-button" data-agent-import-close aria-label="Назад" title="Назад"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button><span class="eyebrow">ИМПОРТ ЭКСПЕДИТОРОВ</span><h2>Обновить справочник</h2><p>Вставь текст или прикрепи КП/контакты. ИИ выделит компании, контакты, телефоны, почты, сайты и направления и добавит их в справочник.</p><textarea id="agentImportText" placeholder="Вставь сюда текст…"></textarea><div class="agent-import-actions"><label class="attach-button icon-only" for="agentImportFile" title="Прикрепить файл"><svg viewBox="0 0 24 24"><path d="M8.5 12.5 14.9 6.1a3.3 3.3 0 0 1 4.7 4.7l-8.9 8.9a5 5 0 0 1-7.1-7.1l9.2-9.2a2.9 2.9 0 0 1 4.1 4.1l-8.8 8.8a1.4 1.4 0 0 1-2-2l7.9-7.9"/></svg></label><input id="agentImportFile" type="file" accept=".pdf,.txt,.csv,.xlsx,.xls,.docx,.rtf,.json,.png,.jpg,.jpeg,.webp"><button id="agentImportRun" class="calculate">Обновить справочник</button></div><div id="agentImportStatus"></div></div>`;document.querySelector('main').appendChild(v);v.querySelector('[data-agent-import-close]').onclick=()=>v.classList.remove('open');v.addEventListener('click',e=>{if(e.target===v)v.classList.remove('open')});$('#agentImportFile').onchange=()=>{const f=$('#agentImportFile').files?.[0];if(f)$('#agentImportStatus').textContent=f.name};$('#agentImportRun').onclick=async()=>{const st=$('#agentImportStatus');st.textContent='Обрабатываю…';try{let text=$('#agentImportText').value.trim();const f=$('#agentImportFile').files?.[0];if(f)text+=(text?'\n\n':'')+await extractAttachment(f);if(!text)throw new Error('Добавь текст или файл');const r=await fetch('/api/agents/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Не удалось обновить');if(Array.isArray(d.records)&&d.records.length){agentDirectory=agentDirectory.concat(d.records);renderDirectory();}st.textContent=`Добавлено новых контактов: ${d.added||d.records?.length||0}`;setTimeout(()=>v.classList.remove('open'),900)}catch(e){st.textContent=e.message||'Ошибка'}}}
+  v.classList.add('open');
 }
 
-function setTheme(mode, persist = true){
-  const dark = mode === 'dark';
-  const root = document.documentElement;
-  root.classList.add('theme-anim'); clearTimeout(window.__themeAnimT); window.__themeAnimT = setTimeout(() => root.classList.remove('theme-anim'), 450);
-  root.classList.toggle('dark', dark);
-  document.body.classList.toggle('manual-dark', dark);
-  document.body.classList.toggle('manual-light', !dark);
-  if (persist) { try { localStorage.setItem('iomastavka_theme', mode); } catch(e) {} }
-  const b = $('#themeToggleButton');
-  if (b) { b.title = dark ? tr('themeLight') : tr('themeDark'); b.setAttribute('aria-label', b.title); }
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0b2238' : '#bfe6f8');
-}
+function setTheme(mode){document.body.classList.toggle('manual-dark',mode==='dark');document.body.classList.toggle('manual-light',mode==='light');localStorage.setItem('iomastavka_theme',mode);const b=$('#themeToggleButton'),i=$('#themeIcon');if(i)i.textContent=mode==='dark'?'☾':'☀';if(b){b.title=mode==='dark'?tr('themeLight'):tr('themeDark');b.setAttribute('aria-label',b.title);}}
 let newsCache=[];
 let newsPrefetchPromise=null;
 function prefetchNews(){if(newsCache.length)return Promise.resolve(newsCache);if(newsPrefetchPromise)return newsPrefetchPromise;const fallback=[{title:'Китай — Россия: что проверить перед расчётом мультимодальной перевозки',link:'',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Incoterms, габариты, объёмный вес, терминальные расходы и документы.'},{title:'ТН ВЭД и импорт: какие данные собрать до запроса ставки',link:'',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Описание товара, код ТН ВЭД, инвойс, упаковка, разрешительные документы и базис поставки.'},{title:'ЖД, море или авиа: как выбрать транспорт из Китая',link:'',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Сравнение сроков, расчётного веса и структуры стоимости.'}];newsPrefetchPromise=fetch('/api/news?lang='+lang,{cache:'no-store',credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('news');return r.json()}).then(d=>{newsCache=Array.isArray(d.items)&&d.items.length?d.items:fallback;return newsCache}).catch(()=>{newsCache=fallback;return newsCache});return newsPrefetchPromise}
@@ -464,10 +425,10 @@ function renderRouteAdvice(){
 
   const warnings = [];
   const modes = [];
-  if (info.sea)  modes.push(ico('ship') + 'море' + (info.region==='south'?' (Наньша/Яньтянь)':info.region==='east'?' (Нинбо/Шанхай)':info.region==='north'?' (Циндао/Тяньцзинь)':' (Янцзы)'));
-  if (info.rail) modes.push(ico('train') + 'прямое ЖД');
-  if (info.road) modes.push(ico('truck') + 'авто');
-  if (info.air)  modes.push(ico('plane') + 'авиа');
+  if (info.sea)  modes.push('🚢 море' + (info.region==='south'?' (Наньша/Яньтянь)':info.region==='east'?' (Нинбо/Шанхай)':info.region==='north'?' (Циндао/Тяньцзинь)':' (Янцзы)'));
+  if (info.rail) modes.push('🚂 прямое ЖД');
+  if (info.road) modes.push('🚛 авто');
+  if (info.air)  modes.push('✈️ авиа');
 
   // Предупреждения по выбранному транспорту
   if (selectedMode === 'rail' && !info.rail){
@@ -487,7 +448,7 @@ function renderRouteAdvice(){
   }
 
   // Основная карточка
-  let html = '<div class="route-advice-main"><span class="route-advice-icon">' + ico('map') + '</span><div class="route-advice-text">' +
+  let html = '<div class="route-advice-main"><span class="route-advice-icon">🗺</span><div class="route-advice-text">' +
     '<b>' + escapeHtml(from) + ' → ' + escapeHtml(to) + '</b>' +
     '<p>' + escapeHtml(info.note) + '</p>' +
     '<div class="route-advice-modes">' + modes.join(' · ') + '</div>' +
@@ -495,7 +456,7 @@ function renderRouteAdvice(){
 
   // Предупреждения
   warnings.forEach(function(w){
-    const icon = ico(w.type === 'danger' ? 'ban' : w.type === 'warning' ? 'alert' : 'info');
+    const icon = w.type === 'danger' ? '🚫' : w.type === 'warning' ? '⚠️' : 'ℹ️';
     html += '<div class="route-advice-warn route-advice-' + w.type + '"><span class="route-advice-warn-icon">' + icon + '</span><div>' + w.html + '</div></div>';
   });
 
@@ -646,20 +607,19 @@ function containerFitWarning(){
  else if(fitsContainer(dims,c40)) text='⚠️ В 20 DC не войдёт. Потребуется 40 DC.';
  else if(fitsContainer(dims,c40hc)) text='⚠️ В 20 DC и 40 DC не войдёт. Потребуется 40 HC.';
  else text='⚠️ Габариты не помещаются даже в 40 HC. Нужен негабарит / OOG и отдельное согласование.';
- box.innerHTML=text?ico('alert')+'<span>'+escapeHtml(text.replace(/^⚠️\s*/,''))+'</span>':'';box.classList.toggle('hidden',!text);
+ box.textContent=text;box.classList.toggle('hidden',!text);
 }
 ['length','width','height','pieces'].forEach(id=>$('#'+id)?.addEventListener('input',()=>{containerFitWarning();updateAutoVolume()}));
 $$('.unit-choice').forEach(b=>b.addEventListener('click',()=>setDimensionUnit(b.dataset.unit)));
 updateDimensionUnitUI();
 containerFitWarning();
-$('#calculate').onclick=async()=>{const btn=$('#calculate');btn.classList.add('is-loading');btn.disabled=true;const weight=Number($('#weight').value)||0,pieces=Number($('#pieces').value)||1,[l,w,h]=dimensionsMm();selectedFactor=selectedMode&&modes[selectedMode]?modes[selectedMode].factor:167;renderFactors();const volume=l*w*h/1e9*pieces,volumetric=volume*selectedFactor,charge=Math.max(weight,volumetric);const result=$('#result');result.classList.remove('hidden');result.innerHTML=`<div class="result-loading">${lang==='ru'?'Ищу подходящую ставку…':lang==='en'?'Finding a matching rate…':'正在寻找匹配的运价…'}</div>`;containerFitWarning();
+$('#calculate').onclick=async()=>{const weight=Number($('#weight').value)||0,pieces=Number($('#pieces').value)||1,[l,w,h]=dimensionsMm();selectedFactor=selectedMode&&modes[selectedMode]?modes[selectedMode].factor:167;renderFactors();const volume=l*w*h/1e9*pieces,volumetric=volume*selectedFactor,charge=Math.max(weight,volumetric);const result=$('#result');result.classList.remove('hidden');result.innerHTML=`<div class="result-loading">${lang==='ru'?'Ищу подходящую ставку…':lang==='en'?'Finding a matching rate…':'正在寻找匹配的运价…'}</div>`;containerFitWarning();
  try{const qs=new URLSearchParams({from:$('#fromCity').value.trim(),to:$('#toCity').value.trim(),mode:selectedMode||'',distance:$('#distance').value||''});const r=await fetch('/api/rates/recommend?'+qs.toString());const d=await r.json();const rows=(d.matches||[]).filter(x=>Number.isFinite(Number(x.rate)));const best=rows[0];const fmtMoney=n=>new Intl.NumberFormat(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':'en-US',{maximumFractionDigits:3}).format(Number(n));const chinese=x=>/中国|china|chinese|\.cn$/i.test(String(x?.company||'')+' '+String(x?.source||'')+' '+String(x?.notes||''));let html='';
- if(best){let price=Number(best.rate);let commission=0;if(chinese(best)){commission=price*.05;price+=commission}html=`<div class="result-price-window"><div class="result-kicker">${lang==='ru'?'РАСЧЁТ ПЕРЕВОЗКИ':lang==='en'?'TRANSPORT QUOTE':'运输报价'}</div><div class="result-price">${fmtMoney(price)} <span>${escapeHtml(best.currency||'USD')}</span></div><div class="result-meta"><b>${escapeHtml(best.company||'—')}</b> · ${escapeHtml(best.basis||'shipment')} · ${escapeHtml(best.mode||selectedMode||'—')}</div><div class="result-grid"><span>${lang==='ru'?'Грузовой вес':'Chargeable weight'}<b>${fmtNum(charge)} kg</b></span><span>${lang==='ru'?'Объём':'Volume'}<b>${fmtNum(volume)} m³</b></span><span>${lang==='ru'?'Расстояние':'Distance'}<b>${fmtNum(Number($('#distance').value)||0)} km</b></span><span>${lang==='ru'?'Ставка':'Base rate'}<b>${fmtMoney(best.rate)} ${escapeHtml(best.currency||'')}</b></span></div>${commission?`<div class="commission-note">+ 5% ${lang==='ru'?'комиссия китайского перевозчика уже включена':'Chinese carrier transfer commission included'}</div>`:''}<div class="terminal-warning">${ico('alert')}${lang==='ru'?'Обязательно уточнить терминальные расходы в пункте прибытия.':lang==='en'?'Confirm terminal charges at destination.':'务必确认目的地的码头费用。'}</div>${best.notes?`<div class="result-notes">${escapeHtml(best.notes)}</div>`:''}</div>`}
- else {html=`<div class="result-price-window"><div class="result-kicker">${lang==='ru'?'СТАВКА НЕ НАЙДЕНА':lang==='en'?'NO MATCHING RATE':'未找到匹配运价'}</div><div class="result-price muted">—</div><p>${lang==='ru'?'В базе нет однозначной ставки для этого маршрута. Я не буду придумывать цену. Добавьте КП или выберите экспедитора/транспорт с сохранённой ставкой.':lang==='en'?'There is no unambiguous saved rate for this route. I will not invent a price. Add a quote or choose a forwarder/transport with a saved rate.':'数据库中没有该路线的明确运价，不会虚构价格。请添加报价或选择已有运价的代理商/运输方式。'}</p><div class="terminal-warning">${ico('alert')}${lang==='ru'?'Даже при найденной ставке обязательно уточнять терминальные расходы в пункте прибытия.':lang==='en'?'Always confirm destination terminal charges.':'务必确认目的地码头费用。'}</div></div>`}
+ if(best){let price=Number(best.rate);let commission=0;if(chinese(best)){commission=price*.05;price+=commission}html=`<div class="result-price-window"><div class="result-kicker">${lang==='ru'?'РАСЧЁТ ПЕРЕВОЗКИ':lang==='en'?'TRANSPORT QUOTE':'运输报价'}</div><div class="result-price">${fmtMoney(price)} <span>${escapeHtml(best.currency||'USD')}</span></div><div class="result-meta"><b>${escapeHtml(best.company||'—')}</b> · ${escapeHtml(best.basis||'shipment')} · ${escapeHtml(best.mode||selectedMode||'—')}</div><div class="result-grid"><span>${lang==='ru'?'Грузовой вес':'Chargeable weight'}<b>${fmtNum(charge)} kg</b></span><span>${lang==='ru'?'Объём':'Volume'}<b>${fmtNum(volume)} m³</b></span><span>${lang==='ru'?'Расстояние':'Distance'}<b>${fmtNum(Number($('#distance').value)||0)} km</b></span><span>${lang==='ru'?'Ставка':'Base rate'}<b>${fmtMoney(best.rate)} ${escapeHtml(best.currency||'')}</b></span></div>${commission?`<div class="commission-note">+ 5% ${lang==='ru'?'комиссия китайского перевозчика уже включена':'Chinese carrier transfer commission included'}</div>`:''}<div class="terminal-warning">⚠️ ${lang==='ru'?'Обязательно уточнить терминальные расходы в пункте прибытия.':lang==='en'?'Confirm terminal charges at destination.':'务必确认目的地的码头费用。'}</div>${best.notes?`<div class="result-notes">${escapeHtml(best.notes)}</div>`:''}</div>`}
+ else {html=`<div class="result-price-window"><div class="result-kicker">${lang==='ru'?'СТАВКА НЕ НАЙДЕНА':lang==='en'?'NO MATCHING RATE':'未找到匹配运价'}</div><div class="result-price muted">—</div><p>${lang==='ru'?'В базе нет однозначной ставки для этого маршрута. Я не буду придумывать цену. Добавьте КП или выберите экспедитора/транспорт с сохранённой ставкой.':lang==='en'?'There is no unambiguous saved rate for this route. I will not invent a price. Add a quote or choose a forwarder/transport with a saved rate.':'数据库中没有该路线的明确运价，不会虚构价格。请添加报价或选择已有运价的代理商/运输方式。'}</p><div class="terminal-warning">⚠️ ${lang==='ru'?'Даже при найденной ставке обязательно уточнять терминальные расходы в пункте прибытия.':lang==='en'?'Always confirm destination terminal charges.':'务必确认目的地码头费用。'}</div></div>`}
  result.innerHTML=html;
- }catch(e){result.innerHTML=`<div class="result-price-window"><div class="result-kicker">${lang==='ru'?'НЕ УДАЛОСЬ РАССЧИТАТЬ':lang==='en'?'CALCULATION ERROR':'计算失败'}</div><p>${escapeHtml(friendlyError(e))}</p></div>`}
- showRecommendation(selectedForwarder);btn.classList.remove('is-loading');btn.disabled=false;try{result.scrollIntoView({behavior:'smooth',block:'nearest'})}catch{}};
-$('#result')?.addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.add('hidden')});
+ }catch(e){result.innerHTML=`<div class="result-price-window"><div class="result-kicker">${lang==='ru'?'НЕ УДАЛОСЬ РАССЧИТАТЬ':lang==='en'?'CALCULATION ERROR':'计算失败'}</div><p>${escapeHtml(e.message||'Ошибка')}</p></div>`}
+ showRecommendation(selectedForwarder);setTimeout(()=>{$('#result')?.addEventListener('click',e=>{if(e.target===e.currentTarget||e.target.closest('.result-price-window')===null)e.currentTarget.classList.add('hidden')},{once:false})},0)};
 
 let distanceTimer=null;
 ['fromCity','toCity'].forEach(id=>$('#'+id)?.addEventListener('input',()=>{clearTimeout(distanceTimer);distanceTimer=setTimeout(autoDistance,450)}));
@@ -667,11 +627,8 @@ let distanceTimer=null;
 
 // AI chat: полностью локальный бесплатный режим. Файлы извлекаются в браузере.
 function getCalculatorContext(){return {from:$('#fromCity')?.value||'',to:$('#toCity')?.value||'',distanceKm:Number($('#distance')?.value)||null,weightKg:Number($('#weight')?.value)||null,pieces:Number($('#pieces')?.value)||null,lengthMm:dimensionsMm()[0]||null,widthMm:dimensionsMm()[1]||null,heightMm:dimensionsMm()[2]||null,forwarder:selectedForwarder||'',transport:selectedMode?modeName(selectedMode):'',incoterms:$('#incotermBtn span')?.textContent||'EXW'};}
-function clearChatEmpty(){$('#chatMessages')?.querySelector('.chat-empty')?.remove()}
-function renderChatEmpty(force){const box=$('#chatMessages');if(!box)return;if(force)box.querySelector('.chat-empty')?.remove();if(box.children.length)return;const S={ru:{t:'Чем помочь?',p:'Спросите про маршрут, ставку, Incoterms или таможню — текстом или голосом.',c:['Ставка Гуанчжоу → Новосибирск','Что такое EXW и FCA?','Как посчитать объёмный вес?','Какие документы нужны для ввоза товара?']},en:{t:'How can I help?',p:'Ask about routes, rates, Incoterms or customs — by text or voice.',c:['Rate Guangzhou → Novosibirsk','What are EXW and FCA?','How to calculate volumetric weight?','Which documents do I need to import goods?']},tr:{t:'Nasıl yardımcı olabilirim?',p:'Rota, navlun, Incoterms veya gümrük hakkında sorun — yazılı ya da sesli.',c:['Guangzhou → Novosibirsk navlun','EXW ve FCA nedir?','Hacimsel ağırlık nasıl hesaplanır?','İthalat için hangi belgeler gerekli?']},zh:{t:'需要什么帮助？',p:'可以咨询路线、运价、贸易术语或清关——文字或语音均可。',c:['广州 → 新西伯利亚 运价','EXW 和 FCA 是什么？','如何计算体积重量？','进口货物需要哪些文件？']}}[lang]||null;if(!S)return;const d=document.createElement('div');d.className='chat-empty';d.innerHTML='<div class="chat-empty-icon">'+ICONS_SVG('sparkle')+'</div><h3></h3><p></p><div class="chat-chips"></div>';d.querySelector('h3').textContent=S.t;d.querySelector('p').textContent=S.p;const chips=d.querySelector('.chat-chips');S.c.forEach(t=>{const b=document.createElement('button');b.type='button';b.className='chat-chip';b.textContent=t;b.onclick=()=>{const i=$('#assistantInput');if(i){i.value=t;Promise.resolve(sendAI(false)).catch(()=>{})}};chips.appendChild(b)});box.appendChild(d)}
-function ICONS_SVG(n){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[n]||'')+'</svg>'}
-function setAIThinking(on,error=''){const box=$('#chatMessages');if(!box)return;const sb=$('#sendAI');if(sb){sb.disabled=!!on;sb.classList.toggle('is-loading',!!on)}if(on||error)clearChatEmpty();const old=box.querySelector('.ai-thinking-bubble');if(old)old.remove();if(on){const d=document.createElement('div');d.className='chat-bubble assistant ai-thinking-bubble';d.innerHTML=`<i></i><i></i><i></i>`;box.appendChild(d);box.scrollTop=box.scrollHeight}else if(error){const d=document.createElement('div');d.className='chat-bubble assistant ai-error-bubble';d.textContent=error;box.appendChild(d);box.scrollTop=box.scrollHeight}}
-function addChat(role,text,shouldSpeak=false){clearChatEmpty();const d=document.createElement('div');d.className=`chat-bubble ${role}`;d.textContent=text;$('#chatMessages').appendChild(d);$('#chatMessages').scrollTop=$('#chatMessages').scrollHeight;if(role==='assistant'&&shouldSpeak)speakAI(text)}
+function setAIThinking(on,error=''){const box=$('#chatMessages');if(!box)return;const old=box.querySelector('.ai-thinking-bubble');if(old)old.remove();if(on){const d=document.createElement('div');d.className='chat-bubble assistant ai-thinking-bubble';d.innerHTML=`<i></i><i></i><i></i>`;box.appendChild(d);box.scrollTop=box.scrollHeight}else if(error){const d=document.createElement('div');d.className='chat-bubble assistant ai-error-bubble';d.textContent=error;box.appendChild(d);box.scrollTop=box.scrollHeight}}
+function addChat(role,text,shouldSpeak=false){const d=document.createElement('div');d.className=`chat-bubble ${role}`;d.textContent=text;$('#chatMessages').appendChild(d);$('#chatMessages').scrollTop=$('#chatMessages').scrollHeight;if(role==='assistant'&&shouldSpeak)speakAI(text)}
 async function extractAttachment(file){
  const name=file.name.toLowerCase(), ext=name.split('.').pop();
  if(['txt','csv','json','text','md','markdown','rtf'].includes(ext)){let t=await file.text();if(ext==='rtf')t=t.replace(/\\[a-z]+\d* ?/gi,'').replace(/[{}]/g,'');return t.slice(0,120000)}
@@ -692,12 +649,11 @@ async function parseRatesLocally(text,companyHint=''){
 }
 async function importLocalRates(records){if(!records.length)return 0;const r=await fetch('/api/rates/import-local',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({records})});if(!r.ok)throw new Error('Не удалось сохранить ставки');const d=await r.json();return Number(d.added||0)}
 async function sendAI(fromVoice=false){
- if($('#sendAI')?.classList.contains('is-loading'))return;
  if(!fromVoice){try{window.speechSynthesis?.cancel()}catch{}}
  const input=$('#assistantInput'), msg=input.value.trim(), files=[...($('#aiFile')?.files||[])];
  if(!msg&&!files.length){setAIThinking(false);addChat('assistant',lang==='tr'?'Bir soru yazın veya dosya ekleyin.':lang==='en'?'Write a question or attach a file.':'Напишите вопрос или прикрепите файл.',false);return;}
  const shown=msg||(files.length?`📎 ${files.map(f=>f.name).join(', ')}`:''); addChat('user',shown,false); setAIThinking(true);
- try{let docs=[];for(const f of files){const text=await extractAttachment(f);docs.push({name:f.name,text});}let imported=0;for(const d of docs){const recs=await parseRatesLocally(d.text,d.name);if(recs.length)imported+=await importLocalRates(recs)}if(imported)await loadRates();const action=detectRequestedAction(msg);let instruction=msg||'Проанализируй прикрепленный файл и дай краткий полезный результат.';if(action==='rates'&&docs.length)instruction+=' Считай файл КП/ставками: выдели перевозчика, маршруты, транспорт, базис, цены, валюту, срок действия и ограничения. Скажи, какие ставки сохранены.';if(action==='numbers')instruction+=' Извлеки только важные цифры и подпиши, что каждая означает.';if(action==='translate')instruction+=` Переведи содержимое файла на ${lang==='ru'?'русский':lang==='en'?'английский':lang==='tr'?'турецкий':'китайский'} язык.`;if(action==='structure')instruction+=' Структурируй данные в удобные списки/таблицу.';const fileContext=docs.length?docs.map(d=>`\n--- ФАЙЛ: ${d.name} ---\n${d.text}`).join('\n'):'';const finalMessage=instruction+fileContext+(imported?`\n\nВ базу ставок уже сохранено записей: ${imported}. Учитывай их в ответе.`:'');console.warn('[IOMA] /api/ai send len=', finalMessage.length);const r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:finalMessage,history:chatHistory.slice(-10),context:getCalculatorContext(),language:lang,web:true})});const raw=await r.text();let d={};try{d=JSON.parse(raw)}catch{throw new Error(raw||'AI unavailable')}if(!r.ok||!d.ok)throw new Error(d.error||'AI unavailable');const text=String(d.text||'').trim()||'Не удалось получить ответ.';setAIThinking(false);addChat('assistant',text,fromVoice);chatHistory.push({role:'user',content:finalMessage},{role:'assistant',content:text});chatHistory=chatHistory.slice(-12);if(input)input.value='';if($('#aiFile'))$('#aiFile').value='';if($('#fileNames'))$('#fileNames').textContent=tr('fileHint')}catch(e){const msg=friendlyError(e);setAIThinking(false,(lang==='tr'?'Yanıt alınamadı: ':lang==='en'?'Could not get a response: ':'Не удалось получить ответ: ')+msg)}}
+ try{let docs=[];for(const f of files){const text=await extractAttachment(f);docs.push({name:f.name,text});}let imported=0;for(const d of docs){const recs=await parseRatesLocally(d.text,d.name);if(recs.length)imported+=await importLocalRates(recs)}if(imported)await loadRates();const action=detectRequestedAction(msg);let instruction=msg||'Проанализируй прикрепленный файл и дай краткий полезный результат.';if(action==='rates'&&docs.length)instruction+=' Считай файл КП/ставками: выдели перевозчика, маршруты, транспорт, базис, цены, валюту, срок действия и ограничения. Скажи, какие ставки сохранены.';if(action==='numbers')instruction+=' Извлеки только важные цифры и подпиши, что каждая означает.';if(action==='translate')instruction+=` Переведи содержимое файла на ${lang==='ru'?'русский':lang==='en'?'английский':lang==='tr'?'турецкий':'китайский'} язык.`;if(action==='structure')instruction+=' Структурируй данные в удобные списки/таблицу.';const fileContext=docs.length?docs.map(d=>`\n--- ФАЙЛ: ${d.name} ---\n${d.text}`).join('\n'):'';const finalMessage=instruction+fileContext+(imported?`\n\nВ базу ставок уже сохранено записей: ${imported}. Учитывай их в ответе.`:'');console.warn('[IOMA] /api/ai send len=', finalMessage.length);const r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:finalMessage,history:chatHistory.slice(-10),context:getCalculatorContext(),language:lang,web:true})});const raw=await r.text();let d={};try{d=JSON.parse(raw)}catch{throw new Error(raw||'AI unavailable')}if(!r.ok||!d.ok)throw new Error(d.error||'AI unavailable');const text=String(d.text||'').trim()||'Не удалось получить ответ.';setAIThinking(false);addChat('assistant',text,fromVoice);chatHistory.push({role:'user',content:finalMessage},{role:'assistant',content:text});chatHistory=chatHistory.slice(-12);if(input)input.value='';if($('#aiFile'))$('#aiFile').value='';if($('#fileNames'))$('#fileNames').textContent=tr('fileHint')}catch(e){const msg=e?.message||'Не удалось обработать запрос';setAIThinking(false,msg);addChat('assistant',(lang==='tr'?'Yanıt alınamadı: ':lang==='en'?'Could not get a response: ':'Не удалось получить ответ: ')+msg,false)}}
 $('#aiFile')?.addEventListener('change',e=>{const fs=[...e.target.files],el=$('#fileNames');if(el)el.textContent=fs.length?fs.map(f=>f.name).join(' · '):tr('fileHint')});
 // Reliable send binding: works with mouse, touch and Enter and cannot be blocked by a nested handler.
 document.addEventListener('click',e=>{const b=e.target.closest?.('#sendAI');if(!b)return;e.preventDefault();e.stopPropagation();Promise.resolve(sendAI(false)).catch(err=>console.warn('AI send:',err));},true);
@@ -723,18 +679,17 @@ function renderDirectory(){
    const key=normalizeTextCompany(a.company||''); if(!groups.has(key))groups.set(key,{company:a.company,contacts:new Set(),phones:new Set(),emails:new Set(),sites:new Set(),modes:new Set(),transport:new Set(),notes:new Set()});
    const g=groups.get(key);if(a.contact)g.contacts.add(a.contact);if(a.phone)g.phones.add(a.phone);if(a.email)a.email.split(/[,;]+/).map(x=>x.trim()).filter(Boolean).forEach(x=>g.emails.add(x));if(a.site)g.sites.add(a.site);(a.modes||[]).forEach(x=>g.modes.add(x));(a.transport||[]).forEach(x=>g.transport.add(x));if(a.notes)g.notes.add(a.notes);
   });
-  [...groups.values()].forEach(g=>{const trEl=document.createElement('tr');const sites=[...g.sites];const site=sites.length?sites.map(x=>`<a href="${x.startsWith('http')?x:'https://'+x}" target="_blank" rel="noopener">${x.replace(/^https?:\/\//,'')}</a>`).join('<br>'):'—';const contacts=[...g.contacts].join('<br>')||'—';const phones=[...g.phones].join('<br>')||'—';const emails=[...g.emails].join('<br>')||'—';const modes=[...g.modes].map(translatedTransportLabel).join(', ')||[...g.transport].map(translatedTransportLabel).join(', ')||'—';const __L=[tr('company'),tr('contact'),tr('phone'),tr('email'),tr('website'),tr('directions'),tr('note')];const __cells=[`<b>${escapeHtml(g.company||'—')}</b>`,contacts,phones,emails,site,modes,[...g.notes].join('<br>')||'—'];trEl.innerHTML=__cells.map((c,i)=>`<td data-label="${__L[i]}"${c==='—'?' data-empty':''}>${c}</td>`).join('');grid.appendChild(trEl)});if(!groups.size){const __e={ru:'Нет экспедиторов для этого направления',en:'No forwarders for this direction',tr:'Bu yön için forwarder yok',zh:'该方向暂无货运代理'};grid.innerHTML=`<tr><td class="empty-cell" colspan="7">${__e[lang]||__e.ru}</td></tr>`;}
+  [...groups.values()].forEach(g=>{const trEl=document.createElement('tr');const sites=[...g.sites];const site=sites.length?sites.map(x=>`<a href="${x.startsWith('http')?x:'https://'+x}" target="_blank" rel="noopener">${x.replace(/^https?:\/\//,'')}</a>`).join('<br>'):'—';const contacts=[...g.contacts].join('<br>')||'—';const phones=[...g.phones].join('<br>')||'—';const emails=[...g.emails].join('<br>')||'—';const modes=[...g.modes].map(translatedTransportLabel).join(', ')||[...g.transport].map(translatedTransportLabel).join(', ')||'—';trEl.innerHTML=`<td><b>${escapeHtml(g.company||'—')}</b></td><td>${contacts}</td><td>${phones}</td><td>${emails}</td><td>${site}</td><td>${modes}</td><td>${[...g.notes].join('<br>')||'—'}</td>`;grid.appendChild(trEl)});
  }
 }
 
 // Customs code checker: submit to the server, which uses FTS-first web research plus OpenAI for structured analysis.
-async function checkCustomsCode(){const __b=$('#customsCheck');if(__b){__b.disabled=true;__b.classList.add('is-loading')}try{await _checkCustomsCode()}finally{if(__b){__b.disabled=false;__b.classList.remove('is-loading')}}}
-async function _checkCustomsCode(){
+async function checkCustomsCode(){
   const input=$('#customsCode'), status=$('#customsStatus'), result=$('#customsResult');
   const code=String(input?.value||'').replace(/\D/g,'').slice(0,10);
   if(!code||code.length<4){if(status)status.textContent=lang==='tr'?'En az 4 hane girin.':lang==='en'?'Enter at least 4 digits.':'Введите минимум 4 цифры кода ТН ВЭД.';return;}
   if(status)status.textContent=lang==='tr'?'Kod kontrol ediliyor…':lang==='en'?'Checking code…':'Проверяю код…';
-  if(result){result.classList.remove('hidden');result.innerHTML='<div class="customs-result-grid">'+Array(6).fill('<div class="customs-info-card"><div class="skeleton" style="width:40%;height:10px"></div><div class="skeleton" style="width:80%;height:14px;margin-top:8px"></div></div>').join('')+'</div>';}
+  if(result){result.classList.add('hidden');result.innerHTML='';}
   try{
     const r=await fetch('/api/customs/check',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({code})});
     const raw=await r.text();let d={};try{d=JSON.parse(raw)}catch{throw new Error(raw||'Не удалось получить ответ')}
@@ -742,7 +697,7 @@ async function _checkCustomsCode(){
     if(!r.ok||!d.ok)throw new Error(d.error||'Не удалось получить информацию по коду');
     if(status)status.textContent=lang==='tr'?`Kod ${d.code||code} kontrol edildi`:lang==='en'?`Code ${d.code||code} checked`:`Код ${d.code||code} проверен`;
     if(result){const raw=String(d.analysis||(lang==='tr'?'Bilgi bulunamadı.':lang==='en'?'No information found.':'Информация не найдена.')); const lines=raw.split(/\n+/).map(x=>x.trim()).filter(Boolean); const labels=['КОД','ОПИСАНИЕ','ИМПОРТНАЯ ПОШЛИНА','НДС','АКЦИЗ','ТАМОЖЕННЫЙ СБОР','ЧЕСТНЫЙ ЗНАК','РАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ','ЗАПРЕТЫ И ОГРАНИЧЕНИЯ','ЕДИНИЦА ИЗМЕРЕНИЯ','ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ','ИСТОЧНИКИ','ПРИМЕЧАНИЕ']; const cards=lines.map(line=>{const m=line.match(/^([^:]{2,45}):\s*(.*)$/); if(!m||!labels.includes(m[1].toUpperCase())) return `<div class="customs-free-line">${escapeHtml(line)}</div>`; const cls=m[1].toUpperCase()==='ЧЕСТНЫЙ ЗНАК'?' customs-marking':''; return `<div class="customs-info-card${cls}"><div class="customs-info-label">${escapeHtml(m[1])}</div><div class="customs-info-value">${escapeHtml(m[2])}</div></div>`}).join(''); result.innerHTML=`<div class="customs-result-title">${escapeHtml(d.title||('ТН ВЭД '+code))}</div><div class="customs-result-grid">${cards}</div>`;result.classList.remove('hidden')}
-  }catch(e){if(result){result.classList.add('hidden');result.innerHTML='';}if(status)status.textContent=friendlyError(e)||(lang==='tr'?'Kontrol hatası':lang==='en'?'Check error':'Ошибка проверки');}
+  }catch(e){if(status)status.textContent=e.message||(lang==='tr'?'Kontrol hatası':lang==='en'?'Check error':'Ошибка проверки');}
 }
 $('#customsCheck')?.addEventListener('click',e=>{e.preventDefault();checkCustomsCode()});
 $('#customsCode')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();checkCustomsCode()}});
@@ -860,50 +815,40 @@ function isSuperImportant(n){
 function renderNewsItems(items){
   const box = $('#newsList');
   if (!box) return;
-  const key = items.map(function(n){ return String(n.link || n.title || ''); }).join('|') + '::' + lang;
-  if (box.dataset.key === key && box.querySelector('.news-card')) return; // already rendered: opens instantly
-  box.dataset.key = key;
   box.innerHTML = '';
-  const frag = document.createDocumentFragment();
-  // Look up missing pictures only for cards that actually scroll into view.
-  const io = ('IntersectionObserver' in window) ? new IntersectionObserver(function(entries){
-    entries.forEach(function(en){
-      if (!en.isIntersecting) return;
-      io.unobserve(en.target);
-      const card = en.target, q = card.dataset.q, n = card._news;
+  items.forEach(function(n){
+    const a = document.createElement('button');
+    a.type = 'button';
+    const important = isSuperImportant(n);
+    a.className = 'news-card' + (important ? ' news-card-important' : '');
+    const img = n.image || '';
+    const thumb = img
+      ? '<div class="news-card-img"><img src="' + escapeHtml(img) + '" alt="" loading="lazy"></div>'
+      : '<div class="news-card-img news-card-img-placeholder"><span>✦</span></div>';
+    const badge = important ? '<div class="news-card-badge">' + (lang === 'ru' ? '⚠ ВАЖНО' : '⚠ IMPORTANT') + '</div>' : '';
+    const shortTitle = String(cleanNewsText(n.title) || '').slice(0, 140);
+    a.innerHTML = badge + thumb + '<div class="news-card-body"><div class="news-card-title">' + escapeHtml(shortTitle) + '</div></div>';
+    a.onclick = function(){ openArticle(n); };
+    console.warn('[IOMA] card rendered idx=' + items.indexOf(n) + ' title=' + String(n.title || '').slice(0,80) + ' link=' + String(n.link || '').slice(0,60));
+    box.appendChild(a);
+    if (!img && n.title){
+      var q = String(cleanNewsText(n.title) || '').slice(0, 120);
+      var cardRef = a;
       fetch('/api/news/image?title=' + encodeURIComponent(q))
         .then(function(r){ return r.json(); })
         .then(function(d){
           if (d && d.ok && d.image){
             n.image = d.image;
-            const holder = card.querySelector('.news-card-img');
-            if (holder){ holder.classList.remove('news-card-img-placeholder'); holder.innerHTML = '<img src="' + escapeHtml(d.image) + '" alt="" loading="lazy" decoding="async">'; }
+            var holder = cardRef.querySelector('.news-card-img');
+            if (holder){
+              holder.classList.remove('news-card-img-placeholder');
+              holder.innerHTML = '<img src="' + d.image + '" alt="" loading="lazy">';
+            }
           }
-        }).catch(function(){});
-    });
-  }, { root: box, rootMargin: '200px' }) : null;
-  items.forEach(function(n, idx){
-    const a = document.createElement('button');
-    a.type = 'button';
-    const important = isSuperImportant(n);
-    a.className = 'news-card' + (important ? ' news-card-important' : '');
-    a.style.setProperty('--i', Math.min(idx, 8));
-    const img = n.image || '';
-    const thumb = img
-      ? '<div class="news-card-img"><img src="' + escapeHtml(img) + '" alt="" ' + (idx < 3 ? '' : 'loading="lazy" ') + 'decoding="async"></div>'
-      : '<div class="news-card-img news-card-img-placeholder">' + ico('news') + '</div>';
-    const badge = important ? '<div class="news-card-badge">' + (lang === 'ru' ? 'ВАЖНО' : 'IMPORTANT') + '</div>' : '';
-    const shortTitle = String(cleanNewsText(n.title) || '').slice(0, 140);
-    a.innerHTML = badge + thumb + '<div class="news-card-body"><div class="news-card-title">' + escapeHtml(shortTitle) + '</div></div>';
-    a.onclick = function(){ openArticle(n); };
-    frag.appendChild(a);
-    if (!img && n.title && io){
-      a._news = n;
-      a.dataset.q = String(cleanNewsText(n.title) || '').slice(0, 120);
-      io.observe(a);
+        })
+        .catch(function(){});
     }
   });
-  box.appendChild(frag);
 }
 
 async function loadNews(){
@@ -914,11 +859,9 @@ async function loadNews(){
     {title:'ЖД, море или авиа: как выбрать транспорт из Китая',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Сравнение сроков, расчётного веса и структуры стоимости.',link:''}
   ];
   if(newsCache.length){renderNewsItems(newsCache);return;}
-  delete box.dataset.key;
-  box.setAttribute('aria-busy','true');
-  box.innerHTML = Array.from({length:6}, function(){ return '<div class="news-skeleton"><div class="skeleton"></div><div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div></div>'; }).join('');
-  try{const r=await fetch('/api/news?lang='+lang,{cache:'no-store'});const d=r.ok?await r.json():null;const items=Array.isArray(d?.items)?d.items:[];if(items.length){newsCache=items;renderNewsItems(items);box.removeAttribute('aria-busy');return;}}catch{}
-  newsCache=fallback; renderNewsItems(fallback); box.removeAttribute('aria-busy');
+  box.innerHTML=`<div class="news-loading">${tr('newsLoading')}</div>`;
+  try{const r=await fetch('/api/news?lang='+lang,{cache:'no-store'});const d=r.ok?await r.json():null;const items=Array.isArray(d?.items)?d.items:[];if(items.length){newsCache=items;renderNewsItems(items);return;}}catch{}
+  newsCache=fallback; renderNewsItems(fallback);
 }
 function escapeHtml(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function renderArticleMarkdown(text=''){
@@ -1034,17 +977,6 @@ function mdToHtmlArticle(text){
   return out.join('');
 }
 
-function articleHeroHtml(img, statusLabel, title, source, dateStr){
-  const bigImgHtml = img ? '<img src="' + escapeHtml(img) + '" alt="" loading="eager" decoding="async">' : '<div class="article-art"></div>';
-  return '<div class="article-hero">' + bigImgHtml +
-    '<div class="article-hero-shade"></div>' +
-    '<div class="article-title">' +
-      '<span class="eyebrow">' + escapeHtml(statusLabel) + '</span>' +
-      '<h1>' + escapeHtml(title) + '</h1>' +
-      '<p>' + escapeHtml(source) + (dateStr ? ' · ' + escapeHtml(dateStr) : '') + '</p>' +
-    '</div></div>';
-}
-
 function renderArticleFull(a, n, urgent, source, title, dateStr, img, statusLabel){
   const box = $('#articleContent');
   const articleTitle = stripSourceFromTitle(cleanNewsText(a.title || title));
@@ -1053,14 +985,15 @@ function renderArticleFull(a, n, urgent, source, title, dateStr, img, statusLabe
   const mainImage = a.image || img;
   const sourceLink = n.link || '';
   const contentHtml = mdToHtmlArticle(content);
+  const bigImgHtml = mainImage ? '<img src="' + escapeHtml(mainImage) + '" alt="" loading="eager">' : '<div class="article-art"></div>';
   const audioBtnHtml = content.length > 40 ? (
     '<div class="article-audio-block">' +
-      '<div class="article-audio-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="7" rx="2"/><rect x="17" y="14" width="4" height="7" rx="2"/></svg></div>' +
+      '<div class="article-audio-icon">🎧</div>' +
       '<div class="article-audio-text">' +
         '<div class="article-audio-title">Аудиоверсия статьи</div>' +
         '<div class="article-audio-sub">Голос Дмитрий · ' + Math.max(1, Math.round(content.length/900)) + ' мин</div>' +
       '</div>' +
-      '<button class="article-audio-btn" id="articlePlayBtn" type="button">' +
+      '<button class="article-audio-btn" id="articlePlayBtn">' +
         '<span class="audio-orb-mini" aria-hidden="true"><i></i><i></i><i></i></span>' +
         '<svg class="audio-play-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' +
         '<svg class="audio-pause-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>' +
@@ -1068,7 +1001,13 @@ function renderArticleFull(a, n, urgent, source, title, dateStr, img, statusLabe
       '</button>' +
     '</div>'
   ) : '';
-  box.innerHTML = articleHeroHtml(mainImage, statusLabel, articleTitle, source, dateStr) +
+  box.innerHTML = '<div class="article-hero">' + bigImgHtml +
+    '<div class="article-hero-shade"></div>' +
+    '<div class="article-title">' +
+      '<span class="eyebrow" style="color:#fff!important;-webkit-text-fill-color:#fff!important;text-shadow:0 2px 8px rgba(0,0,0,.9)!important">' + escapeHtml(statusLabel) + '</span>' +
+      '<h1 style="color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;background:none!important;text-shadow:0 2px 4px rgba(0,0,0,.98),0 4px 16px rgba(0,0,0,.9),0 8px 30px rgba(0,0,0,.75)!important">' + escapeHtml(articleTitle) + '</h1>' +
+      '<p style="color:rgba(255,255,255,.94)!important;-webkit-text-fill-color:rgba(255,255,255,.94)!important;text-shadow:0 2px 8px rgba(0,0,0,.75)!important">' + escapeHtml(source) + (dateStr ? ' · ' + escapeHtml(dateStr) : '') + '</p>' +
+    '</div></div>' +
     '<div class="article-body article-body-full">' +
       (subtitle ? '<p class="article-subtitle">' + escapeHtml(subtitle) + '</p>' : '') +
       audioBtnHtml +
@@ -1078,7 +1017,6 @@ function renderArticleFull(a, n, urgent, source, title, dateStr, img, statusLabe
         ? '<div class="article-source">Материал опубликован по источнику: <b>' + escapeHtml(source || sourceLink || 'открытые данные') + '</b>. Полный текст доступен по ссылке выше.</div>'
         : '<div class="article-source">Материал подготовлен ИИ. Проверяйте первоисточник.</div>') +
     '</div>';
-  const shell = box.closest('.article-shell'); if (shell) shell.scrollTop = 0;
   const btn = document.getElementById('articlePlayBtn');
   if (btn) btn.addEventListener('click', function(){ playArticleAudio(a, lang, btn); });
 }
@@ -1150,6 +1088,7 @@ function showLangBadge(on){
 }
 
 async function openArticle(n){
+  console.log('[openArticle] click n.title=', String(n && n.title || '').slice(0,70), '| link=', String(n && n.link || '').slice(0,60));
   try { stopAudioPlayback(); } catch(e){}
   currentArticleNews = n;
   showView('article');
@@ -1166,6 +1105,7 @@ async function openArticle(n){
   const stableId = String(n.link || '').trim() || title;
   const normId = normalizeText(stableId);
   const cacheKey = normId + '::' + lang;
+  console.warn('[IOMA] cacheKey:', cacheKey.slice(0,100), '| normId:', normId.slice(0,60), '| lang:', lang, '| memKeys:', Object.keys(articleMemCache).length);
 
   // 1. Память — мгновенно
   if (articleMemCache[cacheKey]){
@@ -1185,12 +1125,18 @@ async function openArticle(n){
   if (hasOldContent){
     showLangBadge(true);
   } else {
-    box.innerHTML = articleHeroHtml(img, statusLabel, title, source, dateStr) +
+    const bigImgHtml = img ? '<img src="' + escapeHtml(img) + '" alt="" loading="eager">' : '<div class="article-art"></div>';
+    box.innerHTML = '<div class="article-hero">' + bigImgHtml +
+      '<div class="article-hero-shade"></div>' +
+      '<div class="article-title">' +
+        '<span class="eyebrow" style="color:#fff!important;-webkit-text-fill-color:#fff!important;text-shadow:0 2px 8px rgba(0,0,0,.9)!important">' + escapeHtml(statusLabel) + '</span>' +
+        '<h1 style="color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;text-shadow:0 2px 4px rgba(0,0,0,.98),0 4px 16px rgba(0,0,0,.9)!important">' + escapeHtml(title) + '</h1>' +
+        '<p style="color:rgba(255,255,255,.94)!important;-webkit-text-fill-color:rgba(255,255,255,.94)!important">' + escapeHtml(source) + (dateStr ? ' · ' + escapeHtml(dateStr) : '') + '</p>' +
+      '</div></div>' +
       '<div class="article-body article-body-full">' +
         (desc ? '<p class="article-subtitle">' + escapeHtml(desc) + '</p>' : '') +
-        '<div class="article-skeleton">' + Array(9).fill('<div class="skeleton"></div>').join('') + '</div>' +
+        '<div class="article-inline-progress"><div></div></div>' +
       '</div>';
-    const __sh = box.closest('.article-shell'); if (__sh) __sh.scrollTop = 0;
   }
 
   try {
@@ -1204,9 +1150,8 @@ async function openArticle(n){
     if (typeof saveLocalArticle === 'function') saveLocalArticle(normId, lang, d.article);
     renderArticleFull(d.article, n, urgent, source, title, dateStr, img, statusLabel);
   } catch(e){
-    const __msg = friendlyError(e);
-    if (!hasOldContent) { const sk = box.querySelector('.article-skeleton'); const html = '<div class="article-error">' + escapeHtml(__msg) + '</div>'; if (sk) sk.outerHTML = html; else box.insertAdjacentHTML('beforeend', html); }
-    toast(__msg, 'error', 5000);
+    if (!hasOldContent) box.innerHTML += '<p style="color:#a94d4d;padding:20px;text-align:center">Ошибка: ' + escapeHtml(e.message) + '</p>';
+    else console.warn('lang switch error:', e.message);
   } finally {
     showLangBadge(false);
   }
@@ -1223,7 +1168,7 @@ async function checkWeather(){try{const cfg=await fetch('/api/config',{cache:'no
 async function backgroundRefresh(){await Promise.allSettled([checkWeather(),loadRates(),loadCurrency()]);}
 updateCityPlaceholders();
 setTimeout(renderRouteAdvice, 500);
-renderChatEmpty();checkWeather();setInterval(checkWeather,5*60*1000);
+checkWeather();setInterval(checkWeather,5*60*1000);
 loadRates();loadAgents();renderIncoterms();renderFactors();updateAutoVolume();applyLang();$('#currencyDate').textContent=formatToday();loadCurrency();setInterval(loadCurrency,30*60*1000);
 setInterval(()=>fetch('/api/health',{cache:'no-store'}).catch(()=>{}),2*60*1000);
 setInterval(()=>{fetch('/api/news',{cache:'no-store'}).catch(()=>{})},30*60*1000);
@@ -1250,124 +1195,4 @@ setInterval(()=>{if(document.visibilityState==='visible')backgroundRefresh()},10
       if (typeof window.__iomaCloseViews === 'function') window.__iomaCloseViews();
     }
   });
-})();
-
-// --- Connection feedback --------------------------------------------------
-window.addEventListener('offline', () => toast(friendlyError(new Error('fetch')), 'error', 5000));
-window.addEventListener('online', () => toast(lang === 'en' ? 'Connection restored' : lang === 'tr' ? 'Bağlantı yeniden kuruldu' : lang === 'zh' ? '网络已恢复' : 'Соединение восстановлено', 'success', 2600));
-
-
-// ========== Импортный калькулятор контракта ==========
-(function(){
-  const $id = id => document.getElementById(id);
-  const num = v => { const x = Number(String(v||'').replace(/\s/g,'').replace(',', '.')); return Number.isFinite(x) ? x : 0; };
-  const fmt = n => { const x = Number(n); if (!Number.isFinite(x)) return '0'; return x.toLocaleString('ru-RU', { maximumFractionDigits: 2 }); };
-
-  function getValues(){
-    return {
-      invoice:      num($id('cfInvoice')?.value),
-      td:           num($id('cfTD')?.value),
-      duty:         num($id('cfDuty')?.value),
-      freight:      num($id('cfFreight')?.value),
-      declarant:    num($id('cfDeclarant')?.value),
-      insurance:    num($id('cfInsurance')?.value),
-      vat:          num($id('cfVAT')?.value) || 22,
-      profit:       num($id('cfProfit')?.value),
-      rate:         num($id('cfRate')?.value) || 12.567,
-      transferFee:  num($id('cfTransferFee')?.value) || 3,
-      taxes:        num($id('cfTaxes')?.value) || 2.2
-    };
-  }
-
-  // Таможенный сбор по стоимости (рубли) — сетка ФТС
-  function customsFee(rub){
-    if (!rub) return 0;
-    if (rub <= 200000)   return 1231;
-    if (rub <= 450000)   return 2462;
-    if (rub <= 1200000)  return 4924;
-    if (rub <= 2700000)  return 13541;
-    if (rub <= 4200000)  return 18465;
-    if (rub <= 5500000)  return 21344;
-    if (rub <= 10000000) return 49240;
-    return 73860;
-  }
-
-  function calculate(){
-    const v = getValues();
-    const invoiceWithTD = v.invoice * (1 + v.td / 100);           // Инвойс + ТД, ¥
-    const transferFeeY  = invoiceWithTD * (v.transferFee / 100);  // Комиссия, ¥
-    const insuranceY    = v.invoice * (v.insurance / 100);        // Страхование, ¥
-    const customsBaseY  = invoiceWithTD + v.freight;              // База ТС, ¥
-    const dutyY         = customsBaseY * (v.duty / 100);          // Пошлина, ¥
-    const vatBaseY      = customsBaseY + dutyY;                   // База НДС, ¥
-    const vatY          = vatBaseY * (v.vat / 100);               // НДС, ¥
-    const feeRub        = customsFee(customsBaseY * v.rate);      // Сбор, ₽
-    const feeY          = v.rate ? feeRub / v.rate : 0;           // Сбор, ¥
-    const customsPayY   = dutyY + vatY + feeY;                    // Таможенные платежи, ¥
-    const declarantY    = v.rate ? v.declarant / v.rate : 0;      // Декларант, ¥
-    const expensesY     = invoiceWithTD + transferFeeY + v.freight + insuranceY + customsPayY + declarantY;
-    const taxesY        = expensesY * (v.taxes / 100);            // Налоги, ¥
-    const totalY        = expensesY + v.profit + taxesY;          // Итого, ¥
-    const totalRub      = totalY * v.rate;                        // Итого, ₽
-    const overhead      = invoiceWithTD ? (totalY - invoiceWithTD) / invoiceWithTD * 100 : 0;
-
-    return { v, invoiceWithTD, transferFeeY, insuranceY, dutyY, vatY, feeY, customsPayY, declarantY, taxesY, totalY, totalRub, overhead };
-  }
-
-  function render(){
-    const box = $id('contractResults');
-    if (!box) return;
-    const r = calculate();
-    if (!r.invoiceWithTD){
-      box.innerHTML = '<div class="contract-placeholder">Введите данные слева — расчёт появится здесь автоматически</div>';
-      return;
-    }
-    const rows = [
-      ['Инвойс + ТД',                  r.invoiceWithTD, '¥', ''],
-      ['Комиссия за перевод',          r.transferFeeY,  '¥', ''],
-      ['Фрахт',                        r.v.freight,     '¥', ''],
-      ['Страхование',                  r.insuranceY,    '¥', ''],
-      ['Пошлина',                      r.dutyY,         '¥', ''],
-      ['НДС',                          r.vatY,          '¥', ''],
-      ['Таможенный сбор',              r.feeY,          '¥', ''],
-      ['Таможенные платежи (всего)',   r.customsPayY,   '¥', 'accent'],
-      ['Декларант',                    r.declarantY,    '¥', ''],
-      ['Прибыль',                      r.v.profit,      '¥', ''],
-      ['Налоги',                       r.taxesY,        '¥', '']
-    ];
-    let html = '<div class="contract-table">';
-    rows.forEach(function(row){
-      html += '<div class="contract-row ' + row[3] + '"><span>' + row[0] + '</span><b>' + fmt(row[1]) + ' ' + row[2] + '</b></div>';
-    });
-    html += '<div class="contract-row contract-row-total"><span>Итого</span><b>' + fmt(r.totalY) + ' ¥</b></div>';
-    html += '<div class="contract-row contract-row-total-rub"><span>Итого, ₽</span><b>' + fmt(r.totalRub) + ' ₽</b></div>';
-    html += '<div class="contract-row contract-row-overhead"><span>Накладные расходы</span><b>' + fmt(r.overhead) + ' %</b></div>';
-    html += '</div>';
-    box.innerHTML = html;
-  }
-
-  function init(){
-    const ids = ['cfInvoice','cfTD','cfDuty','cfFreight','cfDeclarant','cfInsurance','cfVAT','cfProfit','cfRate','cfTransferFee','cfTaxes'];
-    ids.forEach(function(id){ const el = $id(id); if (el) el.addEventListener('input', render); });
-    const $c = $id('contractCalc'); if ($c) $c.addEventListener('click', render);
-    const $r = $id('contractReset');
-    if ($r) $r.addEventListener('click', function(){
-      ids.forEach(function(id){ const el = $id(id); if (el) el.value = ''; });
-      if ($id('cfVAT')) $id('cfVAT').value = 22;
-      if ($id('cfRate')) $id('cfRate').value = 12.567;
-      if ($id('cfTransferFee')) $id('cfTransferFee').value = 3;
-      if ($id('cfTaxes')) $id('cfTaxes').value = 2.2;
-      if ($id('cfInsurance')) $id('cfInsurance').value = 0.15;
-      render();
-    });
-    // Дефолты при первой загрузке
-    if ($id('cfVAT') && !$id('cfVAT').value) $id('cfVAT').value = 22;
-    if ($id('cfRate') && !$id('cfRate').value) $id('cfRate').value = 12.567;
-    if ($id('cfTransferFee') && !$id('cfTransferFee').value) $id('cfTransferFee').value = 3;
-    if ($id('cfTaxes') && !$id('cfTaxes').value) $id('cfTaxes').value = 2.2;
-    if ($id('cfInsurance') && !$id('cfInsurance').value) $id('cfInsurance').value = 0.15;
-    render();
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
