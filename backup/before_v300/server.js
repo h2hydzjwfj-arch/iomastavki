@@ -28,10 +28,6 @@ const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const { execFile } = require('child_process');
 const os = require('os');
-const feeds = require('./lib/feeds');
-const extract = require('./lib/extract');
-const insights = require('./lib/insights');
-const weatherLib = require('./lib/weather');
 const upload = multer({storage: multer.memoryStorage(), limits:{fileSize: 15*1024*1024}});
 
 const app = express();
@@ -99,7 +95,7 @@ async function groqRequest(model, messages, maxTokens, key){
       }
       const errText = await r.text();
       if (r.status === 429 || /rate limit/i.test(errText)){
-        console.log('[AI] Groq 429 (' + model + '): ' + errText.slice(0,120));
+        // При 429 сразу отдаём наверх — пусть пробует Gemini
         return { ok:false, rateLimited:true };
       }
       if (/decommissioned|does not exist/i.test(errText)) return { ok:false, fatal:true };
@@ -133,71 +129,40 @@ function repairJSON(raw){
 // ========== Google Gemini (резервный провайдер) ==========
 async function geminiRequest(systemPrompt, userPrompt, maxTokens, jsonMode){
   const key = process.env.GEMINI_API_KEY;
-  if (!key){ console.log('[AI] Gemini — нет ключа'); return { ok:false, error:'no key' }; }
-  const models = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-2.5-pro'];
-  const bodyBase = {
+  if (!key) return { ok:false, error:'no key' };
+  const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
+  const body = {
     contents: [
       { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userPrompt }] }
     ],
     generationConfig: {
-      maxOutputTokens: Math.max(6000, (maxTokens || 2000) * 3),
+      maxOutputTokens: maxTokens || 2000,
       temperature: 0.5
     }
   };
-  const bodyNoThinking = JSON.parse(JSON.stringify(bodyBase));
-  bodyNoThinking.generationConfig.thinkingConfig = { thinkingBudget: 0 };
-  // NOTE: не ставим responseMimeType — некоторые ключи/модели не поддерживают
+  if (jsonMode) body.generationConfig.responseMimeType = 'application/json';
   for (const model of models){
     for (let attempt = 1; attempt <= 2; attempt++){
       try {
-        // Пробуем сначала с key в query, потом с заголовком x-goog-api-key
-        const authVariants = [
-          { url: 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key, headers: { 'Content-Type': 'application/json' } },
-          { url: 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key } }
-        ];
-        for (const v of authVariants){
-          // 1-я попытка с thinkingBudget=0, если 400 — без него
-          let r = await fetch(v.url, {
-            method: 'POST',
-            headers: v.headers,
-            body: JSON.stringify(bodyNoThinking),
-            signal: AbortSignal.timeout(60000)
-          });
-          if (r.status === 400){
-            const errText = await r.text();
-            if (/thinking|thinkingConfig/i.test(errText)){
-              console.warn('[AI] Gemini ' + model + ' не поддерживает thinkingConfig — повтор без него');
-              r = await fetch(v.url, {
-                method: 'POST',
-                headers: v.headers,
-                body: JSON.stringify(bodyBase),
-                signal: AbortSignal.timeout(60000)
-              });
-            } else {
-              console.warn('[AI] Gemini ' + model + ' HTTP 400: ' + errText.slice(0,150));
-              continue;
-            }
-          }
-          if (r.ok){
-            const d = await r.json();
-            const parts = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts;
-            const text = parts && parts.map(function(x){return x.text||'';}).join('');
-            if (text){
-              console.log('[AI] Gemini ' + model + ' OK');
-              return { ok:true, text };
-            }
-            const finish = d.candidates && d.candidates[0] && d.candidates[0].finishReason;
-            console.warn('[AI] Gemini ' + model + ' — пустой ответ (finishReason=' + (finish || '?') + ')');
-          } else {
-            const errText = await r.text();
-            console.warn('[AI] Gemini ' + model + ' HTTP ' + r.status + ': ' + errText.slice(0, 200));
-            if (r.status === 429){ break; }
-            if (r.status === 400 && /API key not valid|API_KEY_INVALID|invalid.*key/i.test(errText)) return { ok:false, fatal:true };
-          }
+        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(90000)
+        });
+        if (r.ok){
+          const d = await r.json();
+          const parts = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts;
+          const text = parts && parts.map(function(x){return x.text||'';}).join('');
+          if (text) return { ok:true, text };
         }
+        const errText = await r.text();
+        if (r.status === 429 || /rate limit|quota/i.test(errText)){
+          if (attempt < 2){ await sleep(3000); continue; }
+        }
+        if (r.status === 400 && /API_KEY_INVALID|API key not valid/i.test(errText)) return { ok:false, fatal:true };
         break;
       } catch(e){
-        console.warn('[AI] Gemini ' + model + ' error: ' + e.message);
         if (attempt < 2){ await sleep(2000); continue; }
       }
     }
@@ -206,10 +171,9 @@ async function geminiRequest(systemPrompt, userPrompt, maxTokens, jsonMode){
 }
 
 async function geminiChatJSON(systemPrompt, userPrompt, maxTokens){
-  const res = await geminiRequest(systemPrompt + ' Return ONLY valid JSON.', userPrompt, maxTokens, false);
-  if (!res.ok){ console.warn('[AI] Gemini request failed: ' + (res.error || 'unknown')); return null; }
-  try { return repairJSON(res.text); }
-  catch(e){ console.warn('[AI] Gemini JSON repair fail: ' + e.message + ' | text: ' + String(res.text||'').slice(0,150)); return null; }
+  const res = await geminiRequest(systemPrompt + ' Return ONLY valid JSON.', userPrompt, maxTokens, true);
+  if (!res.ok) return null;
+  try { return repairJSON(res.text); } catch(e){ console.warn('[AI] Gemini JSON repair fail'); return null; }
 }
 async function geminiChatText(systemPrompt, userPrompt, maxTokens){
   const res = await geminiRequest(systemPrompt, userPrompt, maxTokens, false);
@@ -226,17 +190,16 @@ async function aiChatJSON(systemPrompt, userPrompt, maxTokens){
       for (const model of GROQ_MODELS){
         const res = await groqRequest(model, messages, maxTokens, process.env.GROQ_API_KEY);
         if (res.ok){
-          console.log('[AI] Groq ' + model + ' OK (json)');
+          console.log('[AI] Groq ' + model + ' OK');
           try { return repairJSON(res.text); } catch(e){ console.warn('[AI] JSON repair fail'); }
         }
         if (res.fatal) continue;
       }
     }
     if (process.env.GEMINI_API_KEY){
-      console.log('[AI] пробую Gemini (json)…');
       const g = await geminiChatJSON(systemPrompt, userPrompt, maxTokens);
       if (g && typeof g === 'object' && Object.keys(g).length){
-        console.log('[AI] Gemini OK (json)');
+        console.log('[AI] Gemini OK');
         return g;
       }
     }
@@ -261,10 +224,8 @@ async function aiChatJSON(systemPrompt, userPrompt, maxTokens){
   });
 }
 
-async function aiChatText(systemPrompt, userPrompt, maxTokens, opts){
-  // opts.priority: interactive requests (chat) skip the background queue
-  const runner = (opts && opts.priority) ? function(f){ return f(); } : withAiLock;
-  return runner(async function(){
+async function aiChatText(systemPrompt, userPrompt, maxTokens){
+  return withAiLock(async function(){
     const messages = [
       { role:'system', content: systemPrompt },
       { role:'user', content: userPrompt }
@@ -327,77 +288,6 @@ async function aiChatText(systemPrompt, userPrompt, maxTokens, opts){
 
     throw new Error('Все AI-провайдеры недоступны');
   });
-}
-
-
-// ========== Streaming chat (Server-Sent Events) ==========
-async function streamOpenAICompat(url, key, body, onDelta, timeoutMs){
-  const r = await fetch(url, {
-    method:'POST',
-    headers:{'Authorization':'Bearer ' + key, 'Content-Type':'application/json'},
-    body: JSON.stringify(Object.assign({}, body, { stream:true })),
-    signal: AbortSignal.timeout(timeoutMs || 60000)
-  });
-  if (!r.ok){
-    const t = await r.text().catch(function(){ return ''; });
-    const e = new Error('HTTP ' + r.status + ' ' + t.slice(0, 200)); e.status = r.status; e.body = t; throw e;
-  }
-  const reader = r.body.getReader();
-  const dec = new TextDecoder();
-  let buf = '', total = '';
-  for (;;){
-    const chunk = await reader.read();
-    if (chunk.done) break;
-    buf += dec.decode(chunk.value, { stream:true });
-    let i;
-    while ((i = buf.indexOf('\n')) >= 0){
-      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
-      if (line.indexOf('data:') !== 0) continue;
-      const p = line.slice(5).trim();
-      if (p === '[DONE]') return total;
-      try {
-        const j = JSON.parse(p);
-        const d = j.choices && j.choices[0] && j.choices[0].delta;
-        const t = d && d.content;
-        if (t){ total += t; onDelta(t); }
-      } catch(e){}
-    }
-  }
-  return total;
-}
-
-/** Streams an answer. Order: Groq (fast, low reasoning effort) -> DeepSeek -> Gemini (no streaming, sent as one piece). */
-async function aiStreamChat(messages, onDelta){
-  if (process.env.GROQ_API_KEY){
-    for (const model of ['openai/gpt-oss-20b', 'openai/gpt-oss-120b']){
-      for (const withEffort of [true, false]){
-        try {
-          const body = { model, messages, max_tokens: 1500, temperature: 0.5 };
-          if (withEffort) body.reasoning_effort = 'low';
-          const t = await streamOpenAICompat('https://api.groq.com/openai/v1/chat/completions', process.env.GROQ_API_KEY, body, onDelta, 45000);
-          if (t) return t;
-        } catch(e){
-          if (e.status === 429){ console.log('[AI-stream] Groq 429 (' + model + ')'); break; }
-          if (withEffort && /reasoning/i.test(e.body || e.message)) continue;
-          console.log('[AI-stream] Groq ' + model + ': ' + e.message.slice(0, 120));
-          break;
-        }
-      }
-    }
-  }
-  if (process.env.DEEPSEEK_API_KEY){
-    try {
-      const t = await streamOpenAICompat('https://api.deepseek.com/chat/completions', process.env.DEEPSEEK_API_KEY, { model:'deepseek-chat', messages, max_tokens: 1500, temperature: 0.5 }, onDelta, 60000);
-      if (t) return t;
-    } catch(e){ console.log('[AI-stream] DeepSeek: ' + e.message.slice(0, 120)); }
-  }
-  if (process.env.GEMINI_API_KEY){
-    const sys = messages.filter(function(m){ return m.role === 'system'; }).map(function(m){ return m.content; }).join('\n');
-    const usr = messages.filter(function(m){ return m.role !== 'system'; }).map(function(m){ return (m.role === 'assistant' ? 'Assistant: ' : 'User: ') + m.content; }).join('\n');
-    const g = await geminiChatText(sys, usr, 1500);
-    if (g){ onDelta(g); return g; }
-  }
-  throw new Error('AI is unavailable');
 }
 
 function preprocessForTts(text, lang){
@@ -543,23 +433,52 @@ async function fetchRss(url, source){
   } catch(e){ return []; }
 }
 function isUrgent(t){ return /(обязательн|запрет|пошлин|таможенн|маркиров|лиценз|санкц|mandatory|ban|duty|tariff|customs|sanction)/i.test(String(t||'')); }
-let newsRefreshing = null;
 async function fetchNews(){
-  if (newsRefreshing) return newsRefreshing;
-  newsRefreshing = (async function(){
-    let items = [];
-    try { items = await feeds.fetchAllNews(function(m){ console.log(m); }); } catch(e){ console.warn('[news] fetch failed: ' + e.message); }
-    if (!items.length){ return newsCache.items; } // never replace a good list with an empty one
-    const same = newsCache.items.length === items.length && newsCache.items.every(function(x, i){ return x.link === items[i].link; });
-    newsCache.at = Date.now();
-    newsCache.items = items;
-    if (!same) newsCache.translations = {};
-    saveNewsCacheToDisk();
-    warmNewsTranslations().catch(function(e){ console.warn('[news-warm] ' + e.message); });
-    warmOriginals(items.slice(0, 12)).catch(function(){});
-    return items;
-  })().finally(function(){ newsRefreshing = null; });
-  return newsRefreshing;
+  const queries = [
+    ['site:customs.gov.ru','ФТС России'],
+    ['site:eaeunion.org','ЕЭК'],
+    ['site:alta.ru','Альта-Софт'],
+    ['site:tks.ru','TKS.RU'],
+    ['site:logirus.ru','Логирус'],
+    ['site:rzd-partner.ru','РЖД-Партнёр'],
+    ['site:mintrans.gov.ru','Минтранс'],
+    ['логистика Китай Россия','Логистика'],
+    ['грузоперевозки Китай Россия','Грузоперевозки'],
+    ['импорт из Китая в Россию','Импорт'],
+    ['таможня ЕАЭС пошлина ВЭД','Таможня'],
+    ['ТН ВЭД маркировка','ТН ВЭД'],
+    ['контейнерные перевозки Китай','Контейнеры'],
+    ['железнодорожные перевозки Китай Россия','Ж/Д'],
+    ['морские перевозки Азия','Море']
+  ];
+  const urls = queries.map(function(q){
+    return ['https://news.google.com/rss/search?q=' + encodeURIComponent(q[0]) + '&hl=ru&gl=RU&ceid=RU:ru', q[1]];
+  });
+  let all = [];
+  try { const lists = await Promise.all(urls.map(function(u){ return fetchRss(u[0], u[1]); })); all = lists.flat(); } catch(e){}
+  const BAD_TOPICS = /(украин|киев|київ|ukrain|киевск|одесс|харьков|львов|донец|луганск|крым|мариупол|запорож|херсон|николаев|чернигов|ВСУ|ЗСУ|політик|зеленск)/i;
+  const BAD_DOMAINS = /(\.ua\b|delo\.ua|pravda\.com\.ua|ukrinform|unian|112\.ua|gordonua|strana\.ua|liga\.net|korrespondent\.net|lenta\.ua|zn\.ua|epravda|24tv\.ua|tsn\.ua|fakty\.com\.ua|obozrevatel|focus\.ua|nv\.ua)/i;
+  all = all.filter(function(x){
+    const tx = String(x.title||'') + ' ' + String(x.description||'') + ' ' + String(x.link||'');
+    if (BAD_TOPICS.test(tx)) return false;
+    if (BAD_DOMAINS.test(String(x.link||''))) return false;
+    if (BAD_DOMAINS.test(String(x.source||''))) return false;
+    if (/\.ua\b/i.test(String(x.title||''))) return false;
+    return true;
+  });
+  const seen = new Set();
+  all = all.filter(function(x){ const k = normalizeText(x.title); if (!k || seen.has(k)) return false; seen.add(k); return true; });
+  all.sort(function(a,b){ return new Date(b.date) - new Date(a.date); });
+  const items = all.slice(0,30).map(function(x){
+    return Object.assign({}, x, { title: stripSource(x.title), urgent: isUrgent(x.title + ' ' + x.description) });
+  });
+  newsCache.at = Date.now();
+  newsCache.items = items;
+  newsCache.translations = {}; // сбрасываем устаревшие переводы
+  saveNewsCacheToDisk();
+  // Фоновый прогрев переводов
+  warmNewsTranslations().catch(function(e){ console.warn('[news-warm] ' + e.message); });
+  return items;
 }
 
 async function warmNewsTranslations(){
@@ -724,36 +643,6 @@ function defaultImgQuery(title){
   const h = crypto.createHash('md5').update(t).digest('hex');
   const n = parseInt(h.slice(0, 8), 16);
   const pick = function(arr){ return arr[n % arr.length]; };
-  if (/hyperloop|вакуумн|маглев|hyperloop|скоростн.*поезд/.test(t)) return pick(['hyperloop train','futuristic transport','vacuum train','high speed train future']);
-  if (/искусственн.*интеллект|нейросет|ai\b|ai |машинн.*обучен/.test(t)) return pick(['artificial intelligence','ai neural network','machine learning code','ai technology']);
-  if (/дрон|беспилот|drone|uav|квадрокоптер/.test(t)) return pick(['delivery drone','drone flying','cargo drone','uav logistics']);
-  if (/спутник|космос|spacex|satellite|космическ/.test(t)) return pick(['satellite orbit','space rocket','satellite technology','space station']);
-  if (/робот|robot|автоматизац|механизац/.test(t)) return pick(['warehouse robot','industrial robot','automation robot','robotic arms factory']);
-  if (/электро|ev|электромобил|charging|зарядк/.test(t)) return pick(['electric vehicle charging','ev battery','electric car','charging station']);
-  if (/блокчейн|blockchain|криптовалют/.test(t)) return pick(['blockchain technology','cryptocurrency network','digital ledger']);
-  if (/5g|6g|связь|internet|интернет/.test(t)) return pick(['5g tower','communication technology','internet network']);
-  if (/телеком|telecom|связь/.test(t)) return pick(['telecom equipment','network cables','cell tower']);
-  if (/финтех|fintech|банк|bank|payment/.test(t)) return pick(['fintech app','banking technology','digital payment']);
-  if (/кибербезопас|security|безопасн/.test(t)) return pick(['cybersecurity','data security','network protection']);
-  if (/нефт|oil|barrel|нефтепрод/.test(t)) return pick(['oil tanker ship','oil refinery','oil pipeline','fuel tanker truck']);
-  if (/газ|lng|газовоз/.test(t)) return pick(['lng tanker','gas pipeline','natural gas plant']);
-  if (/пшениц|зерн|wheat|grain|урожай/.test(t)) return pick(['wheat field harvest','grain silo','bulk cargo grain','agriculture export']);
-  if (/уголь|coal|угол/.test(t)) return pick(['coal mine','coal train','bulk coal port']);
-  if (/металл|metal|сталь|steel|алюмин/.test(t)) return pick(['steel factory','metal warehouse','steel coils logistics']);
-  if (/автомобил|машин|car|автотрансп/.test(t)) return pick(['car transport ship','auto logistics','vehicle loading port','car carrier trailer']);
-  if (/авиа|самолёт|air|flight|cargo plane|боинг|airbus/.test(t)) return pick(['cargo airplane','airport cargo terminal','air freight loading']);
-  if (/мор|порт|судно|контейнер|ship|port/.test(t)) return pick(['container ship port','cargo ship sea','port terminal crane','shipping containers']);
-  if (/железнодорож|жд|rail|поезд|вагон/.test(t)) return pick(['freight train railway','cargo train','railway containers','train tracks']);
-  if (/грузовик|авто|truck|фур|фура/.test(t)) return pick(['cargo truck highway','semi trailer road','truck fleet logistics']);
-  if (/китай|china|шанхай|пекин|гуанчжоу/.test(t)) return pick(['shanghai port','china factory','china logistics warehouse','beijing business']);
-  if (/индия|india|дели|мумбаи/.test(t)) return pick(['india port logistics','mumbai port','india cargo ship','delhi business']);
-  if (/киргиз|казахстан|узбекистан|средн.*ази/.test(t)) return pick(['central asia trade','kazakhstan trade','silk road','central asia logistics']);
-  if (/таможен|пошлин|фтс|еэк|вэд|тн.?вэд|сертифик/.test(t)) return pick(['customs documents','customs clearance','border checkpoint','trade documents']);
-  if (/маркиров|честный знак/.test(t)) return pick(['product marking','barcode scanner','qr code label','warehouse label']);
-  if (/рыба|fish|сельхоз|agro|food|продовольств/.test(t)) return pick(['food cargo shipping','refrigerated container','cold chain logistics','food export']);
-  if (/склад|warehouse|логист/.test(t)) return pick(['warehouse logistics','distribution center','fulfillment center','pallet warehouse']);
-  if (/импорт|экспорт|import|export/.test(t)) return pick(['cargo shipping logistics','export containers port','import logistics warehouse']);
-
   if (/таможен|пошлин|декларац|фтс|еэк|вэд|тн.?вэд|сертифик/.test(t)) return pick(['customs documents','customs clearance','border checkpoint','trade documents','customs inspection']);
   if (/маркиров|честный знак/.test(t)) return pick(['product marking','barcode scanner','qr code label','warehouse label']);
   if (/нефт|газ|barrel|oil|tanker/.test(t)) return pick(['oil tanker ship','oil refinery','oil pipeline','fuel tanker truck']);
@@ -879,60 +768,6 @@ app.get('/api/route-distance', async function(req,res){
   }
 });
 
-// Диагностика Gemini — какие модели доступны для ключа
-app.get('/api/gemini-test', async function(req,res){
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) return res.status(400).json({ ok:false, error:'GEMINI_API_KEY не задан' });
-  try {
-    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + key, {
-      signal: AbortSignal.timeout(15000)
-    });
-    if (!r.ok){
-      const t = await r.text();
-      return res.status(502).json({ ok:false, error:'HTTP ' + r.status + ': ' + t.slice(0, 300) });
-    }
-    const d = await r.json();
-    const models = (d.models || []).map(function(m){
-      return {
-        name: m.name,
-        displayName: m.displayName,
-        supportsGenerate: !!(m.supportedGenerationMethods || []).includes('generateContent')
-      };
-    }).filter(function(m){ return m.supportsGenerate; });
-    res.json({ ok:true, count: models.length, models: models });
-  } catch(e){
-    res.status(500).json({ ok:false, error:e.message });
-  }
-});
-
-// Тестовый запрос к Gemini — проверка что реально отвечает
-app.get('/api/gemini-ask', async function(req,res){
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) return res.status(400).json({ ok:false, error:'GEMINI_API_KEY не задан' });
-  const model = String(req.query.model || 'gemini-3.6-flash');
-  try {
-    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: 'Ответь одним словом: работает?' }] }],
-        generationConfig: { maxOutputTokens: 500, temperature: 0.1, thinkingConfig: { thinkingBudget: 0 } }
-      }),
-      signal: AbortSignal.timeout(30000)
-    });
-    if (!r.ok){
-      const t = await r.text();
-      return res.status(502).json({ ok:false, model: model, error: 'HTTP ' + r.status + ': ' + t.slice(0, 400) });
-    }
-    const d = await r.json();
-    const parts = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts;
-    const text = parts && parts.map(function(x){return x.text||'';}).join('');
-    res.json({ ok:true, model: model, answer: text, finishReason: d.candidates && d.candidates[0] && d.candidates[0].finishReason });
-  } catch(e){
-    res.status(500).json({ ok:false, model: model, error: e.message });
-  }
-});
-
 app.get('/api/currency', async function(req,res){
   try {
     const r = await fetch('https://www.cbr-xml-daily.ru/daily_json.js', { signal: AbortSignal.timeout(8000) });
@@ -943,17 +778,6 @@ app.get('/api/currency', async function(req,res){
     }
     throw new Error('CBR');
   } catch(e){ res.status(502).json({ ok:false, error:'CBR unavailable' }); }
-});
-
-// ========== Weather (OpenWeather) — drives the animated background ==========
-app.get('/api/weather', async function(req,res){
-  const key = process.env.OPENWEATHER_API_KEY;
-  if (!key) return res.status(503).json({ ok:false, error:'OPENWEATHER_API_KEY is not set' });
-  try {
-    const d = await weatherLib.getWeather(req.query.lat || weatherLib.MOSCOW.lat, req.query.lon || weatherLib.MOSCOW.lon, key, String(req.query.lang || 'ru').slice(0, 2));
-    res.set('Cache-Control', 'public, max-age=300');
-    res.json(d);
-  } catch(e){ res.status(502).json({ ok:false, error:e.message }); }
 });
 
 // ========== Перевод заголовков новостей ==========
@@ -1021,8 +845,7 @@ app.get('/api/news', async function(req,res){
   const targetLang = String(req.query.lang || 'ru').toLowerCase().slice(0,2);
   try {
     let items = newsCache.items;
-    if (!items.length) items = await fetchNews();
-    else if (Date.now() - newsCache.at > 30*60*1000) fetchNews().catch(function(){}); // stale-while-revalidate
+    if (Date.now() - newsCache.at > 6*60*60*1000 || !items.length) items = await fetchNews();
     if (targetLang && targetLang !== 'ru'){
       try { items = await translateNewsItems(items, targetLang); }
       catch(e){ console.warn('[news-translate] fail: ' + e.message); }
@@ -1049,242 +872,163 @@ app.get('/api/news/image', async function(req,res){
   res.json({ ok:true, image: image || '', query });
 });
 
-// ========== Articles v2: the real text of the real article. Nothing is written by an AI. ==========
-// Only translation (into en/zh/tr) uses an AI, and it is cached + prepared in the background.
-const ART2_DIR = path.join(DATA_DIR, 'articles-v2');
-try { fs.mkdirSync(ART2_DIR, { recursive: true }); } catch(e){}
-const FULL_TEXT_ALL = /^(1|true|yes)$/i.test(String(process.env.NEWS_FULL_TEXT || ''));
-const art2Mem = new Map();      // id -> record (source of truth while the process lives)
-const art2Inflight = {};        // key -> Promise
-const art2Failed = {};          // id -> timestamp of last failed download
+// ========== Автопрогрев статей (фоновый) ==========
+let prewarmRunning = false;
 
-function art2File(id){ return path.join(ART2_DIR, String(id).replace(/[^a-z0-9]/gi, '') + '.json'); }
-function art2Get(id){
-  if (art2Mem.has(id)) return art2Mem.get(id);
-  try {
-    const f = art2File(id), st = fs.statSync(f);
-    if (Date.now() - st.mtimeMs > 14*24*60*60*1000) return null;
-    const rec = JSON.parse(fs.readFileSync(f, 'utf8'));
-    art2Mem.set(id, rec);
-    return rec;
-  } catch(e){ return null; }
-}
-function art2Save(rec){
-  art2Mem.set(rec.id, rec);
-  if (art2Mem.size > 300) art2Mem.delete(art2Mem.keys().next().value);
-  try { fs.writeFileSync(art2File(rec.id), JSON.stringify(rec), 'utf8'); } catch(e){}
-}
-async function mapLimit(list, limit, fn){
-  const out = new Array(list.length); let next = 0;
-  async function worker(){ for (;;){ const i = next++; if (i >= list.length) return; out[i] = await fn(list[i], i); } }
-  await Promise.all(Array.from({ length: Math.min(limit, list.length) }, worker));
-  return out;
-}
-
-function findNewsItem(body){
-  const link = String(body.link || '').trim();
-  const id = String(body.id || '').trim();
-  let it = (newsCache.items || []).find(function(x){ return (id && x.id === id) || (link && x.link === link); });
-  if (it) return it;
-  const src = feeds.SOURCES.find(function(s){ return s.name === String(body.source || ''); });
-  return {
-    id: feeds.hash(link || body.title), title: stripSource(String(body.title || '')), link: link,
-    description: String(body.description || ''), source: String(body.source || ''), sourceId: src ? src.id : '',
-    kind: src ? src.kind : 'media', reuse: src ? src.reuse : 'excerpt', category: [], date: new Date().toISOString()
-  };
-}
-function reuseMode(item){ return (FULL_TEXT_ALL || item.reuse === 'full') ? 'full' : 'excerpt'; }
-
-async function loadOriginal(item){
-  const cached = art2Get(item.id);
-  if (cached && cached.orig && cached.orig.ok) return cached;
-  if (art2Failed[item.id] && Date.now() - art2Failed[item.id] < 3*60*1000 && cached) return cached;
-  const key = 'o' + item.id;
-  if (art2Inflight[key]) return art2Inflight[key];
-  const p = (async function(){
-    let url = item.link || '';
-    if (/news\.google\.com/i.test(url)) url = await feeds.resolveGoogleNewsUrl(url);
-    let orig = null;
-    if (url && /^https?:\/\//i.test(url)){
-      try {
-        const page = await feeds.getText(url, { timeout: 12000 });
-        const ex = extract.extractArticle(page.text, page.finalUrl || url);
-        if (ex && ex.paragraphs >= 2 && ex.chars > 300){
-          orig = { ok:true, title: ex.title || item.title, description: ex.description || '', markdown: ex.markdown, image: ex.image || '', siteName: ex.siteName || '', publishedAt: ex.publishedAt || item.date, sourceUrl: page.finalUrl || url, fetchedAt: Date.now() };
-        }
-      } catch(e){ console.warn('[article] download failed: ' + e.message + ' | ' + url.slice(0, 80)); }
-    }
-    if (!orig){
-      art2Failed[item.id] = Date.now();
-      orig = { ok:false, title: item.title, description: item.description || '', markdown: item.description || '', image: item.image || '', siteName: item.source || '', publishedAt: item.date, sourceUrl: url || item.link, fetchedAt: Date.now() };
-    }
-    const rec = { id: item.id, orig: orig, tr: (cached && cached.tr) || {} };
-    if (orig.ok) art2Save(rec); else art2Mem.set(item.id, rec);
-    return rec;
-  })().finally(function(){ delete art2Inflight[key]; });
-  art2Inflight[key] = p;
-  return p;
-}
-
-async function warmOriginals(items){
-  await mapLimit(items, 3, async function(it){ try { await loadOriginal(it); } catch(e){} });
-}
 async function prewarmArticles(N){
-  // Cheap now: download the real articles (no AI). Optionally pre-translate with PREWARM_TRANSLATIONS=1.
-  const items = (newsCache.items || []).slice(0, Math.max(1, Math.min(20, N || 5)));
-  await warmOriginals(items);
-  if (/^(1|true)$/i.test(String(process.env.PREWARM_TRANSLATIONS || ''))){
-    for (const it of items.slice(0, 5)){
-      const rec = await loadOriginal(it);
-      if (!rec.orig.ok) continue;
-      const mode = reuseMode(it), cut = insights.applyReuse(rec.orig.markdown, mode);
-      for (const lg of ['en', 'zh', 'tr']){ if (!rec.tr[lg]) { try { await ensureTranslation(it, rec, lg, cut, mode); } catch(e){} } }
-    }
+  if (prewarmRunning){
+    console.log('[prewarm] уже выполняется, пропускаю');
+    return;
   }
-}
-
-// ---- translation (fast path: small model, parallel chunks, never waits in the chat queue)
-let transActive = 0; const transWaiters = [];
-async function transSlot(){
-  if (transActive >= 4) await new Promise(function(r){ transWaiters.push(r); });
-  transActive++;
-  return function(){ transActive--; const w = transWaiters.shift(); if (w) w(); };
-}
-async function aiTranslateText(text, LANG){
-  const sys = 'You are a professional news translator. Translate the user text into ' + LANG + '. Keep Markdown syntax, list markers, table pipes, link URLs, numbers, dates, currencies, customs/HS codes, abbreviations and proper names exactly as they are. Do not add, remove, summarise or comment on anything. Output only the translation.';
-  const messages = [{ role:'system', content: sys }, { role:'user', content: text }];
-  const maxTokens = Math.min(6000, Math.ceil(text.length * 1.6) + 300);
-  const release = await transSlot();
+  N = Math.max(1, Math.min(20, N || 5));
+  prewarmRunning = true;
+  console.log('[prewarm] === старт: топ-' + N + ' статей × 4 языка ===');
+  const t0 = Date.now();
+  let ok = 0, fail = 0, cached = 0;
   try {
-    if (process.env.GROQ_API_KEY){
-      for (const model of ['openai/gpt-oss-20b', 'openai/gpt-oss-120b']){
-        for (const withEffort of [true, false]){
-          try {
-            const body = { model, messages, max_tokens: maxTokens, temperature: 0.2 };
-            if (withEffort) body.reasoning_effort = 'low';
-            const r = await fetch('https://api.groq.com/openai/v1/chat/completions', { method:'POST', headers:{ 'Authorization':'Bearer ' + process.env.GROQ_API_KEY, 'Content-Type':'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(40000) });
-            if (r.ok){ const d = await r.json(); const t = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content; if (t && t.trim()) return t.trim(); break; }
-            const errText = await r.text();
-            if (r.status === 429) break;
-            if (withEffort && /reasoning/i.test(errText)) continue;
-            break;
-          } catch(e){ break; }
+    // Обновляем новости, если кэш устарел
+    if (!newsCache.items.length || Date.now() - newsCache.at > 6*60*60*1000){
+      console.log('[prewarm] обновляю новости...');
+      try { await fetchNews(); } catch(e){ console.warn('[prewarm] fetchNews: ' + e.message); }
+    }
+    const items = (newsCache.items || []).slice(0, N);
+    if (!items.length){ console.log('[prewarm] новостей нет, выходим'); return; }
+
+    for (let i = 0; i < items.length; i++){
+      const item = items[i];
+      const title = (typeof stripSource === 'function') ? stripSource(item.title) : item.title;
+      const desc = item.description || '';
+      const source = item.source || '';
+      const link = item.link || '';
+      console.log('[prewarm] (' + (i+1) + '/' + items.length + ') ' + String(title).slice(0,60));
+      for (const lg of ['ru', 'en', 'zh', 'tr']){
+        try {
+          const r = await fetch('http://localhost:' + PORT + '/api/news/article', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, description: desc, source, link, language: lg }),
+            signal: AbortSignal.timeout(180000)
+          });
+          const d = await r.json();
+          if (d && d.ok && d.article){
+            if (d.fromCache){ cached++; console.log('    · ' + lg + ' (кэш)'); }
+            else { ok++; console.log('    ✓ ' + lg + ' OK'); }
+          } else { fail++; console.log('    ✗ ' + lg + ' fail'); }
+        } catch(e){
+          fail++;
+          console.log('    ✗ ' + lg + ': ' + e.message);
         }
+        await sleep(2500); // пауза между запросами — не бьём лимиты
       }
     }
-    if (process.env.GEMINI_API_KEY){
-      try { const g = await geminiChatText(sys, text, maxTokens); if (g && g.trim()) return g.trim(); } catch(e){}
-    }
-    if (process.env.DEEPSEEK_API_KEY){
-      try {
-        const r = await fetch('https://api.deepseek.com/chat/completions', { method:'POST', headers:{ 'Authorization':'Bearer ' + process.env.DEEPSEEK_API_KEY, 'Content-Type':'application/json' }, body: JSON.stringify({ model:'deepseek-chat', messages, max_tokens: maxTokens, temperature: 0.2 }), signal: AbortSignal.timeout(50000) });
-        if (r.ok){ const d = await r.json(); const t = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content; if (t && t.trim()) return t.trim(); }
-      } catch(e){}
-    }
-    return null;
-  } finally { release(); }
-}
-
-function subtitleFor(item, rec, mdText){
-  const d = String(rec.orig.description || item.description || '').trim();
-  if (d.length < 40 || d.length > 320) return '';
-  if (mdText && mdText.slice(0, 120).toLowerCase().indexOf(d.slice(0, 60).toLowerCase()) === 0) return '';
-  return d;
-}
-
-function ensureTranslation(item, rec, lang, cut, mode){
-  const key = 't' + item.id + lang;
-  if (art2Inflight[key]) return art2Inflight[key];
-  const LANG = { en:'English', zh:'Simplified Chinese', tr:'Turkish' }[lang];
-  if (!LANG) return Promise.resolve(null);
-  const p = (async function(){
-    const subtitle = subtitleFor(item, rec, cut.content);
-    const head = rec.orig.title + '\n@@\n' + subtitle;
-    const parts = [head].concat(insights.splitForTranslation(cut.content, 1800));
-    const out = await mapLimit(parts, 3, function(txt){ return aiTranslateText(txt, LANG); });
-    if (out.some(function(x){ return !x; })) throw new Error('translation incomplete');
-    const hs = String(out[0]).split(/\n?@@\n?/);
-    const tr = { title: (hs[0] || '').trim(), subtitle: (hs[1] || '').trim(), markdown: out.slice(1).join('\n\n'), mode: mode, at: Date.now() };
-    rec.tr = rec.tr || {}; rec.tr[lang] = tr;
-    art2Save(rec);
-    return tr;
-  })().finally(function(){ delete art2Inflight[key]; });
-  art2Inflight[key] = p;
-  p.catch(function(e){ console.warn('[translate] ' + lang + ': ' + e.message); });
-  return p;
-}
-
-const imageForTitleCache = {};
-async function imageForTitle(title){
-  const key = crypto.createHash('md5').update(String(title).toLowerCase()).digest('hex');
-  if (newsImageCache[key]) return newsImageCache[key];
-  if (imageForTitleCache[key] !== undefined) return imageForTitleCache[key];
-  const img = await fetchPexelsImage(defaultImgQuery(title));
-  imageForTitleCache[key] = img || '';
-  if (img){ newsImageCache[key] = img; saveNewsImageCache(); }
-  return img || '';
-}
-
-async function buildArticleView(item, rec, lang, mode, cut, tr, status){
-  const o = rec.orig;
-  const shownMd = tr ? tr.markdown : cut.content;
-  const facts = insights.extractFacts(cut.content, 8);
-  const trTitles = (lang !== 'ru' && newsCache.translations && newsCache.translations[lang]) || null;
-  const relatedItems = insights.related(item, newsCache.items || [], 3).map(function(x){
-    const idx = (newsCache.items || []).findIndex(function(y){ return y.link === x.link; });
-    const tt = trTitles && trTitles[idx];
-    return { id: x.id, title: (tt && tt.title) || x.title, link: x.link, date: x.date, source: x.source, image: x.image || '' };
-  });
-  let image = (mode === 'full' && o.image) ? o.image : '';
-  let imageKind = image ? 'source' : '';
-  if (!image){ try { image = await imageForTitle(item.title); imageKind = image ? 'stock' : ''; } catch(e){} }
-  return {
-    title: tr && tr.title ? tr.title : (o.title || item.title),
-    subtitle: tr ? tr.subtitle : subtitleFor(item, rec, cut.content),
-    content: shownMd,
-    image: image, imageKind: imageKind,
-    source: item.source || o.siteName, sourceId: item.sourceId || '', sourceKind: item.kind || 'media',
-    sourceUrl: o.sourceUrl || item.link, publishedAt: o.publishedAt || item.date,
-    isOriginal: true, textOk: !!o.ok,
-    reuse: mode, truncated: !!cut.truncated,
-    facts: facts, related: relatedItems, category: item.category || [],
-    readingMinutes: insights.readingMinutes(shownMd),
-    lang: tr ? lang : 'ru', requestedLang: lang, translation: lang === 'ru' ? 'na' : (tr ? 'ready' : status)
-  };
+  } finally {
+    prewarmRunning = false;
+    const dt = Math.round((Date.now()-t0)/1000);
+    console.log('[prewarm] === готово за ' + dt + ' сек: новых=' + ok + ', кэш=' + cached + ', ошибок=' + fail + ' ===');
+  }
 }
 
 app.post('/api/news/article', async function(req,res){
-  const body = req.body || {};
-  if (!String(body.title || '').trim() && !String(body.link || '').trim()) return res.status(400).json({ ok:false, error:'Title required' });
-  const lang = ['ru','en','zh','tr'].indexOf(String(body.language || 'ru').toLowerCase().slice(0,2)) >= 0 ? String(body.language).toLowerCase().slice(0,2) : 'ru';
-  try {
-    const item = findNewsItem(body);
-    const rec = await loadOriginal(item);
-    const mode = reuseMode(item);
-    const cut = insights.applyReuse(rec.orig.markdown, mode);
-    let tr = null, status = 'na';
-    if (lang !== 'ru'){
-      const have = rec.tr && rec.tr[lang];
-      if (have && have.mode === mode) tr = have;
-      else {
-        const p = ensureTranslation(item, rec, lang, cut, mode);
-        const wait = Number.isFinite(Number(body.wait)) ? Math.max(0, Math.min(25000, Number(body.wait))) : 2500;
-        try { tr = await Promise.race([p, sleep(wait).then(function(){ return null; })]); status = tr ? 'ready' : 'pending'; }
-        catch(e){ tr = null; status = 'failed'; }
+  const title = String(req.body?.title || '').trim();
+  if (!title) return res.status(400).json({ ok:false, error:'Title required' });
+  const language = String(req.body?.language || 'ru').toLowerCase().slice(0,2);
+  const description = String(req.body?.description || '');
+  const sourceName = String(req.body?.source || '');
+  const sourceLink = String(req.body?.link || '');
+  const cleanTitle = stripSource ? stripSource(title) : title;
+  const sourceLinkRaw = String(req.body?.link || '').trim();
+  console.warn('[IOMA-SRV] /api/news/article:', { title: title.slice(0,80), link: sourceLinkRaw.slice(0,60), lang: language });
+  // Используем link как первичный ключ, т.к. он уникален
+  const cacheId = sourceLinkRaw || cleanTitle;
+  console.log('[article] lookup id=' + cacheId.slice(0,60) + ' lang=' + language);
+
+  // 0. Если есть прямая ссылка — пробуем загрузить оригинал
+  if (sourceLinkRaw && language === 'ru'){
+    const orig = getCachedArticle(cacheId, 'orig');
+    if (orig){
+      console.log('[full-article] CACHE HIT original');
+      return res.json({ ok:true, article: orig, fromCache: true, isOriginal: true });
+    }
+    try {
+      console.log('[full-article] try original: ' + sourceLinkRaw.slice(0,80));
+      const full = await fetchFullArticle(sourceLinkRaw);
+      if (full && full.paragraphs >= 3){
+        const art = {
+          title: full.title || cleanTitle,
+          subtitle: full.description || '',
+          content: full.content,
+          podcast: '',
+          image: full.image || '',
+          source: sourceName,
+          sourceUrl: sourceLinkRaw,
+          isOriginal: true,
+          attribution: sourceName
+        };
+        saveCachedArticle(cacheId, 'orig', art);
+        console.log('[full-article] OK original, ' + full.paragraphs + ' paras');
+        return res.json({ ok:true, article: art, fromCache: false, isOriginal: true });
       }
-    }
-    // Prepare the other languages in the background so switching languages is instant
-    if (rec.orig.ok && (process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY || process.env.DEEPSEEK_API_KEY)){
-      ['en','zh','tr'].filter(function(l){ return l !== lang && !(rec.tr && rec.tr[l] && rec.tr[l].mode === mode); }).forEach(function(l, i){
-        setTimeout(function(){ ensureTranslation(item, rec, l, cut, mode).catch(function(){}); }, 400 + i*700);
-      });
-    }
-    const article = await buildArticleView(item, rec, lang, mode, cut, tr, status);
-    res.json({ ok:true, article: article, fromCache: !!(rec.orig.fetchedAt && Date.now() - rec.orig.fetchedAt > 5000) });
-  } catch(e){
-    console.warn('[article] ' + e.message);
-    res.status(502).json({ ok:false, error: e.message });
+    } catch(e){ console.warn('[full-article] fail: ' + e.message); }
   }
+
+  // 1. Проверяем кэш (на диске) — по ключу id+lang
+  const cached = getCachedArticle(cacheId, language);
+  if (cached){
+    console.log('[article] CACHE HIT (' + language + '): ' + cacheId.slice(0,50));
+    return res.json({ ok:true, article: cached, fromCache: true });
+  }
+  console.log('[article] CACHE MISS (' + language + '): ' + cacheId.slice(0,50));
+
+  // 2. Если есть RU в кэше, но нужен другой язык — переводим RU
+  if (language !== 'ru'){
+    const ruCached = getCachedArticle(cacheId, 'ru');
+    if (ruCached){
+      console.log('[article] RU cache есть, перевожу на ' + language);
+      try {
+        const LANG = language==='en'?'English':language==='tr'?'Turkish':'Chinese';
+        const sys = 'Translate this article to ' + LANG + '. Output ONLY valid JSON with keys: title, subtitle, content, podcast. Preserve markdown in content.';
+        const usr = 'Translate to ' + LANG + ':\n\n' + JSON.stringify({title:ruCached.title, subtitle:ruCached.subtitle||'', content:String(ruCached.content||'').slice(0,6000), podcast:String(ruCached.podcast||'').slice(0,800)});
+        const translated = await aiChatJSON(sys, usr, 4000);
+        if (translated && translated.content){
+          translated.source = sourceName;
+          translated.image = ruCached.image || '';
+          saveCachedArticle(cacheId, language, translated);
+          return res.json({ ok:true, article: translated, fromCache: false, translated: true });
+        }
+      } catch(e){ console.warn('[article] translate error: ' + e.message); }
+    }
+  }
+
+  // 3. Генерируем с нуля (только RU если языка нет)
+  if (!process.env.GROQ_API_KEY && !process.env.DEEPSEEK_API_KEY){
+    const tpl = buildTemplate(cleanTitle, description, sourceName, '');
+    tpl.source = sourceName;
+    saveCachedArticle(cacheId, language, tpl);
+    return res.json({ ok:true, article: tpl, fromCache: false });
+  }
+
+  const LANG = language==='en'?'English':language==='tr'?'Turkish':language==='zh'?'Chinese':'Russian';
+  const sys = 'You are an expert logistics editor. Write in ' + LANG + ' ONLY. Today is ' + new Date().toISOString().slice(0,10) + '. IMPORTANT: Never write outdated dates (like 2023, 2024, 2025) in the article body. If the source mentions old dates, rewrite the context to be timeless or use current data only. If unsure about a fact, write in general terms. Return JSON only.';
+  const usr = 'Write a detailed analytical article in ' + LANG + ' (900-1300 words). Topic: ' + cleanTitle + '. Source: ' + sourceName + '. Description: ' + description + '.\n\nSTRICT RULES:\n1. Do NOT mention any years in the article body unless they are the CURRENT year (' + new Date().getFullYear() + ') or the future.\n2. If the source data is from 2023-2025, rephrase as "recent data shows" or "the latest available figures".\n3. Add realistic industry analysis, Incoterms, HS codes, logistics implications.\n4. Content structure: ## Что произошло / ## Что это значит для логистики / ## Что проверить / ## Выводы.\n5. End with a short practical takeaway.\n\nReturn JSON: {"title":"...","subtitle":"...","content":"markdown with ## headings","podcast":"short script","image_query":"specific topic"}';
+  let article = null;
+  for (let att = 1; att <= 2; att++){
+    try {
+      article = await aiChatJSON(sys, usr, 4000);
+      if (article && article.content) break;
+    } catch(e){
+      console.warn('[article] attempt ' + att + ': ' + e.message);
+      if (att < 2) await sleep(3000);
+    }
+  }
+  if (!article || !article.content) article = buildTemplate(cleanTitle, description, sourceName, '');
+  article.source = sourceName;
+  const mainQuery = String(article.image_query || '').trim() || defaultImgQuery(cleanTitle);
+  article.image = await fetchPexelsImage(mainQuery) || '';
+
+  // 4. Сохраняем в кэш
+  saveCachedArticle(cacheId, language, article);
+
+  res.json({ ok:true, article, fromCache: false });
 });
 
 // Ручной запуск прогрева
@@ -1384,30 +1128,13 @@ app.post('/api/ai', async function(req,res){
   const message = String(req.body?.message || '').trim();
   if (!message) return res.status(400).json({ ok:false });
   const history = Array.isArray(req.body?.history) ? req.body.history.slice(-10) : [];
-  const language = String(req.body?.language || 'ru').slice(0, 2);
-  const langName = { ru:'Russian', en:'English', zh:'Chinese', tr:'Turkish' }[language] || 'Russian';
-  const ctxRaw = req.body?.context;
-  const ctx = (typeof ctxRaw === 'string' ? ctxRaw : (ctxRaw && typeof ctxRaw === 'object' ? JSON.stringify(Object.fromEntries(Object.entries(ctxRaw).filter(function(e){ return e[1] !== '' && e[1] !== null; }))) : '')).slice(0, 800);
-  const sys = 'Ты AI-ассистент iomastavka — помощник по логистике Китай–Россия, ВЭД, таможне, ставкам и Incoterms. Отвечай на языке пользователя (' + langName + '). '
-    + 'Отвечай коротко и по делу: на приветствие и простые вопросы — одной-двумя фразами. Подробно — только когда просят. Не выдумывай ставки, сроки, законы и цифры: если не уверен, так и скажи. '
-    + 'Сегодня ' + new Date().toISOString().slice(0, 10) + '.' + (ctx ? ' Контекст калькулятора пользователя: ' + ctx : '');
-  const messages = [{ role:'system', content: sys }]
-    .concat(history.filter(function(h){ return h && h.content; }).map(function(h){ return { role: h.role === 'assistant' ? 'assistant' : 'user', content: String(h.content).slice(0, 4000) }; }))
-    .concat([{ role:'user', content: message.slice(0, 8000) }]);
-  const wantsStream = /text\/event-stream/i.test(String(req.headers.accept || '')) || req.body?.stream === true;
-  if (!wantsStream){
-    try {
-      const historyText = history.map(function(h){ return (h.role === 'assistant' ? 'Assistant: ' : 'User: ') + h.content; }).join('\n');
-      const text = await aiChatText(sys, (historyText ? historyText + '\n' : '') + 'User: ' + message, 1500, { priority:true });
-      return res.json({ ok:true, text });
-    } catch(e){ return res.status(502).json({ ok:false, error:e.message }); }
-  }
-  res.writeHead(200, { 'Content-Type':'text/event-stream; charset=utf-8', 'Cache-Control':'no-cache, no-transform', 'Connection':'keep-alive', 'X-Accel-Buffering':'no' });
-  const send = function(o){ try { res.write('data: ' + JSON.stringify(o) + '\n\n'); } catch(e){} };
-  send({ start:true });
-  try { await aiStreamChat(messages, function(t){ send({ delta:t }); }); send({ done:true }); }
-  catch(e){ send({ error: e.message }); }
-  res.end();
+  const sys = 'Ты AI-ассистент iomastavka — помощник по логистике Китай-Россия, ВЭД, таможне, ставкам, Incoterms. Отвечай на языке пользователя. Не выдумывай ставки.';
+  const historyText = history.map(function(h){ return (h.role === 'assistant' ? 'Assistant: ' : 'User: ') + h.content; }).join('\n');
+  const prompt = (historyText ? historyText + '\n' : '') + 'User: ' + message;
+  try {
+    const text = await aiChatText(sys, prompt, 1500);
+    res.json({ ok:true, text });
+  } catch(e){ res.status(502).json({ ok:false, error:e.message }); }
 });
 
 app.post('/api/customs/check', async function(req,res){
@@ -1416,12 +1143,7 @@ app.post('/api/customs/check', async function(req,res){
   console.log('[customs] запрос code=' + code + ' | Groq=' + (process.env.GROQ_API_KEY?'yes':'no') + ' Gemini=' + (process.env.GEMINI_API_KEY?'yes':'no') + ' DeepSeek=' + (process.env.DEEPSEEK_API_KEY?'yes':'no'));
   const t0 = Date.now();
   try {
-    const FACTS_DATE = '2026-09-22';
-    const sys = 'Ты специалист по ВЭД РФ и ЕАЭС с 20-летним опытом. Отвечай на русском. Давай точную информацию по коду ТН ВЭД: описание, пошлину, НДС, акциз, таможенный сбор, маркировку Честный знак, разрешительные документы (сертификаты, декларации), запреты и ограничения. Если чего-то нет — пиши "не установлено". '
-      + 'ОБЯЗАТЕЛЬНО учти следующие факты (актуальны на ' + FACTS_DATE + ', выше приоритетом, чем любые твои прежние знания): '
-      + 'с 1 января 2026 года основная ставка НДС в РФ — 22% (была 20% до 2026 года), согласно Федеральному закону от 28.11.2025 №425-ФЗ; льготная ставка 10% сохраняется для социально значимых товаров (продукты, лекарства, медизделия, книги, детские товары); ставка 0% — для экспорта и отдельных операций. '
-      + 'Если код относится к социально значимой категории по правительственному перечню — укажи 10%, иначе укажи 22%, и явно укажи, к какой категории отнёс товар. '
-      + 'В конце ответа ОБЯЗАТЕЛЬНО добавь отдельную строку "АКТУАЛЬНОСТЬ:" с текстом на русском о том, что ставки пошлин и НДС нужно дополнительно сверить на сайте customs.gov.ru или через ФТС перед подачей декларации, так как ставки пошлин (в отличие от НДС) периодически меняются точечно по конкретным кодам.';
+    const sys = 'Ты специалист по ВЭД РФ и ЕАЭС с 20-летним опытом. Отвечай на русском. Давай точную и актуальную информацию по коду ТН ВЭД: описание, пошлину, НДС, акциз, таможенный сбор, маркировку Честный знак, разрешительные документы (сертификаты, декларации), запреты и ограничения. Если чего-то нет — пиши "не установлено".';
     const usr = 'Код ТН ВЭД ЕАЭС: ' + code + '\n\nВерни строго в формате (каждая строка начинается с метки):\nКОД: ' + code + '\nОПИСАНИЕ: [полное наименование товара]\nИМПОРТНАЯ ПОШЛИНА: [ставка, % или €/кг]\nНДС: [ставка, %]\nАКЦИЗ: [ставка или "нет"]\nТАМОЖЕННЫЙ СБОР: [сумма в рублях по стоимости]\nЧЕСТНЫЙ ЗНАК: [подлежит/не подлежит маркировке]\nРАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: [сертификаты/декларации, если нужны]\nЗАПРЕТЫ И ОГРАНИЧЕНИЯ: [если есть]\nДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: [важные примечания]';
     const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('Превышено время ожидания (60 сек)')), 60000));
     const text = await Promise.race([aiChatText(sys, usr, 2500), timeout]);
@@ -1462,8 +1184,6 @@ setInterval(function(){
 
 app.listen(PORT, function(){
   console.log('iomastavka listening on ' + PORT);
-  if (!newsCache.items.length || Date.now() - newsCache.at > 30*60*1000) fetchNews().catch(function(e){ console.warn('[startup] news: ' + e.message); });
-  setInterval(function(){ fetchNews().catch(function(){}); }, 30*60*1000);
   setTimeout(function(){ if (newsCache.items.length && (!newsCache.translations || !newsCache.translations.en)){ console.log('[startup] прогрев переводов новостей...'); warmNewsTranslations().catch(function(){}); } }, 20000);
   setTimeout(function(){
     console.log('[startup] автопрогрев 5 статей в фоне...');

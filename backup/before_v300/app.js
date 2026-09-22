@@ -79,7 +79,7 @@ function friendlyError(e){
 // HARDENED UI BOOT: these handlers are intentionally independent from the rest of the app.
 // If an optional module fails later, the core windows, close buttons and theme controls still work.
 (() => {
-  const viewMap = {calculator:'calculatorView',assistant:'assistantView',forwarders:'forwardersView',news:'newsView',article:'articleView',tarotView:'tarotView',customsView:'customsView'};
+  const viewMap = {calculator:'calculatorView',assistant:'assistantView',forwarders:'forwardersView',news:'newsView',article:'articleView',tarotView:'tarotView',customsView:'customsView',contract:'contractView'};
   const open = (name) => {
     const id=viewMap[name]; if(!id) return false;
     const target=document.getElementById(id); if(!target) return false;
@@ -115,10 +115,10 @@ function friendlyError(e){
 })();
 
 const I18N = {
-  ru:{title:'Расчёт ставки',navTarot:'Карта дня',navTheme:'Тема',navRates:'Ставки',navCustoms:'Таможня',from:'Откуда',to:'Куда',cargo:'ГРУЗ',weight:'Вес, кг',pieces:'Количество мест',distance:'Расстояние, км',auto:'Автоматически',dimensions:'ГАБАРИТЫ ОДНОГО МЕСТА',volumeAll:'Объём — по всем местам',length:'Длина',width:'Ширина',height:'Высота',forwarder:'Экспедитор',transport:'Вид транспорта',incoterms:'Условия поставки',dimWeight:'Объёмный вес',chooseForwarder:'Выберите экспедитора',chooseTransport:'Выберите транспорт',selected:'ЭКСПЕДИТОР',none:'Не выбран',calculate:'Рассчитать',agents:'Экспедиторы',assistant:'ИИ-ассистент',assistantSub:'Спросите что угодно по логистике',assistantHelp:'Можно писать обычным языком: маршрут, ставка, Incoterms, таможня, расчёт веса или новая ставка.',send:'Отправить',news:'Новости',newsSub:'Логистика · Китай · Таможня',logout:'Выйти',thinking:'Думаю над вашим ответом…',aiOff:'ИИ не подключён. Добавьте OPENAI_API_KEY в Render.',newsLoading:'Загружаю новости…',noNews:'Новости пока недоступны.',weatherError:'Погода временно недоступна.',todayDate:'15.09.2026 г.',home:'Главная',heroEyebrow:'ЛОГИСТИКА · КИТАЙ → РОССИЯ',heroText:'Точный расчёт. Умный помощник.\nВсё необходимое для работы с грузом — в одном месте.',tileRates:'Расчёт ставок',tileRatesSub:'Маршрут, ставка и транспорт',tileAI:'ИИ-ассистент',tileAISub:'Текстом или голосом',tileAgents:'Экспедиторы',tileAgentsSub:'Контакты и направления перевозок',tileNews:'Новости ВЭД',tileNewsSub:'Китай · логистика · таможня',directoryEyebrow:'СПРАВОЧНИК',directorySub:'Поставщики и контакты по направлениям.',intelligence:'ИНТЕЛЛЕКТ',assistantSub2:'Логистика, расчёты и ВЭД — голосом или текстом.',attach:'Файл',fileHint:'Файл можно добавить вместе с сообщением',voice:'Микрофон',intelligenceFeed:'ИНФОРМАЦИОННАЯ ЛЕНТА',newsSub2:'Китай · логистика · таможня',chargeWeight:'Расчётный вес',company:'Компания',contact:'Контакт',phone:'Телефон',email:'Email',website:'Сайт',directions:'Направления',note:'Примечание',all:'Все',close:'Закрыть',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Автоматически по транспорту',transportRail:'ЖД',transportRoad:'Авто',transportAir:'Авиа',transportSea:'Море',transportMulti:'Море + ЖД',menu:'Меню',ready:'Готов к разговору',listen:'Слушаю…',transcribe:'Расшифровываю…',recognized:'Речь распознана',fail:'Не удалось распознать голос',mic:'Нет доступа к микрофону',unavailable:'Голос недоступен',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'ЦБ РФ',articleLoading:'Готовлю статью…',articleError:'Не удалось подготовить статью.',articleListen:'Аудиоподкаст',articlePlay:'Слушать',articlePause:'Пауза',articleSource:'Материал подготовлен на основе новости',articleBack:'К новостям',autoVolumeLabel:'Объём',autoVolumetricLabel:'Объёмный вес',factorLabel:'Фактор',themeLight:'Светлая тема',themeDark:'Тёмная тема',themeToggle:'Сменить тему',customsEyebrow:'ТАМОЖЕННЫЙ КОНТРОЛЬ',customsTitle:'Проверка ТН ВЭД',customsHelp:'Укажите код ТН ВЭД ЕАЭС — я автоматически проверю пошлину, НДС, сборы, маркировку и другие меры.',customsPlaceholder:'Например, 8467890000',customsCheck:'Проверить код'},
+  ru:{title:'Расчёт ставки',from:'Откуда',to:'Куда',cargo:'ГРУЗ',weight:'Вес, кг',pieces:'Количество мест',distance:'Расстояние, км',auto:'Автоматически',dimensions:'ГАБАРИТЫ ОДНОГО МЕСТА',volumeAll:'Объём — по всем местам',length:'Длина',width:'Ширина',height:'Высота',forwarder:'Экспедитор',transport:'Вид транспорта',incoterms:'Условия поставки',dimWeight:'Объёмный вес',chooseForwarder:'Выберите экспедитора',chooseTransport:'Выберите транспорт',selected:'ЭКСПЕДИТОР',none:'Не выбран',calculate:'Рассчитать',agents:'Экспедиторы',assistant:'ИИ-ассистент',assistantSub:'Спросите что угодно по логистике',assistantHelp:'Можно писать обычным языком: маршрут, ставка, Incoterms, таможня, расчёт веса или новая ставка.',send:'Отправить',news:'Новости',newsSub:'Логистика · Китай · Таможня',logout:'Выйти',thinking:'Думаю над вашим ответом…',aiOff:'ИИ не подключён. Добавьте OPENAI_API_KEY в Render.',newsLoading:'Загружаю новости…',noNews:'Новости пока недоступны.',weatherError:'Погода временно недоступна.',todayDate:'15.09.2026 г.',home:'Главная',heroEyebrow:'ЛОГИСТИКА · КИТАЙ → РОССИЯ',heroText:'Точный расчёт. Умный помощник.\nВсё необходимое для работы с грузом — в одном месте.',tileRates:'Расчёт ставок',tileRatesSub:'Маршрут, ставка и транспорт',tileAI:'ИИ-ассистент',tileAISub:'Текстом или голосом',tileAgents:'Экспедиторы',tileAgentsSub:'Контакты и направления перевозок',tileNews:'Новости ВЭД',tileNewsSub:'Китай · логистика · таможня',directoryEyebrow:'СПРАВОЧНИК',directorySub:'Поставщики и контакты по направлениям.',intelligence:'ИНТЕЛЛЕКТ',assistantSub2:'Логистика, расчёты и ВЭД — голосом или текстом.',attach:'Файл',fileHint:'Файл можно добавить вместе с сообщением',voice:'Микрофон',intelligenceFeed:'ИНФОРМАЦИОННАЯ ЛЕНТА',newsSub2:'Китай · логистика · таможня',chargeWeight:'Расчётный вес',company:'Компания',contact:'Контакт',phone:'Телефон',email:'Email',website:'Сайт',directions:'Направления',note:'Примечание',all:'Все',close:'Закрыть',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Автоматически по транспорту',transportRail:'ЖД',transportRoad:'Авто',transportAir:'Авиа',transportSea:'Море',transportMulti:'Море + ЖД',menu:'Меню',ready:'Готов к разговору',listen:'Слушаю…',transcribe:'Расшифровываю…',recognized:'Речь распознана',fail:'Не удалось распознать голос',mic:'Нет доступа к микрофону',unavailable:'Голос недоступен',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'ЦБ РФ',articleLoading:'Готовлю статью…',articleError:'Не удалось подготовить статью.',articleListen:'Аудиоподкаст',articlePlay:'Слушать',articlePause:'Пауза',articleSource:'Материал подготовлен на основе новости',articleBack:'К новостям',autoVolumeLabel:'Объём',autoVolumetricLabel:'Объёмный вес',factorLabel:'Фактор',themeLight:'Светлая тема',themeDark:'Тёмная тема',themeToggle:'Сменить тему',customsEyebrow:'ТАМОЖЕННЫЙ КОНТРОЛЬ',customsTitle:'Проверка ТН ВЭД',customsHelp:'Укажите код ТН ВЭД ЕАЭС — я автоматически проверю пошлину, НДС, сборы, маркировку и другие меры.',customsPlaceholder:'Например, 8467890000',customsCheck:'Проверить код'},
 
-  tr:{title:'Navlun Hesaplama',navTarot:'Kart',navTheme:'Tema',navRates:'Navlun',navCustoms:'Gümrük',from:'Nereden',to:'Nereye',cargo:'KARGO',weight:'Ağırlık, kg',pieces:'Parça sayısı',distance:'Mesafe, km',auto:'Otomatik',dimensions:'TEK PARÇA ÖLÇÜLERİ',volumeAll:'Hacim — tüm parçalar',length:'Uzunluk',width:'Genişlik',height:'Yükseklik',forwarder:'Forwarder',transport:'Taşıma şekli',incoterms:'Teslim şekli',dimWeight:'Hacimsel ağırlık',chooseForwarder:'Forwarder seçin',chooseTransport:'Taşıma şeklini seçin',selected:'FORWARDER',none:'Seçilmedi',calculate:'Hesapla',agents:'Forwarderlar',assistant:'Yapay zekâ asistanı',assistantSub:'Lojistik hakkında sorun',assistantHelp:'Rota, navlun, Incoterms, gümrük, ağırlık hesabı veya yeni bir fiyatı doğal dille yazabilirsiniz.',send:'Gönder',news:'Haberler',newsSub:'Lojistik · Çin · Gümrük',logout:'Çıkış',thinking:'Yanıt hazırlanıyor…',aiOff:'Yapay zekâ bağlı değil. Render üzerinde OPENAI_API_KEY ekleyin.',newsLoading:'Haberler yükleniyor…',noNews:'Haberler şu anda kullanılamıyor.',weatherError:'Hava durumu geçici olarak kullanılamıyor.',todayDate:'15.09.2026',home:'Ana sayfa',heroEyebrow:'LOJİSTİK · ÇİN → RUSYA',heroText:'Doğru hesaplama. Akıllı asistan.\nKargo operasyonu için gereken her şey tek yerde.',tileRates:'Navlun hesaplama',tileRatesSub:'Rota, fiyat ve taşıma şekli',tileAI:'Yapay zekâ asistanı',tileAISub:'Metin veya ses',tileAgents:'Forwarderlar',tileAgentsSub:'İletişim bilgileri ve taşıma yönleri',tileNews:'Dış ticaret haberleri',tileNewsSub:'Çin · lojistik · gümrük',directoryEyebrow:'REHBER',directorySub:'Taşıma yönlerine göre tedarikçiler ve iletişim bilgileri.',intelligence:'ZEKA',assistantSub2:'Lojistik, hesaplamalar ve dış ticaret — sesli veya yazılı.',attach:'Dosya',fileHint:'Mesajınıza dosya ekleyebilirsiniz',voice:'Mikrofon',intelligenceFeed:'BİLGİ AKIŞI',newsSub2:'Çin · lojistik · gümrük',chargeWeight:'Hesaplanan ağırlık',company:'Şirket',contact:'Yetkili',phone:'Telefon',email:'E-posta',website:'Web sitesi',directions:'Yönler',note:'Not',all:'Tümü',close:'Kapat',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Taşıma şekline göre otomatik',transportRail:'Demiryolu',transportRoad:'Karayolu',transportAir:'Hava yolu',transportSea:'Deniz yolu',transportMulti:'Deniz + Demiryolu',menu:'Menü',ready:'Konuşmaya hazır',listen:'Dinliyorum…',transcribe:'Yazıya dökülüyor…',recognized:'Konuşma algılandı',fail:'Ses tanınamadı',mic:'Mikrofon erişimi yok',unavailable:'Ses kullanılamıyor',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'Rusya Merkez Bankası',articleLoading:'Makale hazırlanıyor…',articleError:'Makale hazırlanamadı.',articleListen:'Sesli podcast',articlePlay:'Dinle',articlePause:'Duraklat',articleSource:'Seçilen haber temel alınarak hazırlandı',articleBack:'Haberlere dön',autoVolumeLabel:'Hacim',autoVolumetricLabel:'Hacimsel ağırlık',factorLabel:'Faktör',themeLight:'Açık tema',themeDark:'Koyu tema',themeToggle:'Temayı değiştir',customsEyebrow:'GÜMRÜK KONTROLÜ',customsTitle:'GTİP KODU KONTROLÜ',customsHelp:'EAEU GTİP kodunu girin — gümrük vergisi, KDV, gümrük harçları, işaretleme ve diğer önlemler otomatik olarak kontrol edilir.',customsPlaceholder:'Örneğin 8467890000',customsCheck:'Kodu kontrol et'},  en:{title:'Rate calculation',navTarot:'Card',navTheme:'Theme',navRates:'Rates',navCustoms:'Customs',from:'From',to:'To',cargo:'CARGO',weight:'Weight, kg',pieces:'Pieces',distance:'Distance, km',auto:'Automatic',dimensions:'DIMENSIONS OF ONE PIECE',volumeAll:'Volume — all pieces',length:'Length',width:'Width',height:'Height',forwarder:'Forwarder',transport:'Transport',incoterms:'Incoterms',dimWeight:'Volumetric weight',chooseForwarder:'Choose forwarder',chooseTransport:'Choose transport',selected:'FORWARDER',none:'Not selected',calculate:'Calculate',agents:'Forwarders',assistant:'AI assistant',assistantSub:'Ask anything about logistics',assistantHelp:'Write naturally: route, rate, Incoterms, customs, weight calculation or a new rate.',send:'Send',news:'News',newsSub:'Logistics · China · Customs',logout:'Log out',thinking:'Thinking about your answer…',aiOff:'AI is not connected. Add OPENAI_API_KEY in Render.',newsLoading:'Loading news…',noNews:'News are temporarily unavailable.',weatherError:'Weather is temporarily unavailable.',todayDate:'15.09.2026',home:'Home',heroEyebrow:'LOGISTICS · CHINA → RUSSIA',heroText:'Precise calculation. Smart assistant.\nEverything you need for cargo work — in one place.',tileRates:'Rate calculation',tileRatesSub:'Route, rate and transport',tileAI:'AI assistant',tileAISub:'Text or voice',tileAgents:'Forwarders',tileAgentsSub:'Contacts and transport directions',tileNews:'Trade news',tileNewsSub:'China · logistics · customs',directoryEyebrow:'DIRECTORY',directorySub:'Suppliers and contacts by transport direction.',intelligence:'INTELLIGENCE',assistantSub2:'Logistics, rates and foreign trade — by voice or text.',attach:'File',fileHint:'Attach a file with your message',voice:'Microphone',intelligenceFeed:'NEWS FEED',newsSub2:'China · logistics · customs',chargeWeight:'Chargeable weight',company:'Company',contact:'Contact',phone:'Phone',email:'Email',website:'Website',directions:'Directions',note:'Note',all:'All',close:'Close',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Automatic by transport',transportRail:'Rail',transportRoad:'Road',transportAir:'Air',transportSea:'Sea',transportMulti:'Sea + Rail',menu:'Menu',ready:'Ready to talk',listen:'Listening…',transcribe:'Transcribing…',recognized:'Speech recognized',fail:'Could not recognize speech',mic:'Microphone access denied',unavailable:'Voice unavailable',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'CBR',articleLoading:'Preparing article…',articleError:'Could not prepare the article.',articleListen:'Audio podcast',articlePlay:'Listen',articlePause:'Pause',articleSource:'Prepared from the selected news item',articleBack:'Back to news',autoVolumeLabel:'Volume',autoVolumetricLabel:'Volumetric weight',factorLabel:'Factor',themeLight:'Light theme',themeDark:'Dark theme',themeToggle:'Switch theme',customsEyebrow:'CUSTOMS CONTROL',customsTitle:'HS / TN VED CHECK',customsHelp:'Enter the EAEU TN VED code — I will automatically check duty, VAT, customs fees, marking and other measures.',customsPlaceholder:'For example, 8467890000',customsCheck:'Check code'},
-  zh:{title:'运价计算',navTarot:'卡片',navTheme:'主题',navRates:'运价',navCustoms:'海关',from:'起运地',to:'目的地',cargo:'货物',weight:'重量，公斤',pieces:'件数',distance:'距离，公里',auto:'自动',dimensions:'单件尺寸',volumeAll:'体积 — 所有件',length:'长度',width:'宽度',height:'高度',forwarder:'货运代理',transport:'运输方式',incoterms:'贸易术语',dimWeight:'体积重量',chooseForwarder:'选择货运代理',chooseTransport:'选择运输方式',selected:'货运代理',none:'未选择',calculate:'计算',agents:'货运代理',assistant:'AI 助手',assistantSub:'咨询物流问题',assistantHelp:'可以直接输入路线、运价、贸易术语、清关或体积重量问题。',send:'发送',news:'新闻',newsSub:'物流 · 中国 · 海关',logout:'退出',thinking:'正在组织答案…',aiOff:'AI 尚未连接。请在 Render 添加 OPENAI_API_KEY。',newsLoading:'正在加载新闻…',noNews:'暂时没有新闻。',weatherError:'天气暂时不可用。',todayDate:'15.09.2026',home:'首页',heroEyebrow:'物流 · 中国 → 俄罗斯',heroText:'精准报价。智能助手。\n货运工作所需的一切，都在这里。',tileRates:'运价计算',tileRatesSub:'路线、运价和运输方式',tileAI:'AI 助手',tileAISub:'文字或语音',tileAgents:'货运代理',tileAgentsSub:'联系方式和运输方向',tileNews:'外贸新闻',tileNewsSub:'中国 · 物流 · 海关',directoryEyebrow:'通讯录',directorySub:'按运输方向查看供应商和联系方式。',intelligence:'智能',assistantSub2:'物流、运价和外贸 — 支持语音或文字。',attach:'文件',fileHint:'可以随消息添加文件',voice:'麦克风',intelligenceFeed:'资讯',newsSub2:'中国 · 物流 · 海关',chargeWeight:'计费重量',company:'公司',contact:'联系人',phone:'电话',email:'邮箱',website:'网站',directions:'运输方向',note:'备注',all:'全部',close:'关闭',weatherUpdating:'',distanceWaiting:'',autoByTransport:'根据运输方式自动计算',transportRail:'铁路',transportRoad:'公路',transportAir:'空运',transportSea:'海运',transportMulti:'海运 + 铁路',menu:'菜单',ready:'准备好开始对话',listen:'正在听…',transcribe:'正在转写…',recognized:'已识别语音',fail:'无法识别语音',mic:'没有麦克风权限',unavailable:'语音不可用',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'中国人民银行',articleLoading:'正在准备文章…',articleError:'无法生成文章。',articleListen:'音频播客',articlePlay:'播放',articlePause:'暂停',articleSource:'根据所选新闻整理',articleBack:'返回新闻',autoVolumeLabel:'体积',autoVolumetricLabel:'体积重量',factorLabel:'换算系数',themeLight:'浅色主题',themeDark:'深色主题',themeToggle:'切换主题',customsEyebrow:'海关监管',customsTitle:'海关编码检查',customsHelp:'输入欧亚经济联盟海关编码 — 自动检查关税、增值税、海关费用、商品标记和其他措施。',customsPlaceholder:'例如 8467890000',customsCheck:'检查编码'}
+  tr:{title:'Navlun Hesaplama',from:'Nereden',to:'Nereye',cargo:'KARGO',weight:'Ağırlık, kg',pieces:'Parça sayısı',distance:'Mesafe, km',auto:'Otomatik',dimensions:'TEK PARÇA ÖLÇÜLERİ',volumeAll:'Hacim — tüm parçalar',length:'Uzunluk',width:'Genişlik',height:'Yükseklik',forwarder:'Forwarder',transport:'Taşıma şekli',incoterms:'Teslim şekli',dimWeight:'Hacimsel ağırlık',chooseForwarder:'Forwarder seçin',chooseTransport:'Taşıma şeklini seçin',selected:'FORWARDER',none:'Seçilmedi',calculate:'Hesapla',agents:'Forwarderlar',assistant:'Yapay zekâ asistanı',assistantSub:'Lojistik hakkında sorun',assistantHelp:'Rota, navlun, Incoterms, gümrük, ağırlık hesabı veya yeni bir fiyatı doğal dille yazabilirsiniz.',send:'Gönder',news:'Haberler',newsSub:'Lojistik · Çin · Gümrük',logout:'Çıkış',thinking:'Yanıt hazırlanıyor…',aiOff:'Yapay zekâ bağlı değil. Render üzerinde OPENAI_API_KEY ekleyin.',newsLoading:'Haberler yükleniyor…',noNews:'Haberler şu anda kullanılamıyor.',weatherError:'Hava durumu geçici olarak kullanılamıyor.',todayDate:'15.09.2026',home:'Ana sayfa',heroEyebrow:'LOJİSTİK · ÇİN → RUSYA',heroText:'Doğru hesaplama. Akıllı asistan.\nKargo operasyonu için gereken her şey tek yerde.',tileRates:'Navlun hesaplama',tileRatesSub:'Rota, fiyat ve taşıma şekli',tileAI:'Yapay zekâ asistanı',tileAISub:'Metin veya ses',tileAgents:'Forwarderlar',tileAgentsSub:'İletişim bilgileri ve taşıma yönleri',tileNews:'Dış ticaret haberleri',tileNewsSub:'Çin · lojistik · gümrük',directoryEyebrow:'REHBER',directorySub:'Taşıma yönlerine göre tedarikçiler ve iletişim bilgileri.',intelligence:'ZEKA',assistantSub2:'Lojistik, hesaplamalar ve dış ticaret — sesli veya yazılı.',attach:'Dosya',fileHint:'Mesajınıza dosya ekleyebilirsiniz',voice:'Mikrofon',intelligenceFeed:'BİLGİ AKIŞI',newsSub2:'Çin · lojistik · gümrük',chargeWeight:'Hesaplanan ağırlık',company:'Şirket',contact:'Yetkili',phone:'Telefon',email:'E-posta',website:'Web sitesi',directions:'Yönler',note:'Not',all:'Tümü',close:'Kapat',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Taşıma şekline göre otomatik',transportRail:'Demiryolu',transportRoad:'Karayolu',transportAir:'Hava yolu',transportSea:'Deniz yolu',transportMulti:'Deniz + Demiryolu',menu:'Menü',ready:'Konuşmaya hazır',listen:'Dinliyorum…',transcribe:'Yazıya dökülüyor…',recognized:'Konuşma algılandı',fail:'Ses tanınamadı',mic:'Mikrofon erişimi yok',unavailable:'Ses kullanılamıyor',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'Rusya Merkez Bankası',articleLoading:'Makale hazırlanıyor…',articleError:'Makale hazırlanamadı.',articleListen:'Sesli podcast',articlePlay:'Dinle',articlePause:'Duraklat',articleSource:'Seçilen haber temel alınarak hazırlandı',articleBack:'Haberlere dön',autoVolumeLabel:'Hacim',autoVolumetricLabel:'Hacimsel ağırlık',factorLabel:'Faktör',themeLight:'Açık tema',themeDark:'Koyu tema',themeToggle:'Temayı değiştir',customsEyebrow:'GÜMRÜK KONTROLÜ',customsTitle:'GTİP KODU KONTROLÜ',customsHelp:'EAEU GTİP kodunu girin — gümrük vergisi, KDV, gümrük harçları, işaretleme ve diğer önlemler otomatik olarak kontrol edilir.',customsPlaceholder:'Örneğin 8467890000',customsCheck:'Kodu kontrol et'},  en:{title:'Rate calculation',from:'From',to:'To',cargo:'CARGO',weight:'Weight, kg',pieces:'Pieces',distance:'Distance, km',auto:'Automatic',dimensions:'DIMENSIONS OF ONE PIECE',volumeAll:'Volume — all pieces',length:'Length',width:'Width',height:'Height',forwarder:'Forwarder',transport:'Transport',incoterms:'Incoterms',dimWeight:'Volumetric weight',chooseForwarder:'Choose forwarder',chooseTransport:'Choose transport',selected:'FORWARDER',none:'Not selected',calculate:'Calculate',agents:'Forwarders',assistant:'AI assistant',assistantSub:'Ask anything about logistics',assistantHelp:'Write naturally: route, rate, Incoterms, customs, weight calculation or a new rate.',send:'Send',news:'News',newsSub:'Logistics · China · Customs',logout:'Log out',thinking:'Thinking about your answer…',aiOff:'AI is not connected. Add OPENAI_API_KEY in Render.',newsLoading:'Loading news…',noNews:'News are temporarily unavailable.',weatherError:'Weather is temporarily unavailable.',todayDate:'15.09.2026',home:'Home',heroEyebrow:'LOGISTICS · CHINA → RUSSIA',heroText:'Precise calculation. Smart assistant.\nEverything you need for cargo work — in one place.',tileRates:'Rate calculation',tileRatesSub:'Route, rate and transport',tileAI:'AI assistant',tileAISub:'Text or voice',tileAgents:'Forwarders',tileAgentsSub:'Contacts and transport directions',tileNews:'Trade news',tileNewsSub:'China · logistics · customs',directoryEyebrow:'DIRECTORY',directorySub:'Suppliers and contacts by transport direction.',intelligence:'INTELLIGENCE',assistantSub2:'Logistics, rates and foreign trade — by voice or text.',attach:'File',fileHint:'Attach a file with your message',voice:'Microphone',intelligenceFeed:'NEWS FEED',newsSub2:'China · logistics · customs',chargeWeight:'Chargeable weight',company:'Company',contact:'Contact',phone:'Phone',email:'Email',website:'Website',directions:'Directions',note:'Note',all:'All',close:'Close',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Automatic by transport',transportRail:'Rail',transportRoad:'Road',transportAir:'Air',transportSea:'Sea',transportMulti:'Sea + Rail',menu:'Menu',ready:'Ready to talk',listen:'Listening…',transcribe:'Transcribing…',recognized:'Speech recognized',fail:'Could not recognize speech',mic:'Microphone access denied',unavailable:'Voice unavailable',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'CBR',articleLoading:'Preparing article…',articleError:'Could not prepare the article.',articleListen:'Audio podcast',articlePlay:'Listen',articlePause:'Pause',articleSource:'Prepared from the selected news item',articleBack:'Back to news',autoVolumeLabel:'Volume',autoVolumetricLabel:'Volumetric weight',factorLabel:'Factor',themeLight:'Light theme',themeDark:'Dark theme',themeToggle:'Switch theme',customsEyebrow:'CUSTOMS CONTROL',customsTitle:'HS / TN VED CHECK',customsHelp:'Enter the EAEU TN VED code — I will automatically check duty, VAT, customs fees, marking and other measures.',customsPlaceholder:'For example, 8467890000',customsCheck:'Check code'},
+  zh:{title:'运价计算',from:'起运地',to:'目的地',cargo:'货物',weight:'重量，公斤',pieces:'件数',distance:'距离，公里',auto:'自动',dimensions:'单件尺寸',volumeAll:'体积 — 所有件',length:'长度',width:'宽度',height:'高度',forwarder:'货运代理',transport:'运输方式',incoterms:'贸易术语',dimWeight:'体积重量',chooseForwarder:'选择货运代理',chooseTransport:'选择运输方式',selected:'货运代理',none:'未选择',calculate:'计算',agents:'货运代理',assistant:'AI 助手',assistantSub:'咨询物流问题',assistantHelp:'可以直接输入路线、运价、贸易术语、清关或体积重量问题。',send:'发送',news:'新闻',newsSub:'物流 · 中国 · 海关',logout:'退出',thinking:'正在组织答案…',aiOff:'AI 尚未连接。请在 Render 添加 OPENAI_API_KEY。',newsLoading:'正在加载新闻…',noNews:'暂时没有新闻。',weatherError:'天气暂时不可用。',todayDate:'15.09.2026',home:'首页',heroEyebrow:'物流 · 中国 → 俄罗斯',heroText:'精准报价。智能助手。\n货运工作所需的一切，都在这里。',tileRates:'运价计算',tileRatesSub:'路线、运价和运输方式',tileAI:'AI 助手',tileAISub:'文字或语音',tileAgents:'货运代理',tileAgentsSub:'联系方式和运输方向',tileNews:'外贸新闻',tileNewsSub:'中国 · 物流 · 海关',directoryEyebrow:'通讯录',directorySub:'按运输方向查看供应商和联系方式。',intelligence:'智能',assistantSub2:'物流、运价和外贸 — 支持语音或文字。',attach:'文件',fileHint:'可以随消息添加文件',voice:'麦克风',intelligenceFeed:'资讯',newsSub2:'中国 · 物流 · 海关',chargeWeight:'计费重量',company:'公司',contact:'联系人',phone:'电话',email:'邮箱',website:'网站',directions:'运输方向',note:'备注',all:'全部',close:'关闭',weatherUpdating:'',distanceWaiting:'',autoByTransport:'根据运输方式自动计算',transportRail:'铁路',transportRoad:'公路',transportAir:'空运',transportSea:'海运',transportMulti:'海运 + 铁路',menu:'菜单',ready:'准备好开始对话',listen:'正在听…',transcribe:'正在转写…',recognized:'已识别语音',fail:'无法识别语音',mic:'没有麦克风权限',unavailable:'语音不可用',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'中国人民银行',articleLoading:'正在准备文章…',articleError:'无法生成文章。',articleListen:'音频播客',articlePlay:'播放',articlePause:'暂停',articleSource:'根据所选新闻整理',articleBack:'返回新闻',autoVolumeLabel:'体积',autoVolumetricLabel:'体积重量',factorLabel:'换算系数',themeLight:'浅色主题',themeDark:'深色主题',themeToggle:'切换主题',customsEyebrow:'海关监管',customsTitle:'海关编码检查',customsHelp:'输入欧亚经济联盟海关编码 — 自动检查关税、增值税、海关费用、商品标记和其他措施。',customsPlaceholder:'例如 8467890000',customsCheck:'检查编码'}
 };
 
 const modes={air:{ru:'Авиа',en:'Air',zh:'空运',factor:167},road:{ru:'Авто',en:'Road',zh:'公路',factor:400},rail:{ru:'ЖД',en:'Rail',zh:'铁路',factor:500},sea:{ru:'Море',en:'Sea',zh:'海运',factor:1000},multimodal:{ru:'Море + ЖД',en:'Sea + Rail',zh:'海运+铁路',factor:1000}};
@@ -160,487 +160,6 @@ const ASIA_CITY_SEED = [
 ['Алматы','Almaty','Алматы','Almaty','Kazakhstan','asia'],['Астана','Astana','Астана','Astana','Kazakhstan','asia'],['Шымкент','Shymkent','Шымкент','Shymkent','Kazakhstan','asia'],['Ташкент','Tashkent','Toshkent','Tashkent','Uzbekistan','asia'],['Самарканд','Samarkand','Samarqand','Samarkand','Uzbekistan','asia'],['Бишкек','Bishkek','Бишкек','Bishkek','Kyrgyzstan','asia'],['Ош','Osh','Ош','Osh','Kyrgyzstan','asia'],['Душанбе','Dushanbe','Душанбе','Dushanbe','Tajikistan','asia'],['Худжанд','Khujand','Хуҷанд','Sughd','Tajikistan','asia'],['Ашхабад','Ashgabat','Aşgabat','Ahal','Turkmenistan','asia'],['Туркменабад','Turkmenabat','Türkmenabat','Lebap','Turkmenistan','asia']
 ];
 for(const c of ASIA_CITY_SEED){ if(!cities.some(x=>String(x[1]).toLowerCase()===String(c[1]).toLowerCase())) cities.push(c); }
-
-const RU_CITIES_FULL = [
-// Центральный ФО
-['Подольск','Podolsk','Подольск','Московская область','Russia','ru'],
-['Химки','Khimki','Химки','Московская область','Russia','ru'],
-['Балашиха','Balashikha','Балашиха','Московская область','Russia','ru'],
-['Мытищи','Mytishchi','Мытищи','Московская область','Russia','ru'],
-['Люберцы','Lyubertsy','Люберцы','Московская область','Russia','ru'],
-['Красногорск','Krasnogorsk','Красногорск','Московская область','Russia','ru'],
-['Одинцово','Odintsovo','Одинцово','Московская область','Russia','ru'],
-['Белгород','Belgorod','Белгород','Белгородская область','Russia','ru'],
-['Старый Оскол','Stary Oskol','Старый Оскол','Белгородская область','Russia','ru'],
-['Брянск','Bryansk','Брянск','Брянская область','Russia','ru'],
-['Владимир','Vladimir','Владимир','Владимирская область','Russia','ru'],
-['Ковров','Kovrov','Ковров','Владимирская область','Russia','ru'],
-['Муром','Murom','Муром','Владимирская область','Russia','ru'],
-['Воронеж','Voronezh','Воронеж','Воронежская область','Russia','ru'],
-['Иваново','Ivanovo','Иваново','Ивановская область','Russia','ru'],
-['Калуга','Kaluga','Калуга','Калужская область','Russia','ru'],
-['Обнинск','Obninsk','Обнинск','Калужская область','Russia','ru'],
-['Кострома','Kostroma','Кострома','Костромская область','Russia','ru'],
-['Курск','Kursk','Курск','Курская область','Russia','ru'],
-['Железногорск','Zheleznogorsk','Железногорск','Курская область','Russia','ru'],
-['Липецк','Lipetsk','Липецк','Липецкая область','Russia','ru'],
-['Елец','Yelets','Елец','Липецкая область','Russia','ru'],
-['Орёл','Oryol','Орёл','Орловская область','Russia','ru'],
-['Рязань','Ryazan','Рязань','Рязанская область','Russia','ru'],
-['Смоленск','Smolensk','Смоленск','Смоленская область','Russia','ru'],
-['Тамбов','Tambov','Тамбов','Тамбовская область','Russia','ru'],
-['Тверь','Tver','Тверь','Тверская область','Russia','ru'],
-['Тула','Tula','Тула','Тульская область','Russia','ru'],
-['Новомосковск','Novomoskovsk','Новомосковск','Тульская область','Russia','ru'],
-['Ярославль','Yaroslavl','Ярославль','Ярославская область','Russia','ru'],
-['Рыбинск','Rybinsk','Рыбинск','Ярославская область','Russia','ru'],
-// Северо-Запад
-['Гатчина','Gatchina','Гатчина','Ленинградская область','Russia','ru'],
-['Выборг','Vyborg','Выборг','Ленинградская область','Russia','ru'],
-['Архангельск','Arkhangelsk','Архангельск','Архангельская область','Russia','ru'],
-['Северодвинск','Severodvinsk','Северодвинск','Архангельская область','Russia','ru'],
-['Вологда','Vologda','Вологда','Вологодская область','Russia','ru'],
-['Череповец','Cherepovets','Череповец','Вологодская область','Russia','ru'],
-['Калининград','Kaliningrad','Калининград','Калининградская область','Russia','ru'],
-['Петрозаводск','Petrozavodsk','Петрозаводск','Республика Карелия','Russia','ru'],
-['Сыктывкар','Syktyvkar','Сыктывкар','Республика Коми','Russia','ru'],
-['Ухта','Ukhta','Ухта','Республика Коми','Russia','ru'],
-['Мурманск','Murmansk','Мурманск','Мурманская область','Russia','ru'],
-['Великий Новгород','Veliky Novgorod','Великий Новгород','Новгородская область','Russia','ru'],
-['Псков','Pskov','Псков','Псковская область','Russia','ru'],
-// Юг
-['Сочи','Sochi','Сочи','Краснодарский край','Russia','ru'],
-['Армавир','Armavir','Армавир','Краснодарский край','Russia','ru'],
-['Таганрог','Taganrog','Таганрог','Ростовская область','Russia','ru'],
-['Шахты','Shakhty','Шахты','Ростовская область','Russia','ru'],
-['Новочеркасск','Novocherkassk','Новочеркасск','Ростовская область','Russia','ru'],
-['Астрахань','Astrakhan','Астрахань','Астраханская область','Russia','ru'],
-['Волгоград','Volgograd','Волгоград','Волгоградская область','Russia','ru'],
-['Волжский','Volzhsky','Волжский','Волгоградская область','Russia','ru'],
-['Симферополь','Simferopol','Симферополь','Республика Крым','Russia','ru'],
-['Севастополь','Sevastopol','Севастополь','Севастополь','Russia','ru'],
-['Керчь','Kerch','Керчь','Республика Крым','Russia','ru'],
-['Майкоп','Maykop','Майкоп','Республика Адыгея','Russia','ru'],
-['Элиста','Elista','Элиста','Республика Калмыкия','Russia','ru'],
-// Северный Кавказ
-['Ставрополь','Stavropol','Ставрополь','Ставропольский край','Russia','ru'],
-['Пятигорск','Pyatigorsk','Пятигорск','Ставропольский край','Russia','ru'],
-['Кисловодск','Kislovodsk','Кисловодск','Ставропольский край','Russia','ru'],
-['Махачкала','Makhachkala','Махачкала','Республика Дагестан','Russia','ru'],
-['Дербент','Derbent','Дербент','Республика Дагестан','Russia','ru'],
-['Грозный','Grozny','Грозный','Чеченская Республика','Russia','ru'],
-['Владикавказ','Vladikavkaz','Владикавказ','Республика Северная Осетия','Russia','ru'],
-['Назрань','Nazran','Назрань','Республика Ингушетия','Russia','ru'],
-['Черкесск','Cherkessk','Черкесск','Карачаево-Черкесия','Russia','ru'],
-// Поволжье
-['Нижнекамск','Nizhnekamsk','Нижнекамск','Республика Татарстан','Russia','ru'],
-['Альметьевск','Almetyevsk','Альметьевск','Республика Татарстан','Russia','ru'],
-['Стерлитамак','Sterlitamak','Стерлитамак','Республика Башкортостан','Russia','ru'],
-['Салават','Salavat','Салават','Республика Башкортостан','Russia','ru'],
-['Тольятти','Tolyatti','Тольятти','Самарская область','Russia','ru'],
-['Сызрань','Syzran','Сызрань','Самарская область','Russia','ru'],
-['Саратов','Saratov','Саратов','Саратовская область','Russia','ru'],
-['Энгельс','Engels','Энгельс','Саратовская область','Russia','ru'],
-['Балаково','Balakovo','Балаково','Саратовская область','Russia','ru'],
-['Дзержинск','Dzerzhinsk','Дзержинск','Нижегородская область','Russia','ru'],
-['Арзамас','Arzamas','Арзамас','Нижегородская область','Russia','ru'],
-['Березники','Berezniki','Березники','Пермский край','Russia','ru'],
-['Ижевск','Izhevsk','Ижевск','Удмуртская Республика','Russia','ru'],
-['Сарапул','Sarapul','Сарапул','Удмуртская Республика','Russia','ru'],
-['Чебоксары','Cheboksary','Чебоксары','Чувашская Республика','Russia','ru'],
-['Новочебоксарск','Novocheboksarsk','Новочебоксарск','Чувашская Республика','Russia','ru'],
-['Саранск','Saransk','Саранск','Республика Мордовия','Russia','ru'],
-['Йошкар-Ола','Yoshkar-Ola','Йошкар-Ола','Республика Марий Эл','Russia','ru'],
-['Пенза','Penza','Пенза','Пензенская область','Russia','ru'],
-['Ульяновск','Ulyanovsk','Ульяновск','Ульяновская область','Russia','ru'],
-['Димитровград','Dimitrovgrad','Димитровград','Ульяновская область','Russia','ru'],
-['Киров','Kirov','Киров','Кировская область','Russia','ru'],
-['Оренбург','Orenburg','Оренбург','Оренбургская область','Russia','ru'],
-['Орск','Orsk','Орск','Оренбургская область','Russia','ru'],
-// Урал
-['Нижний Тагил','Nizhny Tagil','Нижний Тагил','Свердловская область','Russia','ru'],
-['Каменск-Уральский','Kamensk-Uralsky','Каменск-Уральский','Свердловская область','Russia','ru'],
-['Первоуральск','Pervouralsk','Первоуральск','Свердловская область','Russia','ru'],
-['Магнитогорск','Magnitogorsk','Магнитогорск','Челябинская область','Russia','ru'],
-['Златоуст','Zlatoust','Златоуст','Челябинская область','Russia','ru'],
-['Миасс','Miass','Миасс','Челябинская область','Russia','ru'],
-['Копейск','Kopeysk','Копейск','Челябинская область','Russia','ru'],
-['Курган','Kurgan','Курган','Курганская область','Russia','ru'],
-['Тобольск','Tobolsk','Тобольск','Тюменская область','Russia','ru'],
-['Сургут','Surgut','Сургут','Ханты-Мансийский АО','Russia','ru'],
-['Нижневартовск','Nizhnevartovsk','Нижневартовск','Ханты-Мансийский АО','Russia','ru'],
-['Нефтеюганск','Nefteyugansk','Нефтеюганск','Ханты-Мансийский АО','Russia','ru'],
-['Ханты-Мансийск','Khanty-Mansiysk','Ханты-Мансийск','Ханты-Мансийский АО','Russia','ru'],
-['Новый Уренгой','Novy Urengoy','Новый Уренгой','Ямало-Ненецкий АО','Russia','ru'],
-['Ноябрьск','Noyabrsk','Ноябрьск','Ямало-Ненецкий АО','Russia','ru'],
-['Салехард','Salekhard','Салехард','Ямало-Ненецкий АО','Russia','ru'],
-// Сибирь
-['Бердск','Berdsk','Бердск','Новосибирская область','Russia','ru'],
-['Искитим','Iskitim','Искитим','Новосибирская область','Russia','ru'],
-['Красноярск','Krasnoyarsk','Красноярск','Красноярский край','Russia','ru'],
-['Норильск','Norilsk','Норильск','Красноярский край','Russia','ru'],
-['Ачинск','Achinsk','Ачинск','Красноярский край','Russia','ru'],
-['Канск','Kansk','Канск','Красноярский край','Russia','ru'],
-['Кемерово','Kemerovo','Кемерово','Кемеровская область','Russia','ru'],
-['Новокузнецк','Novokuznetsk','Новокузнецк','Кемеровская область','Russia','ru'],
-['Прокопьевск','Prokopyevsk','Прокопьевск','Кемеровская область','Russia','ru'],
-['Междуреченск','Mezhdurechensk','Междуреченск','Кемеровская область','Russia','ru'],
-['Барнаул','Barnaul','Барнаул','Алтайский край','Russia','ru'],
-['Бийск','Biysk','Бийск','Алтайский край','Russia','ru'],
-['Рубцовск','Rubtsovsk','Рубцовск','Алтайский край','Russia','ru'],
-['Горно-Алтайск','Gorno-Altaysk','Горно-Алтайск','Республика Алтай','Russia','ru'],
-['Томск','Tomsk','Томск','Томская область','Russia','ru'],
-['Северск','Seversk','Северск','Томская область','Russia','ru'],
-['Иркутск','Irkutsk','Иркутск','Иркутская область','Russia','ru'],
-['Братск','Bratsk','Братск','Иркутская область','Russia','ru'],
-['Ангарск','Angarsk','Ангарск','Иркутская область','Russia','ru'],
-['Усть-Илимск','Ust-Ilimsk','Усть-Илимск','Иркутская область','Russia','ru'],
-['Улан-Удэ','Ulan-Ude','Улан-Удэ','Республика Бурятия','Russia','ru'],
-['Чита','Chita','Чита','Забайкальский край','Russia','ru'],
-['Абакан','Abakan','Абакан','Республика Хакасия','Russia','ru'],
-['Черногорск','Chernogorsk','Черногорск','Республика Хакасия','Russia','ru'],
-['Кызыл','Kyzyl','Кызыл','Республика Тыва','Russia','ru'],
-// Дальний Восток
-['Уссурийск','Ussuriysk','Уссурийск','Приморский край','Russia','ru'],
-['Артём','Artyom','Артём','Приморский край','Russia','ru'],
-['Арсеньев','Arsenyev','Арсеньев','Приморский край','Russia','ru'],
-['Комсомольск-на-Амуре','Komsomolsk-on-Amur','Комсомольск-на-Амуре','Хабаровский край','Russia','ru'],
-['Благовещенск','Blagoveshchensk','Благовещенск','Амурская область','Russia','ru'],
-['Белогорск','Belogorsk','Белогорск','Амурская область','Russia','ru'],
-['Свободный','Svobodny','Свободный','Амурская область','Russia','ru'],
-['Якутск','Yakutsk','Якутск','Республика Саха (Якутия)','Russia','ru'],
-['Нерюнгри','Neryungri','Нерюнгри','Республика Саха (Якутия)','Russia','ru'],
-['Мирный','Mirny','Мирный','Республика Саха (Якутия)','Russia','ru'],
-['Южно-Сахалинск','Yuzhno-Sakhalinsk','Южно-Сахалинск','Сахалинская область','Russia','ru'],
-['Корсаков','Korsakov','Корсаков','Сахалинская область','Russia','ru'],
-['Холмск','Kholmsk','Холмск','Сахалинская область','Russia','ru'],
-['Магадан','Magadan','Магадан','Магаданская область','Russia','ru'],
-['Петропавловск-Камчатский','Petropavlovsk-Kamchatsky','Петропавловск-Камчатский','Камчатский край','Russia','ru'],
-['Елизово','Yelizovo','Елизово','Камчатский край','Russia','ru'],
-['Биробиджан','Birobidzhan','Биробиджан','Еврейская АО','Russia','ru'],
-['Анадырь','Anadyr','Анадырь','Чукотский АО','Russia','ru']
-];
-for(const c of RU_CITIES_FULL){ if(!cities.some(x=>String(x[1]).toLowerCase()===String(c[1]).toLowerCase())) cities.push(c); }
-
-
-const CN_CITIES_FULL = [
-// Гуандун
-['Дунгуань','Dongguan','东莞','Гуандун','China','cn'],
-['Чжуншань','Zhongshan','中山','Гуандун','China','cn'],
-['Хуэйчжоу','Huizhou','惠州','Гуандун','China','cn'],
-['Шаньтоу','Shantou','汕头','Гуандун','China','cn'],
-['Чжаоцин','Zhaoqing','肇庆','Гуандун','China','cn'],
-['Цзеян','Jieyang','揭阳','Гуандун','China','cn'],
-['Шаогуань','Shaoguan','韶关','Гуандун','China','cn'],
-['Мэйчжоу','Meizhou','梅州','Гуандун','China','cn'],
-['Чаочжоу','Chaozhou','潮州','Гуандун','China','cn'],
-['Янцзян','Yangjiang','阳江','Гуандун','China','cn'],
-['Маомин','Maoming','茂名','Гуандун','China','cn'],
-['Чжаньцзян','Zhanjiang','湛江','Гуандун','China','cn'],
-['Хэюань','Heyuan','河源','Гуандун','China','cn'],
-['Цинъюань','Qingyuan','清远','Гуандун','China','cn'],
-// Чжэцзян
-['Шаосин','Shaoxing','绍兴','Чжэцзян','China','cn'],
-['Цзясин','Jiaxing','嘉兴','Чжэцзян','China','cn'],
-['Тайчжоу','Taizhou','台州','Чжэцзян','China','cn'],
-['Хучжоу','Huzhou','湖州','Чжэцзян','China','cn'],
-['Цюйчжоу','Quzhou','衢州','Чжэцзян','China','cn'],
-['Лисуй','Lishui','丽水','Чжэцзян','China','cn'],
-['Чжоушань','Zhoushan','舟山','Чжэцзян','China','cn'],
-// Цзянсу
-['Уси','Wuxi','无锡','Цзянсу','China','cn'],
-['Чанчжоу','Changzhou','常州','Цзянсу','China','cn'],
-['Наньтун','Nantong','南通','Цзянсу','China','cn'],
-['Сюйчжоу','Xuzhou','徐州','Цзянсу','China','cn'],
-['Янчжоу','Yangzhou','扬州','Цзянсу','China','cn'],
-['Яньчэн','Yancheng','盐城','Цзянсу','China','cn'],
-['Хуайань','Huaian','淮安','Цзянсу','China','cn'],
-['Ляньюньган','Lianyungang','连云港','Цзянсу','China','cn'],
-['Чжэньцзян','Zhenjiang','镇江','Цзянсу','China','cn'],
-['Суцянь','Suqian','宿迁','Цзянсу','China','cn'],
-['Тайчжоу','Taizhou','泰州','Цзянсу','China','cn'],
-// Шаньдун
-['Яньтай','Yantai','烟台','Шаньдун','China','cn'],
-['Вэйфан','Weifang','潍坊','Шаньдун','China','cn'],
-['Цзыбо','Zibo','淄博','Шаньдун','China','cn'],
-['Линьи','Linyi','临沂','Шаньдун','China','cn'],
-['Цзинин','Jining','济宁','Шаньдун','China','cn'],
-['Тайань','Taian','泰安','Шаньдун','China','cn'],
-['Вэйхай','Weihai','威海','Шаньдун','China','cn'],
-['Дунъин','Dongying','东营','Шаньдун','China','cn'],
-['Жичжао','Rizhao','日照','Шаньдун','China','cn'],
-['Ляочэн','Liaocheng','聊城','Шаньдун','China','cn'],
-['Дэчжоу','Dezhou','德州','Шаньдун','China','cn'],
-['Хэцзэ','Heze','菏泽','Шаньдун','China','cn'],
-['Цзаочжуан','Zaozhuang','枣庄','Шаньдун','China','cn'],
-// Фуцзянь
-['Цюаньчжоу','Quanzhou','泉州','Фуцзянь','China','cn'],
-['Чжанчжоу','Zhangzhou','漳州','Фуцзянь','China','cn'],
-['Путянь','Putian','莆田','Фуцзянь','China','cn'],
-['Наньпин','Nanping','南平','Фуцзянь','China','cn'],
-['Саньмин','Sanming','三明','Фуцзянь','China','cn'],
-['Лунъянь','Longyan','龙岩','Фуцзянь','China','cn'],
-['Ниндэ','Ningde','宁德','Фуцзянь','China','cn'],
-// Хэнань
-['Лоян','Luoyang','洛阳','Хэнань','China','cn'],
-['Кайфэн','Kaifeng','开封','Хэнань','China','cn'],
-['Аньян','Anyang','安阳','Хэнань','China','cn'],
-['Синьсян','Xinxiang','新乡','Хэнань','China','cn'],
-['Пиндиншань','Pingdingshan','平顶山','Хэнань','China','cn'],
-['Сюйчан','Xuchang','许昌','Хэнань','China','cn'],
-['Синьян','Xinyang','信阳','Хэнань','China','cn'],
-['Наньян','Nanyang','南阳','Хэнань','China','cn'],
-['Шанцю','Shangqiu','商丘','Хэнань','China','cn'],
-['Чжоукоу','Zhoukou','周口','Хэнань','China','cn'],
-['Чжумадянь','Zhumadian','驻马店','Хэнань','China','cn'],
-['Цзяоцзо','Jiaozuo','焦作','Хэнань','China','cn'],
-// Хэбэй
-['Таншань','Tangshan','唐山','Хэбэй','China','cn'],
-['Баодин','Baoding','保定','Хэбэй','China','cn'],
-['Ханьдань','Handan','邯郸','Хэбэй','China','cn'],
-['Синтай','Xingtai','邢台','Хэбэй','China','cn'],
-['Ланфан','Langfang','廊坊','Хэбэй','China','cn'],
-['Чжанцзякоу','Zhangjiakou','张家口','Хэбэй','China','cn'],
-['Чэндэ','Chengde','承德','Хэбэй','China','cn'],
-['Циньхуандао','Qinhuangdao','秦皇岛','Хэбэй','China','cn'],
-['Хэншуй','Hengshui','衡水','Хэбэй','China','cn'],
-// Шаньси
-['Датун','Datong','大同','Шаньси','China','cn'],
-['Линьфэнь','Linfen','临汾','Шаньси','China','cn'],
-['Юньчэн','Yuncheng','运城','Шаньси','China','cn'],
-['Чанчжи','Changzhi','长治','Шаньси','China','cn'],
-['Цзиньчэн','Jincheng','晋城','Шаньси','China','cn'],
-['Шочжоу','Shuozhou','朔州','Шаньси','China','cn'],
-// Шэньси
-['Баоцзи','Baoji','宝鸡','Шэньси','China','cn'],
-['Сяньян','Xianyang','咸阳','Шэньси','China','cn'],
-['Вэйнань','Weinan','渭南','Шэньси','China','cn'],
-['Ханьчжун','Hanzhong','汉中','Шэньси','China','cn'],
-['Юйлинь','Yulin','榆林','Шэньси','China','cn'],
-['Яньань','Yanan','延安','Шэньси','China','cn'],
-['Тунчуань','Tongchuan','铜川','Шэньси','China','cn'],
-// Ганьсу
-['Тяньшуй','Tianshui','天水','Ганьсу','China','cn'],
-['Цзяюйгуань','Jiayuguan','嘉峪关','Ганьсу','China','cn'],
-['Цзиньчан','Jinchang','金昌','Ганьсу','China','cn'],
-['Увэй','Wuwei','武威','Ганьсу','China','cn'],
-['Чжанъе','Zhangye','张掖','Ганьсу','China','cn'],
-['Цзюцюань','Jiuquan','酒泉','Ганьсу','China','cn'],
-['Цинъян','Qingyang','庆阳','Ганьсу','China','cn'],
-// Цинхай, Нинся, Синьцзян
-['Синин','Xining','西宁','Цинхай','China','cn'],
-['Иньчуань','Yinchuan','银川','Нинся','China','cn'],
-['Шицзуйшань','Shizuishan','石嘴山','Нинся','China','cn'],
-['Учжун','Wuzhong','吴忠','Нинся','China','cn'],
-['Гуюань','Guyuan','固原','Нинся','China','cn'],
-['Чжунвэй','Zhongwei','中卫','Нинся','China','cn'],
-['Карамай','Karamay','克拉玛依','Синьцзян','China','cn'],
-['Турфан','Turpan','吐鲁番','Синьцзян','China','cn'],
-['Хами','Hami','哈密','Синьцзян','China','cn'],
-['Корла','Korla','库尔勒','Синьцзян','China','cn'],
-['Аксу','Aksu','阿克苏','Синьцзян','China','cn'],
-['Кашгар','Kashgar','喀什','Синьцзян','China','cn'],
-['Хотан','Hotan','和田','Синьцзян','China','cn'],
-['Инин','Yining','伊宁','Синьцзян','China','cn'],
-['Тачэн','Tacheng','塔城','Синьцзян','China','cn'],
-['Алтай','Altay','阿勒泰','Синьцзян','China','cn'],
-// Внутренняя Монголия
-['Хух-Хото','Hohhot','呼和浩特','Внутренняя Монголия','China','cn'],
-['Баотоу','Baotou','包头','Внутренняя Монголия','China','cn'],
-['Ухай','Wuhai','乌海','Внутренняя Монголия','China','cn'],
-['Чифэн','Chifeng','赤峰','Внутренняя Монголия','China','cn'],
-['Тунляо','Tongliao','通辽','Внутренняя Монголия','China','cn'],
-['Эрдос','Ordos','鄂尔多斯','Внутренняя Монголия','China','cn'],
-['Хулун-Буир','Hulunbuir','呼伦贝尔','Внутренняя Монголия','China','cn'],
-['Баяннур','Bayannur','巴彦淖尔','Внутренняя Монголия','China','cn'],
-['Уланчаб','Ulanqab','乌兰察布','Внутренняя Монголия','China','cn'],
-// Ляонин
-['Аньшань','Anshan','鞍山','Ляонин','China','cn'],
-['Фушунь','Fushun','抚顺','Ляонин','China','cn'],
-['Бэньси','Benxi','本溪','Ляонин','China','cn'],
-['Даньдун','Dandong','丹东','Ляонин','China','cn'],
-['Цзиньчжоу','Jinzhou','锦州','Ляонин','China','cn'],
-['Инкоу','Yingkou','营口','Ляонин','China','cn'],
-['Фусинь','Fuxin','阜新','Ляонин','China','cn'],
-['Ляоян','Liaoyang','辽阳','Ляонин','China','cn'],
-['Паньцзинь','Panjin','盘锦','Ляонин','China','cn'],
-['Телин','Tieling','铁岭','Ляонин','China','cn'],
-['Чаоян','Chaoyang','朝阳','Ляонин','China','cn'],
-['Хулудао','Huludao','葫芦岛','Ляонин','China','cn'],
-// Цзилинь
-['Цзилинь','Jilin','吉林','Цзилинь','China','cn'],
-['Сыпин','Siping','四平','Цзилинь','China','cn'],
-['Ляоюань','Liaoyuan','辽源','Цзилинь','China','cn'],
-['Тунхуа','Tonghua','通化','Цзилинь','China','cn'],
-['Байшань','Baishan','白山','Цзилинь','China','cn'],
-['Сунъюань','Songyuan','松原','Цзилинь','China','cn'],
-['Байчэн','Baicheng','白城','Цзилинь','China','cn'],
-// Хэйлунцзян
-['Муданьцзян','Mudanjiang','牡丹江','Хэйлунцзян','China','cn'],
-['Цзямусы','Jiamusi','佳木斯','Хэйлунцзян','China','cn'],
-['Дацин','Daqing','大庆','Хэйлунцзян','China','cn'],
-['Цзиси','Jixi','鸡西','Хэйлунцзян','China','cn'],
-['Шуанъяшань','Shuangyashan','双鸭山','Хэйлунцзян','China','cn'],
-['Ичунь','Yichun','伊春','Хэйлунцзян','China','cn'],
-['Цитайхэ','Qitaihe','七台河','Хэйлунцзян','China','cn'],
-['Хэган','Hegang','鹤岗','Хэйлунцзян','China','cn'],
-['Хэйхэ','Heihe','黑河','Хэйлунцзян','China','cn'],
-['Суйхуа','Suihua','绥化','Хэйлунцзян','China','cn'],
-// Аньхой
-['Уху','Wuhu','芜湖','Аньхой','China','cn'],
-['Бэнбу','Bengbu','蚌埠','Аньхой','China','cn'],
-['Хуайнань','Huainan','淮南','Аньхой','China','cn'],
-['Мааньшань','Maanshan','马鞍山','Аньхой','China','cn'],
-['Аньцин','Anqing','安庆','Аньхой','China','cn'],
-['Хуаншань','Huangshan','黄山','Аньхой','China','cn'],
-['Чучжоу','Chuzhou','滁州','Аньхой','China','cn'],
-['Фуян','Fuyang','阜阳','Аньхой','China','cn'],
-['Сучжоу','Suzhou','宿州','Аньхой','China','cn'],
-['Луань','Luan','六安','Аньхой','China','cn'],
-['Бочжоу','Bozhou','亳州','Аньхой','China','cn'],
-['Чичжоу','Chizhou','池州','Аньхой','China','cn'],
-['Сюаньчэн','Xuancheng','宣城','Аньхой','China','cn'],
-// Хубэй
-['Ичан','Yichang','宜昌','Хубэй','China','cn'],
-['Сянъян','Xiangyang','襄阳','Хубэй','China','cn'],
-['Цзинчжоу','Jingzhou','荆州','Хубэй','China','cn'],
-['Хуанши','Huangshi','黄石','Хубэй','China','cn'],
-['Шиянь','Shiyan','十堰','Хубэй','China','cn'],
-['Сяогань','Xiaogan','孝感','Хубэй','China','cn'],
-['Цзинмэнь','Jingmen','荆门','Хубэй','China','cn'],
-['Хуанган','Huanggang','黄冈','Хубэй','China','cn'],
-['Сяньнин','Xianning','咸宁','Хубэй','China','cn'],
-['Суйчжоу','Suizhou','随州','Хубэй','China','cn'],
-// Хунань
-['Чжучжоу','Zhuzhou','株洲','Хунань','China','cn'],
-['Сянтань','Xiangtan','湘潭','Хунань','China','cn'],
-['Хэнъян','Hengyang','衡阳','Хунань','China','cn'],
-['Шаоян','Shaoyang','邵阳','Хунань','China','cn'],
-['Юэян','Yueyang','岳阳','Хунань','China','cn'],
-['Чандэ','Changde','常德','Хунань','China','cn'],
-['Чжанцзяцзе','Zhangjiajie','张家界','Хунань','China','cn'],
-['Иян','Yiyang','益阳','Хунань','China','cn'],
-['Чэньчжоу','Chenzhou','郴州','Хунань','China','cn'],
-['Юнчжоу','Yongzhou','永州','Хунань','China','cn'],
-['Хуайхуа','Huaihua','怀化','Хунань','China','cn'],
-// Цзянси
-['Цзюцзян','Jiujiang','九江','Цзянси','China','cn'],
-['Ганьчжоу','Ganzhou','赣州','Цзянси','China','cn'],
-['Цзиндэчжэнь','Jingdezhen','景德镇','Цзянси','China','cn'],
-['Пинсян','Pingxiang','萍乡','Цзянси','China','cn'],
-['Синьюй','Xinyu','新余','Цзянси','China','cn'],
-['Интань','Yingtan','鹰潭','Цзянси','China','cn'],
-['Ичунь','Yichun','宜春','Цзянси','China','cn'],
-['Шанжао','Shangrao','上饶','Цзянси','China','cn'],
-['Цзиань','Jian','吉安','Цзянси','China','cn'],
-// Сычуань
-['Мяньян','Mianyang','绵阳','Сычуань','China','cn'],
-['Дэян','Deyang','德阳','Сычуань','China','cn'],
-['Гуанъюань','Guangyuan','广元','Сычуань','China','cn'],
-['Ибинь','Yibin','宜宾','Сычуань','China','cn'],
-['Лучжоу','Luzhou','泸州','Сычуань','China','cn'],
-['Наньчун','Nanchong','南充','Сычуань','China','cn'],
-['Дачжоу','Dazhou','达州','Сычуань','China','cn'],
-['Яань','Yaan','雅安','Сычуань','China','cn'],
-['Лэшань','Leshan','乐山','Сычуань','China','cn'],
-['Паньчжихуа','Panzhihua','攀枝花','Сычуань','China','cn'],
-['Цзыгун','Zigong','自贡','Сычуань','China','cn'],
-['Суйнин','Suining','遂宁','Сычуань','China','cn'],
-['Нэйцзян','Neijiang','内江','Сычуань','China','cn'],
-['Мэйшань','Meishan','眉山','Сычуань','China','cn'],
-['Бачжун','Bazhong','巴中','Сычуань','China','cn'],
-// Гуйчжоу
-['Цзуньи','Zunyi','遵义','Гуйчжоу','China','cn'],
-['Люпаньшуй','Liupanshui','六盘水','Гуйчжоу','China','cn'],
-['Аньшунь','Anshun','安顺','Гуйчжоу','China','cn'],
-['Бицзе','Bijie','毕节','Гуйчжоу','China','cn'],
-['Тунжэнь','Tongren','铜仁','Гуйчжоу','China','cn'],
-// Юньнань
-['Цюйцзин','Qujing','曲靖','Юньнань','China','cn'],
-['Юйси','Yuxi','玉溪','Юньнань','China','cn'],
-['Баошань','Baoshan','保山','Юньнань','China','cn'],
-['Чжаотун','Zhaotong','昭通','Юньнань','China','cn'],
-['Лицзян','Lijiang','丽江','Юньнань','China','cn'],
-['Пур','Puer','普洱','Юньнань','China','cn'],
-['Линьцан','Lincang','临沧','Юньнань','China','cn'],
-['Дали','Dali','大理','Юньнань','China','cn'],
-// Гуанси
-['Лючжоу','Liuzhou','柳州','Гуанси','China','cn'],
-['Гуйлинь','Guilin','桂林','Гуанси','China','cn'],
-['Учжоу','Wuzhou','梧州','Гуанси','China','cn'],
-['Бэйхай','Beihai','北海','Гуанси','China','cn'],
-['Циньчжоу','Qinzhou','钦州','Гуанси','China','cn'],
-['Фанчэнган','Fangchenggang','防城港','Гуанси','China','cn'],
-['Гуйган','Guigang','贵港','Гуанси','China','cn'],
-['Юйлинь','Yulin','玉林','Гуанси','China','cn'],
-['Байсэ','Baise','百色','Гуанси','China','cn'],
-['Хэчжоу','Hezhou','贺州','Гуанси','China','cn'],
-['Хэчи','Hechi','河池','Гуанси','China','cn'],
-['Лайбинь','Laibin','来宾','Гуанси','China','cn'],
-['Чунцзо','Chongzuo','崇左','Гуанси','China','cn'],
-// Хайнань
-['Хайкоу','Haikou','海口','Хайнань','China','cn'],
-['Санья','Sanya','三亚','Хайнань','China','cn'],
-['Даньчжоу','Danzhou','儋州','Хайнань','China','cn'],
-['Цюнхай','Qionghai','琼海','Хайнань','China','cn'],
-['Вэньчан','Wenchang','文昌','Хайнань','China','cn'],
-['Ваньнин','Wanning','万宁','Хайнань','China','cn'],
-['Дунфан','Dongfang','东方','Хайнань','China','cn'],
-['Учжишань','Wuzhishan','五指山','Хайнань','China','cn'],
-// Тибет
-['Лхаса','Lhasa','拉萨','Тибет','China','cn'],
-['Шигадзе','Shigatse','日喀则','Тибет','China','cn'],
-['Чамдо','Qamdo','昌都','Тибет','China','cn'],
-['Ньингчи','Nyingchi','林芝','Тибет','China','cn'],
-['Шаньнань','Shannan','山南','Тибет','China','cn'],
-['Нагчу','Nagqu','那曲','Тибет','China','cn'],
-['Нгари','Ngari','阿里','Тибет','China','cn']
-];
-for(const c of CN_CITIES_FULL){ if(!cities.some(x=>String(x[1]).toLowerCase()===String(c[1]).toLowerCase())) cities.push(c); }
-// Сопоставление провинций → города
-const PROVINCE_KEYWORDS = {
-  'краснояр':'Красноярский край','красноярск':'Красноярский край',
-  'кемеров':'Кемеровская область','кузбасс':'Кемеровская область',
-  'новосибир':'Новосибирская область','алтайск':'Алтайский край','алтай':'Алтайский край',
-  'томск':'Томская область','иркутск':'Иркутская область','бурят':'Республика Бурятия',
-  'забайкал':'Забайкальский край','хакас':'Республика Хакасия','тыва':'Республика Тыва',
-  'приморск':'Приморский край','хабаровск':'Хабаровский край','амурск':'Амурская область',
-  'якут':'Республика Саха (Якутия)','саха':'Республика Саха (Якутия)','сахалин':'Сахалинская область',
-  'магадан':'Магаданская область','камчат':'Камчатский край','еврейск':'Еврейская АО','чукот':'Чукотский АО',
-  'свердловск':'Свердловская область','челябинск':'Челябинская область','курганск':'Курганская область',
-  'тюменск':'Тюменская область','ханты':'Ханты-Мансийский АО','югра':'Ханты-Мансийский АО','ямал':'Ямало-Ненецкий АО',
-  'татарстан':'Республика Татарстан','башкор':'Республика Башкортостан','самарск':'Самарская область',
-  'саратовск':'Саратовская область','нижегородск':'Нижегородская область','пермск':'Пермский край',
-  'удмурт':'Удмуртская Республика','чуваш':'Чувашская Республика','мордовия':'Республика Мордовия',
-  'марий':'Республика Марий Эл','пензенск':'Пензенская область','ульяновск':'Ульяновская область',
-  'кировск':'Кировская область','оренбургск':'Оренбургская область',
-  'московск':'Московская область','ленинградск':'Ленинградская область','архангельск':'Архангельская область',
-  'вологодск':'Вологодская область','калининградск':'Калининградская область','карелия':'Республика Карелия',
-  'коми':'Республика Коми','мурманск':'Мурманская область','новгородск':'Новгородская область','псковск':'Псковская область',
-  'краснодарск':'Краснодарский край','кубань':'Краснодарский край','ростовск':'Ростовская область',
-  'астраханск':'Астраханская область','волгоградск':'Волгоградская область','крым':'Республика Крым',
-  'адыгея':'Республика Адыгея','калмык':'Республика Калмыкия','ставрополь':'Ставропольский край',
-  'дагестан':'Республика Дагестан','чечен':'Чеченская Республика','осетия':'Республика Северная Осетия',
-  'ингушет':'Республика Ингушетия','карачаев':'Карачаево-Черкесия',
-  'белгородск':'Белгородская область','брянск':'Брянская область','владимирск':'Владимирская область',
-  'воронежск':'Воронежская область','ивановск':'Ивановская область','калужск':'Калужская область',
-  'костромск':'Костромская область','курск':'Курская область','липецк':'Липецкая область',
-  'орловск':'Орловская область','рязанск':'Рязанская область','смоленск':'Смоленская область',
-  'тамбовск':'Тамбовская область','тверск':'Тверская область','тульск':'Тульская область','ярославск':'Ярославская область',
-  'гуандун':'Гуандун','чжэцзян':'Чжэцзян','цзянсу':'Цзянсу','шаньдун':'Шаньдун',
-  'фуцзянь':'Фуцзянь','хэнань':'Хэнань','хэбэй':'Хэбэй','шаньси':'Шаньси','шэньси':'Шэньси',
-  'ганьсу':'Ганьсу','цинхай':'Цинхай','нинся':'Нинся','синьцзян':'Синьцзян','уйгур':'Синьцзян',
-  'монголия':'Внутренняя Монголия','ляонин':'Ляонин','цзилинь':'Цзилинь','хэйлунцзян':'Хэйлунцзян',
-  'аньхой':'Аньхой','хубэй':'Хубэй','хунань':'Хунань','цзянси':'Цзянси','сычуань':'Сычуань',
-  'гуйчжоу':'Гуйчжоу','юньнань':'Юньнань','гуанси':'Гуанси','хайнань':'Хайнань','тибет':'Тибет'
-};
-function provinceOf(query){
-  const x = normalize(String(query||'')).trim();
-  if (!x) return '';
-  for (const [kw, prov] of Object.entries(PROVINCE_KEYWORDS)){ if (x.includes(kw)) return prov; }
-  return '';
-}
-
 const ASIA_CODES = new Set(['cn','jp','kr','kp','mn','in','pk','bd','np','bt','lk','mv','af','id','th','vn','my','sg','ph','mm','kh','la','bn','tl','kz','uz','kg','tj','tm','asia']);
 
 const CITY_COORDS={'Пекин':[39.9042,116.4074],'北京':[39.9042,116.4074],'Beijing':[39.9042,116.4074],'Шанхай':[31.2304,121.4737],'上海':[31.2304,121.4737],'Shanghai':[31.2304,121.4737],'Нинбо':[29.8683,121.5440],'宁波':[29.8683,121.5440],'Ningbo':[29.8683,121.5440],'Гуанчжоу':[23.1291,113.2644],'广州':[23.1291,113.2644],'Guangzhou':[23.1291,113.2644],'Циндао':[36.0671,120.3826],'青岛':[36.0671,120.3826],'Qingdao':[36.0671,120.3826],'Сямэнь':[24.4798,118.0894],'厦门':[24.4798,118.0894],'Xiamen':[24.4798,118.0894],'Чэнду':[30.5728,104.0668],'成都':[30.5728,104.0668],'Chengdu':[30.5728,104.0668],'Москва':[55.7558,37.6173],'Moscow':[55.7558,37.6173],'Санкт-Петербург':[59.9311,30.3609],'Saint Petersburg':[59.9311,30.3609],'圣彼得堡':[59.9311,30.3609],'Екатеринбург':[56.8389,60.6057],'Yekaterinburg':[56.8389,60.6057],'Новосибирск':[55.0084,82.9357],'Novosibirsk':[55.0084,82.9357],'Нижний Новгород':[56.2965,43.9361],'Nizhny Novgorod':[56.2965,43.9361],'Казань':[55.7879,49.1233],'Kazan':[55.7879,49.1233],'Самара':[53.1959,50.1002],'Samara':[53.1959,50.1002],'Владивосток':[43.1155,131.8855],'Vladivostok':[43.1155,131.8855]};
@@ -666,7 +185,6 @@ function applyLang(){
  $('#fileNames').textContent=tr('fileHint'); $('#voiceState').textContent=tr('ready');
  $('.close-button').forEach?.(x=>{});
  $$('[data-i18n-aria]').forEach(el=>el.setAttribute('aria-label',tr(el.dataset.i18nAria)));
- $$('[data-i18n-title]').forEach(el=>el.setAttribute('title',tr(el.dataset.i18nTitle)));
 $$('[data-i18n-placeholder]').forEach(el=>el.placeholder=tr(el.dataset.i18nPlaceholder));
  $('#menuButton')?.setAttribute('title',tr('menu')); $('#menuButton')?.setAttribute('aria-label',tr('menu'));
  $$('.close-button').forEach(el=>{el.setAttribute('aria-label',tr('close'));el.setAttribute('title',tr('close'))});
@@ -934,20 +452,6 @@ const CHINA_CITIES_TRANSPORT = {
 
 function normalizeCityKey(s){ return String(s||'').toLowerCase().replace(/[^a-zа-яё]/gi,''); }
 
-
-function routeAdviceShort(info){
-  if (!info) return '';
-  if (info.region === 'north' && info.rail) return 'Оптимально: прямое ЖД — 25-30 дней';
-  if (info.region === 'center' && info.rail) return 'Оптимально: прямое ЖД';
-  if (info.region === 'east' && info.sea && info.rail) return 'Оптимально: море из ' + (info.hub || 'Нинбо') + ' или прямое ЖД';
-  if (info.region === 'east' && info.sea) return 'Оптимально: море из ' + (info.hub || 'Шанхай');
-  if (info.region === 'south' && info.sea && !info.rail) return 'Оптимально: море через ' + (info.hub || 'Шэньчжэнь') + ' + ЖД';
-  if (info.region === 'south' && info.sea) return 'Оптимально: море';
-  if (info.sea) return 'Оптимально: море';
-  if (info.rail) return 'Оптимально: прямое ЖД';
-  if (info.road) return 'Авто до ' + (info.hub || 'ближайшего ЖД-хаба');
-  return 'Уточните у экспедитора';
-}
 function renderRouteAdvice(){
   const el = $('#routeAdvice');
   if (!el) return;
@@ -985,7 +489,7 @@ function renderRouteAdvice(){
   // Основная карточка
   let html = '<div class="route-advice-main"><span class="route-advice-icon">' + ico('map') + '</span><div class="route-advice-text">' +
     '<b>' + escapeHtml(from) + ' → ' + escapeHtml(to) + '</b>' +
-    '<p>' + escapeHtml(routeAdviceShort(info)) + '</p>' +
+    '<p>' + escapeHtml(info.note) + '</p>' +
     '<div class="route-advice-modes">' + modes.join(' · ') + '</div>' +
     '</div></div>';
 
@@ -1041,21 +545,12 @@ function updateDimensionUnitUI(){
 function dimensionsMm(){
  return ['length','width','height'].map(id=>(Number($('#'+id).value)||0)*UNIT_SCALE[dimensionUnit]);
 }
-function fmtNum(n){const x=Number(n);if(!Number.isFinite(x))return '0';return Math.abs(x-Math.round(x))<1e-9?String(Math.round(x)):x.toFixed(3).replace(/0+$/,'').replace(/\.$/,'')} function updateAutoVolume(){const [l,w,h]=dimensionsMm(),pieces=Number($('#pieces').value)||1,volume=(l*w*h/1e9)*pieces;const hasMode=!!(selectedMode&&modes[selectedMode]);const factor=hasMode?modes[selectedMode].factor:0;const v=$('#autoVolume'),vw=$('#autoVolumetricWeight'),f=$('#autoFactor');if(v)v.textContent=volume?fmtNum(volume)+' m³':'0 m³';if(vw)vw.textContent=(hasMode&&volume)?fmtNum(volume*factor)+' kg':'—';if(f)f.textContent=hasMode?factor+' kg/m³':'—';}
+function fmtNum(n){const x=Number(n);if(!Number.isFinite(x))return '0';return Math.abs(x-Math.round(x))<1e-9?String(Math.round(x)):x.toFixed(3).replace(/0+$/,'').replace(/\.$/,'')} function updateAutoVolume(){const [l,w,h]=dimensionsMm(),pieces=Number($('#pieces').value)||1,volume=(l*w*h/1e9)*pieces,factor=selectedMode&&modes[selectedMode]?modes[selectedMode].factor:167;const v=$('#autoVolume'),vw=$('#autoVolumetricWeight'),f=$('#autoFactor');if(v)v.textContent=volume?fmtNum(volume)+' m³':'0 m³';if(vw)vw.textContent=volume?fmtNum(volume*factor)+' kg':'0 kg';if(f)f.textContent=factor+' kg/m³';}
 function normalize(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
 function cityName(c){if(Array.isArray(c)) return String(c[1]||c[0]||c[2]||'').trim(); if(c&&typeof c==='object') return String(c.name||c.nameEn||c.nameZh||'').trim(); return String(c||'').trim()}
 function editDistance(a,b){a=normalize(a);b=normalize(b);const m=a.length,n=b.length;if(!m||!n)return Math.max(m,n);let prev=Array.from({length:n+1},(_,i)=>i);for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(cur[j-1]+1,prev[j]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur}return prev[n]}
 function cityMatches(q,target){
  const x=normalize(q).trim(); const isAsia=/^(asia|china)$/i.test(String(target||'')); const list=cities.filter(c=>isAsia?ASIA_CODES.has(String(c[5]||'').toLowerCase()):String(c[5]||'').toLowerCase()==='ru'); if(!x)return [];
- // Умный поиск: если запрос похож на название провинции/области — вернуть все города этой провинции
- const prov = provinceOf(q);
- if (prov && x.length >= 3){
-   const provNorm = normalize(prov);
-   const inProv = list.filter(c => normalize(String(c[3]||'')) === provNorm);
-   if (inProv.length){
-     return inProv.slice(0, 40);
-   }
- }
  return list.map(c=>{
    const fields=[c[0],c[1],c[2]]; let score=99; let fuzzy=false; let correction='';
    fields.forEach((f,i)=>{const n=normalize(f); if(n===x)score=Math.min(score,0); else if(n.startsWith(x))score=Math.min(score,1+i*.1); else if(n.includes(x))score=Math.min(score,3+i*.1); else {const d=editDistance(x,n); const limit=Math.max(1,Math.floor(Math.max(x.length,n.length)*.35)); if(d<=limit){score=Math.min(score,6+d);fuzzy=true; if(!correction||d<editDistance(x,normalize(correction)))correction=f;}}});
@@ -1175,87 +670,8 @@ function getCalculatorContext(){return {from:$('#fromCity')?.value||'',to:$('#to
 function clearChatEmpty(){$('#chatMessages')?.querySelector('.chat-empty')?.remove()}
 function renderChatEmpty(force){const box=$('#chatMessages');if(!box)return;if(force)box.querySelector('.chat-empty')?.remove();if(box.children.length)return;const S={ru:{t:'Чем помочь?',p:'Спросите про маршрут, ставку, Incoterms или таможню — текстом или голосом.',c:['Ставка Гуанчжоу → Новосибирск','Что такое EXW и FCA?','Как посчитать объёмный вес?','Какие документы нужны для ввоза товара?']},en:{t:'How can I help?',p:'Ask about routes, rates, Incoterms or customs — by text or voice.',c:['Rate Guangzhou → Novosibirsk','What are EXW and FCA?','How to calculate volumetric weight?','Which documents do I need to import goods?']},tr:{t:'Nasıl yardımcı olabilirim?',p:'Rota, navlun, Incoterms veya gümrük hakkında sorun — yazılı ya da sesli.',c:['Guangzhou → Novosibirsk navlun','EXW ve FCA nedir?','Hacimsel ağırlık nasıl hesaplanır?','İthalat için hangi belgeler gerekli?']},zh:{t:'需要什么帮助？',p:'可以咨询路线、运价、贸易术语或清关——文字或语音均可。',c:['广州 → 新西伯利亚 运价','EXW 和 FCA 是什么？','如何计算体积重量？','进口货物需要哪些文件？']}}[lang]||null;if(!S)return;const d=document.createElement('div');d.className='chat-empty';d.innerHTML='<div class="chat-empty-icon">'+ICONS_SVG('sparkle')+'</div><h3></h3><p></p><div class="chat-chips"></div>';d.querySelector('h3').textContent=S.t;d.querySelector('p').textContent=S.p;const chips=d.querySelector('.chat-chips');S.c.forEach(t=>{const b=document.createElement('button');b.type='button';b.className='chat-chip';b.textContent=t;b.onclick=()=>{const i=$('#assistantInput');if(i){i.value=t;Promise.resolve(sendAI(false)).catch(()=>{})}};chips.appendChild(b)});box.appendChild(d)}
 function ICONS_SVG(n){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[n]||'')+'</svg>'}
-const AI_T = {
-  ru: { t1: 'Думаю над вопросом…', t2: 'Ищу подробности, ещё немного…', file: 'Читаю файл…' },
-  en: { t1: 'Thinking it over…', t2: 'Looking into the details, almost there…', file: 'Reading the file…' },
-  zh: { t1: '正在思考…', t2: '正在查找细节，马上就好…', file: '正在读取文件…' },
-  tr: { t1: 'Düşünüyorum…', t2: 'Ayrıntılara bakıyorum, az kaldı…', file: 'Dosya okunuyor…' }
-};
-let __thinkTimers = [];
-function miniMd(t){
-  let h = String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/`([^`\n]+)`/g, '<code>$1</code>').replace(/^#{1,4}\s+(.+)$/gm, '<strong>$1</strong>');
-  h = h.replace(/^\s*[-*•]\s+(.+)$/gm, '<span class="li">• $1</span>');
-  return h;
-}
-function setAIThinking(on, error = ''){
-  const box = $('#chatMessages'); if (!box) return;
-  const sb = $('#sendAI'); if (sb){ sb.disabled = !!on; sb.classList.toggle('is-loading', !!on); }
-  window.__aiBusy = !!on;
-  __thinkTimers.forEach(clearTimeout); __thinkTimers = [];
-  if (on || error) clearChatEmpty();
-  const old = box.querySelector('.ai-thinking-bubble'); if (old) old.remove();
-  if (window.VoiceOrb && window.__voiceSession) window.VoiceOrb.set(on ? 'thinking' : (window.__aiSpeaking ? 'speaking' : 'idle'));
-  if (on){
-    const d = document.createElement('div');
-    d.className = 'chat-bubble assistant ai-thinking-bubble';
-    d.innerHTML = '<i></i><i></i><i></i><span class="ai-think-text"></span>';
-    box.appendChild(d); box.scrollTop = box.scrollHeight;
-    const tt = AI_T[lang] || AI_T.ru, label = d.querySelector('.ai-think-text');
-    if (($('#aiFile')?.files || []).length) label.textContent = tt.file;
-    __thinkTimers.push(setTimeout(() => { if (label.isConnected && !label.textContent) label.textContent = tt.t1; }, 1800));
-    __thinkTimers.push(setTimeout(() => { if (label.isConnected) label.textContent = tt.t2; }, 7000));
-  } else if (error){
-    const d = document.createElement('div'); d.className = 'chat-bubble assistant ai-error-bubble'; d.textContent = error;
-    box.appendChild(d); box.scrollTop = box.scrollHeight;
-  }
-}
-function addChat(role, text, shouldSpeak = false){
-  clearChatEmpty();
-  const d = document.createElement('div'); d.className = `chat-bubble ${role}`;
-  if (role === 'assistant') d.innerHTML = miniMd(text); else d.textContent = text;
-  $('#chatMessages').appendChild(d); $('#chatMessages').scrollTop = $('#chatMessages').scrollHeight;
-  if (role === 'assistant' && shouldSpeak) speakAI(text);
-}
-async function streamAnswer(payload, fromVoice){
-  const box = $('#chatMessages');
-  const r = await fetch('/api/ai', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' }, body: JSON.stringify(Object.assign({ stream: true }, payload)) });
-  if (!r.ok){ let m = 'AI unavailable'; try { const j = await r.json(); m = j.error || m; } catch (e) {} throw new Error(m); }
-  if (!/event-stream/.test(r.headers.get('content-type') || '') || !r.body){
-    const d = await r.json(); if (!d.ok) throw new Error(d.error || 'AI unavailable');
-    setAIThinking(false); addChat('assistant', d.text, fromVoice); return d.text;
-  }
-  const reader = r.body.getReader(), dec = new TextDecoder();
-  let buf = '', full = '', bubble = null, raf = 0;
-  const paint = () => { raf = 0; if (bubble){ bubble.innerHTML = miniMd(full); box.scrollTop = box.scrollHeight; } };
-  const show = () => {
-    if (!bubble){
-      setAIThinking(false);
-      if (fromVoice && window.VoiceOrb) window.VoiceOrb.set('thinking');
-      bubble = document.createElement('div'); bubble.className = 'chat-bubble assistant streaming'; box.appendChild(bubble);
-    }
-    if (!raf) raf = requestAnimationFrame(paint);
-  };
-  for (;;){
-    const chunk = await reader.read();
-    if (chunk.done) break;
-    buf += dec.decode(chunk.value, { stream: true });
-    let i;
-    while ((i = buf.indexOf('\n\n')) >= 0){
-      const ev = buf.slice(0, i).trim(); buf = buf.slice(i + 2);
-      if (ev.indexOf('data:') !== 0) continue;
-      let j; try { j = JSON.parse(ev.slice(5)); } catch (e) { continue; }
-      if (j.delta){ full += j.delta; show(); }
-      else if (j.error){ throw new Error(j.error); }
-    }
-  }
-  if (raf) cancelAnimationFrame(raf);
-  if (!full.trim()) throw new Error('empty answer');
-  if (!bubble) show();
-  bubble.innerHTML = miniMd(full); bubble.classList.remove('streaming'); box.scrollTop = box.scrollHeight;
-  if (fromVoice) speakAI(full);
-  return full;
-}
+function setAIThinking(on,error=''){const box=$('#chatMessages');if(!box)return;const sb=$('#sendAI');if(sb){sb.disabled=!!on;sb.classList.toggle('is-loading',!!on)}if(on||error)clearChatEmpty();const old=box.querySelector('.ai-thinking-bubble');if(old)old.remove();if(on){const d=document.createElement('div');d.className='chat-bubble assistant ai-thinking-bubble';d.innerHTML=`<i></i><i></i><i></i>`;box.appendChild(d);box.scrollTop=box.scrollHeight}else if(error){const d=document.createElement('div');d.className='chat-bubble assistant ai-error-bubble';d.textContent=error;box.appendChild(d);box.scrollTop=box.scrollHeight}}
+function addChat(role,text,shouldSpeak=false){clearChatEmpty();const d=document.createElement('div');d.className=`chat-bubble ${role}`;d.textContent=text;$('#chatMessages').appendChild(d);$('#chatMessages').scrollTop=$('#chatMessages').scrollHeight;if(role==='assistant'&&shouldSpeak)speakAI(text)}
 async function extractAttachment(file){
  const name=file.name.toLowerCase(), ext=name.split('.').pop();
  if(['txt','csv','json','text','md','markdown','rtf'].includes(ext)){let t=await file.text();if(ext==='rtf')t=t.replace(/\\[a-z]+\d* ?/gi,'').replace(/[{}]/g,'');return t.slice(0,120000)}
@@ -1281,7 +697,7 @@ async function sendAI(fromVoice=false){
  const input=$('#assistantInput'), msg=input.value.trim(), files=[...($('#aiFile')?.files||[])];
  if(!msg&&!files.length){setAIThinking(false);addChat('assistant',lang==='tr'?'Bir soru yazın veya dosya ekleyin.':lang==='en'?'Write a question or attach a file.':'Напишите вопрос или прикрепите файл.',false);return;}
  const shown=msg||(files.length?`📎 ${files.map(f=>f.name).join(', ')}`:''); addChat('user',shown,false); setAIThinking(true);
- try{let docs=[];for(const f of files){const text=await extractAttachment(f);docs.push({name:f.name,text});}let imported=0;for(const d of docs){const recs=await parseRatesLocally(d.text,d.name);if(recs.length)imported+=await importLocalRates(recs)}if(imported)await loadRates();const action=detectRequestedAction(msg);let instruction=msg||'Проанализируй прикрепленный файл и дай краткий полезный результат.';if(action==='rates'&&docs.length)instruction+=' Считай файл КП/ставками: выдели перевозчика, маршруты, транспорт, базис, цены, валюту, срок действия и ограничения. Скажи, какие ставки сохранены.';if(action==='numbers')instruction+=' Извлеки только важные цифры и подпиши, что каждая означает.';if(action==='translate')instruction+=` Переведи содержимое файла на ${lang==='ru'?'русский':lang==='en'?'английский':lang==='tr'?'турецкий':'китайский'} язык.`;if(action==='structure')instruction+=' Структурируй данные в удобные списки/таблицу.';const fileContext=docs.length?docs.map(d=>`\n--- ФАЙЛ: ${d.name} ---\n${d.text}`).join('\n'):'';const finalMessage=instruction+fileContext+(imported?`\n\nВ базу ставок уже сохранено записей: ${imported}. Учитывай их в ответе.`:'');const text=await streamAnswer({message:finalMessage,history:chatHistory.slice(-10),context:getCalculatorContext(),language:lang},fromVoice);chatHistory.push({role:'user',content:finalMessage},{role:'assistant',content:text});chatHistory=chatHistory.slice(-12);if(input)input.value='';if($('#aiFile'))$('#aiFile').value='';if($('#fileNames'))$('#fileNames').textContent=tr('fileHint')}catch(e){const msg=friendlyError(e);setAIThinking(false,(lang==='tr'?'Yanıt alınamadı: ':lang==='en'?'Could not get a response: ':'Не удалось получить ответ: ')+msg)}}
+ try{let docs=[];for(const f of files){const text=await extractAttachment(f);docs.push({name:f.name,text});}let imported=0;for(const d of docs){const recs=await parseRatesLocally(d.text,d.name);if(recs.length)imported+=await importLocalRates(recs)}if(imported)await loadRates();const action=detectRequestedAction(msg);let instruction=msg||'Проанализируй прикрепленный файл и дай краткий полезный результат.';if(action==='rates'&&docs.length)instruction+=' Считай файл КП/ставками: выдели перевозчика, маршруты, транспорт, базис, цены, валюту, срок действия и ограничения. Скажи, какие ставки сохранены.';if(action==='numbers')instruction+=' Извлеки только важные цифры и подпиши, что каждая означает.';if(action==='translate')instruction+=` Переведи содержимое файла на ${lang==='ru'?'русский':lang==='en'?'английский':lang==='tr'?'турецкий':'китайский'} язык.`;if(action==='structure')instruction+=' Структурируй данные в удобные списки/таблицу.';const fileContext=docs.length?docs.map(d=>`\n--- ФАЙЛ: ${d.name} ---\n${d.text}`).join('\n'):'';const finalMessage=instruction+fileContext+(imported?`\n\nВ базу ставок уже сохранено записей: ${imported}. Учитывай их в ответе.`:'');console.warn('[IOMA] /api/ai send len=', finalMessage.length);const r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:finalMessage,history:chatHistory.slice(-10),context:getCalculatorContext(),language:lang,web:true})});const raw=await r.text();let d={};try{d=JSON.parse(raw)}catch{throw new Error(raw||'AI unavailable')}if(!r.ok||!d.ok)throw new Error(d.error||'AI unavailable');const text=String(d.text||'').trim()||'Не удалось получить ответ.';setAIThinking(false);addChat('assistant',text,fromVoice);chatHistory.push({role:'user',content:finalMessage},{role:'assistant',content:text});chatHistory=chatHistory.slice(-12);if(input)input.value='';if($('#aiFile'))$('#aiFile').value='';if($('#fileNames'))$('#fileNames').textContent=tr('fileHint')}catch(e){const msg=friendlyError(e);setAIThinking(false,(lang==='tr'?'Yanıt alınamadı: ':lang==='en'?'Could not get a response: ':'Не удалось получить ответ: ')+msg)}}
 $('#aiFile')?.addEventListener('change',e=>{const fs=[...e.target.files],el=$('#fileNames');if(el)el.textContent=fs.length?fs.map(f=>f.name).join(' · '):tr('fileHint')});
 // Reliable send binding: works with mouse, touch and Enter and cannot be blocked by a nested handler.
 document.addEventListener('click',e=>{const b=e.target.closest?.('#sendAI');if(!b)return;e.preventDefault();e.stopPropagation();Promise.resolve(sendAI(false)).catch(err=>console.warn('AI send:',err));},true);
@@ -1353,25 +769,18 @@ function voiceLang(){return lang==='zh'?'zh-CN':lang==='en'?'en-US':lang==='tr'?
 })();
 
 function forceOrbDisplay(on){
-  const orb = document.querySelector('#voiceOrb'), active = !!on || !!window.__voiceSession;
-  document.querySelector('.assistant-shell')?.classList.toggle('voice-active', active);
-  document.body.classList.toggle('voice-active', active);
-  if (orb) orb.classList.toggle('listening', !!on);
+  const shell = document.querySelector('.assistant-shell');
+  const orb = document.querySelector('#voiceOrb');
+  if (shell) shell.classList.toggle('voice-active', !!on);
+  document.body.classList.toggle('voice-active', !!on);
+  if (on){
+    if (orb) orb.classList.add('listening');
+  } else {
+    if (orb) orb.classList.remove('listening');
+  }
 }
 
-function setVoiceUI(on,text){
-  $('#voiceButton')?.classList.toggle('listening', on);
-  $('#voiceOrb')?.classList.toggle('listening', on);
-  const active = on || !!window.__voiceSession;
-  $('#assistantView')?.classList.toggle('voice-active', active);
-  try { forceOrbDisplay(on); } catch (e) {}
-  if (window.VoiceOrb){
-    if (on){ window.VoiceOrb.set('listening'); window.VoiceOrb.startMic(); }
-    else { window.VoiceOrb.stopMic(); if (!window.__aiBusy && !window.__aiSpeaking) window.VoiceOrb.set('idle'); }
-  }
-  const label = text || tr(on ? 'listen' : 'ready');
-  if ($('#voiceState')) $('#voiceState').textContent = label;
-}
+function setVoiceUI(on,text){$('#voiceButton')?.classList.toggle('listening',on);$('#voiceOrb')?.classList.toggle('listening',on);$('#assistantView')?.classList.toggle('voice-active',on);try{forceOrbDisplay(on)}catch(e){console.warn('forceOrb:',e.message)};if($('#voiceState'))$('#voiceState').textContent=text||tr(on?'listen':'ready')}
 async function transcribeRecordedAudio(){
   const blob=new Blob(mediaChunks,{type:mediaRecorder?.mimeType||'audio/webm'}); mediaChunks=[];
   if(blob.size<1000) return;
@@ -1410,20 +819,8 @@ function initVoice(){
     };
   }else btn.onclick=()=>setVoiceUI(false,tr('unavailable'));
 }
-function speakAI(text){
-  if (!voiceAutoSpeak || !text || !('speechSynthesis' in window)) return;
-  const plain = String(text).replace(/\*\*|__|`/g, '').replace(/^[#>\-\s]+/gm, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '');
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(plain);
-  u.lang = voiceLang(); u.rate = .98; u.pitch = 1; u.volume = 1;
-  u.onstart = () => { window.__aiSpeaking = true; window.VoiceOrb?.set('speaking'); };
-  u.onboundary = () => window.VoiceOrb?.pulse(.5 + Math.random() * .4);
-  const done = () => { window.__aiSpeaking = false; if (window.VoiceOrb && !voiceListening) window.VoiceOrb.set('idle'); };
-  u.onend = done; u.onerror = done;
-  window.speechSynthesis.speak(u);
-}
+function speakAI(text){if(!voiceAutoSpeak||!text||!('speechSynthesis'in window))return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=voiceLang();u.rate=.96;u.pitch=.98;u.volume=1;window.speechSynthesis.speak(u)}
 initVoice();
-if (recognition){ const __prev = recognition.onresult; recognition.onresult = e => { window.VoiceOrb?.pulse(.55); if (__prev) __prev(e); }; recognition.onspeechstart = () => window.VoiceOrb?.pulse(.6); }
 
 // News panel: обновляется с серверного RSS-кэша.
 function formatToday(){const p=new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Moscow',day:'2-digit',month:'2-digit',year:'numeric'}).formatToParts(new Date());const d=Object.fromEntries(p.map(x=>[x.type,x.value]));return `${d.day}.${d.month}.${d.year} г.`}
@@ -1497,8 +894,7 @@ function renderNewsItems(items){
       : '<div class="news-card-img news-card-img-placeholder">' + ico('news') + '</div>';
     const badge = important ? '<div class="news-card-badge">' + (lang === 'ru' ? 'ВАЖНО' : 'IMPORTANT') + '</div>' : '';
     const shortTitle = String(cleanNewsText(n.title) || '').slice(0, 140);
-    const metaLine = [cleanNewsText(n.source || ''), n.date ? new Date(n.date).toLocaleDateString(lang === 'ru' ? 'ru-RU' : lang === 'zh' ? 'zh-CN' : lang === 'tr' ? 'tr-TR' : 'en-GB', { day: 'numeric', month: 'short' }) : ''].filter(Boolean).join(' · ');
-    a.innerHTML = badge + thumb + '<div class="news-card-body"><div class="news-card-meta">' + escapeHtml(metaLine) + '</div><div class="news-card-title">' + escapeHtml(shortTitle) + '</div></div>';
+    a.innerHTML = badge + thumb + '<div class="news-card-body"><div class="news-card-title">' + escapeHtml(shortTitle) + '</div></div>';
     a.onclick = function(){ openArticle(n); };
     frag.appendChild(a);
     if (!img && n.title && io){
@@ -1547,25 +943,25 @@ function writeLocalCache(name, obj){
   } catch(e){ console.warn('localStorage full'); }
 }
 function getLocalArticle(key, lang){
-  const c = readLocalCache('articles2');
+  const c = readLocalCache('articles');
   const e = c[key + '::' + lang];
   if (!e) return null;
-  if (Date.now() - (e.at || 0) > 7*24*60*60*1000){ delete c[key + '::' + lang]; writeLocalCache('articles2', c); return null; }
+  if (Date.now() - (e.at || 0) > 7*24*60*60*1000){ delete c[key + '::' + lang]; writeLocalCache('articles', c); return null; }
   return e.article;
 }
 function saveLocalArticle(key, lang, article){
-  const c = readLocalCache('articles2');
+  const c = readLocalCache('articles');
   c[key + '::' + lang] = { article, at: Date.now() };
-  writeLocalCache('articles2', c);
+  writeLocalCache('articles', c);
 }
 function getLocalNews(){
-  const c = readLocalCache('news2');
+  const c = readLocalCache('news');
   if (!c.items || !c.at) return null;
-  if (Date.now() - c.at > 20*60*1000) return null;
+  if (Date.now() - c.at > 6*60*60*1000) return null;
   return c.items;
 }
 function saveLocalNews(items){
-  writeLocalCache('news2', { items, at: Date.now() });
+  writeLocalCache('news', { items, at: Date.now() });
 }
 
 function mdToHtmlArticle(text){
@@ -1627,7 +1023,6 @@ function mdToHtmlArticle(text){
                      .replace(/\n/g, '<br>'));
         continue;
       }
-      if (/^&gt;\s/.test(para)){ out.push('<blockquote>' + para.replace(/^&gt;\s?/gm, '').replace(/\n/g, '<br>') + '</blockquote>'); continue; }
       if (/^[-–—•]\s/m.test(para)){
         const items = para.split('\n').map(function(l){return l.replace(/^[-–—•]\s*/, '').trim();}).filter(Boolean);
         out.push('<ul>' + items.map(function(i){return '<li>' + i + '</li>';}).join('') + '</ul>');
@@ -1639,184 +1034,54 @@ function mdToHtmlArticle(text){
   return out.join('');
 }
 
-const AT = {
-  ru: { minRead: 'мин чтения', back: 'К новостям', original: 'Открыть оригинал', copy: 'Копировать ссылку', copied: 'Ссылка скопирована', facts: 'Ключевые факты', factsHint: 'Найдено в тексте статьи', related: 'Читайте также', source: 'Источник', official: 'Официальный источник', media: 'Отраслевое издание', excerpt: 'Показано начало материала. Полный текст — у источника.', readFull: 'Читать полностью', translating: 'Перевожу статью…', translateFail: 'Не удалось перевести. Показан оригинал на русском.', retry: 'Повторить', autoTr: 'Автоматический перевод. Оригинал на русском: ', noText: 'Полный текст не удалось загрузить — показано краткое описание. Откройте источник, чтобы прочитать статью целиком.', stock: 'Иллюстрация: Pexels', audio: 'Аудиоверсия статьи', voice: 'Голос', listen: 'Прослушать статью', officialNote: 'Официальная информация. Источник: ', excerptNote: 'Материал представлен как краткая выдержка. Права на полный текст принадлежат: ', types: { date: 'Дата', percent: 'Ставка / доля', code: 'Код ТН ВЭД', money: 'Сумма', qty: 'Объём' }, cats: { customs: 'Таможня', law: 'Право', rail: 'ЖД', sea: 'Море', china: 'Китай', road: 'Авто' }, urgent: 'СРОЧНО' },
-  en: { minRead: 'min read', back: 'Back to news', original: 'Open original', copy: 'Copy link', copied: 'Link copied', facts: 'Key facts', factsHint: 'Found in the article text', related: 'Related articles', source: 'Source', official: 'Official source', media: 'Industry publication', excerpt: 'Showing the beginning of the article. Full text at the source.', readFull: 'Read the full article', translating: 'Translating the article…', translateFail: 'Translation failed. Showing the Russian original.', retry: 'Retry', autoTr: 'Automatic translation. Russian original: ', noText: 'The full text could not be loaded — showing a short summary. Open the source to read the whole article.', stock: 'Illustration: Pexels', audio: 'Audio version', voice: 'Voice', listen: 'Listen', officialNote: 'Official information. Source: ', excerptNote: 'Shown as a short excerpt. Rights to the full text belong to: ', types: { date: 'Date', percent: 'Rate / share', code: 'HS code', money: 'Amount', qty: 'Volume' }, cats: { customs: 'Customs', law: 'Law', rail: 'Rail', sea: 'Sea', china: 'China', road: 'Road' }, urgent: 'URGENT' },
-  zh: { minRead: '分钟阅读', back: '返回新闻', original: '打开原文', copy: '复制链接', copied: '链接已复制', facts: '关键信息', factsHint: '摘自文章正文', related: '相关文章', source: '来源', official: '官方来源', media: '行业媒体', excerpt: '仅显示文章开头，全文请见来源。', readFull: '阅读全文', translating: '正在翻译…', translateFail: '翻译失败，显示俄文原文。', retry: '重试', autoTr: '自动翻译。俄文原文：', noText: '无法加载全文，仅显示简介。请打开来源阅读全文。', stock: '配图：Pexels', audio: '文章音频', voice: '语音', listen: '收听', officialNote: '官方信息。来源：', excerptNote: '仅为摘要，全文版权归属：', types: { date: '日期', percent: '税率 / 占比', code: '商品编码', money: '金额', qty: '数量' }, cats: { customs: '海关', law: '法规', rail: '铁路', sea: '海运', china: '中国', road: '公路' }, urgent: '紧急' },
-  tr: { minRead: 'dk okuma', back: 'Haberlere dön', original: 'Orijinali aç', copy: 'Bağlantıyı kopyala', copied: 'Bağlantı kopyalandı', facts: 'Önemli bilgiler', factsHint: 'Makale metninden alındı', related: 'İlgili makaleler', source: 'Kaynak', official: 'Resmi kaynak', media: 'Sektör yayını', excerpt: 'Makalenin başlangıcı gösteriliyor. Tam metin kaynakta.', readFull: 'Tamamını oku', translating: 'Makale çevriliyor…', translateFail: 'Çeviri başarısız. Rusça orijinal gösteriliyor.', retry: 'Tekrar dene', autoTr: 'Otomatik çeviri. Rusça orijinal: ', noText: 'Tam metin yüklenemedi — kısa özet gösteriliyor. Tamamını okumak için kaynağı açın.', stock: 'Görsel: Pexels', audio: 'Sesli sürüm', voice: 'Ses', listen: 'Dinle', officialNote: 'Resmi bilgi. Kaynak: ', excerptNote: 'Kısa alıntı olarak gösteriliyor. Tam metnin hakları: ', types: { date: 'Tarih', percent: 'Oran / pay', code: 'GTİP kodu', money: 'Tutar', qty: 'Miktar' }, cats: { customs: 'Gümrük', law: 'Hukuk', rail: 'Demiryolu', sea: 'Deniz', china: 'Çin', road: 'Karayolu' }, urgent: 'ACİL' }
-};
-function at(k){ return (AT[lang] || AT.ru)[k] !== undefined ? (AT[lang] || AT.ru)[k] : AT.ru[k]; }
-const wait = ms => new Promise(r => setTimeout(r, ms));
-let articleToken = 0;
-
-function articleDate(iso){
-  if (!iso) return '';
-  const d = new Date(iso); if (isNaN(d)) return '';
-  try { return d.toLocaleDateString(lang === 'ru' ? 'ru-RU' : lang === 'zh' ? 'zh-CN' : lang === 'tr' ? 'tr-TR' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) { return ''; }
-}
-function articleHeroHtml(img, badgesHtml, title, metaText, opts){
-  opts = opts || {};
-  const media = img ? '<img src="' + escapeHtml(img) + '" alt="" loading="eager" decoding="async" referrerpolicy="no-referrer">' : '<div class="article-art"></div>';
-  return '<div class="article-hero">' + media + '<div class="article-hero-shade"></div>' +
-    '<button type="button" class="article-back" data-article-back>' + ICON_BACK + '<span>' + escapeHtml(at('back')) + '</span></button>' +
+function articleHeroHtml(img, statusLabel, title, source, dateStr){
+  const bigImgHtml = img ? '<img src="' + escapeHtml(img) + '" alt="" loading="eager" decoding="async">' : '<div class="article-art"></div>';
+  return '<div class="article-hero">' + bigImgHtml +
+    '<div class="article-hero-shade"></div>' +
     '<div class="article-title">' +
-      '<div class="article-badges">' + badgesHtml + '</div>' +
+      '<span class="eyebrow">' + escapeHtml(statusLabel) + '</span>' +
       '<h1>' + escapeHtml(title) + '</h1>' +
-      '<p class="article-meta">' + escapeHtml(metaText) + '</p>' +
-    '</div>' +
-    (opts.credit ? '<span class="article-credit">' + escapeHtml(opts.credit) + '</span>' : '') +
-  '</div>';
-}
-const ICON_BACK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
-const ICON_EXT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
-const ICON_LINK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1-1"/></svg>';
-const FACT_ICONS = {
-  date: '<path d="M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/>',
-  percent: '<path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2.2"/><circle cx="16.5" cy="16.5" r="2.2"/>',
-  code: '<path d="M8 8 4 12l4 4M16 8l4 4-4 4M13.5 5l-3 14"/>',
-  money: '<circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.4 0-2.5.8-2.5 1.9 0 2.7 5 1.3 5 4 0 1.1-1.1 1.9-2.5 1.9-1.2 0-2.1-.5-2.6-1.3M12 6.5V8m0 8v1.5"/>',
-  qty: '<path d="M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/>'
-};
-
-function factsHtml(facts){
-  if (!facts || !facts.length) return '';
-  return '<section class="aside-card"><h3>' + escapeHtml(at('facts')) + '</h3><p class="aside-hint">' + escapeHtml(at('factsHint')) + '</p><ul class="fact-list">' +
-    facts.map(f => '<li class="fact fact-' + f.type + '"><span class="fact-ico"><svg viewBox="0 0 24 24" aria-hidden="true">' + (FACT_ICONS[f.type] || '') + '</svg></span><span class="fact-text"><b>' + escapeHtml(f.value) + '</b><small>' + escapeHtml((at('types') || {})[f.type] || '') + '</small></span></li>').join('') +
-    '</ul></section>';
-}
-function relatedHtml(list){
-  if (!list || !list.length) return '';
-  return '<section class="aside-card"><h3>' + escapeHtml(at('related')) + '</h3><div class="related-list">' +
-    list.map((x, i) => '<button type="button" class="related-item" data-related="' + i + '"><span class="related-title">' + escapeHtml(cleanNewsText(x.title)) + '</span><span class="related-meta">' + escapeHtml(cleanNewsText(x.source || '')) + (x.date ? ' · ' + escapeHtml(articleDate(x.date)) : '') + '</span></button>').join('') +
-    '</div></section>';
+      '<p>' + escapeHtml(source) + (dateStr ? ' · ' + escapeHtml(dateStr) : '') + '</p>' +
+    '</div></div>';
 }
 
-function renderArticleFull(a, n, opts){
-  opts = opts || {};
+function renderArticleFull(a, n, urgent, source, title, dateStr, img, statusLabel){
   const box = $('#articleContent');
-  const shell = box.closest('.article-shell');
-  const keep = opts.keepScroll && shell ? shell.scrollTop : 0;
-  const title = stripSourceFromTitle(cleanNewsText(a.title || n.title || ''));
+  const articleTitle = stripSourceFromTitle(cleanNewsText(a.title || title));
+  const subtitle = cleanNewsText(a.subtitle || '');
   const content = String(a.content || '');
-  const srcName = cleanNewsText(a.source || n.source || '');
-  const badges = [];
-  if (isUrgentNews(n)) badges.push('<span class="badge badge-urgent">' + escapeHtml(at('urgent')) + '</span>');
-  badges.push('<span class="badge badge-src kind-' + escapeHtml(a.sourceKind || 'media') + '">' + escapeHtml(srcName) + '</span>');
-  (a.category || []).slice(0, 2).forEach(c => { if ((at('cats') || {})[c]) badges.push('<span class="badge badge-cat">' + escapeHtml(at('cats')[c]) + '</span>'); });
-  const meta = [articleDate(a.publishedAt || n.date), a.readingMinutes ? a.readingMinutes + ' ' + at('minRead') : ''].filter(Boolean).join(' · ');
-  const isTranslated = a.lang && a.lang !== 'ru';
-  let banners = '';
-  if (a.translation === 'pending') banners += '<div class="article-banner banner-progress"><span class="spin"></span><span>' + escapeHtml(at('translating')) + '</span></div>';
-  if (a.translation === 'failed') banners += '<div class="article-banner banner-warn"><span>' + escapeHtml(at('translateFail')) + '</span><button type="button" data-article-retry>' + escapeHtml(at('retry')) + '</button></div>';
-  if (a.textOk === false) banners += '<div class="article-banner banner-warn"><span>' + escapeHtml(at('noText')) + '</span></div>';
-  const audio = (a.textOk !== false && content.length > 200) ? (
-    '<div class="article-audio-block"><div class="article-audio-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="7" rx="2"/><rect x="17" y="14" width="4" height="7" rx="2"/></svg></div>' +
-    '<div class="article-audio-text"><div class="article-audio-title">' + escapeHtml(at('audio')) + '</div><div class="article-audio-sub">' + escapeHtml(at('voice')) + ' · ' + Math.max(1, a.readingMinutes || 1) + ' ' + escapeHtml(at('minRead')) + '</div></div>' +
-    '<button class="article-audio-btn" id="articlePlayBtn" type="button"><span class="audio-orb-mini" aria-hidden="true"><i></i><i></i><i></i></span>' +
-    '<svg class="audio-play-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg class="audio-pause-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>' +
-    '<span class="audio-label">' + escapeHtml(at('listen')) + '</span></button></div>') : '';
-  const url = a.sourceUrl || n.link || '';
-  const excerptBox = a.truncated ? '<div class="article-excerpt-end"><p>' + escapeHtml(at('excerpt')) + '</p>' + (url ? '<a class="btn-source" href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(at('readFull')) + ' ' + ICON_EXT + '</a>' : '') + '</div>' : '';
-  const sourceBox = '<div class="article-sourcebox"><div><span class="sb-label">' + escapeHtml(at('source')) + '</span><b>' + escapeHtml(srcName) + '</b><span class="sb-kind">' + escapeHtml(at(a.sourceKind === 'official' ? 'official' : 'media')) + '</span></div>' +
-    '<p>' + escapeHtml(a.reuse === 'full' ? at('officialNote') + srcName + '.' : at('excerptNote') + srcName + '.') + (isTranslated && url ? ' ' + escapeHtml(at('autoTr')) : '') + (isTranslated && url ? '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(srcName) + '</a>' : '') + '</p>' +
-    (url ? '<div class="sb-actions"><a class="btn-source" href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(at('original')) + ' ' + ICON_EXT + '</a><button type="button" class="btn-ghost" data-article-copy>' + ICON_LINK + escapeHtml(at('copy')) + '</button></div>' : '') + '</div>';
-  const aside = factsHtml(a.facts) + relatedHtml(a.related);
-  box.innerHTML = articleHeroHtml(a.image, badges.join(''), title, meta, { credit: a.imageKind === 'stock' ? at('stock') : '' }) +
-    '<div class="article-layout"><div class="article-body article-body-full">' + banners +
-      (a.subtitle ? '<p class="article-subtitle">' + escapeHtml(cleanNewsText(a.subtitle)) + '</p>' : '') +
-      audio + mdToHtmlArticle(content) + excerptBox + sourceBox +
-    '</div>' + (aside ? '<aside class="article-aside">' + aside + '</aside>' : '') + '</div>';
-  if (shell) shell.scrollTop = keep;
+  const mainImage = a.image || img;
+  const sourceLink = n.link || '';
+  const contentHtml = mdToHtmlArticle(content);
+  const audioBtnHtml = content.length > 40 ? (
+    '<div class="article-audio-block">' +
+      '<div class="article-audio-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="7" rx="2"/><rect x="17" y="14" width="4" height="7" rx="2"/></svg></div>' +
+      '<div class="article-audio-text">' +
+        '<div class="article-audio-title">Аудиоверсия статьи</div>' +
+        '<div class="article-audio-sub">Голос Дмитрий · ' + Math.max(1, Math.round(content.length/900)) + ' мин</div>' +
+      '</div>' +
+      '<button class="article-audio-btn" id="articlePlayBtn" type="button">' +
+        '<span class="audio-orb-mini" aria-hidden="true"><i></i><i></i><i></i></span>' +
+        '<svg class="audio-play-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' +
+        '<svg class="audio-pause-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>' +
+        '<span class="audio-label">Прослушать статью</span>' +
+      '</button>' +
+    '</div>'
+  ) : '';
+  box.innerHTML = articleHeroHtml(mainImage, statusLabel, articleTitle, source, dateStr) +
+    '<div class="article-body article-body-full">' +
+      (subtitle ? '<p class="article-subtitle">' + escapeHtml(subtitle) + '</p>' : '') +
+      audioBtnHtml +
+      contentHtml +
+      (sourceLink ? '<div class="article-source-link"><b>Источник:</b> <a href="' + escapeHtml(sourceLink) + '" target="_blank" rel="noopener">' + escapeHtml(source || sourceLink) + '</a></div>' : '') +
+      (a.isOriginal
+        ? '<div class="article-source">Материал опубликован по источнику: <b>' + escapeHtml(source || sourceLink || 'открытые данные') + '</b>. Полный текст доступен по ссылке выше.</div>'
+        : '<div class="article-source">Материал подготовлен ИИ. Проверяйте первоисточник.</div>') +
+    '</div>';
+  const shell = box.closest('.article-shell'); if (shell) shell.scrollTop = 0;
   const btn = document.getElementById('articlePlayBtn');
-  if (btn) btn.addEventListener('click', function(){ playArticleAudio(a, a.lang || lang, btn); });
-  box.querySelector('[data-article-back]')?.addEventListener('click', function(){ stopAudioPlayback(); showView('news'); });
-  box.querySelector('[data-article-copy]')?.addEventListener('click', function(){ try { navigator.clipboard.writeText(url); toast(at('copied'), 'success', 1800); } catch (e) {} });
-  box.querySelector('[data-article-retry]')?.addEventListener('click', function(){ delete articleMemCache[articleKeyOf(n)]; openArticle(n); });
-  box.querySelectorAll('[data-related]').forEach(function(el){
-    el.addEventListener('click', function(){ const x = (a.related || [])[Number(el.dataset.related)]; if (x) openArticle(x); });
-  });
+  if (btn) btn.addEventListener('click', function(){ playArticleAudio(a, lang, btn); });
 }
-
-function articleKeyOf(n, l){ return String(n.id || n.link || n.title || '') + '::' + (l || lang); }
-async function fetchArticle(n, language, waitMs){
-  const r = await fetch('/api/news/article', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: n.id || '', title: stripSourceFromTitle(cleanNewsText(n.title || '')), description: cleanNewsText(n.description || ''), source: cleanNewsText(n.source || ''), link: n.link || '', language: language, wait: waitMs })
-  });
-  const d = await r.json();
-  if (!r.ok || !d.ok) throw new Error(d.error || 'Article unavailable');
-  return d.article;
-}
-function cacheArticle(n, l, a){
-  articleMemCache[articleKeyOf(n, l)] = a;
-  if (a.textOk !== false) { try { saveLocalArticle(articleKeyOf(n, l).replace(/::.*/, ''), l, a); } catch (e) {} }
-}
-// Prepare the other languages while the reader is busy: switching language is then instant.
-async function warmArticleLangs(n, token){
-  for (const l of ['ru', 'en', 'zh', 'tr']){
-    if (l === lang || articleMemCache[articleKeyOf(n, l)]) continue;
-    for (let i = 0; i < 20; i++){
-      if (token !== articleToken) return;
-      try {
-        const a = await fetchArticle(n, l, 0);
-        if (l === 'ru' || a.translation === 'ready'){ cacheArticle(n, l, a); break; }
-        if (a.translation === 'failed') break;
-      } catch (e) { return; }
-      await wait(2500);
-    }
-  }
-}
-
-async function openArticle(n){
-  try { stopAudioPlayback(); } catch (e) {}
-  currentArticleNews = n;
-  showView('article');
-  const token = ++articleToken;
-  const box = $('#articleContent');
-  const title = stripSourceFromTitle(cleanNewsText(n.title || ''));
-  const key = articleKeyOf(n);
-
-  const cached = articleMemCache[key] || (() => { try { return getLocalArticle(key.replace(/::.*/, ''), lang); } catch (e) { return null; } })();
-  if (cached && cached.textOk !== false && (lang === 'ru' || cached.translation === 'ready')){
-    articleMemCache[key] = cached;
-    renderArticleFull(cached, n);
-    warmArticleLangs(n, token);
-    return;
-  }
-
-  const hasOld = !!box.querySelector('.article-body');
-  if (hasOld) showLangBadge(true);
-  else {
-    box.innerHTML = articleHeroHtml(n.image || '', '<span class="badge badge-src">' + escapeHtml(cleanNewsText(n.source || '')) + '</span>', title, '', {}) +
-      '<div class="article-layout"><div class="article-body article-body-full"><div class="article-skeleton">' + Array(10).fill('<div class="skeleton"></div>').join('') + '</div></div></div>';
-    box.querySelector('[data-article-back]')?.addEventListener('click', function(){ showView('news'); });
-    const sh = box.closest('.article-shell'); if (sh) sh.scrollTop = 0;
-  }
-  try {
-    let a = await fetchArticle(n, lang, lang === 'ru' ? 0 : 3000);
-    if (token !== articleToken) return;
-    if (a.translation === 'pending'){
-      if (!hasOld) renderArticleFull(a, n);                 // show the original right away, translation follows
-      for (let i = 0; i < 26 && token === articleToken; i++){
-        await wait(1400);
-        const b = await fetchArticle(n, lang, 0);
-        if (b.translation !== 'pending'){ a = b; break; }
-      }
-      if (token !== articleToken) return;
-    }
-    if (lang === 'ru' || a.translation === 'ready') cacheArticle(n, lang, a);
-    renderArticleFull(a, n, { keepScroll: hasOld });
-    if (a.textOk !== false) warmArticleLangs(n, token);
-  } catch (e) {
-    if (token !== articleToken) return;
-    const msg = friendlyError(e);
-    if (!hasOld){ const sk = box.querySelector('.article-skeleton'); const html = '<div class="article-error">' + escapeHtml(msg) + '</div>'; if (sk) sk.outerHTML = html; }
-    toast(msg, 'error', 5000);
-  } finally {
-    if (token === articleToken) showLangBadge(false);
-  }
-}
-
 
 let currentAudioPlayer = null;
 let currentPlayBtn = null;
@@ -1842,7 +1107,7 @@ async function playArticleAudio(article, langCode, btn){
   btn.classList.add('playing');
   const label = btn.querySelector('.audio-label');
   if (label) label.textContent = 'Готовлю…';
-  const text = String(article.content || article.subtitle || article.title || '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/^\|?[\s\-:|]+\|?$/gm, ' ').replace(/[#*`>|]/g,' ').replace(/[ \t]+/g, ' ').slice(0, 40000);
+  const text = String(article.content || article.subtitle || article.title || '').replace(/[#*`]/g,'').slice(0, 40000);
   try {
     const r = await fetch('/api/news/article/audio', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -1884,10 +1149,81 @@ function showLangBadge(on){
   }
 }
 
+async function openArticle(n){
+  try { stopAudioPlayback(); } catch(e){}
+  currentArticleNews = n;
+  showView('article');
+  const box = $('#articleContent');
+  const urgent = isUrgentNews(n);
+  const title = stripSourceFromTitle(cleanNewsText(n.title || ''));
+  const desc = cleanNewsText(n.description || '');
+  const source = cleanNewsText(n.source || '');
+  const img = n.image || '';
+  const dateStr = n.date ? new Date(n.date).toLocaleDateString(lang === 'ru' ? 'ru-RU' : lang === 'zh' ? 'zh-CN' : 'en-US') : '';
+  const statusLabel = urgent ? (lang === 'ru' ? 'СРОЧНО' : 'URGENT') : (lang === 'ru' ? 'ЛОГИСТИКА / РЫНОК' : 'LOGISTICS / MARKET');
+  const normTitle = normalizeText(title);
+  // Ключ кэша: link приоритетнее title, т.к. link уникален
+  const stableId = String(n.link || '').trim() || title;
+  const normId = normalizeText(stableId);
+  const cacheKey = normId + '::' + lang;
+
+  // 1. Память — мгновенно
+  if (articleMemCache[cacheKey]){
+    renderArticleFull(articleMemCache[cacheKey], n, urgent, source, title, dateStr, img, statusLabel);
+    return;
+  }
+  // 2. localStorage — мгновенно
+  const localArt = (typeof getLocalArticle === 'function') ? getLocalArticle(normId, lang) : null;
+  if (localArt){
+    articleMemCache[cacheKey] = localArt;
+    renderArticleFull(localArt, n, urgent, source, title, dateStr, img, statusLabel);
+    return;
+  }
+
+  // 3. Если в окне уже есть другая статья — не стираем, показываем бейдж
+  const hasOldContent = !!box.querySelector('.article-body');
+  if (hasOldContent){
+    showLangBadge(true);
+  } else {
+    box.innerHTML = articleHeroHtml(img, statusLabel, title, source, dateStr) +
+      '<div class="article-body article-body-full">' +
+        (desc ? '<p class="article-subtitle">' + escapeHtml(desc) + '</p>' : '') +
+        '<div class="article-skeleton">' + Array(9).fill('<div class="skeleton"></div>').join('') + '</div>' +
+      '</div>';
+    const __sh = box.closest('.article-shell'); if (__sh) __sh.scrollTop = 0;
+  }
+
+  try {
+    const r = await fetch('/api/news/article', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ title: title, description: desc, source: source, link: n.link || '', language: lang })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || 'Не удалось');
+    articleMemCache[cacheKey] = d.article;
+    if (typeof saveLocalArticle === 'function') saveLocalArticle(normId, lang, d.article);
+    renderArticleFull(d.article, n, urgent, source, title, dateStr, img, statusLabel);
+  } catch(e){
+    const __msg = friendlyError(e);
+    if (!hasOldContent) { const sk = box.querySelector('.article-skeleton'); const html = '<div class="article-error">' + escapeHtml(__msg) + '</div>'; if (sk) sk.outerHTML = html; else box.insertAdjacentHTML('beforeend', html); }
+    toast(__msg, 'error', 5000);
+  } finally {
+    showLangBadge(false);
+  }
+}
+
+function applyWeatherVisual(d){document.body.classList.remove('weather-night','weather-sun','weather-cloud','weather-rain','weather-snow','weather-storm');const now=Math.floor(Date.now()/1000);const night=d.sunrise&&d.sunset?(now<d.sunrise||now>d.sunset):false;const main=d.main||'';const icon=d.icon||'';document.body.classList.add(night?'weather-night':main==='Thunderstorm'?'weather-storm':main==='Rain'||main==='Drizzle'?'weather-rain':main==='Snow'?'weather-snow':main==='Clouds'?'weather-cloud':'weather-sun');document.documentElement.style.setProperty('--weather-clouds',Math.min(1,(Number(d.clouds)||0)/100));document.documentElement.style.setProperty('--weather-wind',Math.min(1,(Number(d.wind)||0)/18));document.documentElement.style.setProperty('--weather-temp',Number(d.temp)||0);document.documentElement.dataset.weatherIcon=icon;const weatherNames={Clear:{ru:'Ясно',en:'Clear',tr:'Açık',zh:'晴'},Clouds:{ru:'Облачно',en:'Cloudy',tr:'Bulutlu',zh:'多云'},Rain:{ru:'Дождь',en:'Rain',tr:'Yağmur',zh:'下雨'},Drizzle:{ru:'Морось',en:'Drizzle',tr:'Çiseleme',zh:'毛毛雨'},Snow:{ru:'Снег',en:'Snow',tr:'Kar',zh:'下雪'},Thunderstorm:{ru:'Гроза',en:'Thunderstorm',tr:'Gök gürültülü fırtına',zh:'雷雨'},Mist:{ru:'Туман',en:'Mist',tr:'Sis',zh:'雾'},Fog:{ru:'Туман',en:'Fog',tr:'Sis',zh:'雾'}};const hw=$('#homeWeatherText');if(hw)hw.textContent=`${weatherNames[main]?.[lang]||main}${d.temp!=null?' · '+Math.round(d.temp)+'°':''}`;const hs=$('#homeRouteStatus');if(hs&&$('#distance')?.value)hs.textContent=lang==='ru'?`Маршрут · ${Number($('#distance').value).toLocaleString('ru-RU')} км`:lang==='en'?`Route · ${Number($('#distance').value).toLocaleString('en-US')} km`:`路线 · ${Number($('#distance').value).toLocaleString('zh-CN')} 公里`;}
+function setTimeWeather(){
+  // Заглушка: не используем погоду, если API недоступен
+  document.body.classList.remove('weather-night','weather-sun','weather-cloud','weather-rain','weather-snow','weather-storm');
+  document.body.classList.add('weather-sun');
+}
+
+async function checkWeather(){try{const cfg=await fetch('/api/config',{cache:'no-store'}).then(r=>r.json());if(!cfg.weatherConfigured){setTimeWeather();return}const wr=await fetch('/api/weather',{cache:'no-store'});if(!wr.ok)throw new Error('weather');const d=await wr.json();applyWeatherVisual(d)}catch{setTimeWeather()}}
 async function backgroundRefresh(){await Promise.allSettled([checkWeather(),loadRates(),loadCurrency()]);}
 updateCityPlaceholders();
 setTimeout(renderRouteAdvice, 500);
-renderChatEmpty();
+renderChatEmpty();checkWeather();setInterval(checkWeather,5*60*1000);
 loadRates();loadAgents();renderIncoterms();renderFactors();updateAutoVolume();applyLang();$('#currencyDate').textContent=formatToday();loadCurrency();setInterval(loadCurrency,30*60*1000);
 setInterval(()=>fetch('/api/health',{cache:'no-store'}).catch(()=>{}),2*60*1000);
 setInterval(()=>{fetch('/api/news',{cache:'no-store'}).catch(()=>{})},30*60*1000);
@@ -1920,570 +1256,118 @@ setInterval(()=>{if(document.visibilityState==='visible')backgroundRefresh()},10
 window.addEventListener('offline', () => toast(friendlyError(new Error('fetch')), 'error', 5000));
 window.addEventListener('online', () => toast(lang === 'en' ? 'Connection restored' : lang === 'tr' ? 'Bağlantı yeniden kuruldu' : lang === 'zh' ? '网络已恢复' : 'Соединение восстановлено', 'success', 2600));
 
-// =====================================================================================
-//  LIVE WEATHER BACKGROUND
-//  Real conditions from /api/weather (OpenWeather). Procedural clouds, rain, snow, fog and
-//  lightning drawn on one canvas. Preview any state:  ?wx=rain | storm | snow | fog | clouds | clear | night | dusk
-// =====================================================================================
+
+// ========== Импортный калькулятор контракта ==========
 (function(){
-  const scene = document.getElementById('weatherScene');
-  if (!scene || window.WX) return;
-  const cv = document.createElement('canvas');
-  cv.className = 'wx-canvas'; cv.setAttribute('aria-hidden', 'true');
-  scene.appendChild(cv);
-  const ctx = cv.getContext('2d');
-  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let W = 0, H = 0, DPR = 1, raf = 0, last = 0, sprites = {}, spriteTone = '';
-  let clouds = [], drops = [], flakes = [], fogs = [], bolt = null, flash = 0, nextBolt = 0, clock = 0;
-  const S = { kind: 'clear', clouds: .1, wind: 2, intensity: 0, night: false, dusk: false };
+  const $id = id => document.getElementById(id);
+  const num = v => { const x = Number(String(v||'').replace(/\s/g,'').replace(',', '.')); return Number.isFinite(x) ? x : 0; };
+  const fmt = n => { const x = Number(n); if (!Number.isFinite(x)) return '0'; return x.toLocaleString('ru-RU', { maximumFractionDigits: 2 }); };
 
-  function rng(seed){ let s = seed >>> 0; return function(){ s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; }
-  const lerp = (a, b, t) => a + (b - a) * t;
-  const mix = (A, B, t) => [lerp(A[0], B[0], t), lerp(A[1], B[1], t), lerp(A[2], B[2], t)];
-  const rgba = (c, a) => 'rgba(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ',' + a + ')';
-
-  const TONES = {
-    day:   { top: [255, 255, 255], bot: [170, 194, 216] },
-    dusk:  { top: [255, 232, 208], bot: [186, 146, 172] },
-    night: { top: [116, 140, 176], bot: [44, 60, 92] },
-    grey:  { top: [190, 200, 210], bot: [96, 110, 128] },
-    storm: { top: [138, 150, 164], bot: [52, 62, 76] }
-  };
-  function toneName(){
-    if (S.kind === 'storm') return S.night ? 'night' : 'storm';
-    if (S.kind === 'rain' || S.kind === 'drizzle') return S.night ? 'night' : 'grey';
-    if (S.night) return 'night';
-    if (S.dusk) return 'dusk';
-    if (S.kind === 'fog' || S.kind === 'snow' || (S.kind === 'clouds' && S.clouds > .8)) return 'grey';
-    return 'day';
-  }
-
-  // One soft, volumetric cumulus: many radial puffs, bright on top, shaded underneath.
-  function makeCloud(seed, tone){
-    const w = 600, h = 260, c = document.createElement('canvas');
-    c.width = w; c.height = h;
-    const g = c.getContext('2d'), r = rng(seed), puffs = [];
-    const n = 46 + Math.floor(r() * 14);
-    for (let i = 0; i < n; i++){
-      const t = r(), mid = 1 - Math.abs(t - .5) * 2;
-      const rad = (26 + r() * 50) * (.5 + .75 * mid);
-      const x = w * (.13 + .74 * t);
-      const y = h * .66 - mid * h * .30 * (.35 + r() * .8) - r() * 16;
-      puffs.push({ x: x, y: y, rad: rad });
-    }
-    for (let i = 0; i < 9; i++) puffs.push({ x: w * (.16 + .68 * r()), y: h * .7 + r() * 10, rad: 26 + r() * 30 });
-    puffs.sort((a, b) => b.y - a.y);            // shaded base first, bright crown last
-    for (const p of puffs){
-      const shade = Math.max(0, Math.min(1, (p.y - h * .28) / (h * .5)));
-      const col = mix(tone.top, tone.bot, shade);
-      const gr = g.createRadialGradient(p.x - p.rad * .28, p.y - p.rad * .34, p.rad * .08, p.x, p.y, p.rad);
-      gr.addColorStop(0, rgba(col, .96));
-      gr.addColorStop(.5, rgba(col, .6));
-      gr.addColorStop(1, rgba(tone.bot, 0));
-      g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y, p.rad, 0, 6.2832); g.fill();
-    }
-    return c;
-  }
-  function makeFog(){
-    const c = document.createElement('canvas'); c.width = 900; c.height = 240;
-    const g = c.getContext('2d'), gr = g.createRadialGradient(450, 120, 10, 450, 120, 430);
-    gr.addColorStop(0, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
-    g.save(); g.scale(1, .3); g.fillStyle = gr; g.beginPath(); g.arc(450, 400, 430, 0, 6.2832); g.fill(); g.restore();
-    return c;
-  }
-  function ensureSprites(){
-    const tn = toneName();
-    if (spriteTone === tn && sprites.cloud) return;
-    spriteTone = tn;
-    sprites.cloud = [11, 23, 37, 51, 67, 83].map(sd => makeCloud(sd, TONES[tn]));
-    if (!sprites.fog) sprites.fog = makeFog();
-  }
-
-  function resize(){
-    DPR = Math.min(window.devicePixelRatio || 1, 1.5);
-    W = window.innerWidth; H = window.innerHeight;
-    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
-    build();
-  }
-
-  function build(){
-    ensureSprites();
-    const r = rng(7), area = Math.min(2, (W * H) / (1400 * 800));
-    // clouds -------------------------------------------------------------
-    const heavy = S.kind === 'rain' || S.kind === 'storm' || S.kind === 'drizzle' || S.kind === 'snow';
-    let n = Math.round(2 + S.clouds * 8 + (heavy ? 3 : 0));
-    if (S.kind === 'clear') n = Math.round(1 + S.clouds * 4);
-    clouds = [];
-    for (let i = 0; i < n; i++){
-      const depth = .35 + r() * .95;                            // .35 far … 1.3 near
-      clouds.push({
-        spr: Math.floor(r() * 6),
-        x: r() * (W + 900) - 450,
-        y: H * (.02 + (1.25 - depth) * .26) + r() * H * .10,
-        s: depth * (.75 + r() * .45) * Math.max(.6, Math.min(1.4, W / 1300)),
-        v: (5 + depth * 15) * (.6 + Math.min(S.wind, 14) * .16),
-        a: Math.min(1, (.34 + .6 * S.clouds) * (.55 + .45 * Math.min(1, depth)) + (heavy ? .18 : 0)),
-        z: depth
-      });
-    }
-    clouds.sort((a, b) => a.z - b.z);
-    // rain ---------------------------------------------------------------
-    drops = [];
-    if (S.kind === 'rain' || S.kind === 'storm' || S.kind === 'drizzle'){
-      const base = S.kind === 'drizzle' ? 70 : 140;
-      const cnt = Math.round((base + S.intensity * 560 * (S.kind === 'storm' ? 1.15 : 1)) * area);
-      for (let i = 0; i < cnt; i++){
-        const z = .35 + r() * .65;
-        drops.push({ x: r() * (W + 260) - 130, y: r() * H, l: (9 + r() * 15) * z, v: (760 + r() * 760) * z, z: z });
-      }
-    }
-    // snow ---------------------------------------------------------------
-    flakes = [];
-    if (S.kind === 'snow'){
-      const cnt = Math.round((70 + S.intensity * 320) * area);
-      for (let i = 0; i < cnt; i++){
-        const z = .3 + r() * .7;
-        flakes.push({ x: r() * W, y: r() * H, r: (.8 + r() * 2.4) * (.6 + z * .6), v: (28 + r() * 62) * z, ph: r() * 6.28, amp: 10 + r() * 28, z: z });
-      }
-    }
-    // fog ----------------------------------------------------------------
-    fogs = [];
-    if (S.kind === 'fog' || S.kind === 'rain' || S.kind === 'storm'){
-      const cnt = S.kind === 'fog' ? 8 : 3;
-      for (let i = 0; i < cnt; i++) fogs.push({ x: r() * W - 450, y: H * (.35 + r() * .6), s: .9 + r() * 1.3, v: 6 + r() * 10, a: S.kind === 'fog' ? .55 : .3 });
-    }
-    nextBolt = clock + 2200 + Math.random() * 3800;
-    if (reduce) draw();
-  }
-
-  function makeBolt(){
-    const x0 = W * (.12 + Math.random() * .76), pts = [[x0, -10]];
-    let x = x0, y = -10;
-    const endY = H * (.45 + Math.random() * .3);
-    while (y < endY){ y += 26 + Math.random() * 42; x += (Math.random() - .5) * 70; pts.push([x, y]); }
-    const branches = [];
-    for (let i = 2; i < pts.length - 2; i++){
-      if (Math.random() < .28){
-        const b = [pts[i].slice()]; let bx = pts[i][0], by = pts[i][1];
-        for (let k = 0; k < 4; k++){ by += 22 + Math.random() * 30; bx += (Math.random() < .5 ? -1 : 1) * (14 + Math.random() * 34); b.push([bx, by]); }
-        branches.push(b);
-      }
-    }
-    return { pts: pts, branches: branches, life: 1 };
-  }
-
-  function step(dt){
-    clock += dt * 1000;
-    const slant = Math.max(-.7, Math.min(.7, S.wind * .045));
-    for (const c of clouds){ c.x += c.v * dt; if (c.x > W + 450) c.x = -450 - Math.random() * 300; }
-    for (const d of drops){
-      d.y += d.v * dt; d.x += d.v * slant * dt;
-      if (d.y > H + 20){ d.y = -20 - Math.random() * 80; d.x = Math.random() * (W + 260) - 130; }
-    }
-    for (const f of flakes){
-      f.y += f.v * dt; f.ph += dt * (.8 + f.z);
-      f.x += Math.sin(f.ph) * f.amp * dt + S.wind * 4 * dt;
-      if (f.y > H + 6){ f.y = -6; f.x = Math.random() * W; }
-      if (f.x > W + 10) f.x = -10;
-    }
-    for (const g of fogs){ g.x += g.v * dt; if (g.x > W + 100) g.x = -900 * g.s; }
-    if (S.kind === 'storm'){
-      if (clock > nextBolt){ bolt = makeBolt(); flash = 1; nextBolt = clock + 3500 + Math.random() * 7500; setTimeout(() => { flash = Math.max(flash, .7); }, 140); }
-      if (bolt){ bolt.life -= dt * 4.2; if (bolt.life <= 0) bolt = null; }
-      flash = Math.max(0, flash - dt * 2.6);
-    } else { bolt = null; flash = 0; }
-  }
-
-  function draw(){
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    ctx.clearRect(0, 0, W, H);
-    // far clouds first
-    const cs = sprites.cloud;
-    for (const c of clouds){
-      const spr = cs[c.spr % cs.length], w = spr.width * c.s, h = spr.height * c.s;
-      ctx.globalAlpha = c.a;
-      ctx.drawImage(spr, c.x - w / 2, c.y - h / 2, w, h);
-    }
-    ctx.globalAlpha = 1;
-    // fog banks
-    for (const g of fogs){
-      ctx.globalAlpha = g.a;
-      ctx.drawImage(sprites.fog, g.x, g.y, 900 * g.s, 240 * g.s);
-    }
-    ctx.globalAlpha = 1;
-    // rain
-    if (drops.length){
-      const slant = Math.max(-.7, Math.min(.7, S.wind * .045));
-      const tint = S.night ? '170,200,235' : '86,128,166';
-      for (let pass = 0; pass < 3; pass++){
-        const lo = .35 + pass * .22, hi = lo + .22;
-        ctx.beginPath();
-        for (const d of drops){
-          if (d.z < lo || d.z >= hi) continue;
-          ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - d.l * slant, d.y - d.l);
-        }
-        ctx.strokeStyle = 'rgba(' + tint + ',' + (.16 + pass * .13) + ')';
-        ctx.lineWidth = .8 + pass * .35;
-        ctx.stroke();
-      }
-    }
-    // snow
-    if (flakes.length){
-      ctx.fillStyle = S.night ? 'rgba(235,245,255,.9)' : 'rgba(255,255,255,.95)';
-      for (const f of flakes){
-        ctx.globalAlpha = .45 + f.z * .5;
-        ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.2832); ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    }
-    // lightning
-    if (bolt){
-      ctx.save();
-      ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-      const paint = pts => { ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); };
-      ctx.globalAlpha = Math.max(0, bolt.life);
-      ctx.shadowColor = 'rgba(170,200,255,.95)'; ctx.shadowBlur = 24;
-      ctx.strokeStyle = 'rgba(210,225,255,.9)'; ctx.lineWidth = 3; paint(bolt.pts);
-      ctx.lineWidth = 1.4; bolt.branches.forEach(paint);
-      ctx.shadowBlur = 0; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.4; paint(bolt.pts);
-      ctx.restore();
-    }
-    if (flash > .01){
-      ctx.fillStyle = 'rgba(214,228,255,' + (flash * .42) + ')';
-      ctx.fillRect(0, 0, W, H);
-    }
-  }
-
-  function frame(t){
-    raf = requestAnimationFrame(frame);
-    if (document.hidden) { last = t; return; }
-    const open = document.body.classList.contains('view-open');
-    const minDt = open ? 33 : 15;                 // 30 fps behind windows, 60 fps otherwise
-    const dt = t - last;
-    if (dt < minDt) return;
-    last = t;
-    step(Math.min(dt, 60) / 1000);
-    draw();
-  }
-
-  function classes(){
-    const b = document.body;
-    ['clear', 'clouds', 'rain', 'storm', 'snow', 'fog'].forEach(k => b.classList.remove('wx-' + k));
-    b.classList.remove('wx-night', 'wx-dusk');
-    const k = S.kind === 'drizzle' ? 'rain' : S.kind;
-    b.classList.add('wx-' + k);
-    if (S.night) b.classList.add('wx-night');
-    if (S.dusk) b.classList.add('wx-dusk');
-  }
-
-  // Sun / moon travel across the sky with the real time of day.
-  function celestial(d){
-    const now = Math.floor(Date.now() / 1000);
-    const sr = d && d.sunrise, ss = d && d.sunset;
-    let p, isSun = true;
-    if (sr && ss){
-      if (now >= sr && now <= ss) p = (now - sr) / (ss - sr);
-      else { isSun = false; const night = 86400 - (ss - sr); const since = now > ss ? now - ss : now + 86400 - ss; p = Math.max(0, Math.min(1, since / night)); }
-    } else { const h = new Date().getHours() + new Date().getMinutes() / 60; isSun = h >= 6 && h < 21; p = isSun ? (h - 6) / 15 : ((h + 3) % 24) / 9; p = Math.max(0, Math.min(1, p)); }
-    const x = 12 + 76 * p, y = 58 - Math.sin(Math.PI * p) * 46;
-    const r = document.documentElement.style;
-    r.setProperty(isSun ? '--sun-x' : '--moon-x', x + '%');
-    r.setProperty(isSun ? '--sun-y' : '--moon-y', y + '%');
-    return { isSun: isSun, p: p, dusk: isSun && (p < .07 || p > .93) };
-  }
-
-  function set(d){
-    d = d || {};
-    const cel = celestial(d);
-    S.kind = d.kind || (d.main ? ({ Thunderstorm: 'storm', Drizzle: 'drizzle', Rain: 'rain', Snow: 'snow', Clouds: 'clouds', Clear: 'clear', Mist: 'fog', Fog: 'fog', Haze: 'fog', Smoke: 'fog', Dust: 'fog' }[d.main] || 'clear') : 'clear');
-    S.clouds = Math.max(0, Math.min(1, (d.clouds != null ? d.clouds : (S.kind === 'clear' ? 8 : S.kind === 'clouds' ? 75 : 100)) / 100));
-    S.wind = Number(d.wind) || 0;
-    S.intensity = d.intensity != null ? d.intensity : (S.kind === 'storm' ? .8 : S.kind === 'rain' ? .55 : S.kind === 'snow' ? .5 : 0);
-    S.rn = d.night != null ? !!d.night : !cel.isSun;
-    S.night = S.rn || document.documentElement.classList.contains('dark');
-    S.dusk = !S.night && (d.dusk != null ? !!d.dusk : cel.dusk);
-    S.temp = d.temp;
-    classes();
-    spriteTone = '';          // rebuild sprites in the right light
-    resize();
-    document.documentElement.style.setProperty('--wx-wind', Math.min(1, S.wind / 15));
-    if (!reduce && !raf) raf = requestAnimationFrame(frame);
-  }
-
-  window.WX = { set: set, state: S, redraw: () => { spriteTone = ''; build(); } };
-  // dark theme = night sky, so the sprites must follow the theme too
-  new MutationObserver(() => { const dk = document.documentElement.classList.contains('dark'); if (dk !== !!S._dark){ S._dark = dk; S.night = !!S.rn || dk; if (S.night) S.dusk = false; classes(); spriteTone = ''; build(); } }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(resize, 200); });
-  document.addEventListener('visibilitychange', () => { last = 0; });
-  set({ kind: 'clear', clouds: 12 });
-})();
-
-// ---- location + data --------------------------------------------------------------
-(function(){
-  const KEY = 'iomastavka_geo';
-  const readGeo = () => { try { const g = JSON.parse(localStorage.getItem(KEY) || 'null'); return g && isFinite(g.lat) && isFinite(g.lon) ? g : null; } catch (e) { return null; } };
-  const T = {
-    ru: { names: { clear: 'Ясно', clouds: 'Облачно', rain: 'Дождь', drizzle: 'Морось', storm: 'Гроза', snow: 'Снег', fog: 'Туман' }, use: 'Погода по вашему месту', back: 'Показываю погоду в Москве', asking: 'Разрешите доступ к геопозиции…', denied: 'Нет доступа к геопозиции — показываю Москву', title: 'Нажмите, чтобы показать погоду в вашем месте', titleBack: 'Нажмите, чтобы вернуться к Москве' },
-    en: { names: { clear: 'Clear', clouds: 'Cloudy', rain: 'Rain', drizzle: 'Drizzle', storm: 'Thunderstorm', snow: 'Snow', fog: 'Fog' }, use: 'Weather for your location', back: 'Showing Moscow weather', asking: 'Allow location access…', denied: 'Location unavailable — showing Moscow', title: 'Click to use your location', titleBack: 'Click to go back to Moscow' },
-    zh: { names: { clear: '晴', clouds: '多云', rain: '下雨', drizzle: '毛毛雨', storm: '雷雨', snow: '下雪', fog: '雾' }, use: '显示您所在位置的天气', back: '显示莫斯科天气', asking: '请允许访问位置…', denied: '无法获取位置，显示莫斯科', title: '点击使用您的位置', titleBack: '点击返回莫斯科' },
-    tr: { names: { clear: 'Açık', clouds: 'Bulutlu', rain: 'Yağmur', drizzle: 'Çiseleme', storm: 'Fırtına', snow: 'Kar', fog: 'Sis' }, use: 'Konumunuza göre hava', back: 'Moskova havası gösteriliyor', asking: 'Konum erişimine izin verin…', denied: 'Konum alınamadı — Moskova gösteriliyor', title: 'Konumunuzu kullanmak için tıklayın', titleBack: "Moskova'ya dönmek için tıklayın" }
-  };
-  const L = () => T[lang] || T.ru;
-  let lastData = null;
-
-  function paintChip(d){
-    const el = document.getElementById('homeWeatherText');
-    if (!el || !d) return;
-    const geo = readGeo();
-    const kind = d.kind || 'clear';
-    const t = d.temp != null ? (d.temp > 0 ? '+' : '') + Math.round(d.temp) + '°' : '';
-    el.textContent = [d.city || (geo ? '' : 'Москва'), (L().names[kind] || ''), t].filter(Boolean).join(' · ');
-    const box = el.parentElement;
-    if (box){ box.classList.add('wx-chip'); box.setAttribute('role', 'button'); box.tabIndex = 0; box.title = geo ? L().titleBack : L().title; }
-  }
-
-  window.applyWeatherVisual = function(d){
-    lastData = d;
-    if (window.WX) window.WX.set(d);
-    paintChip(d);
-    const hs = $('#homeRouteStatus');
-    if (hs && $('#distance')?.value) hs.textContent = (lang === 'ru' ? 'Маршрут · ' : lang === 'en' ? 'Route · ' : '路线 · ') + Number($('#distance').value).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US') + ' km';
-  };
-  window.setTimeWeather = function(){ window.applyWeatherVisual({ kind: 'clear', clouds: 12, wind: 2 }); };
-
-  window.checkWeather = async function(){
-    if (window.__wxDemo) return;
-    try {
-      const g = readGeo();
-      const q = '?lang=' + encodeURIComponent(lang) + (g ? '&lat=' + g.lat + '&lon=' + g.lon : '');
-      const r = await fetch('/api/weather' + q, { cache: 'no-store' });
-      if (!r.ok) throw new Error('weather ' + r.status);
-      window.applyWeatherVisual(await r.json());
-    } catch (e) { if (!lastData) window.setTimeWeather(); }
-  };
-
-  function toggleGeo(){
-    if (readGeo()){ localStorage.removeItem(KEY); toast(L().back, 'info', 2600); return window.checkWeather(); }
-    if (!navigator.geolocation){ toast(L().denied, 'error', 3200); return; }
-    toast(L().asking, 'info', 2400);
-    navigator.geolocation.getCurrentPosition(pos => {
-      try { localStorage.setItem(KEY, JSON.stringify({ lat: +pos.coords.latitude.toFixed(3), lon: +pos.coords.longitude.toFixed(3) })); } catch (e) {}
-      toast(L().use, 'success', 2200);
-      window.checkWeather();
-    }, () => toast(L().denied, 'error', 3600), { timeout: 9000, maximumAge: 600000 });
-  }
-  document.addEventListener('click', e => { const c = e.target.closest && e.target.closest('.wx-chip'); if (c) toggleGeo(); });
-  document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('wx-chip')){ e.preventDefault(); toggleGeo(); } });
-
-  // preview: ?wx=rain
-  const demo = (new URLSearchParams(location.search).get('wx') || '').toLowerCase();
-  if (demo){
-    window.__wxDemo = true;
-    const P = {
-      clear: { kind: 'clear', clouds: 10, wind: 2, night: false, dusk: false }, night: { kind: 'clear', clouds: 12, wind: 1, night: true },
-      dusk: { kind: 'clear', clouds: 30, wind: 2, night: false, dusk: true }, clouds: { kind: 'clouds', clouds: 85, wind: 5 },
-      rain: { kind: 'rain', clouds: 100, wind: 5, intensity: .65 }, drizzle: { kind: 'drizzle', clouds: 95, wind: 2, intensity: .3 },
-      storm: { kind: 'storm', clouds: 100, wind: 9, intensity: .9 }, snow: { kind: 'snow', clouds: 90, wind: 2, intensity: .6 }, fog: { kind: 'fog', clouds: 70, wind: 1 }
+  function getValues(){
+    return {
+      invoice:      num($id('cfInvoice')?.value),
+      td:           num($id('cfTD')?.value),
+      duty:         num($id('cfDuty')?.value),
+      freight:      num($id('cfFreight')?.value),
+      declarant:    num($id('cfDeclarant')?.value),
+      insurance:    num($id('cfInsurance')?.value),
+      vat:          num($id('cfVAT')?.value) || 22,
+      profit:       num($id('cfProfit')?.value),
+      rate:         num($id('cfRate')?.value) || 12.567,
+      transferFee:  num($id('cfTransferFee')?.value) || 3,
+      taxes:        num($id('cfTaxes')?.value) || 2.2
     };
-    const d = Object.assign({ city: 'Москва', temp: 12 }, P[demo] || P.clear);
-    setTimeout(() => window.applyWeatherVisual(d), 0);
-  }
-  window.checkWeather();
-  setInterval(() => window.checkWeather(), 5 * 60 * 1000);
-})();
-
-
-// =====================================================================================
-//  VOICE ORB — a living, iridescent sphere (Siri / ChatGPT-voice style)
-//  idle: slow breathing · listening: swells with your voice · thinking: swirls · speaking: pulses
-// =====================================================================================
-(function(){
-  const orb = document.getElementById('voiceOrb');
-  if (!orb || window.VoiceOrb) return;
-  const stage = orb.parentElement;
-  const cv = document.createElement('canvas');
-  cv.className = 'voice-orb-canvas'; cv.setAttribute('aria-hidden', 'true');
-  orb.insertBefore(cv, orb.firstChild);
-  const ctx = cv.getContext('2d');
-  const SIZE = 260, DPR = Math.min(window.devicePixelRatio || 1, 2);
-  cv.width = cv.height = SIZE * DPR;
-
-  const PAL = {
-    idle:      [[96, 170, 255], [104, 130, 255], [70, 214, 204], [150, 205, 255]],
-    listening: [[64, 196, 255], [76, 140, 255], [52, 228, 196], [176, 120, 255]],
-    thinking:  [[160, 124, 255], [92, 150, 255], [64, 222, 212], [255, 146, 212]],
-    speaking:  [[255, 154, 214], [124, 142, 255], [64, 222, 212], [255, 204, 128]]
-  };
-  const cur = PAL.idle.map(c => c.slice());
-  const st = { state: 'idle', level: 0, target: 0, pulse: 0, t: 0 };
-  let raf = 0, last = 0, mic = null;
-  const rgba = (c, a) => 'rgba(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ',' + a + ')';
-
-  function frame(now){
-    raf = requestAnimationFrame(frame);
-    if (document.hidden) { last = now; return; }
-    const r = cv.getBoundingClientRect();
-    if (r.height < 20) { last = now; return; }             // stage collapsed: don't draw
-    const dt = Math.min(50, now - (last || now)) / 1000; last = now;
-    st.t += dt;
-    st.level += (st.target - st.level) * Math.min(1, dt * 14);
-    st.pulse *= Math.exp(-dt * 3.2);
-    const target = PAL[st.state] || PAL.idle;
-    for (let k = 0; k < 4; k++) for (let j = 0; j < 3; j++) cur[k][j] += (target[k][j] - cur[k][j]) * Math.min(1, dt * 3);
-    draw();
   }
 
-  function draw(){
-    const s = st.state, t = st.t;
-    const env = .5 + .5 * Math.sin(t * 7.3) * Math.sin(t * 3.1 + 1);
-    let lv = Math.max(st.level, st.pulse);
-    if (s === 'speaking') lv = Math.max(lv, .22 + .3 * env);
-    if (s === 'idle') lv = 0;
-    const cx = SIZE / 2, cy = SIZE / 2;
-    const R = SIZE * .265 * (1 + (s === 'listening' ? lv * .34 : s === 'speaking' ? lv * .2 : s === 'thinking' ? .05 * Math.sin(t * 3) : .035 * Math.sin(t * 1.3)));
-    const amp = s === 'idle' ? .05 : s === 'listening' ? .07 + lv * .3 : s === 'thinking' ? .14 : .1 + lv * .2;
-    const speed = s === 'idle' ? .55 : s === 'listening' ? .9 + lv * 2.6 : s === 'thinking' ? 2.6 : 1.5 + lv * 1.6;
+  // Таможенный сбор по стоимости (рубли) — сетка ФТС
+  function customsFee(rub){
+    if (!rub) return 0;
+    if (rub <= 200000)   return 1231;
+    if (rub <= 450000)   return 2462;
+    if (rub <= 1200000)  return 4924;
+    if (rub <= 2700000)  return 13541;
+    if (rub <= 4200000)  return 18465;
+    if (rub <= 5500000)  return 21344;
+    if (rub <= 10000000) return 49240;
+    return 73860;
+  }
 
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    ctx.clearRect(0, 0, SIZE, SIZE);
-    ctx.globalCompositeOperation = 'source-over';
-    const glow = ctx.createRadialGradient(cx, cy, R * .5, cx, cy, R * 2.2);
-    glow.addColorStop(0, rgba(cur[0], .34 + lv * .3)); glow.addColorStop(1, rgba(cur[0], 0));
-    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(cx, cy, R * 2.2, 0, 6.2832); ctx.fill();
+  function calculate(){
+    const v = getValues();
+    const invoiceWithTD = v.invoice * (1 + v.td / 100);           // Инвойс + ТД, ¥
+    const transferFeeY  = invoiceWithTD * (v.transferFee / 100);  // Комиссия, ¥
+    const insuranceY    = v.invoice * (v.insurance / 100);        // Страхование, ¥
+    const customsBaseY  = invoiceWithTD + v.freight;              // База ТС, ¥
+    const dutyY         = customsBaseY * (v.duty / 100);          // Пошлина, ¥
+    const vatBaseY      = customsBaseY + dutyY;                   // База НДС, ¥
+    const vatY          = vatBaseY * (v.vat / 100);               // НДС, ¥
+    const feeRub        = customsFee(customsBaseY * v.rate);      // Сбор, ₽
+    const feeY          = v.rate ? feeRub / v.rate : 0;           // Сбор, ¥
+    const customsPayY   = dutyY + vatY + feeY;                    // Таможенные платежи, ¥
+    const declarantY    = v.rate ? v.declarant / v.rate : 0;      // Декларант, ¥
+    const expensesY     = invoiceWithTD + transferFeeY + v.freight + insuranceY + customsPayY + declarantY;
+    const taxesY        = expensesY * (v.taxes / 100);            // Налоги, ¥
+    const totalY        = expensesY + v.profit + taxesY;          // Итого, ¥
+    const totalRub      = totalY * v.rate;                        // Итого, ₽
+    const overhead      = invoiceWithTD ? (totalY - invoiceWithTD) / invoiceWithTD * 100 : 0;
 
-    ctx.globalCompositeOperation = 'lighter';
-    for (let k = 0; k < 4; k++){
-      const col = cur[k], ph = t * speed * (.7 + k * .23) + k * 1.7, off = R * .17 * (1 + lv);
-      const ox = cx + Math.cos(ph * .9 + k) * off, oy = cy + Math.sin(ph * .8 + k * 2) * off;
-      const N = 72; let rmax = 0;
-      ctx.beginPath();
-      for (let i = 0; i <= N; i++){
-        const a = i / N * 6.2832;
-        const rr = R * (1 + amp * (Math.sin(3 * a + ph) + .6 * Math.sin(5 * a - ph * 1.3 + k) + .4 * Math.sin(2 * a + ph * .7))) * (.9 + k * .05);
-        rmax = Math.max(rmax, rr);
-        const x = ox + Math.cos(a) * rr, y = oy + Math.sin(a) * rr;
-        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
-      }
-      ctx.closePath();
-      const g = ctx.createRadialGradient(ox - R * .2, oy - R * .25, R * .08, ox, oy, rmax * 1.1);
-      g.addColorStop(0, rgba(col, .88)); g.addColorStop(.62, rgba(col, .46)); g.addColorStop(1, rgba(col, .04));
-      ctx.fillStyle = g; ctx.fill();
+    return { v, invoiceWithTD, transferFeeY, insuranceY, dutyY, vatY, feeY, customsPayY, declarantY, taxesY, totalY, totalRub, overhead };
+  }
+
+  function render(){
+    const box = $id('contractResults');
+    if (!box) return;
+    const r = calculate();
+    if (!r.invoiceWithTD){
+      box.innerHTML = '<div class="contract-placeholder">Введите данные слева — расчёт появится здесь автоматически</div>';
+      return;
     }
-    ctx.globalCompositeOperation = 'source-over';
-    const hl = ctx.createRadialGradient(cx - R * .38, cy - R * .42, 2, cx - R * .3, cy - R * .34, R * .75);
-    hl.addColorStop(0, 'rgba(255,255,255,.55)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = hl; ctx.beginPath(); ctx.arc(cx, cy, R * 1.05, 0, 6.2832); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, R * 1.02, 0, 6.2832); ctx.stroke();
+    const rows = [
+      ['Инвойс + ТД',                  r.invoiceWithTD, '¥', ''],
+      ['Комиссия за перевод',          r.transferFeeY,  '¥', ''],
+      ['Фрахт',                        r.v.freight,     '¥', ''],
+      ['Страхование',                  r.insuranceY,    '¥', ''],
+      ['Пошлина',                      r.dutyY,         '¥', ''],
+      ['НДС',                          r.vatY,          '¥', ''],
+      ['Таможенный сбор',              r.feeY,          '¥', ''],
+      ['Таможенные платежи (всего)',   r.customsPayY,   '¥', 'accent'],
+      ['Декларант',                    r.declarantY,    '¥', ''],
+      ['Прибыль',                      r.v.profit,      '¥', ''],
+      ['Налоги',                       r.taxesY,        '¥', '']
+    ];
+    let html = '<div class="contract-table">';
+    rows.forEach(function(row){
+      html += '<div class="contract-row ' + row[3] + '"><span>' + row[0] + '</span><b>' + fmt(row[1]) + ' ' + row[2] + '</b></div>';
+    });
+    html += '<div class="contract-row contract-row-total"><span>Итого</span><b>' + fmt(r.totalY) + ' ¥</b></div>';
+    html += '<div class="contract-row contract-row-total-rub"><span>Итого, ₽</span><b>' + fmt(r.totalRub) + ' ₽</b></div>';
+    html += '<div class="contract-row contract-row-overhead"><span>Накладные расходы</span><b>' + fmt(r.overhead) + ' %</b></div>';
+    html += '</div>';
+    box.innerHTML = html;
   }
 
-  async function startMic(){
-    if (mic || localStorage.getItem('iomastavka_orb_mic') === 'off') return !!mic;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
-      const AC = window.AudioContext || window.webkitAudioContext;
-      const ac = new AC(), src = ac.createMediaStreamSource(stream), an = ac.createAnalyser();
-      an.fftSize = 512; an.smoothingTimeConstant = .55; src.connect(an);
-      mic = { stream: stream, ac: ac, an: an, buf: new Uint8Array(an.fftSize), raf: 0 };
-      (function poll(){
-        if (!mic) return;
-        mic.an.getByteTimeDomainData(mic.buf);
-        let sum = 0; for (let i = 0; i < mic.buf.length; i++){ const x = (mic.buf[i] - 128) / 128; sum += x * x; }
-        st.target = Math.min(1, Math.sqrt(sum / mic.buf.length) * 6);
-        mic.raf = requestAnimationFrame(poll);
-      })();
-      return true;
-    } catch (e) { return false; }
-  }
-  function stopMic(){
-    if (!mic) return;
-    cancelAnimationFrame(mic.raf);
-    try { mic.stream.getTracks().forEach(t => t.stop()); } catch (e) {}
-    try { mic.ac.close(); } catch (e) {}
-    mic = null; st.target = 0;
+  function init(){
+    const ids = ['cfInvoice','cfTD','cfDuty','cfFreight','cfDeclarant','cfInsurance','cfVAT','cfProfit','cfRate','cfTransferFee','cfTaxes'];
+    ids.forEach(function(id){ const el = $id(id); if (el) el.addEventListener('input', render); });
+    const $c = $id('contractCalc'); if ($c) $c.addEventListener('click', render);
+    const $r = $id('contractReset');
+    if ($r) $r.addEventListener('click', function(){
+      ids.forEach(function(id){ const el = $id(id); if (el) el.value = ''; });
+      if ($id('cfVAT')) $id('cfVAT').value = 22;
+      if ($id('cfRate')) $id('cfRate').value = 12.567;
+      if ($id('cfTransferFee')) $id('cfTransferFee').value = 3;
+      if ($id('cfTaxes')) $id('cfTaxes').value = 2.2;
+      if ($id('cfInsurance')) $id('cfInsurance').value = 0.15;
+      render();
+    });
+    // Дефолты при первой загрузке
+    if ($id('cfVAT') && !$id('cfVAT').value) $id('cfVAT').value = 22;
+    if ($id('cfRate') && !$id('cfRate').value) $id('cfRate').value = 12.567;
+    if ($id('cfTransferFee') && !$id('cfTransferFee').value) $id('cfTransferFee').value = 3;
+    if ($id('cfTaxes') && !$id('cfTaxes').value) $id('cfTaxes').value = 2.2;
+    if ($id('cfInsurance') && !$id('cfInsurance').value) $id('cfInsurance').value = 0.15;
+    render();
   }
 
-  window.VoiceOrb = {
-    set: s => { if (PAL[s]) st.state = s; const cap = document.getElementById('voiceOrbCaption'); if (cap && window.__voiceCaptions && window.__voiceCaptions[s]) cap.textContent = window.__voiceCaptions[s](); },
-    pulse: v => { st.pulse = Math.max(st.pulse, v || .6); },
-    startMic: startMic, stopMic: stopMic, state: st
-  };
-  if (!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches) raf = requestAnimationFrame(frame);
-  else draw();
-
-  // caption + exit button live inside the orb stage
-  const L = {
-    ru: { idle: 'Нажмите на шар и говорите', listening: 'Слушаю…', thinking: 'Думаю…', speaking: 'Отвечаю…', exit: 'Завершить голосовой режим' },
-    en: { idle: 'Tap the orb and speak', listening: 'Listening…', thinking: 'Thinking…', speaking: 'Speaking…', exit: 'End voice mode' },
-    zh: { idle: '点击球体并说话', listening: '正在聆听…', thinking: '思考中…', speaking: '回答中…', exit: '结束语音模式' },
-    tr: { idle: 'Küreye dokunun ve konuşun', listening: 'Dinliyorum…', thinking: 'Düşünüyorum…', speaking: 'Cevaplıyorum…', exit: 'Sesli modu bitir' }
-  };
-  const T = () => L[lang] || L.ru;
-  window.__voiceCaptions = { idle: () => T().idle, listening: () => T().listening, thinking: () => T().thinking, speaking: () => T().speaking };
-  const cap = document.createElement('div'); cap.id = 'voiceOrbCaption'; cap.className = 'voice-orb-caption'; cap.setAttribute('aria-live', 'polite');
-  const exit = document.createElement('button'); exit.type = 'button'; exit.className = 'voice-exit';
-  stage.appendChild(cap); stage.appendChild(exit);
-  const paint = () => { exit.textContent = T().exit; cap.textContent = T()[st.state] || ''; };
-  paint(); document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.lang')) setTimeout(paint, 0); });
-
-  window.voiceSessionStart = function(){
-    window.__voiceSession = true; voiceAutoSpeak = true;
-    $('#assistantView')?.classList.add('voice-active', 'voice-session');
-    document.querySelector('.assistant-shell')?.classList.add('voice-active', 'voice-session');
-  };
-  window.voiceSessionEnd = function(){
-    window.__voiceSession = false; voiceAutoSpeak = false;
-    try { window.__iomaStopVoice && window.__iomaStopVoice(); } catch (e) {}
-    try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
-    stopMic(); st.state = 'idle'; paint();
-    $('#assistantView')?.classList.remove('voice-active', 'voice-session');
-    document.querySelector('.assistant-shell')?.classList.remove('voice-active', 'voice-session');
-    document.body.classList.remove('voice-active');
-    $('#voiceButton')?.classList.remove('listening');
-  };
-  exit.addEventListener('click', () => window.voiceSessionEnd());
-  // tap the orb = talk / stop talking (captures before the legacy handler)
-  orb.addEventListener('click', e => {
-    e.preventDefault(); e.stopImmediatePropagation();
-    try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (x) {}
-    $('#voiceButton')?.click();
-  }, true);
-  orb.style.cursor = 'pointer';
-  // mic button starts a session (and keeps it open for the whole conversation)
-  $('#voiceButton')?.addEventListener('click', () => { if (!window.__voiceSession) window.voiceSessionStart(); }, true);
-  // leaving the assistant window ends the session
-  new MutationObserver(() => { if (!$('#assistantView')?.classList.contains('open') && window.__voiceSession) window.voiceSessionEnd(); }).observe($('#assistantView'), { attributes: true, attributeFilter: ['class'] });
-})();
-
-// ========== Вставка КП из буфера обмена ==========
-(function(){
-  const btn = document.getElementById('pasteRateBtn');
-  const status = document.getElementById('rateUploadStatus');
-  if (!btn) return;
-  btn.addEventListener('click', async function(){
-    try {
-      const text = await navigator.clipboard.readText();
-      if (!text || text.length < 20){
-        if (status){ status.textContent = 'Буфер обмена пуст или текст слишком короткий'; status.classList.add('is-error'); }
-        return;
-      }
-      if (status){ status.textContent = 'Разбираю КП через AI…'; status.classList.remove('is-error','is-ok'); }
-      // Отправляем в /api/rates/import как текст
-      const r = await fetch('/api/rates/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text })
-      });
-      const d = await r.json();
-      if (r.ok && d.ok){
-        if (status){ status.textContent = 'Готово! Добавлено ставок: ' + (d.added||0); status.classList.add('is-ok'); }
-        toast('Ставки из буфера добавлены: ' + (d.added||0), 'success');
-        try { await loadRates(); } catch(_) {}
-      } else {
-        throw new Error(d.error || 'Не удалось разобрать КП');
-      }
-    } catch(e){
-      if (status){ status.textContent = 'Ошибка: ' + (e.message||e); status.classList.add('is-error'); }
-      toast('Не удалось обработать КП: ' + (e.message||e), 'error', 5000);
-    }
-  });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
