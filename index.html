@@ -18,7 +18,7 @@
     
 <div class="topbar-left"><nav class="top-nav" id="topNav" aria-label="Быстрые действия"><button id="menuButton" class="top-nav-btn" type="button" aria-label="Карта дня" title="Карта дня" data-i18n-aria="navTarot" data-i18n-title="navTarot"><svg class="top-nav-svg" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg><span data-i18n="navTarot">Карта</span></button><button id="themeToggleButton" class="top-nav-btn" type="button" aria-label="Тема" title="Тема" data-i18n-aria="navTheme" data-i18n-title="navTheme"><svg class="top-nav-svg" viewBox="0 0 24 24"><g class="icon-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g><path class="icon-moon" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span data-i18n="navTheme">Тема</span></button><button id="agentImportButton" class="top-nav-btn" type="button" aria-label="Обновить ставки" title="Обновить ставки" data-i18n-aria="navRates" data-i18n-title="navRates"><svg class="top-nav-svg" viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span data-i18n="navRates">Ставки</span></button><button id="customsButton" class="top-nav-btn" type="button" aria-label="Проверка ТН ВЭД" title="Проверка ТН ВЭД" data-i18n-aria="navCustoms" data-i18n-title="navCustoms"><svg class="top-nav-svg" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5z"/><circle cx="12" cy="10" r="2.5"/><path d="M7 19c1-2.5 3-3.5 5-3.5s4 1 5 3.5"/></svg><span data-i18n="navCustoms">Таможня</span></button></nav></div>
   <div class="brand" aria-label="iomastavka"><span>i</span><span>o</span><span>m</span><span>a</span><span>s</span><span>t</span><span>a</span><span>v</span><span>k</span><span>a</span></div>
-  <div class="top-actions"><span class="live-pill"><i></i> LIVE</span><button class="lang active" data-lang="ru">🇷🇺</button><button class="lang" data-lang="en">🇬🇧</button><button class="lang" data-lang="zh">🇨🇳</button><button class="lang" data-lang="tr">🇹🇷</button><button id="logoutButton" class="logout" data-i18n="logout">Выйти</button></div>
+  <div class="top-actions"><span class="live-pill"><i></i> LIVE</span><button class="lang active" data-lang="ru">🇷🇺</button><button class="lang" data-lang="en">🇬🇧</button><button class="lang" data-lang="zh">🇨🇳</button><button class="lang" data-lang="tr">🇹🇷</button></div>
 </header>
 <main class="app-shell">
 <section id="homeView" class="home-view">
@@ -28,31 +28,34 @@
     <button class="service-card" data-open-view="assistant"><span class="service-icon icon-ai"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span><span class="service-text"><b data-i18n="tileAI">AI-ассистент</b><small data-i18n="tileAISub">Текстом или голосом</small></span><span class="service-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
     <button class="service-card" data-open-view="forwarders"><span class="service-icon icon-box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></span><span class="service-text"><b data-i18n="tileAgents">Экспедиторы</b><small data-i18n="tileAgentsSub">Контакты и направления перевозок</small></span><span class="service-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
     <button class="service-card" data-open-view="news"><span class="service-icon icon-news"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="13" height="16" rx="2"/><path d="M17 9h2a1 1 0 0 1 1 1v8a2 2 0 0 1-2 2"/><path d="M8 8h5M8 12h5M8 16h3"/></svg></span><span class="service-text"><b data-i18n="tileNews">Новости ВЭД</b><small data-i18n="tileNewsSub">Китай · логистика · таможня</small></span><span class="service-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
+    <button class="service-card" data-open-view="request"><span class="service-icon icon-request"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg></span><span class="service-text"><b>Оставить заявку</b><small>Свяжемся и рассчитаем доставку</small></span><span class="service-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
   </div>
   <div class="home-status"><div><span class="status-dot"></span><span id="homeWeatherText">Погода обновляется</span></div><div id="homeRouteStatus">Расстояние появится после выбора двух городов</div><div class="home-currency"><span class="home-currency-date" id="homeCurrencyDate">19.09.2026</span><span data-i18n="currencyCny">CNY</span><b id="homeCny">12.535</b><span data-i18n="currencyUsd">USD</span><b id="homeUsd">84.336</b><span data-i18n="currencyEur">EUR</span><b id="homeEur">97.763</b></div></div>
 </section>
 
 <section id="calculatorView" class="view-layer" aria-hidden="true"><section class="card calculator-card" id="calculator"><button class="close-button view-close" data-close-view="calculator" data-i18n-aria="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-<div class="calc-layout"><div class="calc-inputs"><h1 data-i18n="title">Расчёт маршрута</h1>
+<h1 data-i18n="title">Расчёт маршрута</h1>
 <div class="route"><div class="field autocomplete"><label data-i18n="from">Откуда</label><input id="fromCity" autocomplete="off" placeholder="Город в Китае"><div id="fromSuggestions" class="suggestions"></div></div><div class="route-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><div class="field autocomplete"><label data-i18n="to">Куда</label><input id="toCity" autocomplete="off" placeholder="Город в России"><div id="toSuggestions" class="suggestions"></div></div></div>
 <div class="section-title"><span data-i18n="cargo">ГРУЗ</span></div>
 <div class="grid three"><div class="field"><label data-i18n="weight">Вес, кг</label><input id="weight" type="number" min="0" placeholder="0"></div><div class="field"><label data-i18n="pieces">Количество мест</label><input id="pieces" type="number" min="1" placeholder="1"></div><div class="field"><label data-i18n="distance">Расстояние, км</label><input id="distance" type="number" min="0" placeholder="0"></div></div><div class="auto-calc-strip"><div><span data-i18n="autoVolumeLabel">Объём</span><b id="autoVolume">0 m³</b></div><div><span data-i18n="autoVolumetricLabel">Объёмный вес</span><b id="autoVolumetricWeight">0 kg</b></div><div><span data-i18n="factorLabel">Фактор</span><b id="autoFactor">167 kg/m³</b></div></div>
 <div class="dimensions"><div id="containerWarning" class="container-warning hidden"></div><div class="dimensions-head"><span id="dimensionsTitle" data-i18n="dimensions">ГАБАРИТЫ ОДНОГО МЕСТА, мм</span><div class="unit-switch" aria-label="Единицы измерения"><button type="button" class="unit-choice active" data-unit="mm">мм</button><button type="button" class="unit-choice" data-unit="cm">см</button><button type="button" class="unit-choice" data-unit="m">м</button></div></div><div class="grid three"><div class="field"><label data-i18n="length">Длина <span class="dimension-unit-label">мм</span></label><input id="length" type="number" min="0" placeholder="0"></div><div class="field"><label data-i18n="width">Ширина <span class="dimension-unit-label">мм</span></label><input id="width" type="number" min="0" placeholder="0"></div><div class="field"><label data-i18n="height">Высота <span class="dimension-unit-label">мм</span></label><input id="height" type="number" min="0" placeholder="0"></div></div></div>
 <div class="grid four centered-three"><div class="field hover-select"><label data-i18n="forwarder">Экспедитор</label><button class="fake-select" id="forwarderBtn"><span data-i18n="chooseForwarder">Выберите экспедитора</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="hover-menu" id="forwarderMenu"></div></div><div class="field hover-select"><label data-i18n="transport">Вид транспорта</label><button class="fake-select" id="transportBtn"><span data-i18n="chooseTransport">Выберите транспорт</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="hover-menu" id="transportMenu"></div></div><div class="field hover-select"><label data-i18n="incoterms">Условия поставки</label><button class="fake-select" id="incotermBtn"><span>EXW</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="hover-menu" id="incotermMenu"></div></div></div>
+<div id="recommendation" class="recommendation hidden"></div>
+<div id="routeAdvice" class="route-advice hidden"></div>
 <div class="rate-upload-area">
     <input type="file" id="rateFileUpload" accept=".pdf,.xlsx,.xls,.docx,.txt,.csv,.json,.png,.jpg,.jpeg" hidden>
     <button type="button" class="attach-button" onclick="document.getElementById('rateFileUpload').click()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 12.5 14.9 6.1a3.3 3.3 0 0 1 4.7 4.7l-8.9 8.9a5 5 0 0 1-7.1-7.1l9.2-9.2a2.9 2.9 0 0 1 4.1 4.1l-8.8 8.8a1.4 1.4 0 0 1-2-2l7.9-7.9"/></svg>Загрузить КП / ставку</button>
-    <button type="button" id="pasteRateBtn" class="attach-button" title="Вставить текст КП из буфера обмена"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 2h6v4H9z"/><path d="M9 12h6M9 16h4"/></svg>Вставить КП из буфера</button>
     <span id="rateUploadStatus" role="status" aria-live="polite"></span>
 </div>
-<button id="calculate" class="calculate" data-i18n="calculate">Рассчитать</button></div><div class="calc-output"><div id="routeAdvice" class="route-advice hidden"></div><div id="recommendation" class="recommendation hidden"></div><div id="result" class="result hidden"></div></div></div></section></section>
+<button id="calculate" class="calculate" data-i18n="calculate">Рассчитать</button><div id="result" class="result hidden"></div>
+</section></section>
 
 <section id="forwardersView" class="view-layer" aria-hidden="true"><div class="directory-panel"><button class="close-button view-close" data-close-view="forwarders" data-i18n-aria="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="directory-head"><div><span class="eyebrow" data-i18n="directoryEyebrow">СПРАВОЧНИК</span><h2 data-i18n="agents">Экспедиторы</h2><p data-i18n="directorySub">Поставщики и контакты по направлениям.</p></div><div class="directory-filters" id="directoryFilters"></div></div><div class="directory-table-wrap"><table class="directory-table"><thead><tr><th data-i18n="company">Компания</th><th data-i18n="contact">Контакт</th><th data-i18n="phone">Телефон</th><th data-i18n="email">Email</th><th data-i18n="website">Сайт</th><th data-i18n="directions">Направления</th><th data-i18n="note">Примечание</th></tr></thead><tbody id="directoryGrid"></tbody></table></div></div></section>
 
 <section id="assistantView" class="view-layer" aria-hidden="true"><div class="assistant-shell"><button class="close-button" data-close-view="assistant" data-i18n-aria="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="assistant-head"><div><span class="eyebrow" data-i18n="intelligence">ИНТЕЛЛЕКТ</span><h2 data-i18n="assistant">AI-ассистент</h2><small data-i18n="assistantSub2">Логистика, расчёты и ВЭД — голосом или текстом.</small></div></div><div class="voice-orb-stage"><div class="voice-orb" id="voiceOrb" aria-hidden="true"><span></span><span></span><span></span></div></div><div id="chatMessages" class="chat-messages"></div><div class="voice-state" id="voiceState">Готов к разговору</div><div class="chat-compose"><div class="attachment-row"><label class="attach-button icon-only" for="aiFile" aria-label="Прикрепить файл" title="Прикрепить файл"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 12.5 14.9 6.1a3.3 3.3 0 0 1 4.7 4.7l-8.9 8.9a5 5 0 0 1-7.1-7.1l9.2-9.2a2.9 2.9 0 0 1 4.1 4.1l-8.8 8.8a1.4 1.4 0 0 1-2-2l7.9-7.9"/></svg></label><input id="aiFile" type="file" accept=".pdf,.txt,.csv,.xlsx,.xls,.doc,.docx,.rtf,.json,.png,.jpg,.jpeg,.webp" multiple><span id="fileNames" class="file-names" data-i18n="fileHint">Файл можно добавить вместе с сообщением</span></div><textarea id="assistantInput" placeholder="Напишите сообщение или отправьте КП со ставкой…"></textarea><div class="compose-actions"><button id="voiceButton" class="voice-button icon-only" type="button" data-i18n-aria="voice" aria-label="Микрофон" title="Микрофон"><svg class="mic-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="8" height="12" rx="4"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg></button><button id="sendAI" class="assistant-save" data-i18n="send">Отправить</button></div></div><div id="assistantStatus"></div></div></section>
 
 <section id="newsView" class="view-layer" aria-hidden="true"><div class="directory-panel news-shell"><button class="close-button view-close" data-close-view="news" data-i18n-aria="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="directory-head"><div><span class="eyebrow" data-i18n="intelligenceFeed">ИНФОРМАЦИОННАЯ ЛЕНТА</span><h2 data-i18n="news">Новости ВЭД</h2><p data-i18n="newsSub2">Китай · логистика · таможня</p></div></div><div id="newsList" class="news-list"></div></div></section>
-<section id="tarotView" class="view-layer" aria-hidden="true"><div id="tarotShell" class="tarot-shell"><canvas id="tarotDustCanvas" class="tarot-dust-canvas" aria-hidden="true"></canvas><button class="close-button view-close" data-close-view="tarotView" data-i18n-aria="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="tarot-card"><div class="tarot-particles" aria-hidden="true"></div><div class="tarot-stars"><span class="tarot-diamond">✦</span></div><div class="tarot-label">IOMASTAVKA · TODAY</div><div id="tarotSymbol" class="tarot-symbol">♌</div><h2 id="tarotTitle">Сегодня</h2><p id="tarotText"></p><div class="tarot-meta">21.08.2004 · 16:20 · Нижний Новгород</div></div></div></section>
+<section id="tarotView" class="view-layer" aria-hidden="true"><div id="tarotShell" class="tarot-shell"><canvas id="tarotDustCanvas" class="tarot-dust-canvas" aria-hidden="true"></canvas><button class="close-button view-close" data-close-view="tarotView" data-i18n-aria="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="tarot-card"><div class="tarot-particles" aria-hidden="true"></div><div class="tarot-seal" aria-hidden="true"><svg class="tarot-seal-ring" viewBox="0 0 200 200"><circle cx="100" cy="100" r="92"/><circle cx="100" cy="100" r="78"/></svg><svg class="tarot-seal-rays" viewBox="0 0 200 200"><g><line x1="100" y1="14" x2="100" y2="30" transform="rotate(0 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(15 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(30 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(45 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(60 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(75 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(90 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(105 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(120 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(135 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(150 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(165 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(180 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(195 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(210 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(225 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(240 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(255 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(270 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(285 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(300 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(315 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(330 100 100)"/><line x1="100" y1="14" x2="100" y2="30" transform="rotate(345 100 100)"/></g></svg><span id="tarotSymbol" class="tarot-symbol">0</span><span id="tarotRoman" class="tarot-roman"></span></div><div class="tarot-label" data-i18n="tarotLabel">КАРТА ДНЯ</div><h2 id="tarotTitle">Сегодня</h2><div id="tarotKeyword" class="tarot-keyword"></div><p id="tarotText"></p><div id="tarotMeta" class="tarot-meta"></div></div></div></section>
 <section id="customsView" class="view-layer" aria-hidden="true"><div class="customs-shell"><button class="close-button view-close" data-close-view="customsView" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="customs-head"><span class="eyebrow" data-i18n="customsEyebrow">ТАМОЖЕННЫЙ КОНТРОЛЬ</span><h2 data-i18n="customsTitle">Проверка ТН ВЭД</h2><p data-i18n="customsHelp">Укажите код ТН ВЭД ЕАЭС — я автоматически проверю пошлину, НДС, сборы, маркировку и другие меры.</p></div><div class="customs-form"><input id="customsCode" inputmode="numeric" maxlength="10" placeholder="Например, 8467890000" data-i18n-placeholder="customsPlaceholder"><button id="customsCheck" class="calculate" type="button" data-i18n="customsCheck">Проверить код</button></div><div id="customsStatus" class="customs-status"></div><div id="customsResult" class="customs-result hidden"></div></div></section>
 <section id="articleView" class="view-layer" aria-hidden="true"><article class="article-shell"><button class="close-button view-close" data-close-view="article" data-i18n-aria="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div id="articleContent"></div></article></section>
 </main>
@@ -67,5 +70,118 @@
   } catch(e){}
 </script>
 <script src="/app.js?v=20260921-v300" defer></script>
+
+
+<section id="requestView" class="view-layer" aria-hidden="true"><div class="request-shell"><button class="close-button view-close" data-close-view="request" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="request-head"><span class="eyebrow">ЗАЯВКА</span><h2>Оставить заявку</h2><p>Опишите груз и маршрут — свяжемся и рассчитаем доставку.</p></div><form class="request-form" id="requestForm"><label>Имя<input type="text" id="requestName" placeholder="Как к вам обращаться" required maxlength="120"></label><label>Контакт
+  <div class="phone-field" id="phoneField">
+    <button type="button" class="phone-country-btn" id="phoneCountryBtn" aria-haspopup="listbox" aria-expanded="false">
+      <span class="phone-flag" id="phoneFlag">🇷🇺</span>
+      <span class="phone-code" id="phoneCode">+7</span>
+      <svg class="phone-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <input type="tel" id="requestPhone" placeholder="999 123-45-67" required maxlength="20" inputmode="tel" autocomplete="tel-national">
+    <div class="phone-dropdown hidden" id="phoneDropdown">
+      <div class="phone-search-wrap">
+        <svg class="phone-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" id="phoneSearch" placeholder="Страна или код (+375, Belarus, 白俄罗斯)" autocomplete="off">
+      </div>
+      <div class="phone-list" id="phoneList" role="listbox"></div>
+    </div>
+  </div>
+</label><div style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true"><label>Ваш сайт<input type="text" name="website" id="requestWebsite" tabindex="-1" autocomplete="off"></label></div><input type="hidden" name="_t" id="requestTime" value=""><div class="request-row-2">
+  <label>Откуда<input type="text" id="requestFrom" placeholder="Город, Китай" maxlength="80"></label>
+  <label>Куда<input type="text" id="requestTo" placeholder="Город, Россия" maxlength="80"></label>
+</div>
+
+<label>Условия поставки
+  <div class="incoterm-picker" id="incotermPicker">
+    <button type="button" class="incoterm-btn" id="incotermBtn">
+      <span class="incoterm-value" id="incotermValue">EXW</span>
+      <span class="incoterm-hint" id="incotermHint">Самовывоз со склада поставщика</span>
+      <svg class="incoterm-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div class="incoterm-dropdown hidden" id="incotermDropdown">
+      <button type="button" class="incoterm-item" data-code="EXW" data-hint="Самовывоз со склада поставщика">
+        <b>EXW</b><small>Самовывоз со склада поставщика</small>
+      </button>
+      <button type="button" class="incoterm-item" data-code="FCA" data-hint="Передача перевозчику">
+        <b>FCA</b><small>Передача перевозчику</small>
+      </button>
+      <button type="button" class="incoterm-item" data-code="FOB" data-hint="Погрузка на судно в порту">
+        <b>FOB</b><small>Погрузка на судно в порту</small>
+      </button>
+      <button type="button" class="incoterm-item" data-code="CIF" data-hint="Стоимость, страхование и фрахт">
+        <b>CIF</b><small>Стоимость, страхование и фрахт</small>
+      </button>
+      <button type="button" class="incoterm-item" data-code="CPT" data-hint="Перевозка оплачена до">
+        <b>CPT</b><small>Перевозка оплачена до</small>
+      </button>
+      <button type="button" class="incoterm-item" data-code="CIP" data-hint="Перевозка и страхование оплачены">
+        <b>CIP</b><small>Перевозка и страхование оплачены</small>
+      </button>
+      <button type="button" class="incoterm-item" data-code="DAP" data-hint="Доставка в место назначения">
+        <b>DAP</b><small>Доставка в место назначения</small>
+      </button>
+      <button type="button" class="incoterm-item" data-code="DPU" data-hint="Доставка и разгрузка">
+        <b>DPU</b><small>Доставка и разгрузка</small>
+      </button>
+      <button type="button" class="incoterm-item" data-code="DDP" data-hint="Доставка с оплатой пошлин">
+        <b>DDP</b><small>Доставка с оплатой пошлин</small>
+      </button>
+    </div>
+  </div>
+</label>
+
+<label>Вес
+  <div class="input-with-suffix">
+    <input type="number" id="requestWeight" placeholder="1000" min="0" step="0.1" inputmode="decimal">
+    <span class="suffix">кг</span>
+  </div>
+</label>
+
+<label>Габариты (Д × Ш × В)
+  <div class="request-row-dims">
+    <div class="input-with-suffix">
+      <input type="number" id="requestDimL" placeholder="100" min="0" step="0.1" inputmode="decimal">
+      <span class="suffix" id="dimSuffixL">см</span>
+    </div>
+    <span class="dim-sep">×</span>
+    <div class="input-with-suffix">
+      <input type="number" id="requestDimW" placeholder="80" min="0" step="0.1" inputmode="decimal">
+      <span class="suffix" id="dimSuffixW">см</span>
+    </div>
+    <span class="dim-sep">×</span>
+    <div class="input-with-suffix">
+      <input type="number" id="requestDimH" placeholder="60" min="0" step="0.1" inputmode="decimal">
+      <span class="suffix" id="dimSuffixH">см</span>
+    </div>
+  </div>
+  <div class="unit-switch" id="dimUnitSwitch">
+    <button type="button" class="unit-choice" data-unit="mm">мм</button>
+    <button type="button" class="unit-choice active" data-unit="cm">см</button>
+    <button type="button" class="unit-choice" data-unit="m">м</button>
+  </div>
+</label>
+
+<label>Желаемое транзитное время
+  <div class="transit-picker" id="transitPicker">
+    <button type="button" class="incoterm-btn" id="transitBtn">
+      <span class="incoterm-value" id="transitValue">не важно</span>
+      <span class="incoterm-hint" id="transitHint">Подберём оптимальный вариант</span>
+      <svg class="incoterm-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div class="incoterm-dropdown hidden" id="transitDropdown">
+      <button type="button" class="incoterm-item" data-code="express" data-hint="Авиа / экспресс"><b>3–7 дней</b><small>Авиа / экспресс</small></button>
+      <button type="button" class="incoterm-item" data-code="medium" data-hint="Авто / ускоренно"><b>10–20 дней</b><small>Авто / ускоренно</small></button>
+      <button type="button" class="incoterm-item" data-code="rail" data-hint="Ж/Д контейнер"><b>20–35 дней</b><small>Ж/Д контейнер</small></button>
+      <button type="button" class="incoterm-item" data-code="sea" data-hint="Море / мультимодал"><b>35–60 дней</b><small>Море / мультимодал</small></button>
+      <button type="button" class="incoterm-item" data-code="" data-hint="Подберём оптимальный вариант"><b>Не важно</b><small>Подберём оптимальный вариант</small></button>
+    </div>
+  </div>
+</label>
+
+<label>Комментарий <span class="optional">(необязательно)</span>
+  <textarea id="requestBody" rows="3" placeholder="Дополнительные детали, если есть" maxlength="2000"></textarea>
+</label><button type="submit" class="calculate">Отправить</button><div id="requestStatus" class="request-status"></div></form></div></section>
 
 </body></html>

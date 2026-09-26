@@ -1,8 +1,21 @@
 node_modules/
 .env
 .env.*
+!.env.example
+
 data/
+backup/
+logs/
 *.log
+
+# Временные скрипты
+*.py
+*.bak
+*.backup
+*.old
+
+# Служебные
 .DS_Store
-.envls
-.env
+make-hash.js
+test_telegram.js
+clean_css.py

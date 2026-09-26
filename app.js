@@ -79,7 +79,7 @@ function friendlyError(e){
 // HARDENED UI BOOT: these handlers are intentionally independent from the rest of the app.
 // If an optional module fails later, the core windows, close buttons and theme controls still work.
 (() => {
-  const viewMap = {calculator:'calculatorView',assistant:'assistantView',forwarders:'forwardersView',news:'newsView',article:'articleView',tarotView:'tarotView',customsView:'customsView'};
+  const viewMap = {calculator:'calculatorView',assistant:'assistantView',forwarders:'forwardersView',news:'newsView',article:'articleView',tarotView:'tarotView',customsView:'customsView',request:'requestView'};
   const open = (name) => {
     const id=viewMap[name]; if(!id) return false;
     const target=document.getElementById(id); if(!target) return false;
@@ -102,7 +102,9 @@ function friendlyError(e){
     const trigger=e.target.closest?.('[data-open-view]');
     if(trigger){ const name=trigger.getAttribute('data-open-view'); if(open(name)){e.preventDefault();e.stopPropagation();return;} }
     const closeBtn=e.target.closest?.('[data-close-view],.view-close');
-    if(closeBtn){ close(); e.preventDefault(); e.stopPropagation(); return; }
+    const tarotOpen = document.getElementById('tarotView')?.classList.contains('open');
+    if(closeBtn){ if(tarotOpen&&typeof closeTarot==='function')closeTarot(); else close(); e.preventDefault(); e.stopPropagation(); return; }
+    if(e.target.classList?.contains('tarot-shell')){ if(typeof closeTarot==='function')closeTarot(); else close(); return; }
     if(e.target.classList?.contains('view-layer') && e.target.classList.contains('open')){close();}
   }, true);
   window.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
@@ -115,10 +117,10 @@ function friendlyError(e){
 })();
 
 const I18N = {
-  ru:{title:'Расчёт ставки',navTarot:'Карта дня',navTheme:'Тема',navRates:'Ставки',navCustoms:'Таможня',from:'Откуда',to:'Куда',cargo:'ГРУЗ',weight:'Вес, кг',pieces:'Количество мест',distance:'Расстояние, км',auto:'Автоматически',dimensions:'ГАБАРИТЫ ОДНОГО МЕСТА',volumeAll:'Объём — по всем местам',length:'Длина',width:'Ширина',height:'Высота',forwarder:'Экспедитор',transport:'Вид транспорта',incoterms:'Условия поставки',dimWeight:'Объёмный вес',chooseForwarder:'Выберите экспедитора',chooseTransport:'Выберите транспорт',selected:'ЭКСПЕДИТОР',none:'Не выбран',calculate:'Рассчитать',agents:'Экспедиторы',assistant:'ИИ-ассистент',assistantSub:'Спросите что угодно по логистике',assistantHelp:'Можно писать обычным языком: маршрут, ставка, Incoterms, таможня, расчёт веса или новая ставка.',send:'Отправить',news:'Новости',newsSub:'Логистика · Китай · Таможня',logout:'Выйти',thinking:'Думаю над вашим ответом…',aiOff:'ИИ не подключён. Добавьте OPENAI_API_KEY в Render.',newsLoading:'Загружаю новости…',noNews:'Новости пока недоступны.',weatherError:'Погода временно недоступна.',todayDate:'15.09.2026 г.',home:'Главная',heroEyebrow:'ЛОГИСТИКА · КИТАЙ → РОССИЯ',heroText:'Точный расчёт. Умный помощник.\nВсё необходимое для работы с грузом — в одном месте.',tileRates:'Расчёт ставок',tileRatesSub:'Маршрут, ставка и транспорт',tileAI:'ИИ-ассистент',tileAISub:'Текстом или голосом',tileAgents:'Экспедиторы',tileAgentsSub:'Контакты и направления перевозок',tileNews:'Новости ВЭД',tileNewsSub:'Китай · логистика · таможня',directoryEyebrow:'СПРАВОЧНИК',directorySub:'Поставщики и контакты по направлениям.',intelligence:'ИНТЕЛЛЕКТ',assistantSub2:'Логистика, расчёты и ВЭД — голосом или текстом.',attach:'Файл',fileHint:'Файл можно добавить вместе с сообщением',voice:'Микрофон',intelligenceFeed:'ИНФОРМАЦИОННАЯ ЛЕНТА',newsSub2:'Китай · логистика · таможня',chargeWeight:'Расчётный вес',company:'Компания',contact:'Контакт',phone:'Телефон',email:'Email',website:'Сайт',directions:'Направления',note:'Примечание',all:'Все',close:'Закрыть',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Автоматически по транспорту',transportRail:'ЖД',transportRoad:'Авто',transportAir:'Авиа',transportSea:'Море',transportMulti:'Море + ЖД',menu:'Меню',ready:'Готов к разговору',listen:'Слушаю…',transcribe:'Расшифровываю…',recognized:'Речь распознана',fail:'Не удалось распознать голос',mic:'Нет доступа к микрофону',unavailable:'Голос недоступен',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'ЦБ РФ',articleLoading:'Готовлю статью…',articleError:'Не удалось подготовить статью.',articleListen:'Аудиоподкаст',articlePlay:'Слушать',articlePause:'Пауза',articleSource:'Материал подготовлен на основе новости',articleBack:'К новостям',autoVolumeLabel:'Объём',autoVolumetricLabel:'Объёмный вес',factorLabel:'Фактор',themeLight:'Светлая тема',themeDark:'Тёмная тема',themeToggle:'Сменить тему',customsEyebrow:'ТАМОЖЕННЫЙ КОНТРОЛЬ',customsTitle:'Проверка ТН ВЭД',customsHelp:'Укажите код ТН ВЭД ЕАЭС — я автоматически проверю пошлину, НДС, сборы, маркировку и другие меры.',customsPlaceholder:'Например, 8467890000',customsCheck:'Проверить код'},
+  ru:{title:'Расчёт ставки',tarotLabel:'Карта дня',navTarot:'Карта дня',navTheme:'Тема',navRates:'Ставки',navCustoms:'Таможня',from:'Откуда',to:'Куда',cargo:'ГРУЗ',weight:'Вес, кг',pieces:'Количество мест',distance:'Расстояние, км',auto:'Автоматически',dimensions:'ГАБАРИТЫ ОДНОГО МЕСТА',volumeAll:'Объём — по всем местам',length:'Длина',width:'Ширина',height:'Высота',forwarder:'Экспедитор',transport:'Вид транспорта',incoterms:'Условия поставки',dimWeight:'Объёмный вес',chooseForwarder:'Выберите экспедитора',chooseTransport:'Выберите транспорт',selected:'ЭКСПЕДИТОР',none:'Не выбран',calculate:'Рассчитать',agents:'Экспедиторы',assistant:'ИИ-ассистент',assistantSub:'Спросите что угодно по логистике',assistantHelp:'Можно писать обычным языком: маршрут, ставка, Incoterms, таможня, расчёт веса или новая ставка.',send:'Отправить',news:'Новости',newsSub:'Логистика · Китай · Таможня',logout:'Выйти',thinking:'Думаю над вашим ответом…',aiOff:'ИИ не подключён. Добавьте OPENAI_API_KEY в Render.',newsLoading:'Загружаю новости…',noNews:'Новости пока недоступны.',weatherError:'Погода временно недоступна.',todayDate:'15.09.2026 г.',home:'Главная',heroEyebrow:'ЛОГИСТИКА · КИТАЙ → РОССИЯ',heroText:'Точный расчёт. Умный помощник.\nВсё необходимое для работы с грузом — в одном месте.',tileRates:'Расчёт ставок',tileRatesSub:'Маршрут, ставка и транспорт',tileAI:'ИИ-ассистент',tileAISub:'Текстом или голосом',tileAgents:'Экспедиторы',tileAgentsSub:'Контакты и направления перевозок',tileNews:'Новости ВЭД',tileNewsSub:'Китай · логистика · таможня',directoryEyebrow:'СПРАВОЧНИК',directorySub:'Поставщики и контакты по направлениям.',intelligence:'ИНТЕЛЛЕКТ',assistantSub2:'Логистика, расчёты и ВЭД — голосом или текстом.',attach:'Файл',fileHint:'Файл можно добавить вместе с сообщением',voice:'Микрофон',intelligenceFeed:'ИНФОРМАЦИОННАЯ ЛЕНТА',newsSub2:'Китай · логистика · таможня',chargeWeight:'Расчётный вес',company:'Компания',contact:'Контакт',phone:'Телефон',email:'Email',website:'Сайт',directions:'Направления',note:'Примечание',all:'Все',close:'Закрыть',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Автоматически по транспорту',transportRail:'ЖД',transportRoad:'Авто',transportAir:'Авиа',transportSea:'Море',transportMulti:'Море + ЖД',menu:'Меню',ready:'Готов к разговору',listen:'Слушаю…',transcribe:'Расшифровываю…',recognized:'Речь распознана',fail:'Не удалось распознать голос',mic:'Нет доступа к микрофону',unavailable:'Голос недоступен',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'ЦБ РФ',articleLoading:'Готовлю статью…',articleError:'Не удалось подготовить статью.',articleListen:'Аудиоподкаст',articlePlay:'Слушать',articlePause:'Пауза',articleSource:'Материал подготовлен на основе новости',articleBack:'К новостям',autoVolumeLabel:'Объём',autoVolumetricLabel:'Объёмный вес',factorLabel:'Фактор',themeLight:'Светлая тема',themeDark:'Тёмная тема',themeToggle:'Сменить тему',customsEyebrow:'ТАМОЖЕННЫЙ КОНТРОЛЬ',customsTitle:'Проверка ТН ВЭД',customsHelp:'Укажите код ТН ВЭД ЕАЭС — я автоматически проверю пошлину, НДС, сборы, маркировку и другие меры.',customsPlaceholder:'Например, 8467890000',customsCheck:'Проверить код'},
 
-  tr:{title:'Navlun Hesaplama',navTarot:'Kart',navTheme:'Tema',navRates:'Navlun',navCustoms:'Gümrük',from:'Nereden',to:'Nereye',cargo:'KARGO',weight:'Ağırlık, kg',pieces:'Parça sayısı',distance:'Mesafe, km',auto:'Otomatik',dimensions:'TEK PARÇA ÖLÇÜLERİ',volumeAll:'Hacim — tüm parçalar',length:'Uzunluk',width:'Genişlik',height:'Yükseklik',forwarder:'Forwarder',transport:'Taşıma şekli',incoterms:'Teslim şekli',dimWeight:'Hacimsel ağırlık',chooseForwarder:'Forwarder seçin',chooseTransport:'Taşıma şeklini seçin',selected:'FORWARDER',none:'Seçilmedi',calculate:'Hesapla',agents:'Forwarderlar',assistant:'Yapay zekâ asistanı',assistantSub:'Lojistik hakkında sorun',assistantHelp:'Rota, navlun, Incoterms, gümrük, ağırlık hesabı veya yeni bir fiyatı doğal dille yazabilirsiniz.',send:'Gönder',news:'Haberler',newsSub:'Lojistik · Çin · Gümrük',logout:'Çıkış',thinking:'Yanıt hazırlanıyor…',aiOff:'Yapay zekâ bağlı değil. Render üzerinde OPENAI_API_KEY ekleyin.',newsLoading:'Haberler yükleniyor…',noNews:'Haberler şu anda kullanılamıyor.',weatherError:'Hava durumu geçici olarak kullanılamıyor.',todayDate:'15.09.2026',home:'Ana sayfa',heroEyebrow:'LOJİSTİK · ÇİN → RUSYA',heroText:'Doğru hesaplama. Akıllı asistan.\nKargo operasyonu için gereken her şey tek yerde.',tileRates:'Navlun hesaplama',tileRatesSub:'Rota, fiyat ve taşıma şekli',tileAI:'Yapay zekâ asistanı',tileAISub:'Metin veya ses',tileAgents:'Forwarderlar',tileAgentsSub:'İletişim bilgileri ve taşıma yönleri',tileNews:'Dış ticaret haberleri',tileNewsSub:'Çin · lojistik · gümrük',directoryEyebrow:'REHBER',directorySub:'Taşıma yönlerine göre tedarikçiler ve iletişim bilgileri.',intelligence:'ZEKA',assistantSub2:'Lojistik, hesaplamalar ve dış ticaret — sesli veya yazılı.',attach:'Dosya',fileHint:'Mesajınıza dosya ekleyebilirsiniz',voice:'Mikrofon',intelligenceFeed:'BİLGİ AKIŞI',newsSub2:'Çin · lojistik · gümrük',chargeWeight:'Hesaplanan ağırlık',company:'Şirket',contact:'Yetkili',phone:'Telefon',email:'E-posta',website:'Web sitesi',directions:'Yönler',note:'Not',all:'Tümü',close:'Kapat',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Taşıma şekline göre otomatik',transportRail:'Demiryolu',transportRoad:'Karayolu',transportAir:'Hava yolu',transportSea:'Deniz yolu',transportMulti:'Deniz + Demiryolu',menu:'Menü',ready:'Konuşmaya hazır',listen:'Dinliyorum…',transcribe:'Yazıya dökülüyor…',recognized:'Konuşma algılandı',fail:'Ses tanınamadı',mic:'Mikrofon erişimi yok',unavailable:'Ses kullanılamıyor',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'Rusya Merkez Bankası',articleLoading:'Makale hazırlanıyor…',articleError:'Makale hazırlanamadı.',articleListen:'Sesli podcast',articlePlay:'Dinle',articlePause:'Duraklat',articleSource:'Seçilen haber temel alınarak hazırlandı',articleBack:'Haberlere dön',autoVolumeLabel:'Hacim',autoVolumetricLabel:'Hacimsel ağırlık',factorLabel:'Faktör',themeLight:'Açık tema',themeDark:'Koyu tema',themeToggle:'Temayı değiştir',customsEyebrow:'GÜMRÜK KONTROLÜ',customsTitle:'GTİP KODU KONTROLÜ',customsHelp:'EAEU GTİP kodunu girin — gümrük vergisi, KDV, gümrük harçları, işaretleme ve diğer önlemler otomatik olarak kontrol edilir.',customsPlaceholder:'Örneğin 8467890000',customsCheck:'Kodu kontrol et'},  en:{title:'Rate calculation',navTarot:'Card',navTheme:'Theme',navRates:'Rates',navCustoms:'Customs',from:'From',to:'To',cargo:'CARGO',weight:'Weight, kg',pieces:'Pieces',distance:'Distance, km',auto:'Automatic',dimensions:'DIMENSIONS OF ONE PIECE',volumeAll:'Volume — all pieces',length:'Length',width:'Width',height:'Height',forwarder:'Forwarder',transport:'Transport',incoterms:'Incoterms',dimWeight:'Volumetric weight',chooseForwarder:'Choose forwarder',chooseTransport:'Choose transport',selected:'FORWARDER',none:'Not selected',calculate:'Calculate',agents:'Forwarders',assistant:'AI assistant',assistantSub:'Ask anything about logistics',assistantHelp:'Write naturally: route, rate, Incoterms, customs, weight calculation or a new rate.',send:'Send',news:'News',newsSub:'Logistics · China · Customs',logout:'Log out',thinking:'Thinking about your answer…',aiOff:'AI is not connected. Add OPENAI_API_KEY in Render.',newsLoading:'Loading news…',noNews:'News are temporarily unavailable.',weatherError:'Weather is temporarily unavailable.',todayDate:'15.09.2026',home:'Home',heroEyebrow:'LOGISTICS · CHINA → RUSSIA',heroText:'Precise calculation. Smart assistant.\nEverything you need for cargo work — in one place.',tileRates:'Rate calculation',tileRatesSub:'Route, rate and transport',tileAI:'AI assistant',tileAISub:'Text or voice',tileAgents:'Forwarders',tileAgentsSub:'Contacts and transport directions',tileNews:'Trade news',tileNewsSub:'China · logistics · customs',directoryEyebrow:'DIRECTORY',directorySub:'Suppliers and contacts by transport direction.',intelligence:'INTELLIGENCE',assistantSub2:'Logistics, rates and foreign trade — by voice or text.',attach:'File',fileHint:'Attach a file with your message',voice:'Microphone',intelligenceFeed:'NEWS FEED',newsSub2:'China · logistics · customs',chargeWeight:'Chargeable weight',company:'Company',contact:'Contact',phone:'Phone',email:'Email',website:'Website',directions:'Directions',note:'Note',all:'All',close:'Close',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Automatic by transport',transportRail:'Rail',transportRoad:'Road',transportAir:'Air',transportSea:'Sea',transportMulti:'Sea + Rail',menu:'Menu',ready:'Ready to talk',listen:'Listening…',transcribe:'Transcribing…',recognized:'Speech recognized',fail:'Could not recognize speech',mic:'Microphone access denied',unavailable:'Voice unavailable',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'CBR',articleLoading:'Preparing article…',articleError:'Could not prepare the article.',articleListen:'Audio podcast',articlePlay:'Listen',articlePause:'Pause',articleSource:'Prepared from the selected news item',articleBack:'Back to news',autoVolumeLabel:'Volume',autoVolumetricLabel:'Volumetric weight',factorLabel:'Factor',themeLight:'Light theme',themeDark:'Dark theme',themeToggle:'Switch theme',customsEyebrow:'CUSTOMS CONTROL',customsTitle:'HS / TN VED CHECK',customsHelp:'Enter the EAEU TN VED code — I will automatically check duty, VAT, customs fees, marking and other measures.',customsPlaceholder:'For example, 8467890000',customsCheck:'Check code'},
-  zh:{title:'运价计算',navTarot:'卡片',navTheme:'主题',navRates:'运价',navCustoms:'海关',from:'起运地',to:'目的地',cargo:'货物',weight:'重量，公斤',pieces:'件数',distance:'距离，公里',auto:'自动',dimensions:'单件尺寸',volumeAll:'体积 — 所有件',length:'长度',width:'宽度',height:'高度',forwarder:'货运代理',transport:'运输方式',incoterms:'贸易术语',dimWeight:'体积重量',chooseForwarder:'选择货运代理',chooseTransport:'选择运输方式',selected:'货运代理',none:'未选择',calculate:'计算',agents:'货运代理',assistant:'AI 助手',assistantSub:'咨询物流问题',assistantHelp:'可以直接输入路线、运价、贸易术语、清关或体积重量问题。',send:'发送',news:'新闻',newsSub:'物流 · 中国 · 海关',logout:'退出',thinking:'正在组织答案…',aiOff:'AI 尚未连接。请在 Render 添加 OPENAI_API_KEY。',newsLoading:'正在加载新闻…',noNews:'暂时没有新闻。',weatherError:'天气暂时不可用。',todayDate:'15.09.2026',home:'首页',heroEyebrow:'物流 · 中国 → 俄罗斯',heroText:'精准报价。智能助手。\n货运工作所需的一切，都在这里。',tileRates:'运价计算',tileRatesSub:'路线、运价和运输方式',tileAI:'AI 助手',tileAISub:'文字或语音',tileAgents:'货运代理',tileAgentsSub:'联系方式和运输方向',tileNews:'外贸新闻',tileNewsSub:'中国 · 物流 · 海关',directoryEyebrow:'通讯录',directorySub:'按运输方向查看供应商和联系方式。',intelligence:'智能',assistantSub2:'物流、运价和外贸 — 支持语音或文字。',attach:'文件',fileHint:'可以随消息添加文件',voice:'麦克风',intelligenceFeed:'资讯',newsSub2:'中国 · 物流 · 海关',chargeWeight:'计费重量',company:'公司',contact:'联系人',phone:'电话',email:'邮箱',website:'网站',directions:'运输方向',note:'备注',all:'全部',close:'关闭',weatherUpdating:'',distanceWaiting:'',autoByTransport:'根据运输方式自动计算',transportRail:'铁路',transportRoad:'公路',transportAir:'空运',transportSea:'海运',transportMulti:'海运 + 铁路',menu:'菜单',ready:'准备好开始对话',listen:'正在听…',transcribe:'正在转写…',recognized:'已识别语音',fail:'无法识别语音',mic:'没有麦克风权限',unavailable:'语音不可用',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'中国人民银行',articleLoading:'正在准备文章…',articleError:'无法生成文章。',articleListen:'音频播客',articlePlay:'播放',articlePause:'暂停',articleSource:'根据所选新闻整理',articleBack:'返回新闻',autoVolumeLabel:'体积',autoVolumetricLabel:'体积重量',factorLabel:'换算系数',themeLight:'浅色主题',themeDark:'深色主题',themeToggle:'切换主题',customsEyebrow:'海关监管',customsTitle:'海关编码检查',customsHelp:'输入欧亚经济联盟海关编码 — 自动检查关税、增值税、海关费用、商品标记和其他措施。',customsPlaceholder:'例如 8467890000',customsCheck:'检查编码'}
+  tr:{title:'Navlun Hesaplama',tarotLabel:'Günün kartı',navTarot:'Kart',navTheme:'Tema',navRates:'Navlun',navCustoms:'Gümrük',from:'Nereden',to:'Nereye',cargo:'KARGO',weight:'Ağırlık, kg',pieces:'Parça sayısı',distance:'Mesafe, km',auto:'Otomatik',dimensions:'TEK PARÇA ÖLÇÜLERİ',volumeAll:'Hacim — tüm parçalar',length:'Uzunluk',width:'Genişlik',height:'Yükseklik',forwarder:'Forwarder',transport:'Taşıma şekli',incoterms:'Teslim şekli',dimWeight:'Hacimsel ağırlık',chooseForwarder:'Forwarder seçin',chooseTransport:'Taşıma şeklini seçin',selected:'FORWARDER',none:'Seçilmedi',calculate:'Hesapla',agents:'Forwarderlar',assistant:'Yapay zekâ asistanı',assistantSub:'Lojistik hakkında sorun',assistantHelp:'Rota, navlun, Incoterms, gümrük, ağırlık hesabı veya yeni bir fiyatı doğal dille yazabilirsiniz.',send:'Gönder',news:'Haberler',newsSub:'Lojistik · Çin · Gümrük',logout:'Çıkış',thinking:'Yanıt hazırlanıyor…',aiOff:'Yapay zekâ bağlı değil. Render üzerinde OPENAI_API_KEY ekleyin.',newsLoading:'Haberler yükleniyor…',noNews:'Haberler şu anda kullanılamıyor.',weatherError:'Hava durumu geçici olarak kullanılamıyor.',todayDate:'15.09.2026',home:'Ana sayfa',heroEyebrow:'LOJİSTİK · ÇİN → RUSYA',heroText:'Doğru hesaplama. Akıllı asistan.\nKargo operasyonu için gereken her şey tek yerde.',tileRates:'Navlun hesaplama',tileRatesSub:'Rota, fiyat ve taşıma şekli',tileAI:'Yapay zekâ asistanı',tileAISub:'Metin veya ses',tileAgents:'Forwarderlar',tileAgentsSub:'İletişim bilgileri ve taşıma yönleri',tileNews:'Dış ticaret haberleri',tileNewsSub:'Çin · lojistik · gümrük',directoryEyebrow:'REHBER',directorySub:'Taşıma yönlerine göre tedarikçiler ve iletişim bilgileri.',intelligence:'ZEKA',assistantSub2:'Lojistik, hesaplamalar ve dış ticaret — sesli veya yazılı.',attach:'Dosya',fileHint:'Mesajınıza dosya ekleyebilirsiniz',voice:'Mikrofon',intelligenceFeed:'BİLGİ AKIŞI',newsSub2:'Çin · lojistik · gümrük',chargeWeight:'Hesaplanan ağırlık',company:'Şirket',contact:'Yetkili',phone:'Telefon',email:'E-posta',website:'Web sitesi',directions:'Yönler',note:'Not',all:'Tümü',close:'Kapat',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Taşıma şekline göre otomatik',transportRail:'Demiryolu',transportRoad:'Karayolu',transportAir:'Hava yolu',transportSea:'Deniz yolu',transportMulti:'Deniz + Demiryolu',menu:'Menü',ready:'Konuşmaya hazır',listen:'Dinliyorum…',transcribe:'Yazıya dökülüyor…',recognized:'Konuşma algılandı',fail:'Ses tanınamadı',mic:'Mikrofon erişimi yok',unavailable:'Ses kullanılamıyor',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'Rusya Merkez Bankası',articleLoading:'Makale hazırlanıyor…',articleError:'Makale hazırlanamadı.',articleListen:'Sesli podcast',articlePlay:'Dinle',articlePause:'Duraklat',articleSource:'Seçilen haber temel alınarak hazırlandı',articleBack:'Haberlere dön',autoVolumeLabel:'Hacim',autoVolumetricLabel:'Hacimsel ağırlık',factorLabel:'Faktör',themeLight:'Açık tema',themeDark:'Koyu tema',themeToggle:'Temayı değiştir',customsEyebrow:'GÜMRÜK KONTROLÜ',customsTitle:'GTİP KODU KONTROLÜ',customsHelp:'EAEU GTİP kodunu girin — gümrük vergisi, KDV, gümrük harçları, işaretleme ve diğer önlemler otomatik olarak kontrol edilir.',customsPlaceholder:'Örneğin 8467890000',customsCheck:'Kodu kontrol et'},  en:{title:'Rate calculation',tarotLabel:'Card of the day',navTarot:'Card',navTheme:'Theme',navRates:'Rates',navCustoms:'Customs',from:'From',to:'To',cargo:'CARGO',weight:'Weight, kg',pieces:'Pieces',distance:'Distance, km',auto:'Automatic',dimensions:'DIMENSIONS OF ONE PIECE',volumeAll:'Volume — all pieces',length:'Length',width:'Width',height:'Height',forwarder:'Forwarder',transport:'Transport',incoterms:'Incoterms',dimWeight:'Volumetric weight',chooseForwarder:'Choose forwarder',chooseTransport:'Choose transport',selected:'FORWARDER',none:'Not selected',calculate:'Calculate',agents:'Forwarders',assistant:'AI assistant',assistantSub:'Ask anything about logistics',assistantHelp:'Write naturally: route, rate, Incoterms, customs, weight calculation or a new rate.',send:'Send',news:'News',newsSub:'Logistics · China · Customs',logout:'Log out',thinking:'Thinking about your answer…',aiOff:'AI is not connected. Add OPENAI_API_KEY in Render.',newsLoading:'Loading news…',noNews:'News are temporarily unavailable.',weatherError:'Weather is temporarily unavailable.',todayDate:'15.09.2026',home:'Home',heroEyebrow:'LOGISTICS · CHINA → RUSSIA',heroText:'Precise calculation. Smart assistant.\nEverything you need for cargo work — in one place.',tileRates:'Rate calculation',tileRatesSub:'Route, rate and transport',tileAI:'AI assistant',tileAISub:'Text or voice',tileAgents:'Forwarders',tileAgentsSub:'Contacts and transport directions',tileNews:'Trade news',tileNewsSub:'China · logistics · customs',directoryEyebrow:'DIRECTORY',directorySub:'Suppliers and contacts by transport direction.',intelligence:'INTELLIGENCE',assistantSub2:'Logistics, rates and foreign trade — by voice or text.',attach:'File',fileHint:'Attach a file with your message',voice:'Microphone',intelligenceFeed:'NEWS FEED',newsSub2:'China · logistics · customs',chargeWeight:'Chargeable weight',company:'Company',contact:'Contact',phone:'Phone',email:'Email',website:'Website',directions:'Directions',note:'Note',all:'All',close:'Close',weatherUpdating:'',distanceWaiting:'',autoByTransport:'Automatic by transport',transportRail:'Rail',transportRoad:'Road',transportAir:'Air',transportSea:'Sea',transportMulti:'Sea + Rail',menu:'Menu',ready:'Ready to talk',listen:'Listening…',transcribe:'Transcribing…',recognized:'Speech recognized',fail:'Could not recognize speech',mic:'Microphone access denied',unavailable:'Voice unavailable',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'CBR',articleLoading:'Preparing article…',articleError:'Could not prepare the article.',articleListen:'Audio podcast',articlePlay:'Listen',articlePause:'Pause',articleSource:'Prepared from the selected news item',articleBack:'Back to news',autoVolumeLabel:'Volume',autoVolumetricLabel:'Volumetric weight',factorLabel:'Factor',themeLight:'Light theme',themeDark:'Dark theme',themeToggle:'Switch theme',customsEyebrow:'CUSTOMS CONTROL',customsTitle:'HS / TN VED CHECK',customsHelp:'Enter the EAEU TN VED code — I will automatically check duty, VAT, customs fees, marking and other measures.',customsPlaceholder:'For example, 8467890000',customsCheck:'Check code'},
+  zh:{title:'运价计算',tarotLabel:'今日卡牌',navTarot:'卡片',navTheme:'主题',navRates:'运价',navCustoms:'海关',from:'起运地',to:'目的地',cargo:'货物',weight:'重量，公斤',pieces:'件数',distance:'距离，公里',auto:'自动',dimensions:'单件尺寸',volumeAll:'体积 — 所有件',length:'长度',width:'宽度',height:'高度',forwarder:'货运代理',transport:'运输方式',incoterms:'贸易术语',dimWeight:'体积重量',chooseForwarder:'选择货运代理',chooseTransport:'选择运输方式',selected:'货运代理',none:'未选择',calculate:'计算',agents:'货运代理',assistant:'AI 助手',assistantSub:'咨询物流问题',assistantHelp:'可以直接输入路线、运价、贸易术语、清关或体积重量问题。',send:'发送',news:'新闻',newsSub:'物流 · 中国 · 海关',logout:'退出',thinking:'正在组织答案…',aiOff:'AI 尚未连接。请在 Render 添加 OPENAI_API_KEY。',newsLoading:'正在加载新闻…',noNews:'暂时没有新闻。',weatherError:'天气暂时不可用。',todayDate:'15.09.2026',home:'首页',heroEyebrow:'物流 · 中国 → 俄罗斯',heroText:'精准报价。智能助手。\n货运工作所需的一切，都在这里。',tileRates:'运价计算',tileRatesSub:'路线、运价和运输方式',tileAI:'AI 助手',tileAISub:'文字或语音',tileAgents:'货运代理',tileAgentsSub:'联系方式和运输方向',tileNews:'外贸新闻',tileNewsSub:'中国 · 物流 · 海关',directoryEyebrow:'通讯录',directorySub:'按运输方向查看供应商和联系方式。',intelligence:'智能',assistantSub2:'物流、运价和外贸 — 支持语音或文字。',attach:'文件',fileHint:'可以随消息添加文件',voice:'麦克风',intelligenceFeed:'资讯',newsSub2:'中国 · 物流 · 海关',chargeWeight:'计费重量',company:'公司',contact:'联系人',phone:'电话',email:'邮箱',website:'网站',directions:'运输方向',note:'备注',all:'全部',close:'关闭',weatherUpdating:'',distanceWaiting:'',autoByTransport:'根据运输方式自动计算',transportRail:'铁路',transportRoad:'公路',transportAir:'空运',transportSea:'海运',transportMulti:'海运 + 铁路',menu:'菜单',ready:'准备好开始对话',listen:'正在听…',transcribe:'正在转写…',recognized:'已识别语音',fail:'无法识别语音',mic:'没有麦克风权限',unavailable:'语音不可用',currencyCny:'CNY',currencyUsd:'USD',currencyEur:'EUR',oneCny:'1 CNY',oneUsd:'1 USD',oneEur:'1 EUR',cbr:'中国人民银行',articleLoading:'正在准备文章…',articleError:'无法生成文章。',articleListen:'音频播客',articlePlay:'播放',articlePause:'暂停',articleSource:'根据所选新闻整理',articleBack:'返回新闻',autoVolumeLabel:'体积',autoVolumetricLabel:'体积重量',factorLabel:'换算系数',themeLight:'浅色主题',themeDark:'深色主题',themeToggle:'切换主题',customsEyebrow:'海关监管',customsTitle:'海关编码检查',customsHelp:'输入欧亚经济联盟海关编码 — 自动检查关税、增值税、海关费用、商品标记和其他措施。',customsPlaceholder:'例如 8467890000',customsCheck:'检查编码'}
 };
 
 const modes={air:{ru:'Авиа',en:'Air',zh:'空运',factor:167},road:{ru:'Авто',en:'Road',zh:'公路',factor:400},rail:{ru:'ЖД',en:'Rail',zh:'铁路',factor:500},sea:{ru:'Море',en:'Sea',zh:'海运',factor:1000},multimodal:{ru:'Море + ЖД',en:'Sea + Rail',zh:'海运+铁路',factor:1000}};
@@ -160,487 +162,6 @@ const ASIA_CITY_SEED = [
 ['Алматы','Almaty','Алматы','Almaty','Kazakhstan','asia'],['Астана','Astana','Астана','Astana','Kazakhstan','asia'],['Шымкент','Shymkent','Шымкент','Shymkent','Kazakhstan','asia'],['Ташкент','Tashkent','Toshkent','Tashkent','Uzbekistan','asia'],['Самарканд','Samarkand','Samarqand','Samarkand','Uzbekistan','asia'],['Бишкек','Bishkek','Бишкек','Bishkek','Kyrgyzstan','asia'],['Ош','Osh','Ош','Osh','Kyrgyzstan','asia'],['Душанбе','Dushanbe','Душанбе','Dushanbe','Tajikistan','asia'],['Худжанд','Khujand','Хуҷанд','Sughd','Tajikistan','asia'],['Ашхабад','Ashgabat','Aşgabat','Ahal','Turkmenistan','asia'],['Туркменабад','Turkmenabat','Türkmenabat','Lebap','Turkmenistan','asia']
 ];
 for(const c of ASIA_CITY_SEED){ if(!cities.some(x=>String(x[1]).toLowerCase()===String(c[1]).toLowerCase())) cities.push(c); }
-
-const RU_CITIES_FULL = [
-// Центральный ФО
-['Подольск','Podolsk','Подольск','Московская область','Russia','ru'],
-['Химки','Khimki','Химки','Московская область','Russia','ru'],
-['Балашиха','Balashikha','Балашиха','Московская область','Russia','ru'],
-['Мытищи','Mytishchi','Мытищи','Московская область','Russia','ru'],
-['Люберцы','Lyubertsy','Люберцы','Московская область','Russia','ru'],
-['Красногорск','Krasnogorsk','Красногорск','Московская область','Russia','ru'],
-['Одинцово','Odintsovo','Одинцово','Московская область','Russia','ru'],
-['Белгород','Belgorod','Белгород','Белгородская область','Russia','ru'],
-['Старый Оскол','Stary Oskol','Старый Оскол','Белгородская область','Russia','ru'],
-['Брянск','Bryansk','Брянск','Брянская область','Russia','ru'],
-['Владимир','Vladimir','Владимир','Владимирская область','Russia','ru'],
-['Ковров','Kovrov','Ковров','Владимирская область','Russia','ru'],
-['Муром','Murom','Муром','Владимирская область','Russia','ru'],
-['Воронеж','Voronezh','Воронеж','Воронежская область','Russia','ru'],
-['Иваново','Ivanovo','Иваново','Ивановская область','Russia','ru'],
-['Калуга','Kaluga','Калуга','Калужская область','Russia','ru'],
-['Обнинск','Obninsk','Обнинск','Калужская область','Russia','ru'],
-['Кострома','Kostroma','Кострома','Костромская область','Russia','ru'],
-['Курск','Kursk','Курск','Курская область','Russia','ru'],
-['Железногорск','Zheleznogorsk','Железногорск','Курская область','Russia','ru'],
-['Липецк','Lipetsk','Липецк','Липецкая область','Russia','ru'],
-['Елец','Yelets','Елец','Липецкая область','Russia','ru'],
-['Орёл','Oryol','Орёл','Орловская область','Russia','ru'],
-['Рязань','Ryazan','Рязань','Рязанская область','Russia','ru'],
-['Смоленск','Smolensk','Смоленск','Смоленская область','Russia','ru'],
-['Тамбов','Tambov','Тамбов','Тамбовская область','Russia','ru'],
-['Тверь','Tver','Тверь','Тверская область','Russia','ru'],
-['Тула','Tula','Тула','Тульская область','Russia','ru'],
-['Новомосковск','Novomoskovsk','Новомосковск','Тульская область','Russia','ru'],
-['Ярославль','Yaroslavl','Ярославль','Ярославская область','Russia','ru'],
-['Рыбинск','Rybinsk','Рыбинск','Ярославская область','Russia','ru'],
-// Северо-Запад
-['Гатчина','Gatchina','Гатчина','Ленинградская область','Russia','ru'],
-['Выборг','Vyborg','Выборг','Ленинградская область','Russia','ru'],
-['Архангельск','Arkhangelsk','Архангельск','Архангельская область','Russia','ru'],
-['Северодвинск','Severodvinsk','Северодвинск','Архангельская область','Russia','ru'],
-['Вологда','Vologda','Вологда','Вологодская область','Russia','ru'],
-['Череповец','Cherepovets','Череповец','Вологодская область','Russia','ru'],
-['Калининград','Kaliningrad','Калининград','Калининградская область','Russia','ru'],
-['Петрозаводск','Petrozavodsk','Петрозаводск','Республика Карелия','Russia','ru'],
-['Сыктывкар','Syktyvkar','Сыктывкар','Республика Коми','Russia','ru'],
-['Ухта','Ukhta','Ухта','Республика Коми','Russia','ru'],
-['Мурманск','Murmansk','Мурманск','Мурманская область','Russia','ru'],
-['Великий Новгород','Veliky Novgorod','Великий Новгород','Новгородская область','Russia','ru'],
-['Псков','Pskov','Псков','Псковская область','Russia','ru'],
-// Юг
-['Сочи','Sochi','Сочи','Краснодарский край','Russia','ru'],
-['Армавир','Armavir','Армавир','Краснодарский край','Russia','ru'],
-['Таганрог','Taganrog','Таганрог','Ростовская область','Russia','ru'],
-['Шахты','Shakhty','Шахты','Ростовская область','Russia','ru'],
-['Новочеркасск','Novocherkassk','Новочеркасск','Ростовская область','Russia','ru'],
-['Астрахань','Astrakhan','Астрахань','Астраханская область','Russia','ru'],
-['Волгоград','Volgograd','Волгоград','Волгоградская область','Russia','ru'],
-['Волжский','Volzhsky','Волжский','Волгоградская область','Russia','ru'],
-['Симферополь','Simferopol','Симферополь','Республика Крым','Russia','ru'],
-['Севастополь','Sevastopol','Севастополь','Севастополь','Russia','ru'],
-['Керчь','Kerch','Керчь','Республика Крым','Russia','ru'],
-['Майкоп','Maykop','Майкоп','Республика Адыгея','Russia','ru'],
-['Элиста','Elista','Элиста','Республика Калмыкия','Russia','ru'],
-// Северный Кавказ
-['Ставрополь','Stavropol','Ставрополь','Ставропольский край','Russia','ru'],
-['Пятигорск','Pyatigorsk','Пятигорск','Ставропольский край','Russia','ru'],
-['Кисловодск','Kislovodsk','Кисловодск','Ставропольский край','Russia','ru'],
-['Махачкала','Makhachkala','Махачкала','Республика Дагестан','Russia','ru'],
-['Дербент','Derbent','Дербент','Республика Дагестан','Russia','ru'],
-['Грозный','Grozny','Грозный','Чеченская Республика','Russia','ru'],
-['Владикавказ','Vladikavkaz','Владикавказ','Республика Северная Осетия','Russia','ru'],
-['Назрань','Nazran','Назрань','Республика Ингушетия','Russia','ru'],
-['Черкесск','Cherkessk','Черкесск','Карачаево-Черкесия','Russia','ru'],
-// Поволжье
-['Нижнекамск','Nizhnekamsk','Нижнекамск','Республика Татарстан','Russia','ru'],
-['Альметьевск','Almetyevsk','Альметьевск','Республика Татарстан','Russia','ru'],
-['Стерлитамак','Sterlitamak','Стерлитамак','Республика Башкортостан','Russia','ru'],
-['Салават','Salavat','Салават','Республика Башкортостан','Russia','ru'],
-['Тольятти','Tolyatti','Тольятти','Самарская область','Russia','ru'],
-['Сызрань','Syzran','Сызрань','Самарская область','Russia','ru'],
-['Саратов','Saratov','Саратов','Саратовская область','Russia','ru'],
-['Энгельс','Engels','Энгельс','Саратовская область','Russia','ru'],
-['Балаково','Balakovo','Балаково','Саратовская область','Russia','ru'],
-['Дзержинск','Dzerzhinsk','Дзержинск','Нижегородская область','Russia','ru'],
-['Арзамас','Arzamas','Арзамас','Нижегородская область','Russia','ru'],
-['Березники','Berezniki','Березники','Пермский край','Russia','ru'],
-['Ижевск','Izhevsk','Ижевск','Удмуртская Республика','Russia','ru'],
-['Сарапул','Sarapul','Сарапул','Удмуртская Республика','Russia','ru'],
-['Чебоксары','Cheboksary','Чебоксары','Чувашская Республика','Russia','ru'],
-['Новочебоксарск','Novocheboksarsk','Новочебоксарск','Чувашская Республика','Russia','ru'],
-['Саранск','Saransk','Саранск','Республика Мордовия','Russia','ru'],
-['Йошкар-Ола','Yoshkar-Ola','Йошкар-Ола','Республика Марий Эл','Russia','ru'],
-['Пенза','Penza','Пенза','Пензенская область','Russia','ru'],
-['Ульяновск','Ulyanovsk','Ульяновск','Ульяновская область','Russia','ru'],
-['Димитровград','Dimitrovgrad','Димитровград','Ульяновская область','Russia','ru'],
-['Киров','Kirov','Киров','Кировская область','Russia','ru'],
-['Оренбург','Orenburg','Оренбург','Оренбургская область','Russia','ru'],
-['Орск','Orsk','Орск','Оренбургская область','Russia','ru'],
-// Урал
-['Нижний Тагил','Nizhny Tagil','Нижний Тагил','Свердловская область','Russia','ru'],
-['Каменск-Уральский','Kamensk-Uralsky','Каменск-Уральский','Свердловская область','Russia','ru'],
-['Первоуральск','Pervouralsk','Первоуральск','Свердловская область','Russia','ru'],
-['Магнитогорск','Magnitogorsk','Магнитогорск','Челябинская область','Russia','ru'],
-['Златоуст','Zlatoust','Златоуст','Челябинская область','Russia','ru'],
-['Миасс','Miass','Миасс','Челябинская область','Russia','ru'],
-['Копейск','Kopeysk','Копейск','Челябинская область','Russia','ru'],
-['Курган','Kurgan','Курган','Курганская область','Russia','ru'],
-['Тобольск','Tobolsk','Тобольск','Тюменская область','Russia','ru'],
-['Сургут','Surgut','Сургут','Ханты-Мансийский АО','Russia','ru'],
-['Нижневартовск','Nizhnevartovsk','Нижневартовск','Ханты-Мансийский АО','Russia','ru'],
-['Нефтеюганск','Nefteyugansk','Нефтеюганск','Ханты-Мансийский АО','Russia','ru'],
-['Ханты-Мансийск','Khanty-Mansiysk','Ханты-Мансийск','Ханты-Мансийский АО','Russia','ru'],
-['Новый Уренгой','Novy Urengoy','Новый Уренгой','Ямало-Ненецкий АО','Russia','ru'],
-['Ноябрьск','Noyabrsk','Ноябрьск','Ямало-Ненецкий АО','Russia','ru'],
-['Салехард','Salekhard','Салехард','Ямало-Ненецкий АО','Russia','ru'],
-// Сибирь
-['Бердск','Berdsk','Бердск','Новосибирская область','Russia','ru'],
-['Искитим','Iskitim','Искитим','Новосибирская область','Russia','ru'],
-['Красноярск','Krasnoyarsk','Красноярск','Красноярский край','Russia','ru'],
-['Норильск','Norilsk','Норильск','Красноярский край','Russia','ru'],
-['Ачинск','Achinsk','Ачинск','Красноярский край','Russia','ru'],
-['Канск','Kansk','Канск','Красноярский край','Russia','ru'],
-['Кемерово','Kemerovo','Кемерово','Кемеровская область','Russia','ru'],
-['Новокузнецк','Novokuznetsk','Новокузнецк','Кемеровская область','Russia','ru'],
-['Прокопьевск','Prokopyevsk','Прокопьевск','Кемеровская область','Russia','ru'],
-['Междуреченск','Mezhdurechensk','Междуреченск','Кемеровская область','Russia','ru'],
-['Барнаул','Barnaul','Барнаул','Алтайский край','Russia','ru'],
-['Бийск','Biysk','Бийск','Алтайский край','Russia','ru'],
-['Рубцовск','Rubtsovsk','Рубцовск','Алтайский край','Russia','ru'],
-['Горно-Алтайск','Gorno-Altaysk','Горно-Алтайск','Республика Алтай','Russia','ru'],
-['Томск','Tomsk','Томск','Томская область','Russia','ru'],
-['Северск','Seversk','Северск','Томская область','Russia','ru'],
-['Иркутск','Irkutsk','Иркутск','Иркутская область','Russia','ru'],
-['Братск','Bratsk','Братск','Иркутская область','Russia','ru'],
-['Ангарск','Angarsk','Ангарск','Иркутская область','Russia','ru'],
-['Усть-Илимск','Ust-Ilimsk','Усть-Илимск','Иркутская область','Russia','ru'],
-['Улан-Удэ','Ulan-Ude','Улан-Удэ','Республика Бурятия','Russia','ru'],
-['Чита','Chita','Чита','Забайкальский край','Russia','ru'],
-['Абакан','Abakan','Абакан','Республика Хакасия','Russia','ru'],
-['Черногорск','Chernogorsk','Черногорск','Республика Хакасия','Russia','ru'],
-['Кызыл','Kyzyl','Кызыл','Республика Тыва','Russia','ru'],
-// Дальний Восток
-['Уссурийск','Ussuriysk','Уссурийск','Приморский край','Russia','ru'],
-['Артём','Artyom','Артём','Приморский край','Russia','ru'],
-['Арсеньев','Arsenyev','Арсеньев','Приморский край','Russia','ru'],
-['Комсомольск-на-Амуре','Komsomolsk-on-Amur','Комсомольск-на-Амуре','Хабаровский край','Russia','ru'],
-['Благовещенск','Blagoveshchensk','Благовещенск','Амурская область','Russia','ru'],
-['Белогорск','Belogorsk','Белогорск','Амурская область','Russia','ru'],
-['Свободный','Svobodny','Свободный','Амурская область','Russia','ru'],
-['Якутск','Yakutsk','Якутск','Республика Саха (Якутия)','Russia','ru'],
-['Нерюнгри','Neryungri','Нерюнгри','Республика Саха (Якутия)','Russia','ru'],
-['Мирный','Mirny','Мирный','Республика Саха (Якутия)','Russia','ru'],
-['Южно-Сахалинск','Yuzhno-Sakhalinsk','Южно-Сахалинск','Сахалинская область','Russia','ru'],
-['Корсаков','Korsakov','Корсаков','Сахалинская область','Russia','ru'],
-['Холмск','Kholmsk','Холмск','Сахалинская область','Russia','ru'],
-['Магадан','Magadan','Магадан','Магаданская область','Russia','ru'],
-['Петропавловск-Камчатский','Petropavlovsk-Kamchatsky','Петропавловск-Камчатский','Камчатский край','Russia','ru'],
-['Елизово','Yelizovo','Елизово','Камчатский край','Russia','ru'],
-['Биробиджан','Birobidzhan','Биробиджан','Еврейская АО','Russia','ru'],
-['Анадырь','Anadyr','Анадырь','Чукотский АО','Russia','ru']
-];
-for(const c of RU_CITIES_FULL){ if(!cities.some(x=>String(x[1]).toLowerCase()===String(c[1]).toLowerCase())) cities.push(c); }
-
-
-const CN_CITIES_FULL = [
-// Гуандун
-['Дунгуань','Dongguan','东莞','Гуандун','China','cn'],
-['Чжуншань','Zhongshan','中山','Гуандун','China','cn'],
-['Хуэйчжоу','Huizhou','惠州','Гуандун','China','cn'],
-['Шаньтоу','Shantou','汕头','Гуандун','China','cn'],
-['Чжаоцин','Zhaoqing','肇庆','Гуандун','China','cn'],
-['Цзеян','Jieyang','揭阳','Гуандун','China','cn'],
-['Шаогуань','Shaoguan','韶关','Гуандун','China','cn'],
-['Мэйчжоу','Meizhou','梅州','Гуандун','China','cn'],
-['Чаочжоу','Chaozhou','潮州','Гуандун','China','cn'],
-['Янцзян','Yangjiang','阳江','Гуандун','China','cn'],
-['Маомин','Maoming','茂名','Гуандун','China','cn'],
-['Чжаньцзян','Zhanjiang','湛江','Гуандун','China','cn'],
-['Хэюань','Heyuan','河源','Гуандун','China','cn'],
-['Цинъюань','Qingyuan','清远','Гуандун','China','cn'],
-// Чжэцзян
-['Шаосин','Shaoxing','绍兴','Чжэцзян','China','cn'],
-['Цзясин','Jiaxing','嘉兴','Чжэцзян','China','cn'],
-['Тайчжоу','Taizhou','台州','Чжэцзян','China','cn'],
-['Хучжоу','Huzhou','湖州','Чжэцзян','China','cn'],
-['Цюйчжоу','Quzhou','衢州','Чжэцзян','China','cn'],
-['Лисуй','Lishui','丽水','Чжэцзян','China','cn'],
-['Чжоушань','Zhoushan','舟山','Чжэцзян','China','cn'],
-// Цзянсу
-['Уси','Wuxi','无锡','Цзянсу','China','cn'],
-['Чанчжоу','Changzhou','常州','Цзянсу','China','cn'],
-['Наньтун','Nantong','南通','Цзянсу','China','cn'],
-['Сюйчжоу','Xuzhou','徐州','Цзянсу','China','cn'],
-['Янчжоу','Yangzhou','扬州','Цзянсу','China','cn'],
-['Яньчэн','Yancheng','盐城','Цзянсу','China','cn'],
-['Хуайань','Huaian','淮安','Цзянсу','China','cn'],
-['Ляньюньган','Lianyungang','连云港','Цзянсу','China','cn'],
-['Чжэньцзян','Zhenjiang','镇江','Цзянсу','China','cn'],
-['Суцянь','Suqian','宿迁','Цзянсу','China','cn'],
-['Тайчжоу','Taizhou','泰州','Цзянсу','China','cn'],
-// Шаньдун
-['Яньтай','Yantai','烟台','Шаньдун','China','cn'],
-['Вэйфан','Weifang','潍坊','Шаньдун','China','cn'],
-['Цзыбо','Zibo','淄博','Шаньдун','China','cn'],
-['Линьи','Linyi','临沂','Шаньдун','China','cn'],
-['Цзинин','Jining','济宁','Шаньдун','China','cn'],
-['Тайань','Taian','泰安','Шаньдун','China','cn'],
-['Вэйхай','Weihai','威海','Шаньдун','China','cn'],
-['Дунъин','Dongying','东营','Шаньдун','China','cn'],
-['Жичжао','Rizhao','日照','Шаньдун','China','cn'],
-['Ляочэн','Liaocheng','聊城','Шаньдун','China','cn'],
-['Дэчжоу','Dezhou','德州','Шаньдун','China','cn'],
-['Хэцзэ','Heze','菏泽','Шаньдун','China','cn'],
-['Цзаочжуан','Zaozhuang','枣庄','Шаньдун','China','cn'],
-// Фуцзянь
-['Цюаньчжоу','Quanzhou','泉州','Фуцзянь','China','cn'],
-['Чжанчжоу','Zhangzhou','漳州','Фуцзянь','China','cn'],
-['Путянь','Putian','莆田','Фуцзянь','China','cn'],
-['Наньпин','Nanping','南平','Фуцзянь','China','cn'],
-['Саньмин','Sanming','三明','Фуцзянь','China','cn'],
-['Лунъянь','Longyan','龙岩','Фуцзянь','China','cn'],
-['Ниндэ','Ningde','宁德','Фуцзянь','China','cn'],
-// Хэнань
-['Лоян','Luoyang','洛阳','Хэнань','China','cn'],
-['Кайфэн','Kaifeng','开封','Хэнань','China','cn'],
-['Аньян','Anyang','安阳','Хэнань','China','cn'],
-['Синьсян','Xinxiang','新乡','Хэнань','China','cn'],
-['Пиндиншань','Pingdingshan','平顶山','Хэнань','China','cn'],
-['Сюйчан','Xuchang','许昌','Хэнань','China','cn'],
-['Синьян','Xinyang','信阳','Хэнань','China','cn'],
-['Наньян','Nanyang','南阳','Хэнань','China','cn'],
-['Шанцю','Shangqiu','商丘','Хэнань','China','cn'],
-['Чжоукоу','Zhoukou','周口','Хэнань','China','cn'],
-['Чжумадянь','Zhumadian','驻马店','Хэнань','China','cn'],
-['Цзяоцзо','Jiaozuo','焦作','Хэнань','China','cn'],
-// Хэбэй
-['Таншань','Tangshan','唐山','Хэбэй','China','cn'],
-['Баодин','Baoding','保定','Хэбэй','China','cn'],
-['Ханьдань','Handan','邯郸','Хэбэй','China','cn'],
-['Синтай','Xingtai','邢台','Хэбэй','China','cn'],
-['Ланфан','Langfang','廊坊','Хэбэй','China','cn'],
-['Чжанцзякоу','Zhangjiakou','张家口','Хэбэй','China','cn'],
-['Чэндэ','Chengde','承德','Хэбэй','China','cn'],
-['Циньхуандао','Qinhuangdao','秦皇岛','Хэбэй','China','cn'],
-['Хэншуй','Hengshui','衡水','Хэбэй','China','cn'],
-// Шаньси
-['Датун','Datong','大同','Шаньси','China','cn'],
-['Линьфэнь','Linfen','临汾','Шаньси','China','cn'],
-['Юньчэн','Yuncheng','运城','Шаньси','China','cn'],
-['Чанчжи','Changzhi','长治','Шаньси','China','cn'],
-['Цзиньчэн','Jincheng','晋城','Шаньси','China','cn'],
-['Шочжоу','Shuozhou','朔州','Шаньси','China','cn'],
-// Шэньси
-['Баоцзи','Baoji','宝鸡','Шэньси','China','cn'],
-['Сяньян','Xianyang','咸阳','Шэньси','China','cn'],
-['Вэйнань','Weinan','渭南','Шэньси','China','cn'],
-['Ханьчжун','Hanzhong','汉中','Шэньси','China','cn'],
-['Юйлинь','Yulin','榆林','Шэньси','China','cn'],
-['Яньань','Yanan','延安','Шэньси','China','cn'],
-['Тунчуань','Tongchuan','铜川','Шэньси','China','cn'],
-// Ганьсу
-['Тяньшуй','Tianshui','天水','Ганьсу','China','cn'],
-['Цзяюйгуань','Jiayuguan','嘉峪关','Ганьсу','China','cn'],
-['Цзиньчан','Jinchang','金昌','Ганьсу','China','cn'],
-['Увэй','Wuwei','武威','Ганьсу','China','cn'],
-['Чжанъе','Zhangye','张掖','Ганьсу','China','cn'],
-['Цзюцюань','Jiuquan','酒泉','Ганьсу','China','cn'],
-['Цинъян','Qingyang','庆阳','Ганьсу','China','cn'],
-// Цинхай, Нинся, Синьцзян
-['Синин','Xining','西宁','Цинхай','China','cn'],
-['Иньчуань','Yinchuan','银川','Нинся','China','cn'],
-['Шицзуйшань','Shizuishan','石嘴山','Нинся','China','cn'],
-['Учжун','Wuzhong','吴忠','Нинся','China','cn'],
-['Гуюань','Guyuan','固原','Нинся','China','cn'],
-['Чжунвэй','Zhongwei','中卫','Нинся','China','cn'],
-['Карамай','Karamay','克拉玛依','Синьцзян','China','cn'],
-['Турфан','Turpan','吐鲁番','Синьцзян','China','cn'],
-['Хами','Hami','哈密','Синьцзян','China','cn'],
-['Корла','Korla','库尔勒','Синьцзян','China','cn'],
-['Аксу','Aksu','阿克苏','Синьцзян','China','cn'],
-['Кашгар','Kashgar','喀什','Синьцзян','China','cn'],
-['Хотан','Hotan','和田','Синьцзян','China','cn'],
-['Инин','Yining','伊宁','Синьцзян','China','cn'],
-['Тачэн','Tacheng','塔城','Синьцзян','China','cn'],
-['Алтай','Altay','阿勒泰','Синьцзян','China','cn'],
-// Внутренняя Монголия
-['Хух-Хото','Hohhot','呼和浩特','Внутренняя Монголия','China','cn'],
-['Баотоу','Baotou','包头','Внутренняя Монголия','China','cn'],
-['Ухай','Wuhai','乌海','Внутренняя Монголия','China','cn'],
-['Чифэн','Chifeng','赤峰','Внутренняя Монголия','China','cn'],
-['Тунляо','Tongliao','通辽','Внутренняя Монголия','China','cn'],
-['Эрдос','Ordos','鄂尔多斯','Внутренняя Монголия','China','cn'],
-['Хулун-Буир','Hulunbuir','呼伦贝尔','Внутренняя Монголия','China','cn'],
-['Баяннур','Bayannur','巴彦淖尔','Внутренняя Монголия','China','cn'],
-['Уланчаб','Ulanqab','乌兰察布','Внутренняя Монголия','China','cn'],
-// Ляонин
-['Аньшань','Anshan','鞍山','Ляонин','China','cn'],
-['Фушунь','Fushun','抚顺','Ляонин','China','cn'],
-['Бэньси','Benxi','本溪','Ляонин','China','cn'],
-['Даньдун','Dandong','丹东','Ляонин','China','cn'],
-['Цзиньчжоу','Jinzhou','锦州','Ляонин','China','cn'],
-['Инкоу','Yingkou','营口','Ляонин','China','cn'],
-['Фусинь','Fuxin','阜新','Ляонин','China','cn'],
-['Ляоян','Liaoyang','辽阳','Ляонин','China','cn'],
-['Паньцзинь','Panjin','盘锦','Ляонин','China','cn'],
-['Телин','Tieling','铁岭','Ляонин','China','cn'],
-['Чаоян','Chaoyang','朝阳','Ляонин','China','cn'],
-['Хулудао','Huludao','葫芦岛','Ляонин','China','cn'],
-// Цзилинь
-['Цзилинь','Jilin','吉林','Цзилинь','China','cn'],
-['Сыпин','Siping','四平','Цзилинь','China','cn'],
-['Ляоюань','Liaoyuan','辽源','Цзилинь','China','cn'],
-['Тунхуа','Tonghua','通化','Цзилинь','China','cn'],
-['Байшань','Baishan','白山','Цзилинь','China','cn'],
-['Сунъюань','Songyuan','松原','Цзилинь','China','cn'],
-['Байчэн','Baicheng','白城','Цзилинь','China','cn'],
-// Хэйлунцзян
-['Муданьцзян','Mudanjiang','牡丹江','Хэйлунцзян','China','cn'],
-['Цзямусы','Jiamusi','佳木斯','Хэйлунцзян','China','cn'],
-['Дацин','Daqing','大庆','Хэйлунцзян','China','cn'],
-['Цзиси','Jixi','鸡西','Хэйлунцзян','China','cn'],
-['Шуанъяшань','Shuangyashan','双鸭山','Хэйлунцзян','China','cn'],
-['Ичунь','Yichun','伊春','Хэйлунцзян','China','cn'],
-['Цитайхэ','Qitaihe','七台河','Хэйлунцзян','China','cn'],
-['Хэган','Hegang','鹤岗','Хэйлунцзян','China','cn'],
-['Хэйхэ','Heihe','黑河','Хэйлунцзян','China','cn'],
-['Суйхуа','Suihua','绥化','Хэйлунцзян','China','cn'],
-// Аньхой
-['Уху','Wuhu','芜湖','Аньхой','China','cn'],
-['Бэнбу','Bengbu','蚌埠','Аньхой','China','cn'],
-['Хуайнань','Huainan','淮南','Аньхой','China','cn'],
-['Мааньшань','Maanshan','马鞍山','Аньхой','China','cn'],
-['Аньцин','Anqing','安庆','Аньхой','China','cn'],
-['Хуаншань','Huangshan','黄山','Аньхой','China','cn'],
-['Чучжоу','Chuzhou','滁州','Аньхой','China','cn'],
-['Фуян','Fuyang','阜阳','Аньхой','China','cn'],
-['Сучжоу','Suzhou','宿州','Аньхой','China','cn'],
-['Луань','Luan','六安','Аньхой','China','cn'],
-['Бочжоу','Bozhou','亳州','Аньхой','China','cn'],
-['Чичжоу','Chizhou','池州','Аньхой','China','cn'],
-['Сюаньчэн','Xuancheng','宣城','Аньхой','China','cn'],
-// Хубэй
-['Ичан','Yichang','宜昌','Хубэй','China','cn'],
-['Сянъян','Xiangyang','襄阳','Хубэй','China','cn'],
-['Цзинчжоу','Jingzhou','荆州','Хубэй','China','cn'],
-['Хуанши','Huangshi','黄石','Хубэй','China','cn'],
-['Шиянь','Shiyan','十堰','Хубэй','China','cn'],
-['Сяогань','Xiaogan','孝感','Хубэй','China','cn'],
-['Цзинмэнь','Jingmen','荆门','Хубэй','China','cn'],
-['Хуанган','Huanggang','黄冈','Хубэй','China','cn'],
-['Сяньнин','Xianning','咸宁','Хубэй','China','cn'],
-['Суйчжоу','Suizhou','随州','Хубэй','China','cn'],
-// Хунань
-['Чжучжоу','Zhuzhou','株洲','Хунань','China','cn'],
-['Сянтань','Xiangtan','湘潭','Хунань','China','cn'],
-['Хэнъян','Hengyang','衡阳','Хунань','China','cn'],
-['Шаоян','Shaoyang','邵阳','Хунань','China','cn'],
-['Юэян','Yueyang','岳阳','Хунань','China','cn'],
-['Чандэ','Changde','常德','Хунань','China','cn'],
-['Чжанцзяцзе','Zhangjiajie','张家界','Хунань','China','cn'],
-['Иян','Yiyang','益阳','Хунань','China','cn'],
-['Чэньчжоу','Chenzhou','郴州','Хунань','China','cn'],
-['Юнчжоу','Yongzhou','永州','Хунань','China','cn'],
-['Хуайхуа','Huaihua','怀化','Хунань','China','cn'],
-// Цзянси
-['Цзюцзян','Jiujiang','九江','Цзянси','China','cn'],
-['Ганьчжоу','Ganzhou','赣州','Цзянси','China','cn'],
-['Цзиндэчжэнь','Jingdezhen','景德镇','Цзянси','China','cn'],
-['Пинсян','Pingxiang','萍乡','Цзянси','China','cn'],
-['Синьюй','Xinyu','新余','Цзянси','China','cn'],
-['Интань','Yingtan','鹰潭','Цзянси','China','cn'],
-['Ичунь','Yichun','宜春','Цзянси','China','cn'],
-['Шанжао','Shangrao','上饶','Цзянси','China','cn'],
-['Цзиань','Jian','吉安','Цзянси','China','cn'],
-// Сычуань
-['Мяньян','Mianyang','绵阳','Сычуань','China','cn'],
-['Дэян','Deyang','德阳','Сычуань','China','cn'],
-['Гуанъюань','Guangyuan','广元','Сычуань','China','cn'],
-['Ибинь','Yibin','宜宾','Сычуань','China','cn'],
-['Лучжоу','Luzhou','泸州','Сычуань','China','cn'],
-['Наньчун','Nanchong','南充','Сычуань','China','cn'],
-['Дачжоу','Dazhou','达州','Сычуань','China','cn'],
-['Яань','Yaan','雅安','Сычуань','China','cn'],
-['Лэшань','Leshan','乐山','Сычуань','China','cn'],
-['Паньчжихуа','Panzhihua','攀枝花','Сычуань','China','cn'],
-['Цзыгун','Zigong','自贡','Сычуань','China','cn'],
-['Суйнин','Suining','遂宁','Сычуань','China','cn'],
-['Нэйцзян','Neijiang','内江','Сычуань','China','cn'],
-['Мэйшань','Meishan','眉山','Сычуань','China','cn'],
-['Бачжун','Bazhong','巴中','Сычуань','China','cn'],
-// Гуйчжоу
-['Цзуньи','Zunyi','遵义','Гуйчжоу','China','cn'],
-['Люпаньшуй','Liupanshui','六盘水','Гуйчжоу','China','cn'],
-['Аньшунь','Anshun','安顺','Гуйчжоу','China','cn'],
-['Бицзе','Bijie','毕节','Гуйчжоу','China','cn'],
-['Тунжэнь','Tongren','铜仁','Гуйчжоу','China','cn'],
-// Юньнань
-['Цюйцзин','Qujing','曲靖','Юньнань','China','cn'],
-['Юйси','Yuxi','玉溪','Юньнань','China','cn'],
-['Баошань','Baoshan','保山','Юньнань','China','cn'],
-['Чжаотун','Zhaotong','昭通','Юньнань','China','cn'],
-['Лицзян','Lijiang','丽江','Юньнань','China','cn'],
-['Пур','Puer','普洱','Юньнань','China','cn'],
-['Линьцан','Lincang','临沧','Юньнань','China','cn'],
-['Дали','Dali','大理','Юньнань','China','cn'],
-// Гуанси
-['Лючжоу','Liuzhou','柳州','Гуанси','China','cn'],
-['Гуйлинь','Guilin','桂林','Гуанси','China','cn'],
-['Учжоу','Wuzhou','梧州','Гуанси','China','cn'],
-['Бэйхай','Beihai','北海','Гуанси','China','cn'],
-['Циньчжоу','Qinzhou','钦州','Гуанси','China','cn'],
-['Фанчэнган','Fangchenggang','防城港','Гуанси','China','cn'],
-['Гуйган','Guigang','贵港','Гуанси','China','cn'],
-['Юйлинь','Yulin','玉林','Гуанси','China','cn'],
-['Байсэ','Baise','百色','Гуанси','China','cn'],
-['Хэчжоу','Hezhou','贺州','Гуанси','China','cn'],
-['Хэчи','Hechi','河池','Гуанси','China','cn'],
-['Лайбинь','Laibin','来宾','Гуанси','China','cn'],
-['Чунцзо','Chongzuo','崇左','Гуанси','China','cn'],
-// Хайнань
-['Хайкоу','Haikou','海口','Хайнань','China','cn'],
-['Санья','Sanya','三亚','Хайнань','China','cn'],
-['Даньчжоу','Danzhou','儋州','Хайнань','China','cn'],
-['Цюнхай','Qionghai','琼海','Хайнань','China','cn'],
-['Вэньчан','Wenchang','文昌','Хайнань','China','cn'],
-['Ваньнин','Wanning','万宁','Хайнань','China','cn'],
-['Дунфан','Dongfang','东方','Хайнань','China','cn'],
-['Учжишань','Wuzhishan','五指山','Хайнань','China','cn'],
-// Тибет
-['Лхаса','Lhasa','拉萨','Тибет','China','cn'],
-['Шигадзе','Shigatse','日喀则','Тибет','China','cn'],
-['Чамдо','Qamdo','昌都','Тибет','China','cn'],
-['Ньингчи','Nyingchi','林芝','Тибет','China','cn'],
-['Шаньнань','Shannan','山南','Тибет','China','cn'],
-['Нагчу','Nagqu','那曲','Тибет','China','cn'],
-['Нгари','Ngari','阿里','Тибет','China','cn']
-];
-for(const c of CN_CITIES_FULL){ if(!cities.some(x=>String(x[1]).toLowerCase()===String(c[1]).toLowerCase())) cities.push(c); }
-// Сопоставление провинций → города
-const PROVINCE_KEYWORDS = {
-  'краснояр':'Красноярский край','красноярск':'Красноярский край',
-  'кемеров':'Кемеровская область','кузбасс':'Кемеровская область',
-  'новосибир':'Новосибирская область','алтайск':'Алтайский край','алтай':'Алтайский край',
-  'томск':'Томская область','иркутск':'Иркутская область','бурят':'Республика Бурятия',
-  'забайкал':'Забайкальский край','хакас':'Республика Хакасия','тыва':'Республика Тыва',
-  'приморск':'Приморский край','хабаровск':'Хабаровский край','амурск':'Амурская область',
-  'якут':'Республика Саха (Якутия)','саха':'Республика Саха (Якутия)','сахалин':'Сахалинская область',
-  'магадан':'Магаданская область','камчат':'Камчатский край','еврейск':'Еврейская АО','чукот':'Чукотский АО',
-  'свердловск':'Свердловская область','челябинск':'Челябинская область','курганск':'Курганская область',
-  'тюменск':'Тюменская область','ханты':'Ханты-Мансийский АО','югра':'Ханты-Мансийский АО','ямал':'Ямало-Ненецкий АО',
-  'татарстан':'Республика Татарстан','башкор':'Республика Башкортостан','самарск':'Самарская область',
-  'саратовск':'Саратовская область','нижегородск':'Нижегородская область','пермск':'Пермский край',
-  'удмурт':'Удмуртская Республика','чуваш':'Чувашская Республика','мордовия':'Республика Мордовия',
-  'марий':'Республика Марий Эл','пензенск':'Пензенская область','ульяновск':'Ульяновская область',
-  'кировск':'Кировская область','оренбургск':'Оренбургская область',
-  'московск':'Московская область','ленинградск':'Ленинградская область','архангельск':'Архангельская область',
-  'вологодск':'Вологодская область','калининградск':'Калининградская область','карелия':'Республика Карелия',
-  'коми':'Республика Коми','мурманск':'Мурманская область','новгородск':'Новгородская область','псковск':'Псковская область',
-  'краснодарск':'Краснодарский край','кубань':'Краснодарский край','ростовск':'Ростовская область',
-  'астраханск':'Астраханская область','волгоградск':'Волгоградская область','крым':'Республика Крым',
-  'адыгея':'Республика Адыгея','калмык':'Республика Калмыкия','ставрополь':'Ставропольский край',
-  'дагестан':'Республика Дагестан','чечен':'Чеченская Республика','осетия':'Республика Северная Осетия',
-  'ингушет':'Республика Ингушетия','карачаев':'Карачаево-Черкесия',
-  'белгородск':'Белгородская область','брянск':'Брянская область','владимирск':'Владимирская область',
-  'воронежск':'Воронежская область','ивановск':'Ивановская область','калужск':'Калужская область',
-  'костромск':'Костромская область','курск':'Курская область','липецк':'Липецкая область',
-  'орловск':'Орловская область','рязанск':'Рязанская область','смоленск':'Смоленская область',
-  'тамбовск':'Тамбовская область','тверск':'Тверская область','тульск':'Тульская область','ярославск':'Ярославская область',
-  'гуандун':'Гуандун','чжэцзян':'Чжэцзян','цзянсу':'Цзянсу','шаньдун':'Шаньдун',
-  'фуцзянь':'Фуцзянь','хэнань':'Хэнань','хэбэй':'Хэбэй','шаньси':'Шаньси','шэньси':'Шэньси',
-  'ганьсу':'Ганьсу','цинхай':'Цинхай','нинся':'Нинся','синьцзян':'Синьцзян','уйгур':'Синьцзян',
-  'монголия':'Внутренняя Монголия','ляонин':'Ляонин','цзилинь':'Цзилинь','хэйлунцзян':'Хэйлунцзян',
-  'аньхой':'Аньхой','хубэй':'Хубэй','хунань':'Хунань','цзянси':'Цзянси','сычуань':'Сычуань',
-  'гуйчжоу':'Гуйчжоу','юньнань':'Юньнань','гуанси':'Гуанси','хайнань':'Хайнань','тибет':'Тибет'
-};
-function provinceOf(query){
-  const x = normalize(String(query||'')).trim();
-  if (!x) return '';
-  for (const [kw, prov] of Object.entries(PROVINCE_KEYWORDS)){ if (x.includes(kw)) return prov; }
-  return '';
-}
-
 const ASIA_CODES = new Set(['cn','jp','kr','kp','mn','in','pk','bd','np','bt','lk','mv','af','id','th','vn','my','sg','ph','mm','kh','la','bn','tl','kz','uz','kg','tj','tm','asia']);
 
 const CITY_COORDS={'Пекин':[39.9042,116.4074],'北京':[39.9042,116.4074],'Beijing':[39.9042,116.4074],'Шанхай':[31.2304,121.4737],'上海':[31.2304,121.4737],'Shanghai':[31.2304,121.4737],'Нинбо':[29.8683,121.5440],'宁波':[29.8683,121.5440],'Ningbo':[29.8683,121.5440],'Гуанчжоу':[23.1291,113.2644],'广州':[23.1291,113.2644],'Guangzhou':[23.1291,113.2644],'Циндао':[36.0671,120.3826],'青岛':[36.0671,120.3826],'Qingdao':[36.0671,120.3826],'Сямэнь':[24.4798,118.0894],'厦门':[24.4798,118.0894],'Xiamen':[24.4798,118.0894],'Чэнду':[30.5728,104.0668],'成都':[30.5728,104.0668],'Chengdu':[30.5728,104.0668],'Москва':[55.7558,37.6173],'Moscow':[55.7558,37.6173],'Санкт-Петербург':[59.9311,30.3609],'Saint Petersburg':[59.9311,30.3609],'圣彼得堡':[59.9311,30.3609],'Екатеринбург':[56.8389,60.6057],'Yekaterinburg':[56.8389,60.6057],'Новосибирск':[55.0084,82.9357],'Novosibirsk':[55.0084,82.9357],'Нижний Новгород':[56.2965,43.9361],'Nizhny Novgorod':[56.2965,43.9361],'Казань':[55.7879,49.1233],'Kazan':[55.7879,49.1233],'Самара':[53.1959,50.1002],'Samara':[53.1959,50.1002],'Владивосток':[43.1155,131.8855],'Vladivostok':[43.1155,131.8855]};
@@ -674,10 +195,11 @@ $$('[data-i18n-placeholder]').forEach(el=>el.placeholder=tr(el.dataset.i18nPlace
  setDimensionLabels(); renderForwarderMenu(); renderTransportMenu(); renderIncoterms(); renderFactors();
  renderSuggestions($('#fromSuggestions'),$('#fromCity').value.trim()?cityMatches($('#fromCity').value,'asia'):[],$('#fromCity'),'asia');
  renderSuggestions($('#toSuggestions'),$('#toCity').value.trim()?cityMatches($('#toCity').value,'russia'):[],$('#toCity'),'russia');
- $('#currencyDate').textContent=formatToday();
+
  if($('#forwardersView')?.classList.contains('open'))renderDirectory();
  if($('#newsView')?.classList.contains('open'))loadNews();
  if($('#articleView')?.classList.contains('open')&&currentArticleNews)openArticle(currentArticleNews);
+ if($('#tarotView')?.classList.contains('open'))renderTarotText();
  updateCityPlaceholders();
 }
 $$('.lang').forEach(b=>b.onclick=()=>{lang=b.dataset.lang;newsCache=[];newsPrefetchPromise=null;applyLang();
@@ -738,42 +260,48 @@ $('#logoutButton')?.addEventListener('click',async()=>{try{await fetch('/api/log
 $('#themeToggleButton')?.addEventListener('click',()=>setTheme(document.body.classList.contains('manual-dark')?'light':'dark'));
 { const __saved = localStorage.getItem('iomastavka_theme'); const __mq = window.matchMedia('(prefers-color-scheme: dark)'); setTheme(__saved || (__mq.matches ? 'dark' : 'light'), false); __mq.addEventListener?.('change', e => { if (!localStorage.getItem('iomastavka_theme')) setTheme(e.matches ? 'dark' : 'light', false); }); }
 
+const TAROT_DECK=[
+    {n:'0',sym:'0',ru:['Шут','Новый цикл','Сегодня стоит дать место новому: небольшому шагу, идее или разговору, который давно откладывался.'],en:['The Fool','New cycle',"Today, make room for something new — a small step, an idea, or a conversation you've been putting off."],zh:['愚者','新的开始','今天值得为新事物留出空间——一小步、一个想法，或一场你一直拖延的对话。'],tr:['Deli','Yeni döngü','Bugün yeni bir şeye yer aç — küçük bir adım, bir fikir ya da uzun süredir ertelediğin bir konuşma.']},
+    {n:'I',sym:'I',ru:['Маг','Инициатива','Сегодня многое зависит от твоего первого действия. Не жди идеального момента — используй то, что уже есть.'],en:['The Magician','Initiative',"Today a lot depends on your first move. Don't wait for the perfect moment — use what you already have."],zh:['魔术师','主动','今天很多事情取决于你迈出的第一步。别等最好的时机——用好手头已有的一切。'],tr:['Büyücü','İnisiyatif','Bugün çoğu şey attığın ilk adıma bağlı. Mükemmel anı bekleme — elindekini kullan.']},
+    {n:'II',sym:'II',ru:['Верховная Жрица','Интуиция','Не вся информация должна быть получена сразу. Сегодня полезнее наблюдать, чем торопиться с выводами.'],en:['The High Priestess','Intuition','Not everything needs to be known right away. Today it helps more to observe than to rush to conclusions.'],zh:['女祭司','直觉','并非所有信息都需要立刻获得。今天，观察比急于下结论更有益。'],tr:['Başrahibe','Sezgi','Bugün her bilgiye hemen ulaşmak gerekmiyor. Sonuca koşmaktansa gözlemlemek daha faydalı.']},
+    {n:'III',sym:'III',ru:['Императрица','Рост','Хороший день для того, что должно постепенно приносить результат: работа, идея, отношения или проект.'],en:['The Empress','Growth','A good day for things that pay off gradually: work, an idea, a relationship or a project.'],zh:['女皇','成长','适合做那些需要慢慢见效的事：工作、想法、关系或项目。'],tr:['İmparatoriçe','Büyüme','İşi, fikri, ilişkiyi ya da projeyi yavaş yavaş sonuca taşımak için iyi bir gün.']},
+    {n:'IV',sym:'IV',ru:['Император','Опора','Сегодня сила в структуре. Разложи задачи по местам и не позволяй чужой суете управлять твоим ритмом.'],en:['The Emperor','Support','Today, strength is in structure. Put your tasks in order and don\u2019t let others\u2019 rush set your pace.'],zh:['皇帝','支撑','今天力量在于结构。把任务安排妥当，别让别人的忙乱打乱你的节奏。'],tr:['İmparator','Dayanak','Bugün güç düzende. İşlerini yerli yerine koy, başkalarının telaşı ritmini bozmasın.']},
+    {n:'V',sym:'V',ru:['Иерофант','Знание','Полезный ответ сегодня может прийти через человека с опытом, документ или уже проверенный путь.'],en:['The Hierophant','Knowledge','A useful answer today may come through an experienced person, a document, or an already proven path.'],zh:['教皇','知识','今天有用的答案可能来自有经验的人、一份文件，或一条已被验证过的路径。'],tr:['Başrahip','Bilgi','Bugün işe yarar cevap deneyimli biri, bir belge ya da denenmiş bir yoldan gelebilir.']},
+    {n:'VI',sym:'VI',ru:['Влюблённые','Выбор','День про выбор между двумя направлениями. Смотри не только на выгоду, но и на то, куда тебя действительно тянет.'],en:['The Lovers','Choice','A day about choosing between two directions. Look not only at the benefit, but at what really draws you.'],zh:['恋人','抉择','今天关乎在两个方向之间做选择。不只看利益，也看真正吸引你的是什么。'],tr:['Aşıklar','Seçim','Bugün iki yön arasında seçim yapmakla ilgili. Sadece kazanca değil, seni gerçekten çeken şeye de bak.']},
+    {n:'VII',sym:'VII',ru:['Колесница','Движение','День хорошо подходит для дороги, переговоров и решительного движения к конкретной цели.'],en:['The Chariot','Movement','A good day for travel, negotiations, and decisive movement toward a specific goal.'],zh:['战车','前行','适合出行、谈判，以及朝具体目标坚定前进。'],tr:['Savaş Arabası','Hareket','Yolculuk, müzakere ve somut bir hedefe kararlı ilerleme için iyi bir gün.']},
+    {n:'VIII',sym:'VIII',ru:['Сила','Спокойная сила','Сегодня не нужно доказывать силу громкостью. Мягкая уверенность окажется сильнее давления.'],en:['Strength','Calm strength',"Today you don't need to prove strength with volume. Quiet confidence will beat pressure."],zh:['力量','沉稳的力量','今天不必用声音证明力量。温和的自信比压力更有力。'],tr:['Güç','Sakin güç','Bugün gücü yükseklikle kanıtlamana gerek yok. Yumuşak bir özgüven baskıdan daha güçlü olacak.']},
+    {n:'IX',sym:'IX',ru:['Отшельник','Фокус','Убери лишний шум и закончи одну важную вещь. Ясность сегодня приходит через концентрацию.'],en:['The Hermit','Focus','Cut the noise and finish one important thing. Today, clarity comes through focus.'],zh:['隐士','专注','减少多余的干扰，完成一件重要的事。清晰来自专注。'],tr:['Ermiş','Odak','Gereksiz gürültüyü azalt ve önemli bir işi bitir. Bugün netlik odaklanmaktan gelir.']},
+    {n:'X',sym:'X',ru:['Колесо Фортуны','Поворот','Ситуация может неожиданно поменять направление. Оставь немного пространства для удачного поворота.'],en:['Wheel of Fortune','Turn','The situation may suddenly change direction. Leave a little room for a lucky turn.'],zh:['命运之轮','转折','局势可能突然转向。给幸运的转折留一点空间。'],tr:['Kader Çarkı','Dönüş','Durum beklenmedik şekilde yön değiştirebilir. İyi bir dönüş için biraz alan bırak.']},
+    {n:'XI',sym:'XI',ru:['Справедливость','Баланс','Сегодня особенно важно проверять цифры, документы и договорённости. Точность сыграет на твоей стороне.'],en:['Justice','Balance','Today it especially pays to double-check numbers, documents and agreements. Accuracy is on your side.'],zh:['正义','平衡','今天尤其要核对数字、文件和约定。准确会站在你这边。'],tr:['Adalet','Denge','Bugün rakamları, belgeleri ve anlaşmaları kontrol etmek özellikle önemli. Doğruluk senin lehine olacak.']},
+    {n:'XII',sym:'XII',ru:['Повешенный','Пауза','Если что-то не двигается, не обязательно давить сильнее. Иногда смена взгляда быстрее приводит к решению.'],en:['The Hanged Man','Pause',"If something isn't moving, you don't have to push harder. Sometimes a change of view gets you to the answer faster."],zh:['倒吊人','暂停','如果事情停滞不前，不一定要更用力推动。有时换个角度看问题会更快找到答案。'],tr:['Asılan Adam','Duraklama','Bir şey ilerlemiyorsa daha sert bastırmak gerekmeyebilir. Bazen bakış açını değiştirmek çözüme daha hızlı götürür.']},
+    {n:'XIII',sym:'XIII',ru:['Смерть','Обновление','Это не про плохое событие, а про завершение старого этапа. Освободив место, ты увидишь следующий шаг.'],en:['Death','Renewal',"It's not about something bad — it's about closing an old chapter. Once you clear the space, the next step becomes visible."],zh:['死神','更新','这不是坏事，而是旧阶段的结束。腾出空间后，你会看到下一步。'],tr:['Ölüm','Yenilenme','Bu kötü bir olay değil, eski bir dönemin kapanışı. Yer açtığında bir sonraki adımı göreceksin.']},
+    {n:'XIV',sym:'XIV',ru:['Умеренность','Ритм','Сегодня тебе особенно полезен ровный темп: без рывков, перегруза и попытки сделать всё одновременно.'],en:['Temperance','Rhythm','Today an even pace serves you best: no sudden pushes, no overload, no trying to do everything at once.'],zh:['节制','节奏','今天尤其需要平稳的步调：不要突进、不要超负荷，也别想同时完成所有事。'],tr:['Denge','Ritim','Bugün sana özellikle düzenli bir tempo iyi gelir: ani atılımlar, aşırı yük olmadan.']},
+    {n:'XV',sym:'XV',ru:['Дьявол','Освобождение','Заметь, что забирает внимание больше, чем заслуживает. Не каждая срочность действительно твоя.'],en:['The Devil','Liberation',"Notice what's taking more attention than it deserves. Not every urgency is really yours."],zh:['恶魔','解脱','留意什么占据了超出它本该有的注意力。不是每一件"紧急事"都真的属于你。'],tr:['Şeytan','Özgürleşme','Neyin hak ettiğinden fazla dikkatini aldığına dikkat et. Her aciliyet gerçekten senin değildir.']},
+    {n:'XVI',sym:'XVI',ru:['Башня','Перестройка','Неожиданная перемена может оказаться полезной, если не держаться за то, что уже перестало работать.'],en:['The Tower','Rebuild',"An unexpected change can turn out useful if you don't hold on to what's already stopped working."],zh:['塔','重建','意想不到的变化如果不再执着于已经失效的东西，可能反而有益。'],tr:['Kule','Yeniden yapılanma','Artık işe yaramayan şeye tutunmazsan, beklenmedik bir değişiklik faydalı olabilir.']},
+    {n:'XVII',sym:'☆',ru:['Звезда','Надежда','Хороший день для идеи, которая ещё не принесла результат, но уже показывает направление. Продолжай.'],en:['The Star','Hope',"A good day for an idea that hasn't paid off yet but is already showing direction. Keep going."],zh:['星星','希望','适合还未见成效、但已显方向的想法。继续前进。'],tr:['Yıldız','Umut','Henüz sonuç vermemiş ama yönünü göstermeye başlamış bir fikir için iyi bir gün. Devam et.']},
+    {n:'XVIII',sym:'\u263D',ru:['Луна','Наблюдение','Не спеши верить первому впечатлению. Часть картины станет понятнее чуть позже.'],en:['The Moon','Observation',"Don't rush to trust the first impression. Part of the picture will become clearer a bit later."],zh:['月亮','观察','别急于相信第一印象。部分真相稍后才会清晰。'],tr:['Ay','Gözlem','İlk izlenime hemen inanma. Tablonun bir kısmı biraz sonra netleşecek.']},
+    {n:'XIX',sym:'\u2609',ru:['Солнце','Ясность','Одна из самых светлых карт. Сегодня хорошо говорить прямо, действовать уверенно и не усложнять очевидное.'],en:['The Sun','Clarity','One of the brightest cards. A good day to speak plainly, act with confidence, and not overcomplicate the obvious.'],zh:['太阳','明朗','这是最明亮的一张牌。今天适合坦率表达、自信行动，不把简单的事复杂化。'],tr:['Güneş','Netlik','En aydınlık kartlardan biri. Bugün açık konuşmak, kararlı davranmak için uygun.']},
+    {n:'XX',sym:'XX',ru:['Суд','Решение','Сегодня может появиться момент, когда старый вопрос наконец попросит окончательного ответа.'],en:['Judgement','Decision','Today a moment may come when an old question finally asks for a final answer.'],zh:['审判','决断','今天可能出现一个时刻，一个悬而未决的问题终于要求给出最终答案。'],tr:['Mahkeme','Karar','Bugün eski bir sorunun nihayet kesin bir cevap istediği bir an gelebilir.']},
+    {n:'XXI',sym:'XXI',ru:['Мир','Завершение','Хороший знак для закрытия этапа, результата и перехода на следующий уровень.'],en:['The World','Completion','A good sign for closing a chapter, getting a result, and moving to the next level.'],zh:['世界','完成','适合结束一个阶段、收获成果，迈向下一个层次的好兆头。'],tr:['Dünya','Tamamlanma','Bir dönemi kapatmak, sonuç almak ve bir sonraki seviyeye geçmek için iyi bir işaret.']}
+  ];
+function renderTarotText(){
+  const d=new Date(); const daySeed=d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
+  const idx=Math.abs(daySeed*17+21)%TAROT_DECK.length; const c=TAROT_DECK[idx];
+  const loc=c[lang]||c.ru;
+  $('#tarotSymbol').textContent=c.sym;
+  $('#tarotRoman').textContent=c.sym===c.n?'':c.n;
+  $('#tarotTitle').textContent=loc[0];
+  $('#tarotKeyword').textContent=loc[1];
+  $('#tarotText').textContent=loc[2];
+  const dateStr=d.toLocaleDateString(lang==='ru'?'ru-RU':lang==='zh'?'zh-CN':lang==='tr'?'tr-TR':'en-GB',{day:'numeric',month:'long'});
+  $('#tarotMeta').textContent='iomastavka \u00b7 '+dateStr;
+}
 function showTarot(){
   showView('tarotView');
   const shell=$('#tarotShell'), card=$('.tarot-card');
   if(!shell||!card)return;
   shell.classList.remove('tarot-ready','tarot-closing');
-  const deck=[
-    ['0','Шут','The Fool','Новый цикл','Сегодня стоит дать место новому: небольшому шагу, идее или разговору, который давно откладывался.'],
-    ['I','Маг','The Magician','Инициатива','Сегодня многое зависит от твоего первого действия. Не жди идеального момента — используй то, что уже есть.'],
-    ['II','Верховная Жрица','The High Priestess','Интуиция','Не вся информация должна быть получена сразу. Сегодня полезнее наблюдать, чем торопиться с выводами.'],
-    ['III','Императрица','The Empress','Рост','Хороший день для того, что должно постепенно приносить результат: работа, идея, отношения или проект.'],
-    ['IV','Император','The Emperor','Опора','Сегодня сила в структуре. Разложи задачи по местам и не позволяй чужой суете управлять твоим ритмом.'],
-    ['V','Иерофант','The Hierophant','Знание','Полезный ответ сегодня может прийти через человека с опытом, документ или уже проверенный путь.'],
-    ['VI','Влюблённые','The Lovers','Выбор','День про выбор между двумя направлениями. Смотри не только на выгоду, но и на то, куда тебя действительно тянет.'],
-    ['VII','Колесница','The Chariot','Движение','День хорошо подходит для дороги, переговоров и решительного движения к конкретной цели.'],
-    ['VIII','Сила','Strength','Спокойная сила','Сегодня не нужно доказывать силу громкостью. Мягкая уверенность окажется сильнее давления.'],
-    ['IX','Отшельник','The Hermit','Фокус','Убери лишний шум и закончи одну важную вещь. Ясность сегодня приходит через концентрацию.'],
-    ['X','Колесо Фортуны','Wheel of Fortune','Поворот','Ситуация может неожиданно поменять направление. Оставь немного пространства для удачного поворота.'],
-    ['XI','Справедливость','Justice','Баланс','Сегодня особенно важно проверять цифры, документы и договорённости. Точность сыграет на твоей стороне.'],
-    ['XII','Повешенный','The Hanged Man','Пауза','Если что-то не двигается, не обязательно давить сильнее. Иногда смена взгляда быстрее приводит к решению.'],
-    ['XIII','Смерть','Death','Обновление','Это не про плохое событие, а про завершение старого этапа. Освободив место, ты увидишь следующий шаг.'],
-    ['XIV','Умеренность','Temperance','Ритм','Сегодня тебе особенно полезен ровный темп: без рывков, перегруза и попытки сделать всё одновременно.'],
-    ['XV','Дьявол','The Devil','Освобождение','Заметь, что забирает внимание больше, чем заслуживает. Не каждая срочность действительно твоя.'],
-    ['XVI','Башня','The Tower','Перестройка','Неожиданная перемена может оказаться полезной, если не держаться за то, что уже перестало работать.'],
-    ['XVII','Звезда','The Star','Надежда','Хороший день для идеи, которая ещё не принесла результат, но уже показывает направление. Продолжай.'],
-    ['XVIII','Луна','The Moon','Наблюдение','Не спеши верить первому впечатлению. Часть картины станет понятнее чуть позже.'],
-    ['XIX','Солнце','The Sun','Ясность','Одна из самых светлых карт. Сегодня хорошо говорить прямо, действовать уверенно и не усложнять очевидное.'],
-    ['XX','Суд','Judgement','Решение','Сегодня может появиться момент, когда старый вопрос наконец попросит окончательного ответа.'],
-    ['XXI','Мир','The World','Завершение','Хороший знак для закрытия этапа, результата и перехода на следующий уровень.']
-  ];
-  // Birth data is used as a stable personal seed; this is a tarot-style daily reading, not a claim of scientific prediction.
-  const birthSeed=21*1000000+8*10000+2004*10+16+20;
-  const d=new Date(); const daySeed=d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
-  const idx=Math.abs((birthSeed*31+daySeed*17+21))%deck.length; const c=deck[idx];
-  $('#tarotSymbol').textContent=c[0]==='XIX'?'☉':c[0]==='XVII'?'✦':c[0]==='XVIII'?'☽':'♌';
-  $('#tarotTitle').textContent=lang==='ru'?c[1]:lang==='en'?c[2]:c[1];
-  $('#tarotText').textContent=lang==='ru'?`${c[3]} — ${c[4]}`:lang==='en'?`${c[2]} — ${c[4]}`:`${c[1]} — ${c[4]}`;
+  renderTarotText();
   requestAnimationFrame(()=>{shell.classList.add('tarot-ready');card.classList.add('tarot-reveal-stable');startTarotDust(false);});
 }
 function startTarotDust(reverse=false){
@@ -934,20 +462,6 @@ const CHINA_CITIES_TRANSPORT = {
 
 function normalizeCityKey(s){ return String(s||'').toLowerCase().replace(/[^a-zа-яё]/gi,''); }
 
-
-function routeAdviceShort(info){
-  if (!info) return '';
-  if (info.region === 'north' && info.rail) return 'Оптимально: прямое ЖД — 25-30 дней';
-  if (info.region === 'center' && info.rail) return 'Оптимально: прямое ЖД';
-  if (info.region === 'east' && info.sea && info.rail) return 'Оптимально: море из ' + (info.hub || 'Нинбо') + ' или прямое ЖД';
-  if (info.region === 'east' && info.sea) return 'Оптимально: море из ' + (info.hub || 'Шанхай');
-  if (info.region === 'south' && info.sea && !info.rail) return 'Оптимально: море через ' + (info.hub || 'Шэньчжэнь') + ' + ЖД';
-  if (info.region === 'south' && info.sea) return 'Оптимально: море';
-  if (info.sea) return 'Оптимально: море';
-  if (info.rail) return 'Оптимально: прямое ЖД';
-  if (info.road) return 'Авто до ' + (info.hub || 'ближайшего ЖД-хаба');
-  return 'Уточните у экспедитора';
-}
 function renderRouteAdvice(){
   const el = $('#routeAdvice');
   if (!el) return;
@@ -985,7 +499,7 @@ function renderRouteAdvice(){
   // Основная карточка
   let html = '<div class="route-advice-main"><span class="route-advice-icon">' + ico('map') + '</span><div class="route-advice-text">' +
     '<b>' + escapeHtml(from) + ' → ' + escapeHtml(to) + '</b>' +
-    '<p>' + escapeHtml(routeAdviceShort(info)) + '</p>' +
+    '<p>' + escapeHtml(info.note) + '</p>' +
     '<div class="route-advice-modes">' + modes.join(' · ') + '</div>' +
     '</div></div>';
 
@@ -1041,21 +555,12 @@ function updateDimensionUnitUI(){
 function dimensionsMm(){
  return ['length','width','height'].map(id=>(Number($('#'+id).value)||0)*UNIT_SCALE[dimensionUnit]);
 }
-function fmtNum(n){const x=Number(n);if(!Number.isFinite(x))return '0';return Math.abs(x-Math.round(x))<1e-9?String(Math.round(x)):x.toFixed(3).replace(/0+$/,'').replace(/\.$/,'')} function updateAutoVolume(){const [l,w,h]=dimensionsMm(),pieces=Number($('#pieces').value)||1,volume=(l*w*h/1e9)*pieces;const hasMode=!!(selectedMode&&modes[selectedMode]);const factor=hasMode?modes[selectedMode].factor:0;const v=$('#autoVolume'),vw=$('#autoVolumetricWeight'),f=$('#autoFactor');if(v)v.textContent=volume?fmtNum(volume)+' m³':'0 m³';if(vw)vw.textContent=(hasMode&&volume)?fmtNum(volume*factor)+' kg':'—';if(f)f.textContent=hasMode?factor+' kg/m³':'—';}
+function fmtNum(n){const x=Number(n);if(!Number.isFinite(x))return '0';return Math.abs(x-Math.round(x))<1e-9?String(Math.round(x)):x.toFixed(3).replace(/0+$/,'').replace(/\.$/,'')} function updateAutoVolume(){const [l,w,h]=dimensionsMm(),pieces=Number($('#pieces').value)||1,volume=(l*w*h/1e9)*pieces,factor=selectedMode&&modes[selectedMode]?modes[selectedMode].factor:167;const v=$('#autoVolume'),vw=$('#autoVolumetricWeight'),f=$('#autoFactor');if(v)v.textContent=volume?fmtNum(volume)+' m³':'0 m³';if(vw)vw.textContent=volume?fmtNum(volume*factor)+' kg':'0 kg';if(f)f.textContent=factor+' kg/m³';}
 function normalize(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
 function cityName(c){if(Array.isArray(c)) return String(c[1]||c[0]||c[2]||'').trim(); if(c&&typeof c==='object') return String(c.name||c.nameEn||c.nameZh||'').trim(); return String(c||'').trim()}
 function editDistance(a,b){a=normalize(a);b=normalize(b);const m=a.length,n=b.length;if(!m||!n)return Math.max(m,n);let prev=Array.from({length:n+1},(_,i)=>i);for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(cur[j-1]+1,prev[j]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur}return prev[n]}
 function cityMatches(q,target){
  const x=normalize(q).trim(); const isAsia=/^(asia|china)$/i.test(String(target||'')); const list=cities.filter(c=>isAsia?ASIA_CODES.has(String(c[5]||'').toLowerCase()):String(c[5]||'').toLowerCase()==='ru'); if(!x)return [];
- // Умный поиск: если запрос похож на название провинции/области — вернуть все города этой провинции
- const prov = provinceOf(q);
- if (prov && x.length >= 3){
-   const provNorm = normalize(prov);
-   const inProv = list.filter(c => normalize(String(c[3]||'')) === provNorm);
-   if (inProv.length){
-     return inProv.slice(0, 40);
-   }
- }
  return list.map(c=>{
    const fields=[c[0],c[1],c[2]]; let score=99; let fuzzy=false; let correction='';
    fields.forEach((f,i)=>{const n=normalize(f); if(n===x)score=Math.min(score,0); else if(n.startsWith(x))score=Math.min(score,1+i*.1); else if(n.includes(x))score=Math.min(score,3+i*.1); else {const d=editDistance(x,n); const limit=Math.max(1,Math.floor(Math.max(x.length,n.length)*.35)); if(d<=limit){score=Math.min(score,6+d);fuzzy=true; if(!correction||d<editDistance(x,normalize(correction)))correction=f;}}});
@@ -1427,21 +932,28 @@ if (recognition){ const __prev = recognition.onresult; recognition.onresult = e 
 
 // News panel: обновляется с серверного RSS-кэша.
 function formatToday(){const p=new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Moscow',day:'2-digit',month:'2-digit',year:'numeric'}).formatToParts(new Date());const d=Object.fromEntries(p.map(x=>[x.type,x.value]));return `${d.day}.${d.month}.${d.year} г.`}
+function paintCurrency(items,dateLabel){
+  const fmt=x=>x==null?'—':fmtNum(x);
+  if($('#homeCurrencyDate'))$('#homeCurrencyDate').textContent=dateLabel;
+  if(items?.USD?.value!=null)$('#homeUsd')&&($('#homeUsd').textContent=fmt(items.USD.value));
+  if(items?.EUR?.value!=null)$('#homeEur')&&($('#homeEur').textContent=fmt(items.EUR.value));
+  if(items?.CNY?.value!=null)$('#homeCny')&&($('#homeCny').textContent=fmt(items.CNY.value));
+}
 async function loadCurrency(){
-  const paint=(items)=>{const fmt=x=>x==null?'—':fmtNum(x);const dateStr=formatToday();const dateShort=dateStr.replace(' г.','');if($('#homeCurrencyDate'))$('#homeCurrencyDate').textContent=dateShort;if(items?.USD?.value!=null){$('#usdRate').textContent=fmt(items.USD.value);$('#homeUsd').textContent=fmt(items.USD.value)}if(items?.EUR?.value!=null){$('#eurRate').textContent=fmt(items.EUR.value);$('#homeEur').textContent=fmt(items.EUR.value)}if(items?.CNY?.value!=null){$('#cnyRate').textContent=fmt(items.CNY.value);$('#homeCny').textContent=fmt(items.CNY.value)}};
+  if(window.__currencyPinned)return; // user is looking at a historical date — don't overwrite it
+  const dateShort=formatToday().replace(' г.','');
   try{
     const r=await fetch('/api/currency',{credentials:'same-origin',cache:'no-store'});
     if(!r.ok) throw new Error('currency');
     const d=await r.json();
-    $('#currencyDate').textContent=formatToday(); paint(d.items||{});
+    paintCurrency(d.items||{},dateShort);
     try{localStorage.setItem('iomastavka_currency_cache',JSON.stringify(d.items||{}))}catch{}
   }catch{
-    try{const c=JSON.parse(localStorage.getItem('iomastavka_currency_cache')||'{}'); if(Object.keys(c).length){paint(c);return}}catch{}
+    try{const c=JSON.parse(localStorage.getItem('iomastavka_currency_cache')||'{}'); if(Object.keys(c).length){paintCurrency(c,dateShort);return}}catch{}
     // Official Bank of Russia values for 15.09.2026 as a last-resort display fallback.
     // They are replaced automatically as soon as /api/currency becomes available again.
     const fallback={CNY:{nominal:1,value:12.5353},USD:{nominal:1,value:84.3363},EUR:{nominal:1,value:97.7626}};
-    paint(fallback);
-    $('#currencyDate').textContent='15.09.2026';
+    paintCurrency(fallback,'15.09.2026');
   }
 }
 
@@ -1640,7 +1152,7 @@ function mdToHtmlArticle(text){
 }
 
 const AT = {
-  ru: { minRead: 'мин чтения', back: 'К новостям', original: 'Открыть оригинал', copy: 'Копировать ссылку', copied: 'Ссылка скопирована', facts: 'Ключевые факты', factsHint: 'Найдено в тексте статьи', related: 'Читайте также', source: 'Источник', official: 'Официальный источник', media: 'Отраслевое издание', excerpt: 'Показано начало материала. Полный текст — у источника.', readFull: 'Читать полностью', translating: 'Перевожу статью…', translateFail: 'Не удалось перевести. Показан оригинал на русском.', retry: 'Повторить', autoTr: 'Автоматический перевод. Оригинал на русском: ', noText: 'Полный текст не удалось загрузить — показано краткое описание. Откройте источник, чтобы прочитать статью целиком.', stock: 'Иллюстрация: Pexels', audio: 'Аудиоверсия статьи', voice: 'Голос', listen: 'Прослушать статью', officialNote: 'Официальная информация. Источник: ', excerptNote: 'Материал представлен как краткая выдержка. Права на полный текст принадлежат: ', types: { date: 'Дата', percent: 'Ставка / доля', code: 'Код ТН ВЭД', money: 'Сумма', qty: 'Объём' }, cats: { customs: 'Таможня', law: 'Право', rail: 'ЖД', sea: 'Море', china: 'Китай', road: 'Авто' }, urgent: 'СРОЧНО' },
+  ru: { minRead: 'мин чтения', back: 'К новостям', original: 'Открыть оригинал', copy: 'Копировать ссылку', copied: 'Ссылка скопирована', facts: 'Ключевые факты', factsHint: 'Найдено в тексте статьи', related: 'Читайте также', source: 'Источник', official: 'Официальный источник', media: 'Отраслевое издание', excerpt: 'Показано начало материала. Полный текст — у источника.', readFull: 'Читать полностью', translating: 'Перевожу статью…', translateFail: 'Не удалось перевести. Показан оригинал на русском.', retry: 'Повторить', autoTr: 'Автоматический перевод. Оригинал на русском: ', noText: 'Полный текст не удалось загрузить — показано краткое описание. Откройте источник, чтобы прочитать статью целиком.', stock: 'Иллюстрация: Pexels', audio: 'Аудиоверсия статьи', voice: 'Голос', listen: 'Прослушать статью', mediaFullNote: 'Материал полностью воспроизведён с сайта источника. Все права на текст принадлежат: ', mediaFullNote: 'This material is reproduced in full from the source website. All rights to the text belong to: ', mediaFullNote: '本文全文转载自来源网站，文本版权归属：', mediaFullNote: 'Bu içerik kaynak sitesinden tam olarak alınmıştır. Metnin tüm hakları şuna aittir: ', officialNote: 'Официальная информация. Источник: ', excerptNote: 'Материал представлен как краткая выдержка. Права на полный текст принадлежат: ', types: { date: 'Дата', percent: 'Ставка / доля', code: 'Код ТН ВЭД', money: 'Сумма', qty: 'Объём' }, cats: { customs: 'Таможня', law: 'Право', rail: 'ЖД', sea: 'Море', china: 'Китай', road: 'Авто' }, urgent: 'СРОЧНО' },
   en: { minRead: 'min read', back: 'Back to news', original: 'Open original', copy: 'Copy link', copied: 'Link copied', facts: 'Key facts', factsHint: 'Found in the article text', related: 'Related articles', source: 'Source', official: 'Official source', media: 'Industry publication', excerpt: 'Showing the beginning of the article. Full text at the source.', readFull: 'Read the full article', translating: 'Translating the article…', translateFail: 'Translation failed. Showing the Russian original.', retry: 'Retry', autoTr: 'Automatic translation. Russian original: ', noText: 'The full text could not be loaded — showing a short summary. Open the source to read the whole article.', stock: 'Illustration: Pexels', audio: 'Audio version', voice: 'Voice', listen: 'Listen', officialNote: 'Official information. Source: ', excerptNote: 'Shown as a short excerpt. Rights to the full text belong to: ', types: { date: 'Date', percent: 'Rate / share', code: 'HS code', money: 'Amount', qty: 'Volume' }, cats: { customs: 'Customs', law: 'Law', rail: 'Rail', sea: 'Sea', china: 'China', road: 'Road' }, urgent: 'URGENT' },
   zh: { minRead: '分钟阅读', back: '返回新闻', original: '打开原文', copy: '复制链接', copied: '链接已复制', facts: '关键信息', factsHint: '摘自文章正文', related: '相关文章', source: '来源', official: '官方来源', media: '行业媒体', excerpt: '仅显示文章开头，全文请见来源。', readFull: '阅读全文', translating: '正在翻译…', translateFail: '翻译失败，显示俄文原文。', retry: '重试', autoTr: '自动翻译。俄文原文：', noText: '无法加载全文，仅显示简介。请打开来源阅读全文。', stock: '配图：Pexels', audio: '文章音频', voice: '语音', listen: '收听', officialNote: '官方信息。来源：', excerptNote: '仅为摘要，全文版权归属：', types: { date: '日期', percent: '税率 / 占比', code: '商品编码', money: '金额', qty: '数量' }, cats: { customs: '海关', law: '法规', rail: '铁路', sea: '海运', china: '中国', road: '公路' }, urgent: '紧急' },
   tr: { minRead: 'dk okuma', back: 'Haberlere dön', original: 'Orijinali aç', copy: 'Bağlantıyı kopyala', copied: 'Bağlantı kopyalandı', facts: 'Önemli bilgiler', factsHint: 'Makale metninden alındı', related: 'İlgili makaleler', source: 'Kaynak', official: 'Resmi kaynak', media: 'Sektör yayını', excerpt: 'Makalenin başlangıcı gösteriliyor. Tam metin kaynakta.', readFull: 'Tamamını oku', translating: 'Makale çevriliyor…', translateFail: 'Çeviri başarısız. Rusça orijinal gösteriliyor.', retry: 'Tekrar dene', autoTr: 'Otomatik çeviri. Rusça orijinal: ', noText: 'Tam metin yüklenemedi — kısa özet gösteriliyor. Tamamını okumak için kaynağı açın.', stock: 'Görsel: Pexels', audio: 'Sesli sürüm', voice: 'Ses', listen: 'Dinle', officialNote: 'Resmi bilgi. Kaynak: ', excerptNote: 'Kısa alıntı olarak gösteriliyor. Tam metnin hakları: ', types: { date: 'Tarih', percent: 'Oran / pay', code: 'GTİP kodu', money: 'Tutar', qty: 'Miktar' }, cats: { customs: 'Gümrük', law: 'Hukuk', rail: 'Demiryolu', sea: 'Deniz', china: 'Çin', road: 'Karayolu' }, urgent: 'ACİL' }
@@ -1718,7 +1230,7 @@ function renderArticleFull(a, n, opts){
   const url = a.sourceUrl || n.link || '';
   const excerptBox = a.truncated ? '<div class="article-excerpt-end"><p>' + escapeHtml(at('excerpt')) + '</p>' + (url ? '<a class="btn-source" href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(at('readFull')) + ' ' + ICON_EXT + '</a>' : '') + '</div>' : '';
   const sourceBox = '<div class="article-sourcebox"><div><span class="sb-label">' + escapeHtml(at('source')) + '</span><b>' + escapeHtml(srcName) + '</b><span class="sb-kind">' + escapeHtml(at(a.sourceKind === 'official' ? 'official' : 'media')) + '</span></div>' +
-    '<p>' + escapeHtml(a.reuse === 'full' ? at('officialNote') + srcName + '.' : at('excerptNote') + srcName + '.') + (isTranslated && url ? ' ' + escapeHtml(at('autoTr')) : '') + (isTranslated && url ? '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(srcName) + '</a>' : '') + '</p>' +
+    '<p>' + escapeHtml((a.sourceKind === 'official' ? at('officialNote') : a.reuse === 'full' ? at('mediaFullNote') : at('excerptNote')) + srcName + '.') + (isTranslated && url ? ' ' + escapeHtml(at('autoTr')) : '') + (isTranslated && url ? '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(srcName) + '</a>' : '') + '</p>' +
     (url ? '<div class="sb-actions"><a class="btn-source" href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(at('original')) + ' ' + ICON_EXT + '</a><button type="button" class="btn-ghost" data-article-copy>' + ICON_LINK + escapeHtml(at('copy')) + '</button></div>' : '') + '</div>';
   const aside = factsHtml(a.facts) + relatedHtml(a.related);
   box.innerHTML = articleHeroHtml(a.image, badges.join(''), title, meta, { credit: a.imageKind === 'stock' ? at('stock') : '' }) +
@@ -1888,7 +1400,7 @@ async function backgroundRefresh(){await Promise.allSettled([checkWeather(),load
 updateCityPlaceholders();
 setTimeout(renderRouteAdvice, 500);
 renderChatEmpty();
-loadRates();loadAgents();renderIncoterms();renderFactors();updateAutoVolume();applyLang();$('#currencyDate').textContent=formatToday();loadCurrency();setInterval(loadCurrency,30*60*1000);
+loadRates();loadAgents();renderIncoterms();renderFactors();updateAutoVolume();applyLang();loadCurrency();setInterval(loadCurrency,30*60*1000);
 setInterval(()=>fetch('/api/health',{cache:'no-store'}).catch(()=>{}),2*60*1000);
 setInterval(()=>{fetch('/api/news',{cache:'no-store'}).catch(()=>{})},30*60*1000);
 window.addEventListener('error',e=>{console.warn('iomastavka:',e.error||e.message)});window.addEventListener('unhandledrejection',e=>{console.warn('iomastavka promise:',e.reason)});
@@ -2185,7 +1697,9 @@ window.addEventListener('online', () => toast(lang === 'en' ? 'Connection restor
       if (now >= sr && now <= ss) p = (now - sr) / (ss - sr);
       else { isSun = false; const night = 86400 - (ss - sr); const since = now > ss ? now - ss : now + 86400 - ss; p = Math.max(0, Math.min(1, since / night)); }
     } else { const h = new Date().getHours() + new Date().getMinutes() / 60; isSun = h >= 6 && h < 21; p = isSun ? (h - 6) / 15 : ((h + 3) % 24) / 9; p = Math.max(0, Math.min(1, p)); }
-    const x = 12 + 76 * p, y = 58 - Math.sin(Math.PI * p) * 46;
+    // Keep the sun/moon in the upper-right quadrant always — never low or over the hero text,
+    // even though p tracks the real time of day for a subtle living feel.
+    const x = 60 + 28 * p, y = 9 + (1 - Math.sin(Math.PI * p)) * 17;
     const r = document.documentElement.style;
     r.setProperty(isSun ? '--sun-x' : '--moon-x', x + '%');
     r.setProperty(isSun ? '--sun-y' : '--moon-y', y + '%');
@@ -2326,8 +1840,8 @@ window.addEventListener('online', () => toast(lang === 'en' ? 'Connection restor
     if (r.height < 20) { last = now; return; }             // stage collapsed: don't draw
     const dt = Math.min(50, now - (last || now)) / 1000; last = now;
     st.t += dt;
-    st.level += (st.target - st.level) * Math.min(1, dt * 14);
-    st.pulse *= Math.exp(-dt * 3.2);
+    st.level += (st.target - st.level) * Math.min(1, dt * 3.2);
+    st.pulse *= Math.exp(-dt * 1.6);
     const target = PAL[st.state] || PAL.idle;
     for (let k = 0; k < 4; k++) for (let j = 0; j < 3; j++) cur[k][j] += (target[k][j] - cur[k][j]) * Math.min(1, dt * 3);
     draw();
@@ -2335,45 +1849,46 @@ window.addEventListener('online', () => toast(lang === 'en' ? 'Connection restor
 
   function draw(){
     const s = st.state, t = st.t;
-    const env = .5 + .5 * Math.sin(t * 7.3) * Math.sin(t * 3.1 + 1);
+    const env = .5 + .5 * Math.sin(t * 1.7) * Math.sin(t * .9 + 1);
     let lv = Math.max(st.level, st.pulse);
-    if (s === 'speaking') lv = Math.max(lv, .22 + .3 * env);
+    if (s === 'speaking') lv = Math.max(lv, .18 + .22 * env);
     if (s === 'idle') lv = 0;
     const cx = SIZE / 2, cy = SIZE / 2;
-    const R = SIZE * .265 * (1 + (s === 'listening' ? lv * .34 : s === 'speaking' ? lv * .2 : s === 'thinking' ? .05 * Math.sin(t * 3) : .035 * Math.sin(t * 1.3)));
-    const amp = s === 'idle' ? .05 : s === 'listening' ? .07 + lv * .3 : s === 'thinking' ? .14 : .1 + lv * .2;
-    const speed = s === 'idle' ? .55 : s === 'listening' ? .9 + lv * 2.6 : s === 'thinking' ? 2.6 : 1.5 + lv * 1.6;
+    const R = SIZE * .33 * (1 + (s === 'listening' ? lv * .1 : s === 'speaking' ? lv * .07 : s === 'thinking' ? .02 * Math.sin(t * .6) : .018 * Math.sin(t * .4)));
+    // Gentle, slow, smooth — a calm breathing/liquid sphere, not a spiky blob.
+    const amp = s === 'idle' ? .022 : s === 'listening' ? .028 + lv * .07 : s === 'thinking' ? .04 : .035 + lv * .05;
+    const speed = s === 'idle' ? .14 : s === 'listening' ? .2 + lv * .4 : s === 'thinking' ? .38 : .28 + lv * .3;
 
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.clearRect(0, 0, SIZE, SIZE);
     ctx.globalCompositeOperation = 'source-over';
-    const glow = ctx.createRadialGradient(cx, cy, R * .5, cx, cy, R * 2.2);
-    glow.addColorStop(0, rgba(cur[0], .34 + lv * .3)); glow.addColorStop(1, rgba(cur[0], 0));
-    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(cx, cy, R * 2.2, 0, 6.2832); ctx.fill();
+    // Soft glow, tight to the sphere — no big outer halo, no rim stroke.
+    const glow = ctx.createRadialGradient(cx, cy, R * .7, cx, cy, R * 1.35);
+    glow.addColorStop(0, rgba(cur[0], .22 + lv * .18)); glow.addColorStop(1, rgba(cur[0], 0));
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(cx, cy, R * 1.35, 0, 6.2832); ctx.fill();
 
     ctx.globalCompositeOperation = 'lighter';
-    for (let k = 0; k < 4; k++){
-      const col = cur[k], ph = t * speed * (.7 + k * .23) + k * 1.7, off = R * .17 * (1 + lv);
-      const ox = cx + Math.cos(ph * .9 + k) * off, oy = cy + Math.sin(ph * .8 + k * 2) * off;
-      const N = 72; let rmax = 0;
+    for (let k = 0; k < 3; k++){
+      const col = cur[k], ph = t * speed * (.7 + k * .18) + k * 2.1, off = R * .05 * (1 + lv * .6);
+      const ox = cx + Math.cos(ph * .5 + k) * off, oy = cy + Math.sin(ph * .45 + k * 2) * off;
+      const N = 64; let rmax = 0;
       ctx.beginPath();
       for (let i = 0; i <= N; i++){
         const a = i / N * 6.2832;
-        const rr = R * (1 + amp * (Math.sin(3 * a + ph) + .6 * Math.sin(5 * a - ph * 1.3 + k) + .4 * Math.sin(2 * a + ph * .7))) * (.9 + k * .05);
+        const rr = R * (1 + amp * (Math.sin(2 * a + ph) + .5 * Math.sin(3 * a - ph * .8 + k)));
         rmax = Math.max(rmax, rr);
         const x = ox + Math.cos(a) * rr, y = oy + Math.sin(a) * rr;
         i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
       }
       ctx.closePath();
-      const g = ctx.createRadialGradient(ox - R * .2, oy - R * .25, R * .08, ox, oy, rmax * 1.1);
-      g.addColorStop(0, rgba(col, .88)); g.addColorStop(.62, rgba(col, .46)); g.addColorStop(1, rgba(col, .04));
+      const g = ctx.createRadialGradient(ox - R * .2, oy - R * .25, R * .08, ox, oy, rmax * 1.05);
+      g.addColorStop(0, rgba(col, .8)); g.addColorStop(.65, rgba(col, .4)); g.addColorStop(1, rgba(col, .05));
       ctx.fillStyle = g; ctx.fill();
     }
     ctx.globalCompositeOperation = 'source-over';
     const hl = ctx.createRadialGradient(cx - R * .38, cy - R * .42, 2, cx - R * .3, cy - R * .34, R * .75);
-    hl.addColorStop(0, 'rgba(255,255,255,.55)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
+    hl.addColorStop(0, 'rgba(255,255,255,.5)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = hl; ctx.beginPath(); ctx.arc(cx, cy, R * 1.05, 0, 6.2832); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, R * 1.02, 0, 6.2832); ctx.stroke();
   }
 
   async function startMic(){
@@ -2382,13 +1897,13 @@ window.addEventListener('online', () => toast(lang === 'en' ? 'Connection restor
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
       const AC = window.AudioContext || window.webkitAudioContext;
       const ac = new AC(), src = ac.createMediaStreamSource(stream), an = ac.createAnalyser();
-      an.fftSize = 512; an.smoothingTimeConstant = .55; src.connect(an);
+      an.fftSize = 1024; an.smoothingTimeConstant = .82; src.connect(an);
       mic = { stream: stream, ac: ac, an: an, buf: new Uint8Array(an.fftSize), raf: 0 };
       (function poll(){
         if (!mic) return;
         mic.an.getByteTimeDomainData(mic.buf);
         let sum = 0; for (let i = 0; i < mic.buf.length; i++){ const x = (mic.buf[i] - 128) / 128; sum += x * x; }
-        st.target = Math.min(1, Math.sqrt(sum / mic.buf.length) * 6);
+        st.target = Math.min(1, Math.sqrt(sum / mic.buf.length) * 3.2);
         mic.raf = requestAnimationFrame(poll);
       })();
       return true;
@@ -2454,36 +1969,745 @@ window.addEventListener('online', () => toast(lang === 'en' ? 'Connection restor
   new MutationObserver(() => { if (!$('#assistantView')?.classList.contains('open') && window.__voiceSession) window.voiceSessionEnd(); }).observe($('#assistantView'), { attributes: true, attributeFilter: ['class'] });
 })();
 
-// ========== Вставка КП из буфера обмена ==========
+// =====================================================================================
+//  CBR RATE CALENDAR — click the date on the home currency chip to see the rate on any
+//  past day. Pins the display so the 30-minute auto-refresh doesn't overwrite the choice.
+// =====================================================================================
 (function(){
-  const btn = document.getElementById('pasteRateBtn');
-  const status = document.getElementById('rateUploadStatus');
-  if (!btn) return;
-  btn.addEventListener('click', async function(){
+  const T = {
+    ru: { pick: 'Курс ЦБ на дату', today: 'Сегодня', close: 'Закрыть', loading: 'Загружаю…', fail: 'Не удалось получить курс на эту дату', weekdays: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'], months: ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'] },
+    en: { pick: 'CBR rate for a date', today: 'Today', close: 'Close', loading: 'Loading…', fail: 'Could not get the rate for that date', weekdays: ['Mo','Tu','We','Th','Fr','Sa','Su'], months: ['January','February','March','April','May','June','July','August','September','October','November','December'] },
+    zh: { pick: '选择日期查看央行汇率', today: '今天', close: '关闭', loading: '加载中…', fail: '无法获取该日期的汇率', weekdays: ['一','二','三','四','五','六','日'], months: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'] },
+    tr: { pick: 'Tarihe göre MB kuru', today: 'Bugün', close: 'Kapat', loading: 'Yükleniyor…', fail: 'Bu tarih için kur alınamadı', weekdays: ['Pt','Sa','Ça','Pe','Cu','Ct','Pz'], months: ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'] }
+  };
+  const L = () => T[typeof lang !== 'undefined' ? lang : 'ru'] || T.ru;
+  const pad2 = n => String(n).padStart(2, '0');
+  const iso = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+
+  let pop, view = new Date();
+  function build(){
+    pop = document.createElement('div');
+    pop.className = 'currency-cal';
+    pop.setAttribute('role', 'dialog');
+    document.body.appendChild(pop);
+    pop.addEventListener('click', e => e.stopPropagation());
+  }
+  function render(selected){
+    const t = L();
+    const y = view.getFullYear(), m = view.getMonth();
+    const first = new Date(y, m, 1);
+    const startOffset = (first.getDay() + 6) % 7; // Monday-first grid
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    let cells = '';
+    for (let i = 0; i < startOffset; i++) cells += '<span class="cc-day cc-empty"></span>';
+    for (let d = 1; d <= daysInMonth; d++){
+      const dt = new Date(y, m, d);
+      const future = dt > today;
+      const isToday = iso(dt) === iso(today);
+      const isSel = selected && iso(dt) === selected;
+      cells += '<button type="button" class="cc-day' + (future ? ' cc-disabled' : '') + (isToday ? ' cc-today' : '') + (isSel ? ' cc-selected' : '') + '"' + (future ? ' disabled' : ' data-date="' + iso(dt) + '"') + '>' + d + '</button>';
+    }
+    pop.innerHTML =
+      '<div class="cc-head">' +
+        '<button type="button" class="cc-nav" data-nav="-1" aria-label="&larr;"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+        '<b>' + t.months[m] + ' ' + y + '</b>' +
+        '<button type="button" class="cc-nav" data-nav="1" aria-label="&rarr;"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>' +
+      '</div>' +
+      '<div class="cc-weekdays">' + t.weekdays.map(w => '<span>' + w + '</span>').join('') + '</div>' +
+      '<div class="cc-grid">' + cells + '</div>' +
+      '<button type="button" class="cc-today-btn" data-today="1">' + t.today + '</button>';
+    pop.querySelector('[data-nav="-1"]').onclick = () => { view = new Date(y, m - 1, 1); render(selected); };
+    pop.querySelector('[data-nav="1"]').onclick = () => { const n = new Date(y, m + 1, 1); if (n <= today || (n.getFullYear() === today.getFullYear() && n.getMonth() === today.getMonth())) { view = n; render(selected); } };
+    pop.querySelectorAll('.cc-day[data-date]').forEach(btn => { btn.onclick = () => pick(btn.dataset.date); });
+    pop.querySelector('[data-today]').onclick = () => { window.__currencyPinned = false; close(); loadCurrency(); };
+  }
+  function position(anchor){
+    const r = anchor.getBoundingClientRect();
+    pop.style.top = (r.bottom + 10 + window.scrollY) + 'px';
+    const left = Math.max(12, Math.min(r.left, window.innerWidth - 300));
+    pop.style.left = left + 'px';
+  }
+  function open(anchor){
+    if (!pop) build();
+    view = new Date();
+    render(null);
+    pop.classList.add('open');
+    position(anchor);
+    setTimeout(() => document.addEventListener('click', onDocClick), 0);
+  }
+  function close(){
+    if (pop) pop.classList.remove('open');
+    document.removeEventListener('click', onDocClick);
+  }
+  function onDocClick(){ close(); }
+
+  async function pick(dateStr){
+    const t = L();
+    const chip = $('#homeCurrencyDate');
+    if (chip) chip.textContent = t.loading;
     try {
-      const text = await navigator.clipboard.readText();
-      if (!text || text.length < 20){
-        if (status){ status.textContent = 'Буфер обмена пуст или текст слишком короткий'; status.classList.add('is-error'); }
+      const r = await fetch('/api/currency/history?date=' + dateStr);
+      const d = await r.json();
+      if (!r.ok || !d.ok) throw new Error(d.error || 'fail');
+      window.__currencyPinned = true;
+      const dt = new Date(dateStr + 'T00:00:00');
+      const label = dt.getDate() + ' ' + t.months[dt.getMonth()] + ' ' + dt.getFullYear();
+      paintCurrency(d.items, label);
+      toast(label + ' \u2014 ' + (typeof lang !== 'undefined' && lang === 'ru' ? 'курс ЦБ на эту дату' : 'CBR rate'), 'success', 2600);
+    } catch (e) {
+      toast(t.fail, 'error', 3600);
+      window.__currencyPinned = false;
+      loadCurrency();
+    }
+    close();
+  }
+
+  document.addEventListener('click', e => {
+    const chip = e.target.closest && e.target.closest('#homeCurrencyDate');
+    if (!chip) return;
+    e.stopPropagation();
+    if (pop && pop.classList.contains('open')) { close(); return; }
+    open(chip);
+  });
+
+  // keep the chip visually hinting it's clickable, and translate the tooltip
+  const style = () => { const chip = $('#homeCurrencyDate'); if (chip) chip.title = L().pick; };
+  document.addEventListener('DOMContentLoaded', style);
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.lang')) setTimeout(style, 0); });
+  style();
+})();
+
+/* ============ IOMA: форма заявки ============ */
+(function(){
+  if (window.__iomaRequestHandler) return;
+  window.__iomaRequestHandler = true;
+
+  function initRequestForm(){
+    var form = document.getElementById('requestForm');
+    if (!form || form.dataset.bound === '1') return;
+    form.dataset.bound = '1';
+
+    // Запоминаем время открытия формы
+    var openedAt = Date.now();
+    try {
+      var tField = document.getElementById('requestTime');
+      if (tField) tField.value = String(openedAt);
+    } catch(e){}
+
+    // Валидация контакта — отсеиваем спам
+    function validatePhone(countryCode, digits){
+      var picked = (window.__iomaPhonePick && window.__iomaPhonePick()) || { lengths: [10] };
+      var expected = picked.lengths || [7,8,9,10,11,12,13,14,15];
+      if (!expected.includes(digits.length)) return 'Неверная длина номера (введено ' + digits.length + ', нужно ' + expected.join('/') + ')';
+      if (/^(\d)\1+$/.test(digits)) return 'Номер из одинаковых цифр';
+      if (/0{6,}/.test(digits)) return 'Слишком много нулей';
+      if (/9{6,}/.test(digits)) return 'Слишком много девяток';
+      if (/8{6,}/.test(digits)) return 'Слишком много восьмёрок';
+      if (/1{6,}/.test(digits)) return 'Слишком много единиц';
+      if (/2{6,}/.test(digits)) return 'Слишком много двоек';
+      // Известные спам-номера
+      var blocklist = ['88005553535'];
+      if (blocklist.includes(countryCode.replace('+','') + digits)) return 'Этот номер в чёрном списке';
+      return '';
+    }
+
+    function validateName(n){
+      var v = String(n||'').trim();
+      if (v.length < 2) return 'Имя слишком короткое';
+      if (v.length > 120) return 'Имя слишком длинное';
+      if (/^(.)\1+$/.test(v)) return 'Некорректное имя';
+      return '';
+    }
+
+    form.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var status = document.getElementById('requestStatus');
+      var name = (document.getElementById('requestName') || {}).value || '';
+      var picked = (window.__iomaPhonePick && window.__iomaPhonePick()) || { code: '+7', lengths: [10] };
+      var countryCode = picked.code;
+      var phoneRaw = (document.getElementById('requestPhone') || {}).value || '';
+      var phoneDigits = phoneRaw.replace(/\D/g, '');
+      // Убираем ведущую 8 для РФ
+      if (countryCode === '+7' && phoneDigits.startsWith('8')) phoneDigits = phoneDigits.slice(1);
+      // Если пользователь случайно ввёл код страны — убираем дубль
+      var codeDigits = countryCode.replace('+','');
+      if (phoneDigits.indexOf(codeDigits) === 0 && phoneDigits.length > codeDigits.length + 5){
+        phoneDigits = phoneDigits.slice(codeDigits.length);
+      }
+      var contact = countryCode + phoneDigits;
+      var body = (window.__iomaRequestBuildBody && window.__iomaRequestBuildBody()) || ((document.getElementById('requestBody') || {}).value || '');
+      var honey = (document.getElementById('requestWebsite') || {}).value || '';
+
+      if (!name.trim() || !contact.trim()){
+        if (status){ status.textContent = 'Заполните имя и контакт.'; status.className = 'request-status is-error'; }
         return;
       }
-      if (status){ status.textContent = 'Разбираю КП через AI…'; status.classList.remove('is-error','is-ok'); }
-      // Отправляем в /api/rates/import как текст
-      const r = await fetch('/api/rates/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text })
-      });
-      const d = await r.json();
-      if (r.ok && d.ok){
-        if (status){ status.textContent = 'Готово! Добавлено ставок: ' + (d.added||0); status.classList.add('is-ok'); }
-        toast('Ставки из буфера добавлены: ' + (d.added||0), 'success');
-        try { await loadRates(); } catch(_) {}
-      } else {
-        throw new Error(d.error || 'Не удалось разобрать КП');
+
+      // Honeypot — если заполнено, это бот. Тихо делаем вид что отправили.
+      if (honey.trim()){
+        console.log('[antispam] honeypot triggered');
+        if (status){ status.textContent = '✅ Заявка отправлена! Свяжемся с вами.'; status.className = 'request-status is-ok'; }
+        form.reset();
+        return;
       }
-    } catch(e){
-      if (status){ status.textContent = 'Ошибка: ' + (e.message||e); status.classList.add('is-error'); }
-      toast('Не удалось обработать КП: ' + (e.message||e), 'error', 5000);
+
+      // Слишком быстро — бот
+      var elapsed = Date.now() - openedAt;
+      if (elapsed < 3000){
+        if (status){ status.textContent = 'Подождите пару секунд и попробуйте снова.'; status.className = 'request-status is-error'; }
+        return;
+      }
+
+      // Валидация имени
+      var errName = validateName(name);
+      if (errName){
+        if (status){ status.textContent = errName; status.className = 'request-status is-error'; }
+        return;
+      }
+
+      // Валидация контакта
+      var errContact = validatePhone(countryCode, phoneDigits);
+      if (errContact){
+        if (status){ status.textContent = errContact; status.className = 'request-status is-error'; }
+        return;
+      }
+      var btn = form.querySelector('button[type="submit"]');
+      if (btn){ btn.disabled = true; btn.textContent = 'Отправляю…'; }
+      if (status){ status.textContent = ''; status.className = 'request-status'; }
+      try {
+        var r = await fetch('/api/requests', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ name: name.trim(), contact: contact.trim(), body: body.trim() })
+        });
+        var d = await r.json();
+        if (!r.ok || !d.ok) throw new Error(d.error || 'Ошибка отправки');
+        if (status){ status.textContent = '✅ Заявка отправлена! Свяжемся с вами.'; status.className = 'request-status is-ok'; }
+        form.reset();
+      } catch(err){
+        if (status){ status.textContent = 'Ошибка: ' + err.message; status.className = 'request-status is-error'; }
+      } finally {
+        if (btn){ btn.disabled = false; btn.textContent = 'Отправить'; }
+      }
+    });
+  }
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', initRequestForm);
+  } else {
+    initRequestForm();
+  }
+})();
+
+/* ============ IOMA: селектор страны для телефона ============ */
+(function(){
+  if (window.__iomaPhonePicker) return;
+  window.__iomaPhonePicker = true;
+
+  // Страны: флаг, код, длины номера, названия на разных языках
+  var COUNTRIES = [
+    {iso:'RU',c:'+7',n:'Россия',en:'Russia',zh:'俄罗斯',len:[10]},
+    {iso:'KZ',c:'+7',n:'Казахстан',en:'Kazakhstan',zh:'哈萨克斯坦',len:[10]},
+    {iso:'BY',c:'+375',n:'Беларусь',en:'Belarus',zh:'白俄罗斯',len:[9]},
+    {iso:'UA',c:'+380',n:'Украина',en:'Ukraine',zh:'乌克兰',len:[9]},
+    {iso:'UZ',c:'+998',n:'Узбекистан',en:'Uzbekistan',zh:'乌兹别克斯坦',len:[9]},
+    {iso:'KG',c:'+996',n:'Киргизия',en:'Kyrgyzstan',zh:'吉尔吉斯斯坦',len:[9]},
+    {iso:'TJ',c:'+992',n:'Таджикистан',en:'Tajikistan',zh:'塔吉克斯坦',len:[9]},
+    {iso:'TM',c:'+993',n:'Туркмения',en:'Turkmenistan',zh:'土库曼斯坦',len:[8]},
+    {iso:'AM',c:'+374',n:'Армения',en:'Armenia',zh:'亚美尼亚',len:[8]},
+    {iso:'AZ',c:'+994',n:'Азербайджан',en:'Azerbaijan',zh:'阿塞拜疆',len:[9]},
+    {iso:'GE',c:'+995',n:'Грузия',en:'Georgia',zh:'格鲁吉亚',len:[9]},
+    {iso:'MD',c:'+373',n:'Молдова',en:'Moldova',zh:'摩尔多瓦',len:[8]},
+    {iso:'RO',c:'+40',n:'Румыния',en:'Romania',zh:'罗马尼亚',len:[9]},
+    {iso:'BG',c:'+359',n:'Болгария',en:'Bulgaria',zh:'保加利亚',len:[9]},
+    {iso:'RS',c:'+381',n:'Сербия',en:'Serbia',zh:'塞尔维亚',len:[9]},
+    {iso:'HR',c:'+385',n:'Хорватия',en:'Croatia',zh:'克罗地亚',len:[9]},
+    {iso:'SI',c:'+386',n:'Словения',en:'Slovenia',zh:'斯洛文尼亚',len:[8]},
+    {iso:'SK',c:'+421',n:'Словакия',en:'Slovakia',zh:'斯洛伐克',len:[9]},
+    {iso:'CZ',c:'+420',n:'Чехия',en:'Czechia',zh:'捷克',len:[9]},
+    {iso:'HU',c:'+36',n:'Венгрия',en:'Hungary',zh:'匈牙利',len:[9]},
+    {iso:'PL',c:'+48',n:'Польша',en:'Poland',zh:'波兰',len:[9]},
+    {iso:'LT',c:'+370',n:'Литва',en:'Lithuania',zh:'立陶宛',len:[8]},
+    {iso:'LV',c:'+371',n:'Латвия',en:'Latvia',zh:'拉脱维亚',len:[8]},
+    {iso:'EE',c:'+372',n:'Эстония',en:'Estonia',zh:'爱沙尼亚',len:[8]},
+    {iso:'FI',c:'+358',n:'Финляндия',en:'Finland',zh:'芬兰',len:[9]},
+    {iso:'SE',c:'+46',n:'Швеция',en:'Sweden',zh:'瑞典',len:[9]},
+    {iso:'NO',c:'+47',n:'Норвегия',en:'Norway',zh:'挪威',len:[8]},
+    {iso:'DK',c:'+45',n:'Дания',en:'Denmark',zh:'丹麦',len:[8]},
+    {iso:'IS',c:'+354',n:'Исландия',en:'Iceland',zh:'冰岛',len:[7]},
+    {iso:'IE',c:'+353',n:'Ирландия',en:'Ireland',zh:'爱尔兰',len:[9]},
+    {iso:'GB',c:'+44',n:'Великобритания',en:'United Kingdom',zh:'英国',len:[10]},
+    {iso:'DE',c:'+49',n:'Германия',en:'Germany',zh:'德国',len:[10]},
+    {iso:'FR',c:'+33',n:'Франция',en:'France',zh:'法国',len:[9]},
+    {iso:'IT',c:'+39',n:'Италия',en:'Italy',zh:'意大利',len:[10]},
+    {iso:'ES',c:'+34',n:'Испания',en:'Spain',zh:'西班牙',len:[9]},
+    {iso:'PT',c:'+351',n:'Португалия',en:'Portugal',zh:'葡萄牙',len:[9]},
+    {iso:'NL',c:'+31',n:'Нидерланды',en:'Netherlands',zh:'荷兰',len:[9]},
+    {iso:'BE',c:'+32',n:'Бельгия',en:'Belgium',zh:'比利时',len:[9]},
+    {iso:'LU',c:'+352',n:'Люксембург',en:'Luxembourg',zh:'卢森堡',len:[9]},
+    {iso:'CH',c:'+41',n:'Швейцария',en:'Switzerland',zh:'瑞士',len:[9]},
+    {iso:'AT',c:'+43',n:'Австрия',en:'Austria',zh:'奥地利',len:[10]},
+    {iso:'GR',c:'+30',n:'Греция',en:'Greece',zh:'希腊',len:[10]},
+    {iso:'MT',c:'+356',n:'Мальта',en:'Malta',zh:'马耳他',len:[8]},
+    {iso:'CY',c:'+357',n:'Кипр',en:'Cyprus',zh:'塞浦路斯',len:[8]},
+    {iso:'AL',c:'+355',n:'Албания',en:'Albania',zh:'阿尔巴尼亚',len:[9]},
+    {iso:'MK',c:'+389',n:'Северная Македония',en:'North Macedonia',zh:'北马其顿',len:[8]},
+    {iso:'BA',c:'+387',n:'Босния и Герцеговина',en:'Bosnia',zh:'波斯尼亚',len:[8]},
+    {iso:'ME',c:'+382',n:'Черногория',en:'Montenegro',zh:'黑山',len:[8]},
+    {iso:'XK',c:'+383',n:'Косово',en:'Kosovo',zh:'科索沃',len:[8]},
+    {iso:'CN',c:'+86',n:'Китай',en:'China',zh:'中国',len:[11]},
+    {iso:'HK',c:'+852',n:'Гонконг',en:'Hong Kong',zh:'香港',len:[8]},
+    {iso:'TW',c:'+886',n:'Тайвань',en:'Taiwan',zh:'台湾',len:[9]},
+    {iso:'MO',c:'+853',n:'Макао',en:'Macau',zh:'澳门',len:[8]},
+    {iso:'JP',c:'+81',n:'Япония',en:'Japan',zh:'日本',len:[10]},
+    {iso:'KR',c:'+82',n:'Южная Корея',en:'South Korea',zh:'韩国',len:[10]},
+    {iso:'KP',c:'+850',n:'Северная Корея',en:'North Korea',zh:'朝鲜',len:[8]},
+    {iso:'MN',c:'+976',n:'Монголия',en:'Mongolia',zh:'蒙古',len:[8]},
+    {iso:'VN',c:'+84',n:'Вьетнам',en:'Vietnam',zh:'越南',len:[9]},
+    {iso:'TH',c:'+66',n:'Таиланд',en:'Thailand',zh:'泰国',len:[9]},
+    {iso:'ID',c:'+62',n:'Индонезия',en:'Indonesia',zh:'印度尼西亚',len:[10]},
+    {iso:'MY',c:'+60',n:'Малайзия',en:'Malaysia',zh:'马来西亚',len:[9]},
+    {iso:'SG',c:'+65',n:'Сингапур',en:'Singapore',zh:'新加坡',len:[8]},
+    {iso:'PH',c:'+63',n:'Филиппины',en:'Philippines',zh:'菲律宾',len:[10]},
+    {iso:'IN',c:'+91',n:'Индия',en:'India',zh:'印度',len:[10]},
+    {iso:'PK',c:'+92',n:'Пакистан',en:'Pakistan',zh:'巴基斯坦',len:[10]},
+    {iso:'BD',c:'+880',n:'Бангладеш',en:'Bangladesh',zh:'孟加拉',len:[10]},
+    {iso:'LK',c:'+94',n:'Шри-Ланка',en:'Sri Lanka',zh:'斯里兰卡',len:[9]},
+    {iso:'NP',c:'+977',n:'Непал',en:'Nepal',zh:'尼泊尔',len:[10]},
+    {iso:'BT',c:'+975',n:'Бутан',en:'Bhutan',zh:'不丹',len:[8]},
+    {iso:'MV',c:'+960',n:'Мальдивы',en:'Maldives',zh:'马尔代夫',len:[7]},
+    {iso:'AF',c:'+93',n:'Афганистан',en:'Afghanistan',zh:'阿富汗',len:[9]},
+    {iso:'IR',c:'+98',n:'Иран',en:'Iran',zh:'伊朗',len:[10]},
+    {iso:'IQ',c:'+964',n:'Ирак',en:'Iraq',zh:'伊拉克',len:[10]},
+    {iso:'SA',c:'+966',n:'Саудовская Аравия',en:'Saudi Arabia',zh:'沙特阿拉伯',len:[9]},
+    {iso:'AE',c:'+971',n:'ОАЭ',en:'UAE',zh:'阿联酋',len:[9]},
+    {iso:'QA',c:'+974',n:'Катар',en:'Qatar',zh:'卡塔尔',len:[8]},
+    {iso:'KW',c:'+965',n:'Кувейт',en:'Kuwait',zh:'科威特',len:[8]},
+    {iso:'BH',c:'+973',n:'Бахрейн',en:'Bahrain',zh:'巴林',len:[8]},
+    {iso:'OM',c:'+968',n:'Оман',en:'Oman',zh:'阿曼',len:[8]},
+    {iso:'YE',c:'+967',n:'Йемен',en:'Yemen',zh:'也门',len:[9]},
+    {iso:'JO',c:'+962',n:'Иордания',en:'Jordan',zh:'约旦',len:[9]},
+    {iso:'LB',c:'+961',n:'Ливан',en:'Lebanon',zh:'黎巴嫩',len:[8]},
+    {iso:'SY',c:'+963',n:'Сирия',en:'Syria',zh:'叙利亚',len:[9]},
+    {iso:'IL',c:'+972',n:'Израиль',en:'Israel',zh:'以色列',len:[9]},
+    {iso:'PS',c:'+970',n:'Палестина',en:'Palestine',zh:'巴勒斯坦',len:[9]},
+    {iso:'TR',c:'+90',n:'Турция',en:'Turkey',zh:'土耳其',len:[10]},
+    {iso:'EG',c:'+20',n:'Египет',en:'Egypt',zh:'埃及',len:[10]},
+    {iso:'LY',c:'+218',n:'Ливия',en:'Libya',zh:'利比亚',len:[9]},
+    {iso:'TN',c:'+216',n:'Тунис',en:'Tunisia',zh:'突尼斯',len:[8]},
+    {iso:'DZ',c:'+213',n:'Алжир',en:'Algeria',zh:'阿尔及利亚',len:[9]},
+    {iso:'MA',c:'+212',n:'Марокко',en:'Morocco',zh:'摩洛哥',len:[9]},
+    {iso:'SD',c:'+249',n:'Судан',en:'Sudan',zh:'苏丹',len:[9]},
+    {iso:'ET',c:'+251',n:'Эфиопия',en:'Ethiopia',zh:'埃塞俄比亚',len:[9]},
+    {iso:'KE',c:'+254',n:'Кения',en:'Kenya',zh:'肯尼亚',len:[9]},
+    {iso:'TZ',c:'+255',n:'Танзания',en:'Tanzania',zh:'坦桑尼亚',len:[9]},
+    {iso:'UG',c:'+256',n:'Уганда',en:'Uganda',zh:'乌干达',len:[9]},
+    {iso:'RW',c:'+250',n:'Руанда',en:'Rwanda',zh:'卢旺达',len:[9]},
+    {iso:'NG',c:'+234',n:'Нигерия',en:'Nigeria',zh:'尼日利亚',len:[10]},
+    {iso:'GH',c:'+233',n:'Гана',en:'Ghana',zh:'加纳',len:[9]},
+    {iso:'CI',c:'+225',n:'Кот-д\'Ивуар',en:'Ivory Coast',zh:'科特迪瓦',len:[8]},
+    {iso:'SN',c:'+221',n:'Сенегал',en:'Senegal',zh:'塞内加尔',len:[9]},
+    {iso:'CM',c:'+237',n:'Камерун',en:'Cameroon',zh:'喀麦隆',len:[9]},
+    {iso:'ZA',c:'+27',n:'ЮАР',en:'South Africa',zh:'南非',len:[9]},
+    {iso:'ZW',c:'+263',n:'Зимбабве',en:'Zimbabwe',zh:'津巴布韦',len:[9]},
+    {iso:'ZM',c:'+260',n:'Замбия',en:'Zambia',zh:'赞比亚',len:[9]},
+    {iso:'MZ',c:'+258',n:'Мозамбик',en:'Mozambique',zh:'莫桑比克',len:[9]},
+    {iso:'AO',c:'+244',n:'Ангола',en:'Angola',zh:'安哥拉',len:[9]},
+    {iso:'NA',c:'+264',n:'Намибия',en:'Namibia',zh:'纳米比亚',len:[9]},
+    {iso:'BW',c:'+267',n:'Ботсвана',en:'Botswana',zh:'博茨瓦纳',len:[8]},
+    {iso:'MG',c:'+261',n:'Мадагаскар',en:'Madagascar',zh:'马达加斯加',len:[9]},
+    {iso:'MU',c:'+230',n:'Маврикий',en:'Mauritius',zh:'毛里求斯',len:[7]},
+    {iso:'SC',c:'+248',n:'Сейшелы',en:'Seychelles',zh:'塞舌尔',len:[7]},
+    {iso:'US',c:'+1',n:'США',en:'United States',zh:'美国',len:[10]},
+    {iso:'CA',c:'+1',n:'Канада',en:'Canada',zh:'加拿大',len:[10]},
+    {iso:'MX',c:'+52',n:'Мексика',en:'Mexico',zh:'墨西哥',len:[10]},
+    {iso:'GT',c:'+502',n:'Гватемала',en:'Guatemala',zh:'危地马拉',len:[8]},
+    {iso:'CU',c:'+53',n:'Куба',en:'Cuba',zh:'古巴',len:[8]},
+    {iso:'DO',c:'+1809',n:'Доминикана',en:'Dominican Republic',zh:'多米尼加',len:[7]},
+    {iso:'HT',c:'+509',n:'Гаити',en:'Haiti',zh:'海地',len:[8]},
+    {iso:'JM',c:'+1876',n:'Ямайка',en:'Jamaica',zh:'牙买加',len:[7]},
+    {iso:'PA',c:'+507',n:'Панама',en:'Panama',zh:'巴拿马',len:[8]},
+    {iso:'CR',c:'+506',n:'Коста-Рика',en:'Costa Rica',zh:'哥斯达黎加',len:[8]},
+    {iso:'CO',c:'+57',n:'Колумбия',en:'Colombia',zh:'哥伦比亚',len:[10]},
+    {iso:'VE',c:'+58',n:'Венесуэла',en:'Venezuela',zh:'委内瑞拉',len:[10]},
+    {iso:'EC',c:'+593',n:'Эквадор',en:'Ecuador',zh:'厄瓜多尔',len:[9]},
+    {iso:'PE',c:'+51',n:'Перу',en:'Peru',zh:'秘鲁',len:[9]},
+    {iso:'BO',c:'+591',n:'Боливия',en:'Bolivia',zh:'玻利维亚',len:[8]},
+    {iso:'CL',c:'+56',n:'Чили',en:'Chile',zh:'智利',len:[9]},
+    {iso:'AR',c:'+54',n:'Аргентина',en:'Argentina',zh:'阿根廷',len:[10]},
+    {iso:'UY',c:'+598',n:'Уругвай',en:'Uruguay',zh:'乌拉圭',len:[8]},
+    {iso:'PY',c:'+595',n:'Парагвай',en:'Paraguay',zh:'巴拉圭',len:[9]},
+    {iso:'BR',c:'+55',n:'Бразилия',en:'Brazil',zh:'巴西',len:[11]},
+    {iso:'AU',c:'+61',n:'Австралия',en:'Australia',zh:'澳大利亚',len:[9]},
+    {iso:'NZ',c:'+64',n:'Новая Зеландия',en:'New Zealand',zh:'新西兰',len:[9]},
+    {iso:'FJ',c:'+679',n:'Фиджи',en:'Fiji',zh:'斐济',len:[7]},
+    {iso:'PG',c:'+675',n:'Папуа-Новая Гвинея',en:'Papua New Guinea',zh:'巴布亚新几内亚',len:[8]}
+]
+
+  // Сортируем страны по алфавиту (русское название)
+  COUNTRIES.sort(function(a, b){ return a.n.localeCompare(b.n, 'ru'); });
+  // Находим Россию после сортировки
+  var current = COUNTRIES.find(function(c){ return c.c === '+7' && c.n === 'Россия'; }) || COUNTRIES[0];
+  var countryBtn, countryFlag, countryCode, phoneInput, dropdown, searchInput, listEl;
+  var phoneField;
+
+  function flagFromISO(iso){
+    if (!iso || iso.length !== 2) return '🏳️';
+    try {
+      return String.fromCodePoint.apply(null, iso.toUpperCase().split('').map(function(ch){ return 127397 + ch.charCodeAt(0); }));
+    } catch(e){ return '🏳️'; }
+  }
+
+  function render(){
+    if (!listEl) return;
+    var q = (searchInput.value || '').toLowerCase().trim();
+    var filtered = COUNTRIES.filter(function(c){
+      if (!q) return true;
+      if (c.c.indexOf(q) > -1) return true;
+      if (c.c.replace('+','').indexOf(q) > -1) return true;
+      if (c.n.toLowerCase().indexOf(q) > -1) return true;
+      if (c.en.toLowerCase().indexOf(q) > -1) return true;
+      if (c.zh.indexOf(q) > -1) return true;
+      return false;
+    });
+    if (!filtered.length){
+      listEl.innerHTML = '<div class="phone-empty">Не найдено</div>';
+      return;
     }
-  });
+    listEl.innerHTML = filtered.map(function(c){
+      var sel = (c.c === current.c && c.n === current.n) ? ' active' : '';
+      var flagEmoji = flagFromISO(c.iso);
+      return '<button type="button" class="phone-item'+sel+'" data-code="'+c.c+'" data-name="'+c.n+'" data-iso="'+c.iso+'">'
+        + '<span class="phone-item-flag">'+flagEmoji+'</span>'
+        + '<span class="phone-item-name">'+c.n+'</span>'
+        + '<span class="phone-item-code">'+c.c+'</span>'
+        + '</button>';
+    }).join('');
+  }
+
+  function open(){
+    dropdown.classList.remove('hidden');
+    countryBtn.setAttribute('aria-expanded','true');
+    searchInput.value = '';
+    render();
+    setTimeout(function(){ searchInput.focus(); }, 50);
+  }
+
+  function close(){
+    dropdown.classList.add('hidden');
+    countryBtn.setAttribute('aria-expanded','false');
+  }
+
+  function selectCountry(code, name){
+    var found = COUNTRIES.find(function(c){ return c.c === code && c.n === name; })
+             || COUNTRIES.find(function(c){ return c.c === code; });
+    if (!found) return;
+    current = found;
+    countryFlag.textContent = flagFromISO(found.iso);
+    countryCode.textContent = found.c;
+    close();
+    phoneInput.focus();
+  }
+
+  function init(){
+    phoneField = document.getElementById('phoneField');
+    countryBtn = document.getElementById('phoneCountryBtn');
+    countryFlag = document.getElementById('phoneFlag');
+    countryCode = document.getElementById('phoneCode');
+    phoneInput = document.getElementById('requestPhone');
+    dropdown = document.getElementById('phoneDropdown');
+    searchInput = document.getElementById('phoneSearch');
+    listEl = document.getElementById('phoneList');
+
+    if (!phoneField || !countryBtn) return;
+    countryFlag.textContent = flagFromISO(current.iso);
+
+    countryBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      if (dropdown.classList.contains('hidden')) open(); else close();
+    });
+
+    searchInput.addEventListener('input', render);
+
+    listEl.addEventListener('click', function(e){
+      var btn = e.target.closest('.phone-item');
+      if (!btn) return;
+      selectCountry(btn.getAttribute('data-code'), btn.getAttribute('data-name'));
+    });
+
+    document.addEventListener('click', function(e){
+      if (!phoneField.contains(e.target)) close();
+    });
+
+    // Маска: только цифры, пробелы, дефисы, скобки
+    phoneInput.addEventListener('input', function(){
+      var v = phoneInput.value.replace(/[^\d\s\-()]/g, '');
+      phoneInput.value = v;
+    });
+
+    // Экспортируем выбор страны наружу
+    window.__iomaPhonePick = function(){ return { code: current.c, name: current.n, lengths: current.len }; };
+  }
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+
+/* ============ IOMA: расширенная форма заявки ============ */
+(function(){
+  if (window.__iomaRequestExtras) return;
+  window.__iomaRequestExtras = true;
+
+  var INCOTERM_CYCLE = ['EXW', 'FOB', 'CIF', 'DAP', 'DDP'];
+  var INCOTERM_HINTS = {
+    'EXW': 'Самовывоз со склада поставщика',
+    'FCA': 'Передача перевозчику',
+    'FOB': 'Погрузка на судно в порту',
+    'CIF': 'Стоимость, страхование и фрахт',
+    'CPT': 'Перевозка оплачена до',
+    'CIP': 'Перевозка и страхование оплачены',
+    'DAP': 'Доставка в место назначения',
+    'DPU': 'Доставка и разгрузка',
+    'DDP': 'Доставка с оплатой пошлин'
+  };
+
+  var state = {
+    incoterm: 'EXW',
+    transit: '',
+    dimUnit: 'cm'
+  };
+
+  var cycleTimer = null;
+  var userTouchedIncoterm = false;
+
+  function $(id){ return document.getElementById(id); }
+
+  // ===== Incoterms =====
+  function setIncoterm(code){
+    if (!INCOTERM_HINTS[code]) return;
+    state.incoterm = code;
+    var v = $('incotermValue'); if (v) v.textContent = code;
+    var h = $('incotermHint'); if (h) h.textContent = INCOTERM_HINTS[code];
+  }
+
+  function startIncotermCycle(){
+    if (cycleTimer || userTouchedIncoterm) return;
+    var idx = INCOTERM_CYCLE.indexOf(state.incoterm);
+    if (idx < 0) idx = 0;
+    cycleTimer = setInterval(function(){
+      if (userTouchedIncoterm){ clearInterval(cycleTimer); cycleTimer = null; return; }
+      idx = (idx + 1) % INCOTERM_CYCLE.length;
+      setIncoterm(INCOTERM_CYCLE[idx]);
+    }, 2000);
+  }
+
+  function stopIncotermCycle(){
+    userTouchedIncoterm = true;
+    if (cycleTimer){ clearInterval(cycleTimer); cycleTimer = null; }
+  }
+
+  function initIncoterm(){
+    var btn = $('incotermBtn');
+    var dd = $('incotermDropdown');
+    if (!btn || !dd) return;
+
+    startIncotermCycle();
+
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      var open = !dd.classList.contains('hidden');
+      if (open){ dd.classList.add('hidden'); btn.setAttribute('aria-expanded','false'); }
+      else { dd.classList.remove('hidden'); btn.setAttribute('aria-expanded','true'); }
+    });
+
+    dd.addEventListener('click', function(e){
+      var item = e.target.closest('.incoterm-item');
+      if (!item) return;
+      e.preventDefault();
+      e.stopPropagation();
+      stopIncotermCycle();
+      setIncoterm(item.getAttribute('data-code'));
+      dd.classList.add('hidden');
+      btn.setAttribute('aria-expanded','false');
+    });
+
+    document.addEventListener('click', function(e){
+      if (!dd.contains(e.target) && e.target !== btn && !btn.contains(e.target)){
+        dd.classList.add('hidden');
+        btn.setAttribute('aria-expanded','false');
+      }
+    });
+
+    // При фокусе на поле — останавливаем
+    btn.addEventListener('focus', stopIncotermCycle);
+    btn.addEventListener('mouseenter', stopIncotermCycle);
+  }
+
+  // ===== Транзит =====
+  function setTransit(code, hint){
+    state.transit = code || '';
+    var v = $('transitValue');
+    var h = $('transitHint');
+    if (v) v.textContent = code ? hint : 'не важно';
+    if (h) h.textContent = code ? (code === 'express' ? 'Авиа / экспресс' : code === 'medium' ? 'Авто / ускоренно' : code === 'rail' ? 'Ж/Д контейнер' : 'Море / мультимодал') : 'Подберём оптимальный вариант';
+  }
+
+  function initTransit(){
+    var btn = $('transitBtn');
+    var dd = $('transitDropdown');
+    if (!btn || !dd) return;
+
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      var open = !dd.classList.contains('hidden');
+      if (open){ dd.classList.add('hidden'); btn.setAttribute('aria-expanded','false'); }
+      else { dd.classList.remove('hidden'); btn.setAttribute('aria-expanded','true'); }
+    });
+
+    dd.addEventListener('click', function(e){
+      var item = e.target.closest('.incoterm-item');
+      if (!item) return;
+      e.preventDefault();
+      e.stopPropagation();
+      var code = item.getAttribute('data-code');
+      var hint = item.getAttribute('data-hint');
+      setTransit(code, hint);
+      dd.classList.add('hidden');
+      btn.setAttribute('aria-expanded','false');
+    });
+
+    document.addEventListener('click', function(e){
+      if (!dd.contains(e.target) && e.target !== btn && !btn.contains(e.target)){
+        dd.classList.add('hidden');
+        btn.setAttribute('aria-expanded','false');
+      }
+    });
+  }
+
+  // ===== Единицы габаритов =====
+  function setDimUnit(unit){
+    state.dimUnit = unit;
+    ['L','W','H'].forEach(function(k){
+      var el = $('dimSuffix' + k);
+      if (el) el.textContent = unit;
+    });
+    document.querySelectorAll('#dimUnitSwitch .unit-choice').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-unit') === unit);
+    });
+  }
+
+  function initDimUnit(){
+    var sw = $('dimUnitSwitch');
+    if (!sw) return;
+    sw.addEventListener('click', function(e){
+      var btn = e.target.closest('.unit-choice');
+      if (!btn) return;
+      setDimUnit(btn.getAttribute('data-unit'));
+    });
+  }
+
+  // ===== Сборка summary для отправки =====
+  window.__iomaRequestBuildBody = function(){
+    var parts = [];
+    var from = ($('requestFrom') || {}).value || '';
+    var to = ($('requestTo') || {}).value || '';
+    if (from.trim()) parts.push('Откуда: ' + from.trim());
+    if (to.trim()) parts.push('Куда: ' + to.trim());
+    if (state.incoterm) parts.push('Условия: ' + state.incoterm);
+    var w = ($('requestWeight') || {}).value || '';
+    if (w) parts.push('Вес: ' + w + ' кг');
+    var L = ($('requestDimL') || {}).value || '';
+    var W = ($('requestDimW') || {}).value || '';
+    var H = ($('requestDimH') || {}).value || '';
+    if (L || W || H) parts.push('Габариты: ' + L + '×' + W + '×' + H + ' ' + state.dimUnit);
+    if (state.transit){
+      var map = {express:'3-7 дней (авиа)', medium:'10-20 дней (авто)', rail:'20-35 дней (Ж/Д)', sea:'35-60 дней (море)'};
+      parts.push('Транзит: ' + (map[state.transit] || state.transit));
+    }
+    var comment = ($('requestBody') || {}).value || '';
+    if (comment.trim()) parts.push('Комментарий: ' + comment.trim());
+    return parts.join('\n');
+  };
+
+  function init(){
+    initIncoterm();
+    initTransit();
+    initDimUnit();
+    // Устанавливаем начальный Incoterm и подсказку
+    setIncoterm('EXW');
+  }
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+
+/* ============ FIX: переинициализация формы при открытии ============ */
+(function(){
+  if (window.__iomaFormFix) return;
+  window.__iomaFormFix = true;
+
+  function reinit(){
+    // Проверяем, что кнопки на месте
+    var btn = document.getElementById('incotermBtn');
+    var dd = document.getElementById('incotermDropdown');
+    if (!btn || !dd) return;
+    // Убираем возможные дубликаты обработчиков
+    if (btn.dataset.fixed === '1') return;
+    btn.dataset.fixed = '1';
+    // Ничего не навешиваем — полагаемся на __iomaRequestExtras
+  }
+
+  // Следим за открытием формы (MutationObserver на class у #requestView)
+  var view = document.getElementById('requestView');
+  if (view){
+    var mo = new MutationObserver(function(){
+      if (view.classList.contains('open') || !view.getAttribute('aria-hidden') || view.style.display !== 'none'){
+        setTimeout(reinit, 50);
+      }
+    });
+    mo.observe(view, { attributes:true, attributeFilter:['class','aria-hidden','style'] });
+  }
+
+  // Плюс при клике на плитку request
+  document.addEventListener('click', function(e){
+    var t = e.target.closest && e.target.closest('[data-open-view="request"]');
+    if (t) setTimeout(reinit, 100);
+  }, true);
+})();
+
+
+/* ============ IOMA: метеориты в тёмной теме ============ */
+(function(){
+  if (window.__iomaMeteors) return;
+  window.__iomaMeteors = true;
+
+  function spawnMeteor(){
+    if (!document.documentElement.classList.contains('dark')) return;
+    var layer = document.getElementById('meteorsLayer');
+    if (!layer) return;
+    var m = document.createElement('i');
+    m.className = 'meteor';
+    m.style.left = (-5 + Math.random() * 85) + '%';
+    m.style.top = (-15 + Math.random() * 20) + '%';
+    var len = 120 + Math.random() * 180;
+    m.style.height = len + 'px';
+    var dur = 2.0 + Math.random() * 1.2;
+    m.style.animationDuration = dur + 's';
+    layer.appendChild(m);
+    setTimeout(function(){ m.remove(); }, (dur + 0.5) * 1000);
+    // Следующий метеор через 10-18 секунд
+    setTimeout(spawnMeteor, 10000 + Math.random() * 8000);
+  }
+
+  // Первый через 3 секунды
+  setTimeout(spawnMeteor, 3000);
 })();

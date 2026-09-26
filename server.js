@@ -99,7 +99,7 @@ async function groqRequest(model, messages, maxTokens, key){
       }
       const errText = await r.text();
       if (r.status === 429 || /rate limit/i.test(errText)){
-        console.log('[AI] Groq 429 (' + model + '): ' + errText.slice(0,120));
+        // При 429 сразу отдаём наверх — пусть пробует Gemini
         return { ok:false, rateLimited:true };
       }
       if (/decommissioned|does not exist/i.test(errText)) return { ok:false, fatal:true };
@@ -133,71 +133,40 @@ function repairJSON(raw){
 // ========== Google Gemini (резервный провайдер) ==========
 async function geminiRequest(systemPrompt, userPrompt, maxTokens, jsonMode){
   const key = process.env.GEMINI_API_KEY;
-  if (!key){ console.log('[AI] Gemini — нет ключа'); return { ok:false, error:'no key' }; }
-  const models = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-2.5-pro'];
-  const bodyBase = {
+  if (!key) return { ok:false, error:'no key' };
+  const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
+  const body = {
     contents: [
       { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userPrompt }] }
     ],
     generationConfig: {
-      maxOutputTokens: Math.max(6000, (maxTokens || 2000) * 3),
+      maxOutputTokens: maxTokens || 2000,
       temperature: 0.5
     }
   };
-  const bodyNoThinking = JSON.parse(JSON.stringify(bodyBase));
-  bodyNoThinking.generationConfig.thinkingConfig = { thinkingBudget: 0 };
-  // NOTE: не ставим responseMimeType — некоторые ключи/модели не поддерживают
+  if (jsonMode) body.generationConfig.responseMimeType = 'application/json';
   for (const model of models){
     for (let attempt = 1; attempt <= 2; attempt++){
       try {
-        // Пробуем сначала с key в query, потом с заголовком x-goog-api-key
-        const authVariants = [
-          { url: 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key, headers: { 'Content-Type': 'application/json' } },
-          { url: 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key } }
-        ];
-        for (const v of authVariants){
-          // 1-я попытка с thinkingBudget=0, если 400 — без него
-          let r = await fetch(v.url, {
-            method: 'POST',
-            headers: v.headers,
-            body: JSON.stringify(bodyNoThinking),
-            signal: AbortSignal.timeout(60000)
-          });
-          if (r.status === 400){
-            const errText = await r.text();
-            if (/thinking|thinkingConfig/i.test(errText)){
-              console.warn('[AI] Gemini ' + model + ' не поддерживает thinkingConfig — повтор без него');
-              r = await fetch(v.url, {
-                method: 'POST',
-                headers: v.headers,
-                body: JSON.stringify(bodyBase),
-                signal: AbortSignal.timeout(60000)
-              });
-            } else {
-              console.warn('[AI] Gemini ' + model + ' HTTP 400: ' + errText.slice(0,150));
-              continue;
-            }
-          }
-          if (r.ok){
-            const d = await r.json();
-            const parts = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts;
-            const text = parts && parts.map(function(x){return x.text||'';}).join('');
-            if (text){
-              console.log('[AI] Gemini ' + model + ' OK');
-              return { ok:true, text };
-            }
-            const finish = d.candidates && d.candidates[0] && d.candidates[0].finishReason;
-            console.warn('[AI] Gemini ' + model + ' — пустой ответ (finishReason=' + (finish || '?') + ')');
-          } else {
-            const errText = await r.text();
-            console.warn('[AI] Gemini ' + model + ' HTTP ' + r.status + ': ' + errText.slice(0, 200));
-            if (r.status === 429){ break; }
-            if (r.status === 400 && /API key not valid|API_KEY_INVALID|invalid.*key/i.test(errText)) return { ok:false, fatal:true };
-          }
+        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(90000)
+        });
+        if (r.ok){
+          const d = await r.json();
+          const parts = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts;
+          const text = parts && parts.map(function(x){return x.text||'';}).join('');
+          if (text) return { ok:true, text };
         }
+        const errText = await r.text();
+        if (r.status === 429 || /rate limit|quota/i.test(errText)){
+          if (attempt < 2){ await sleep(3000); continue; }
+        }
+        if (r.status === 400 && /API_KEY_INVALID|API key not valid/i.test(errText)) return { ok:false, fatal:true };
         break;
       } catch(e){
-        console.warn('[AI] Gemini ' + model + ' error: ' + e.message);
         if (attempt < 2){ await sleep(2000); continue; }
       }
     }
@@ -206,10 +175,9 @@ async function geminiRequest(systemPrompt, userPrompt, maxTokens, jsonMode){
 }
 
 async function geminiChatJSON(systemPrompt, userPrompt, maxTokens){
-  const res = await geminiRequest(systemPrompt + ' Return ONLY valid JSON.', userPrompt, maxTokens, false);
-  if (!res.ok){ console.warn('[AI] Gemini request failed: ' + (res.error || 'unknown')); return null; }
-  try { return repairJSON(res.text); }
-  catch(e){ console.warn('[AI] Gemini JSON repair fail: ' + e.message + ' | text: ' + String(res.text||'').slice(0,150)); return null; }
+  const res = await geminiRequest(systemPrompt + ' Return ONLY valid JSON.', userPrompt, maxTokens, true);
+  if (!res.ok) return null;
+  try { return repairJSON(res.text); } catch(e){ console.warn('[AI] Gemini JSON repair fail'); return null; }
 }
 async function geminiChatText(systemPrompt, userPrompt, maxTokens){
   const res = await geminiRequest(systemPrompt, userPrompt, maxTokens, false);
@@ -226,17 +194,16 @@ async function aiChatJSON(systemPrompt, userPrompt, maxTokens){
       for (const model of GROQ_MODELS){
         const res = await groqRequest(model, messages, maxTokens, process.env.GROQ_API_KEY);
         if (res.ok){
-          console.log('[AI] Groq ' + model + ' OK (json)');
+          console.log('[AI] Groq ' + model + ' OK');
           try { return repairJSON(res.text); } catch(e){ console.warn('[AI] JSON repair fail'); }
         }
         if (res.fatal) continue;
       }
     }
     if (process.env.GEMINI_API_KEY){
-      console.log('[AI] пробую Gemini (json)…');
       const g = await geminiChatJSON(systemPrompt, userPrompt, maxTokens);
       if (g && typeof g === 'object' && Object.keys(g).length){
-        console.log('[AI] Gemini OK (json)');
+        console.log('[AI] Gemini OK');
         return g;
       }
     }
@@ -724,36 +691,6 @@ function defaultImgQuery(title){
   const h = crypto.createHash('md5').update(t).digest('hex');
   const n = parseInt(h.slice(0, 8), 16);
   const pick = function(arr){ return arr[n % arr.length]; };
-  if (/hyperloop|вакуумн|маглев|hyperloop|скоростн.*поезд/.test(t)) return pick(['hyperloop train','futuristic transport','vacuum train','high speed train future']);
-  if (/искусственн.*интеллект|нейросет|ai\b|ai |машинн.*обучен/.test(t)) return pick(['artificial intelligence','ai neural network','machine learning code','ai technology']);
-  if (/дрон|беспилот|drone|uav|квадрокоптер/.test(t)) return pick(['delivery drone','drone flying','cargo drone','uav logistics']);
-  if (/спутник|космос|spacex|satellite|космическ/.test(t)) return pick(['satellite orbit','space rocket','satellite technology','space station']);
-  if (/робот|robot|автоматизац|механизац/.test(t)) return pick(['warehouse robot','industrial robot','automation robot','robotic arms factory']);
-  if (/электро|ev|электромобил|charging|зарядк/.test(t)) return pick(['electric vehicle charging','ev battery','electric car','charging station']);
-  if (/блокчейн|blockchain|криптовалют/.test(t)) return pick(['blockchain technology','cryptocurrency network','digital ledger']);
-  if (/5g|6g|связь|internet|интернет/.test(t)) return pick(['5g tower','communication technology','internet network']);
-  if (/телеком|telecom|связь/.test(t)) return pick(['telecom equipment','network cables','cell tower']);
-  if (/финтех|fintech|банк|bank|payment/.test(t)) return pick(['fintech app','banking technology','digital payment']);
-  if (/кибербезопас|security|безопасн/.test(t)) return pick(['cybersecurity','data security','network protection']);
-  if (/нефт|oil|barrel|нефтепрод/.test(t)) return pick(['oil tanker ship','oil refinery','oil pipeline','fuel tanker truck']);
-  if (/газ|lng|газовоз/.test(t)) return pick(['lng tanker','gas pipeline','natural gas plant']);
-  if (/пшениц|зерн|wheat|grain|урожай/.test(t)) return pick(['wheat field harvest','grain silo','bulk cargo grain','agriculture export']);
-  if (/уголь|coal|угол/.test(t)) return pick(['coal mine','coal train','bulk coal port']);
-  if (/металл|metal|сталь|steel|алюмин/.test(t)) return pick(['steel factory','metal warehouse','steel coils logistics']);
-  if (/автомобил|машин|car|автотрансп/.test(t)) return pick(['car transport ship','auto logistics','vehicle loading port','car carrier trailer']);
-  if (/авиа|самолёт|air|flight|cargo plane|боинг|airbus/.test(t)) return pick(['cargo airplane','airport cargo terminal','air freight loading']);
-  if (/мор|порт|судно|контейнер|ship|port/.test(t)) return pick(['container ship port','cargo ship sea','port terminal crane','shipping containers']);
-  if (/железнодорож|жд|rail|поезд|вагон/.test(t)) return pick(['freight train railway','cargo train','railway containers','train tracks']);
-  if (/грузовик|авто|truck|фур|фура/.test(t)) return pick(['cargo truck highway','semi trailer road','truck fleet logistics']);
-  if (/китай|china|шанхай|пекин|гуанчжоу/.test(t)) return pick(['shanghai port','china factory','china logistics warehouse','beijing business']);
-  if (/индия|india|дели|мумбаи/.test(t)) return pick(['india port logistics','mumbai port','india cargo ship','delhi business']);
-  if (/киргиз|казахстан|узбекистан|средн.*ази/.test(t)) return pick(['central asia trade','kazakhstan trade','silk road','central asia logistics']);
-  if (/таможен|пошлин|фтс|еэк|вэд|тн.?вэд|сертифик/.test(t)) return pick(['customs documents','customs clearance','border checkpoint','trade documents']);
-  if (/маркиров|честный знак/.test(t)) return pick(['product marking','barcode scanner','qr code label','warehouse label']);
-  if (/рыба|fish|сельхоз|agro|food|продовольств/.test(t)) return pick(['food cargo shipping','refrigerated container','cold chain logistics','food export']);
-  if (/склад|warehouse|логист/.test(t)) return pick(['warehouse logistics','distribution center','fulfillment center','pallet warehouse']);
-  if (/импорт|экспорт|import|export/.test(t)) return pick(['cargo shipping logistics','export containers port','import logistics warehouse']);
-
   if (/таможен|пошлин|декларац|фтс|еэк|вэд|тн.?вэд|сертифик/.test(t)) return pick(['customs documents','customs clearance','border checkpoint','trade documents','customs inspection']);
   if (/маркиров|честный знак/.test(t)) return pick(['product marking','barcode scanner','qr code label','warehouse label']);
   if (/нефт|газ|barrel|oil|tanker/.test(t)) return pick(['oil tanker ship','oil refinery','oil pipeline','fuel tanker truck']);
@@ -879,60 +816,6 @@ app.get('/api/route-distance', async function(req,res){
   }
 });
 
-// Диагностика Gemini — какие модели доступны для ключа
-app.get('/api/gemini-test', async function(req,res){
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) return res.status(400).json({ ok:false, error:'GEMINI_API_KEY не задан' });
-  try {
-    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + key, {
-      signal: AbortSignal.timeout(15000)
-    });
-    if (!r.ok){
-      const t = await r.text();
-      return res.status(502).json({ ok:false, error:'HTTP ' + r.status + ': ' + t.slice(0, 300) });
-    }
-    const d = await r.json();
-    const models = (d.models || []).map(function(m){
-      return {
-        name: m.name,
-        displayName: m.displayName,
-        supportsGenerate: !!(m.supportedGenerationMethods || []).includes('generateContent')
-      };
-    }).filter(function(m){ return m.supportsGenerate; });
-    res.json({ ok:true, count: models.length, models: models });
-  } catch(e){
-    res.status(500).json({ ok:false, error:e.message });
-  }
-});
-
-// Тестовый запрос к Gemini — проверка что реально отвечает
-app.get('/api/gemini-ask', async function(req,res){
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) return res.status(400).json({ ok:false, error:'GEMINI_API_KEY не задан' });
-  const model = String(req.query.model || 'gemini-3.6-flash');
-  try {
-    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: 'Ответь одним словом: работает?' }] }],
-        generationConfig: { maxOutputTokens: 500, temperature: 0.1, thinkingConfig: { thinkingBudget: 0 } }
-      }),
-      signal: AbortSignal.timeout(30000)
-    });
-    if (!r.ok){
-      const t = await r.text();
-      return res.status(502).json({ ok:false, model: model, error: 'HTTP ' + r.status + ': ' + t.slice(0, 400) });
-    }
-    const d = await r.json();
-    const parts = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts;
-    const text = parts && parts.map(function(x){return x.text||'';}).join('');
-    res.json({ ok:true, model: model, answer: text, finishReason: d.candidates && d.candidates[0] && d.candidates[0].finishReason });
-  } catch(e){
-    res.status(500).json({ ok:false, model: model, error: e.message });
-  }
-});
-
 app.get('/api/currency', async function(req,res){
   try {
     const r = await fetch('https://www.cbr-xml-daily.ru/daily_json.js', { signal: AbortSignal.timeout(8000) });
@@ -943,6 +826,36 @@ app.get('/api/currency', async function(req,res){
     }
     throw new Error('CBR');
   } catch(e){ res.status(502).json({ ok:false, error:'CBR unavailable' }); }
+});
+
+// Historical CBR rate for a specific past date (calendar picker on the home page).
+app.get('/api/currency/history', async function(req,res){
+  const m = String(req.query.date || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return res.status(400).json({ ok:false, error:'date must be YYYY-MM-DD' });
+  const [, y, mo, d] = m;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const asked = new Date(Number(y), Number(mo)-1, Number(d));
+  if (asked > today) return res.status(400).json({ ok:false, error:'date is in the future' });
+  try {
+    let url = 'https://www.cbr-xml-daily.ru/archive/' + y + '/' + mo + '/' + d + '/daily_json.js';
+    let r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    // Weekends/holidays have no archive file — CBR publishes the last business day's rate; step back up to 5 days.
+    let tries = 0;
+    let probe = asked;
+    while (!r.ok && tries < 5){
+      probe = new Date(probe.getTime() - 86400000);
+      const py = probe.getFullYear(), pm = String(probe.getMonth()+1).padStart(2,'0'), pd = String(probe.getDate()).padStart(2,'0');
+      url = 'https://www.cbr-xml-daily.ru/archive/' + py + '/' + pm + '/' + pd + '/daily_json.js';
+      r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      tries++;
+    }
+    if (!r.ok) throw new Error('CBR archive HTTP ' + r.status);
+    const data = await r.json(), items = {};
+    for (const c of ['USD','EUR','CNY']){ const x = data.Valute && data.Valute[c]; if (x && x.Value) items[c] = { nominal:x.Nominal||1, value:Number(x.Value) }; }
+    if (!items.USD || !items.EUR || !items.CNY) throw new Error('incomplete data');
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.json({ ok:true, source:'cbr-xml-daily.ru', requestedDate: req.query.date, date: data.Date, items });
+  } catch(e){ res.status(502).json({ ok:false, error:'CBR archive unavailable for that date' }); }
 });
 
 // ========== Weather (OpenWeather) — drives the animated background ==========
@@ -1436,6 +1349,250 @@ app.post('/api/customs/check', async function(req,res){
   }
 });
 
+
+// ========== РОЛИ + ЗАЩИТА + ЗАЯВКИ ==========
+function isAdmin(req){
+  return !!(req.cookies && (req.cookies.auth === 'admin' || req.cookies.auth === '1'));
+}
+function requireAuth(req, res, next){
+  if (isAdmin(req)) return next();
+  return res.status(401).json({ ok:false, error:'Auth required' });
+}
+function esc(s){ return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+app.get('/api/whoami', function(req, res){
+  res.json({ ok:true, role: isAdmin(req) ? 'admin' : 'client', username: (req.cookies && req.cookies.authUser) || '' });
+});
+
+app.get('/admin.js', requireAuth, function(req, res){
+  res.sendFile(require('path').join(ROOT, 'admin.js'));
+});
+app.get('/contract.js', requireAuth, function(req, res){
+  res.sendFile(require('path').join(ROOT, 'contract.js'));
+});
+
+
+// ========== ANTI-SPAM (серверная защита) ==========
+const SPAM_BLOCKS_FILE = require('path').join(ROOT, 'data', 'spam-blocks.json');
+const SPAM_LOG_FILE = require('path').join(ROOT, 'data', 'spam-log.json');
+const IP_RATE = new Map();          // ip -> [timestamps]
+const CONTACT_RECENT = new Map();   // contact -> timestamp
+const RATE_WINDOW_MS = 60 * 60 * 1000;    // 1 час
+const RATE_MAX = 2;                        // 2 заявки в час с одного IP
+const DUP_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 часа
+const MIN_FORM_TIME_MS = 3000;             // 3 секунды
+
+function loadBlocks(){
+  try { return JSON.parse(require('fs').readFileSync(SPAM_BLOCKS_FILE, 'utf8')); } catch(e){ return {}; }
+}
+function saveBlocks(b){
+  try {
+    require('fs').mkdirSync(require('path').dirname(SPAM_BLOCKS_FILE), { recursive:true });
+    require('fs').writeFileSync(SPAM_BLOCKS_FILE, JSON.stringify(b, null, 2));
+  } catch(e){}
+}
+function isBlockedIP(ip){
+  const b = loadBlocks();
+  return b[ip] && (!b[ip].until || b[ip].until > Date.now());
+}
+function blockIP(ip, reason){
+  const b = loadBlocks();
+  b[ip] = { reason: reason || 'manual', at: Date.now(), until: Date.now() + 7*24*60*60*1000 };
+  saveBlocks(b);
+  console.warn('[spam] BLOCKED ' + ip + ' — ' + reason);
+}
+function logSpam(entry){
+  try {
+    require('fs').mkdirSync(require('path').dirname(SPAM_LOG_FILE), { recursive:true });
+    let log = [];
+    try { log = JSON.parse(require('fs').readFileSync(SPAM_LOG_FILE, 'utf8')); } catch(e){}
+    log.unshift(entry);
+    if (log.length > 500) log = log.slice(0, 500);
+    require('fs').writeFileSync(SPAM_LOG_FILE, JSON.stringify(log, null, 2));
+  } catch(e){}
+}
+
+function validateContactServer(c){
+  const v = String(c||'').trim();
+  if (v.length < 6) return 'Контакт слишком короткий';
+  if (v.length > 200) return 'Контакт слишком длинный';
+  const digits = v.replace(/\D/g,'');
+  if (digits.length >= 6){
+    if (digits.length < 10) return 'В номере меньше 10 цифр';
+    if (digits.length > 15) return 'В номере больше 15 цифр';
+    if (/^(\d)\1+$/.test(digits)) return 'Номер из одинаковых цифр';
+    if (/0{6,}/.test(digits)) return 'Много нулей подряд';
+    if (/^[78]9{5,}$/.test(digits)) return 'Подозрительный номер';
+    if (/^[78]0+$/.test(digits)) return 'Номер из нулей';
+    // Три и более одинаковых цифры подряд: 999, 111, 000
+    if (/(\d)\1{4,}/.test(digits)) return 'Слишком много одинаковых цифр подряд';
+  }
+  if (v.indexOf('@') > -1){
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return 'Некорректный email';
+  }
+  return '';
+}
+
+function validateNameServer(n){
+  const v = String(n||'').trim();
+  if (v.length < 2) return 'Имя слишком короткое';
+  if (v.length > 120) return 'Имя слишком длинное';
+  if (/^(.)\1+$/.test(v)) return 'Некорректное имя';
+  if (/^\d+$/.test(v)) return 'Имя из цифр';
+  return '';
+}
+
+function checkRateLimit(ip){
+  const now = Date.now();
+  let arr = IP_RATE.get(ip) || [];
+  arr = arr.filter(t => now - t < RATE_WINDOW_MS);
+  if (arr.length >= RATE_MAX) return false;
+  arr.push(now);
+  IP_RATE.set(ip, arr);
+  return true;
+}
+
+function checkDuplicate(contact){
+  const now = Date.now();
+  const key = String(contact||'').replace(/\D/g,'').toLowerCase();
+  if (!key) return true;
+  const last = CONTACT_RECENT.get(key);
+  if (last && now - last < DUP_WINDOW_MS) return false;
+  CONTACT_RECENT.set(key, now);
+  // Чистим старые
+  if (CONTACT_RECENT.size > 500){
+    for (const [k, t] of CONTACT_RECENT){ if (now - t > DUP_WINDOW_MS) CONTACT_RECENT.delete(k); }
+  }
+  return true;
+}
+
+const REQUESTS_FILE = require('path').join(ROOT, 'data', 'requests.json');
+
+async function sendTelegram(text){
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId){ console.log('[telegram] skip: нет токена/чата'); return false; }
+  try {
+    const r = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ chat_id: chatId, text: text, parse_mode:'HTML', disable_web_page_preview:true }),
+      signal: AbortSignal.timeout(10000)
+    });
+    if (r.ok){ console.log('[telegram] sent'); return true; }
+    console.warn('[telegram] HTTP ' + r.status + ': ' + (await r.text()).slice(0,200));
+    return false;
+  } catch(e){ console.warn('[telegram] error: ' + e.message); return false; }
+}
+
+async function sendEmail(subject, html){
+  const key = process.env.RESEND_API_KEY;
+  const to = process.env.NOTIFY_EMAIL;
+  const from = process.env.RESEND_FROM || 'onboarding@resend.dev';
+  if (!key || !to){ console.log('[email] skip: нет RESEND_API_KEY/NOTIFY_EMAIL'); return false; }
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+key, 'Content-Type':'application/json'},
+      body: JSON.stringify({ from: from, to: [to], subject: subject, html: html }),
+      signal: AbortSignal.timeout(10000)
+    });
+    if (r.ok){ console.log('[email] sent'); return true; }
+    console.warn('[email] HTTP ' + r.status);
+    return false;
+  } catch(e){ console.warn('[email] error: ' + e.message); return false; }
+}
+
+app.post('/api/requests', async function(req, res){
+  try {
+    const ip = String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
+    const ua = String(req.headers['user-agent'] || '').slice(0, 200);
+    const name = String((req.body && req.body.name) || '').trim().slice(0,120);
+    const contact = String((req.body && req.body.contact) || '').trim().slice(0,200);
+    const body = String((req.body && req.body.body) || '').trim().slice(0,2000);
+    const honey = String((req.body && req.body.website) || '').trim();
+    const formTs = Number((req.body && req.body._t) || 0);
+
+    // 1. IP в блок-листе
+    if (isBlockedIP(ip)){
+      console.warn('[spam] blocked IP tried: ' + ip);
+      logSpam({ at: Date.now(), ip, ua, name, contact, reason: 'blocked-ip' });
+      return res.status(200).json({ ok:true, id: 0 });  // тихо
+    }
+
+    // 2. Honeypot
+    if (honey){
+      console.warn('[spam] honeypot filled: ' + ip);
+      logSpam({ at: Date.now(), ip, ua, name, contact, reason: 'honeypot' });
+      blockIP(ip, 'honeypot');
+      return res.status(200).json({ ok:true, id: 0 });
+    }
+
+    // 3. Слишком быстро — заявка за < 3 сек = бот
+    if (formTs > 0 && Date.now() - formTs < MIN_FORM_TIME_MS){
+      console.warn('[spam] too fast: ' + ip + ' (' + (Date.now() - formTs) + 'ms)');
+      logSpam({ at: Date.now(), ip, ua, name, contact, reason: 'too-fast' });
+      return res.status(200).json({ ok:true, id: 0 });
+    }
+
+    // 4. Пустые поля
+    if (!name || !contact) return res.status(400).json({ ok:false, error:'name and contact required' });
+
+    // 5. Валидация имени и контакта
+    const errName = validateNameServer(name);
+    if (errName){
+      console.warn('[spam] bad name: ' + errName + ' | ' + name);
+      logSpam({ at: Date.now(), ip, ua, name, contact, reason: 'name: ' + errName });
+      return res.status(400).json({ ok:false, error: errName });
+    }
+    const errContact = validateContactServer(contact);
+    if (errContact){
+      console.warn('[spam] bad contact: ' + errContact + ' | ' + contact);
+      logSpam({ at: Date.now(), ip, ua, name, contact, reason: 'contact: ' + errContact });
+      return res.status(400).json({ ok:false, error: errContact });
+    }
+
+    // 6. Rate limit по IP
+    if (!checkRateLimit(ip)){
+      console.warn('[spam] rate limit: ' + ip);
+      logSpam({ at: Date.now(), ip, ua, name, contact, reason: 'rate-limit' });
+      return res.status(429).json({ ok:false, error: 'Слишком много заявок. Подождите час.' });
+    }
+
+    // 7. Дубликат контакта
+    if (!checkDuplicate(contact)){
+      console.warn('[spam] duplicate contact: ' + contact);
+      logSpam({ at: Date.now(), ip, ua, name, contact, reason: 'duplicate' });
+      return res.status(429).json({ ok:false, error: 'Заявка с таким контактом уже отправлена.' });
+    }
+    const fs = require('fs');
+    fs.mkdirSync(require('path').dirname(REQUESTS_FILE), { recursive:true });
+    let list = [];
+    try { list = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8')); } catch(e){ list = []; }
+    const entry = { id: Date.now(), name, contact, body, at: new Date().toISOString(), ip: req.ip };
+    list.unshift(entry);
+    if (list.length > 500) list = list.slice(0, 500);
+    fs.writeFileSync(REQUESTS_FILE, JSON.stringify(list, null, 2));
+    console.log('[request] NEW from ' + name + ' / ' + contact);
+    const when = new Date(entry.at).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' });
+    const tgText = '<b>🆕 Новая заявка</b>\n\n<b>Имя:</b> ' + esc(name) + '\n<b>Контакт:</b> ' + esc(contact) + (body ? '\n<b>Сообщение:</b>\n' + esc(body) : '') + '\n\n<b>IP:</b> ' + esc(ip) + '\n<b>UA:</b> ' + esc(ua.slice(0,80)) + '\n\n<i>' + when + ' (МСК)</i>';
+    const mailHtml = '<h2>🆕 Новая заявка с iomastavka</h2><p><b>Имя:</b> ' + esc(name) + '</p><p><b>Контакт:</b> ' + esc(contact) + '</p>' + (body ? '<p><b>Сообщение:</b><br>' + esc(body).replace(/\n/g, '<br>') + '</p>' : '') + '<p style="color:#889"><i>' + when + ' (МСК)</i></p>';
+    Promise.allSettled([sendTelegram(tgText), sendEmail('Новая заявка: ' + name, mailHtml)]).catch(function(){});
+    res.json({ ok:true, id: entry.id });
+  } catch(e){
+    console.warn('[request] error: ' + e.message);
+    res.status(500).json({ ok:false, error: e.message });
+  }
+});
+
+app.get('/api/requests', requireAuth, function(req, res){
+  try {
+    const fs = require('fs');
+    const list = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8'));
+    res.json({ ok:true, requests: list });
+  } catch(e){ res.json({ ok:true, requests: [] }); }
+});
+
 app.post('/api/login', function(req,res){
   if (!verifyPassword(req.body?.password || '')) return res.status(401).json({ ok:false });
   res.cookie('auth','1',{httpOnly:true,secure:true,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
@@ -1459,6 +1616,213 @@ setInterval(function(){
   console.log('[prewarm] плановый (каждые 6ч)');
   prewarmArticles(5).catch(function(){});
 }, 6*60*60*1000);
+
+
+// ========== TELEGRAM AI-АССИСТЕНТ ==========
+// Гибрид: отвечает и админу, и клиентам. Разные роли → разные промпты.
+// Память: последние 5 сообщений на чат. В оперативке (сбрасывается при перезапуске).
+
+const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TG_ADMIN_ID = String(process.env.TELEGRAM_CHAT_ID || '').trim();
+const TG_API = TG_TOKEN ? ('https://api.telegram.org/bot' + TG_TOKEN) : '';
+const TG_MEMORY = new Map();       // chatId -> [{role, content}, ...]
+const TG_OFFSET_FILE = require('path').join(ROOT, 'data', 'tg-offset.json');
+const TG_MAX_HISTORY = 5;
+const TG_POLL_INTERVAL = 2000;     // 2 сек
+
+function tgSaveOffset(n){
+  try { require('fs').writeFileSync(TG_OFFSET_FILE, JSON.stringify({ offset: n })); } catch(e){}
+}
+function tgLoadOffset(){
+  try {
+    const d = JSON.parse(require('fs').readFileSync(TG_OFFSET_FILE, 'utf8'));
+    return Number(d.offset) || 0;
+  } catch(e){ return 0; }
+}
+
+function tgKeyboard(){
+  return {
+    keyboard: [
+      [{ text: '🤖 AI-ассистент' }, { text: '📋 Оставить заявку' }],
+      [{ text: '📊 Тарифы' },       { text: '📞 Контакты' }]
+    ],
+    resize_keyboard: true,
+    persistent: true
+  };
+}
+
+async function tgSend(chatId, text, withKeyboard){
+  if (!TG_API) return false;
+  try {
+    const body = {
+      chat_id: chatId,
+      text: text,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true
+    };
+    if (withKeyboard) body.reply_markup = tgKeyboard();
+    const r = await fetch(TG_API + '/sendMessage', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15000)
+    });
+    if (r.ok) return true;
+    console.warn('[tg] send HTTP ' + r.status + ': ' + (await r.text()).slice(0,200));
+    return false;
+  } catch(e){ console.warn('[tg] send error: ' + e.message); return false; }
+}
+
+async function tgAnswerWithAI(chatId, userText, isAdmin){
+  // Получаем память
+  let mem = TG_MEMORY.get(chatId) || [];
+  mem.push({ role: 'user', content: userText });
+  // Обрезаем до последних 5 пар (10 сообщений) — но в промпте ограничим
+  if (mem.length > TG_MAX_HISTORY * 2) mem = mem.slice(-TG_MAX_HISTORY * 2);
+
+  // Системный промпт разный для админа и клиента
+  const sys = isAdmin
+    ? 'Ты — IOMA AI, создан Романом Мамедовым. Отвечай хозяину (Роман) на русском, кратко, по делу. Если спросят «кто тебя создал» — отвечай: «Меня создал Роман Мамедов». Специализация: логистика Китай–Россия, ВЭД, таможня, Инкотермс, ТН ВЭД. Если не знаешь — скажи «не знаю».'
+    : 'Ты — IOMA AI, ассистент компании iomastavka. Отвечай клиентам на русском, вежливо, коротко. Помогаешь с вопросами о доставке из Китая, таможне, сроках, документах. Если вопрос сложный — предложи оставить заявку (кнопка «📋 Оставить заявку») или перейти на сайт. Не выдумывай цены и сроки.';
+
+  // Формируем одну строку из истории для aiChatText
+  const historyText = mem.slice(0, -1)
+    .map(m => (m.role === 'assistant' ? 'Assistant: ' : 'User: ') + m.content)
+    .join('\n');
+  const fullPrompt = historyText
+    ? historyText + '\nUser: ' + userText
+    : userText;
+
+  try {
+    const answer = await aiChatText(sys, fullPrompt, 800, { priority: true });
+    if (!answer || !answer.trim()){
+      await tgSend(chatId, 'Не удалось получить ответ. Попробуйте позже.', false);
+      return;
+    }
+    mem.push({ role: 'assistant', content: answer });
+    TG_MEMORY.set(chatId, mem);
+    await tgSend(chatId, answer, false);
+  } catch(e){
+    console.warn('[tg-ai] error: ' + e.message);
+    await tgSend(chatId, 'Извините, сервис временно недоступен. Попробуйте ещё раз.', true);
+  }
+}
+
+async function tgHandleUpdate(update){
+  try {
+    const msg = update.message || update.edited_message;
+    if (!msg || !msg.chat || !msg.text) return;
+    const chatId = String(msg.chat.id);
+    const text = String(msg.text).trim();
+    const isAdmin = chatId === TG_ADMIN_ID;
+
+    // Скриптовые кнопки
+    if (text === '/start'){
+      const hello = isAdmin
+        ? '👋 Привет, Роман!\n\nЯ — IOMA AI.\n\n• Напиши вопрос — отвечу как ассистент\n• Клиенты будут получать сюда заявки\n\nКнопки ниже помогут.'
+        : '👋 Здравствуйте!\n\nЯ — IOMA AI, ассистент iomastavka.\n\nМогу помочь с доставкой из Китая, таможней, сроками и документами. Спрашивайте!';
+      await tgSend(chatId, hello, true);
+      return;
+    }
+    if (text === '🤖 AI-ассистент'){
+      await tgSend(chatId, 'Напишите ваш вопрос — отвечу как AI.', true);
+      return;
+    }
+    if (text === '📋 Оставить заявку'){
+      await tgSend(chatId, 'Заполните форму на сайте: <b>iomastavki.onrender.com</b> — нажмите «Оставить заявку».\n\nИли напишите здесь: имя, контакт и суть вопроса — я передам менеджеру.', true);
+      return;
+    }
+    if (text === '📊 Тарифы'){
+      await tgSend(chatId, 'Актуальные тарифы уточняйте у менеджера. Оставьте заявку на сайте — рассчитаем индивидуально.', true);
+      return;
+    }
+    if (text === '📞 Контакты'){
+      await tgSend(chatId, 'Сайт: iomastavki.onrender.com\nTelegram: @iomastavka_bot', true);
+      return;
+    }
+
+    // /block <ip> — заблокировать IP (только для админа)
+    if (text.startsWith('/block ') && isAdmin){
+      const targetIP = text.slice(7).trim();
+      if (targetIP && /^[\d.:a-fA-F]+$/.test(targetIP)){
+        blockIP(targetIP, 'manual via telegram');
+        await tgSend(chatId, '✅ IP заблокирован: <code>' + targetIP + '</code>', true);
+      } else {
+        await tgSend(chatId, 'Формат: /block 1.2.3.4', true);
+      }
+      return;
+    }
+    if (text === '/blocks' && isAdmin){
+      const b = loadBlocks();
+      const list = Object.keys(b).slice(0, 20).map(k => '• ' + k + ' — ' + (b[k].reason || '?')).join('\n');
+      await tgSend(chatId, 'Заблокированные IP:\n' + (list || '(пусто)'), true);
+      return;
+    }
+    if (text === '/spamlog' && isAdmin){
+      try {
+        const log = JSON.parse(require('fs').readFileSync(SPAM_LOG_FILE, 'utf8'));
+        const last = log.slice(0, 10).map(e => '• ' + (e.reason || '?') + ' — ' + (e.contact || '').slice(0,30)).join('\n');
+        await tgSend(chatId, 'Последние спам-заявки:\n' + (last || '(пусто)'), true);
+      } catch(e){ await tgSend(chatId, 'Лог пуст', true); }
+      return;
+    }
+
+    // Всё остальное — в AI
+    await tgAnswerWithAI(chatId, text, isAdmin);
+  } catch(e){
+    console.warn('[tg-handle] error: ' + e.message);
+  }
+}
+
+let tgOffset = tgLoadOffset();
+// Если offset = 0 (первый запуск или файл пуст) — «съедаем» всю историю, чтобы не отвечать на старые сообщения
+if (tgOffset === 0 && TG_API){
+  (async () => {
+    try {
+      const r = await fetch(TG_API + '/getUpdates?timeout=0&offset=-1');
+      if (r.ok){
+        const d = await r.json();
+        if (d.ok && Array.isArray(d.result) && d.result.length){
+          const last = d.result[d.result.length - 1];
+          tgOffset = last.update_id;
+          tgSaveOffset(tgOffset);
+          console.log('[tg] начальный offset установлен на ' + tgOffset + ' (старые сообщения пропущены)');
+        }
+      }
+    } catch(e){ console.warn('[tg] init offset: ' + e.message); }
+  })();
+}
+let tgPolling = false;
+
+async function tgPoll(){
+  if (tgPolling || !TG_API) return;
+  tgPolling = true;
+  try {
+    const url = TG_API + '/getUpdates?timeout=25&offset=' + (tgOffset + 1);
+    const r = await fetch(url, { signal: AbortSignal.timeout(30000) });
+    if (!r.ok){ tgPolling = false; return; }
+    const d = await r.json();
+    if (d.ok && Array.isArray(d.result)){
+      for (const u of d.result){
+        await tgHandleUpdate(u);
+        tgOffset = Math.max(tgOffset, u.update_id);
+      }
+      if (d.result.length) tgSaveOffset(tgOffset);
+    }
+  } catch(e){
+    // timeout — нормально
+  } finally {
+    tgPolling = false;
+  }
+}
+
+if (TG_API){
+  console.log('[tg] Telegram AI-ассистент запущен (chat_id админа: ' + TG_ADMIN_ID + ')');
+  setInterval(tgPoll, TG_POLL_INTERVAL);
+  setTimeout(tgPoll, 1000);
+} else {
+  console.log('[tg] TELEGRAM_BOT_TOKEN не задан — ассистент отключён');
+}
 
 app.listen(PORT, function(){
   console.log('iomastavka listening on ' + PORT);
