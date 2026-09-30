@@ -2566,3 +2566,249 @@ html.dark .unit-choice.active{
   .request-form > .transit-picker{ grid-column:1 !important; }
   .request-shell{ width:100vw !important; max-width:100vw !important; padding:20px 16px !important; border-radius:0 !important; }
 }
+
+
+/* ============ КНОПКА ВХОДА В ЛИЧНЫЙ КАБИНЕТ ============ */
+.login-gate-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  height:36px;
+  padding:0 16px;
+  margin-left:10px;
+  border:1px solid rgba(31,84,118,.16);
+  border-radius:10px;
+  background:linear-gradient(135deg, #2a76a6 0%, #2f95b8 55%, #2aa8a6 120%);
+  color:#fff;
+  font:inherit;
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+  transition:transform .15s, box-shadow .15s;
+  white-space:nowrap;
+}
+.login-gate-btn svg{ width:16px; height:16px; }
+.login-gate-btn:hover{
+  transform:translateY(-1px);
+  box-shadow:0 8px 20px rgba(37,111,159,.32);
+}
+@media (max-width:900px){
+  .login-gate-btn span{ display:none; }
+  .login-gate-btn{ padding:0 10px; }
+}
+
+
+/* ============ УСИЛЕННАЯ КНОПКА ВХОДА ============ */
+.login-gate-btn{
+  background: linear-gradient(135deg, #f0a04b 0%, #e88a3c 50%, #d97728 100%) !important;
+  border: 0 !important;
+  color: #fff !important;
+  box-shadow: 0 6px 16px rgba(232,138,60,.35) !important;
+  font-weight: 700 !important;
+}
+.login-gate-btn:hover{
+  transform: translateY(-1px) !important;
+  box-shadow: 0 10px 24px rgba(232,138,60,.45) !important;
+}
+html.dark .login-gate-btn{
+  background: linear-gradient(135deg, #f5b15e 0%, #e88a3c 50%, #d97728 100%) !important;
+  color: #1a1a1a !important;
+}
+
+/* Скрываем кнопку карты если не убралась */
+[data-open-view="tarotView"]{ display: none !important; }
+
+
+/* ============ УБИРАЕМ КНОПКУ «КАРТА ДНЯ» ============ */
+#menuButton{ display: none !important; }
+
+/* Скрываем скрытые кнопки топбара */
+.top-nav-btn[hidden]{ display: none !important; }
+
+
+/* ============ 5 ФИКСОВ ============ */
+
+/* ФИКС 1: Светлая тема — всегда светлая */
+html:not(.dark) body.weather-night .weather-scene{
+  --sky-a: #cfe6f5 !important;
+  --sky-b: #e6f1f8 !important;
+  --sky-c: #f4f9fc !important;
+}
+html:not(.dark) body.weather-dusk .weather-scene{
+  --sky-a: #dbe6f0 !important;
+  --sky-b: #ecf1f6 !important;
+  --sky-c: #f7fafc !important;
+}
+html:not(.dark) body.manual-dark .weather-scene{
+  --sky-a: #cfe6f5 !important;
+  --sky-b: #e6f1f8 !important;
+  --sky-c: #f4f9fc !important;
+}
+
+/* ФИКС 2: Кнопка «Выйти» — красная */
+.login-gate-btn.ioma-logout{
+  background: linear-gradient(135deg, #d55 0%, #c0392b 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 16px rgba(192,57,43,.28) !important;
+}
+.login-gate-btn.ioma-logout:hover{
+  box-shadow: 0 10px 24px rgba(192,57,43,.4) !important;
+}
+
+/* ФИКС 3: Incoterms и транзит — вниз, поверх всего */
+.incoterm-picker, .transit-picker{ position: relative !important; z-index: 50 !important; }
+.incoterm-dropdown{
+  position: absolute !important;
+  top: calc(100% + 6px) !important;
+  bottom: auto !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 5000 !important;
+  max-height: 240px !important;
+  overflow-y: auto !important;
+  background: #ffffff !important;
+  border: 1.5px solid rgba(31,84,118,.22) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 50px rgba(15,42,63,.30) !important;
+  padding: 6px !important;
+  pointer-events: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+html.dark .incoterm-dropdown{
+  background: #0d2b45 !important;
+  border-color: rgba(140,200,225,.28) !important;
+}
+.incoterm-dropdown.hidden{ display: none !important; }
+.incoterm-item{
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 9px 12px !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: #0f2a3f !important;
+  font: inherit !important;
+  font-size: 13.5px !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  pointer-events: auto !important;
+}
+html.dark .incoterm-item{ color: #e8f3f8 !important; }
+.incoterm-item:hover{ background: rgba(20,156,148,.12) !important; }
+html.dark .incoterm-item:hover{ background: rgba(79,209,197,.18) !important; }
+.incoterm-item b{
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #12897f !important;
+  min-width: 56px !important;
+  flex: 0 0 56px !important;
+}
+html.dark .incoterm-item b{ color: #4fd1c5 !important; }
+.incoterm-item small{
+  flex: 1 !important;
+  font-size: 12px !important;
+  color: #647f91 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+html.dark .incoterm-item small{ color: #8eaabb !important; }
+
+/* ФИКС 4: Переключатель мм/см/м — компактнее */
+.unit-switch{
+  display: inline-flex !important;
+  gap: 0 !important;
+  margin-top: 6px !important;
+  padding: 2px !important;
+  border-radius: 999px !important;
+  background: rgba(15,42,63,.06) !important;
+  width: auto !important;
+  max-width: 160px !important;
+}
+html.dark .unit-switch{ background: rgba(255,255,255,.06) !important; }
+.unit-choice{
+  height: 24px !important;
+  min-width: 40px !important;
+  padding: 0 10px !important;
+  font-size: 11px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: #37566b !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  line-height: 24px !important;
+}
+html.dark .unit-choice{ color: #bcd2de !important; }
+.unit-choice.active{
+  background: #ffffff !important;
+  color: #256f9f !important;
+  box-shadow: 0 1px 3px rgba(15,42,63,.10) !important;
+}
+html.dark .unit-choice.active{
+  background: rgba(255,255,255,.10) !important;
+  color: #6fe0d5 !important;
+}
+
+/* ФИКС 5: Форма — компактнее */
+.request-form > .incoterm-picker,
+.request-form > .transit-picker{
+  grid-column: 1 / -1 !important;
+}
+.request-form{
+  gap: 12px 16px !important;
+}
+.incoterm-btn{
+  min-height: 46px !important;
+  padding: 8px 12px !important;
+}
+.incoterm-value{
+  min-width: 56px !important;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+}
+
+
+/* ============ ФИКС РОЛЬ-ГЕЙТА ============ */
+
+/* 1. Кнопка «Войти» — синий градиент в тон сайта */
+.login-gate-btn{
+  background: linear-gradient(135deg, #2a76a6 0%, #2f95b8 55%, #2aa8a6 120%) !important;
+  color: #fff !important;
+  border: 0 !important;
+  box-shadow: 0 6px 16px rgba(37,111,159,.28) !important;
+  font-weight: 650 !important;
+}
+.login-gate-btn:hover{
+  transform: translateY(-1px) !important;
+  box-shadow: 0 10px 24px rgba(37,111,159,.38) !important;
+}
+html.dark .login-gate-btn{
+  background: linear-gradient(135deg, #2b7fb5 0%, #2596b4 55%, #1fae9f 120%) !important;
+  color: #fff !important;
+}
+
+/* 2. Скрытие плиток — ЖЁСТКО */
+[data-client-only][hidden],
+.service-card[hidden],
+.service-card[data-client-only]:not(.is-authed *),
+.view-layer [data-client-only][hidden]{
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* 3. Топбар — скрыть для гостей */
+.top-nav-btn[hidden]{
+  display: none !important;
+}
+
+/* 4. Красная кнопка «Выйти» */
+.login-gate-btn.ioma-logout{
+  background: linear-gradient(135deg, #d55 0%, #c0392b 100%) !important;
+}

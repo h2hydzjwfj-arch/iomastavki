@@ -407,6 +407,33 @@ function runEdgeTts(text, voice, out){
       });
   });
 }
+
+// ========== КЭШ АУДИО (для Edge TTS) ==========
+const AUDIO_CACHE_DIR = require('path').join(ROOT, 'data', 'audio-cache');
+try { require('fs').mkdirSync(AUDIO_CACHE_DIR, { recursive: true }); } catch(e){}
+
+function audioKey(text, voice){
+  return require('crypto').createHash('md5')
+    .update(String(voice) + '||' + String(text))
+    .digest('hex');
+}
+
+function getCachedAudio(key){
+  try {
+    const file = require('path').join(AUDIO_CACHE_DIR, key + '.mp3');
+    if (!require('fs').existsSync(file)) return null;
+    return require('fs').readFileSync(file);
+  } catch(e){ return null; }
+}
+
+function setCachedAudio(key, buffer){
+  try {
+    if (!buffer || !buffer.length) return;
+    const file = require('path').join(AUDIO_CACHE_DIR, key + '.mp3');
+    require('fs').writeFileSync(file, buffer);
+  } catch(e){ console.warn('[audio-cache] save:', e.message); }
+}
+
 async function synthesizeEdge(text, lang){
   const voice = EDGE_VOICES[lang] || EDGE_VOICES.ru;
   const clean = preprocessForTts(text, lang);
@@ -1595,10 +1622,38 @@ app.get('/api/requests', requireAuth, function(req, res){
 
 app.post('/api/login', function(req,res){
   if (!verifyPassword(req.body?.password || '')) return res.status(401).json({ ok:false });
-  res.cookie('auth','1',{httpOnly:true,secure:true,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
+  res.cookie('auth','1',{httpOnly:true,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
   res.json({ ok:true });
 });
-app.post('/api/logout', function(req,res){ res.clearCookie('auth',{path:'/'}); res.json({ ok:true }); });
+app.get('/api/logout', function(req, res){
+  res.clearCookie('auth', { path: '/', httpOnly: true, sameSite: 'lax' });
+  res.clearCookie('authUser', { path: '/', httpOnly: true, sameSite: 'lax' });
+  res.clearCookie('auth', { path: '/', sameSite: 'lax' });
+  res.clearCookie('authUser', { path: '/', sameSite: 'lax' });
+  res.clearCookie('auth', { path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
+  res.clearCookie('authUser', { path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
+  res.clearCookie('auth', { path: '/' });
+  res.clearCookie('authUser', { path: '/' });
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  console.log('[logout] GET cleared');
+  res.redirect('/?t=' + Date.now());
+});
+
+app.post('/api/logout', function(req, res){
+  res.clearCookie('auth', { path: '/', httpOnly: true, sameSite: 'lax' });
+  res.clearCookie('authUser', { path: '/', httpOnly: true, sameSite: 'lax' });
+  res.clearCookie('auth', { path: '/', sameSite: 'lax' });
+  res.clearCookie('authUser', { path: '/', sameSite: 'lax' });
+  res.clearCookie('auth', { path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
+  res.clearCookie('authUser', { path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
+  res.clearCookie('auth', { path: '/' });
+  res.clearCookie('authUser', { path: '/' });
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  console.log('[logout] POST cleared');
+  res.json({ ok: true });
+});
 
 function verifyPassword(pw){
   const raw = process.env.ADMIN_PASSWORD_HASH || fallbackHash;
