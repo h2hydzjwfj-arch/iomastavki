@@ -1392,7 +1392,16 @@ app.get('/api/whoami', function(req, res){
   if (!auth || auth === '') {
     return res.status(401).json({ ok: false, error: 'unauthorized' });
   }
-  res.json({ ok: true, role: isAdmin(req) ? 'admin' : 'client', username: (req.cookies && req.cookies.authUser) || '' });
+  if (auth === 'admin' || auth === '1') {
+    return res.json({ ok: true, role: 'admin', username: 'admin', email: '' });
+  }
+  if (String(auth).startsWith('client:')) {
+    const clients = require('./lib/clients');
+    const c = clients.findById(String(auth).slice(7));
+    if (!c || !c.active) return res.status(401).json({ ok: false, error: 'unauthorized' });
+    return res.json({ ok: true, role: 'client', username: c.name, email: c.email, clientId: c.id });
+  }
+  return res.status(401).json({ ok: false, error: 'unauthorized' });
 });
 
 app.get('/admin.js', requireAuth, function(req, res){
@@ -1625,9 +1634,80 @@ app.get('/api/requests', requireAuth, function(req, res){
 });
 
 app.post('/api/login', function(req,res){
-  if (!verifyPassword(req.body?.password || '')) return res.status(401).json({ ok:false });
-  res.cookie('auth','1',{httpOnly:true,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
-  res.json({ ok:true });
+  const body = req.body || {};
+  const email = String(body.email || '').trim();
+  const password = String(body.password || '');
+
+  // Путь 1: клиент по email+паролю
+  if (email) {
+    const clients = require('./lib/clients');
+    const c = clients.verifyClient(email, password);
+    if (!c) return res.status(401).json({ ok:false, error:'invalid credentials' });
+    res.cookie('auth', 'client:' + c.id, { httpOnly:true, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
+    res.cookie('authUser', c.name, { httpOnly:false, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
+    return res.json({ ok:true, role:'client', name:c.name, email:c.email });
+  }
+
+  // Путь 2: админ по паролю (как раньше)
+  if (!verifyPassword(password)) return res.status(401).json({ ok:false });
+  res.cookie('auth','admin',{httpOnly:true,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
+  res.cookie('authUser','admin',{httpOnly:false,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
+  res.json({ ok:true, role:'admin' });
+});
+
+// ========== РЕГИСТРАЦИЯ КЛИЕНТА ==========
+const REG_RATE = new Map();
+const REG_WINDOW_MS = 60 * 60 * 1000; // 1 час
+const REG_MAX = 3;                    // 3 регистрации с одного IP в час
+
+app.post('/api/register', function(req, res) {
+  try {
+    const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim();
+    const now = Date.now();
+    const arr = (REG_RATE.get(ip) || []).filter(function(t){ return now - t < REG_WINDOW_MS; });
+    if (arr.length >= REG_MAX) {
+      return res.status(429).json({ ok:false, error:'too many registrations, try later' });
+    }
+
+    const body = req.body || {};
+
+    // Honeypot — если бот заполнил скрытое поле "website", молча возвращаем ok, но клиента не создаём
+    if (body.website || body.honeypot) {
+      console.log('[register] honeypot triggered, ip=' + ip);
+      return res.json({ ok:true });
+    }
+
+    // Минимум 3 секунды на форму
+    const t = Number(body.t || 0);
+    if (!t || (now - t) < 3000) {
+      return res.status(400).json({ ok:false, error:'form too fast' });
+    }
+
+    const email = String(body.email || '').trim().toLowerCase();
+    const name = String(body.name || '').trim();
+    const password = String(body.password || '');
+
+    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      return res.status(400).json({ ok:false, error:'invalid email' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ ok:false, error:'password min 6 chars' });
+    }
+
+    const clients = require('./lib/clients');
+    const c = clients.createClient({ email: email, name: name, password: password });
+
+    arr.push(now);
+    REG_RATE.set(ip, arr);
+
+    console.log('[register] new client:', c.email, 'ip=' + ip);
+    res.json({ ok:true, id:c.id, email:c.email, name:c.name });
+  } catch (e) {
+    const msg = String((e && e.message) || e);
+    if (msg.indexOf('already exists') !== -1) return res.status(409).json({ ok:false, error:'email already registered' });
+    console.error('[register]', msg);
+    res.status(500).json({ ok:false, error:'server error' });
+  }
 });
 app.get('/api/logout', function(req, res){
   res.clearCookie('auth', { path: '/', httpOnly: true, sameSite: 'lax' });
