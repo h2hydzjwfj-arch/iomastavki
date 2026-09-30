@@ -1388,7 +1388,11 @@ function requireAuth(req, res, next){
 function esc(s){ return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 app.get('/api/whoami', function(req, res){
-  res.json({ ok:true, role: isAdmin(req) ? 'admin' : 'client', username: (req.cookies && req.cookies.authUser) || '' });
+  const auth = req.cookies && req.cookies.auth;
+  if (!auth || auth === '') {
+    return res.status(401).json({ ok: false, error: 'unauthorized' });
+  }
+  res.json({ ok: true, role: isAdmin(req) ? 'admin' : 'client', username: (req.cookies && req.cookies.authUser) || '' });
 });
 
 app.get('/admin.js', requireAuth, function(req, res){
