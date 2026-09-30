@@ -746,6 +746,8 @@ app.get('/favicon.ico', function(req,res){
 app.get('/', function(req,res){ res.sendFile(path.join(ROOT,'index.html')); });
 app.get('/app.js', function(req,res){ res.sendFile(path.join(ROOT,'app.js')); });
 app.get('/styles.css', function(req,res){ res.sendFile(path.join(ROOT,'styles.css')); });
+app.get('/cabinet.css', function(req,res){ res.sendFile(path.join(ROOT,'cabinet.css')); });
+app.get('/cabinet.js',  function(req,res){ res.sendFile(path.join(ROOT,'cabinet.js')); });
 app.get('/api/health', function(req,res){ res.json({ ok:true }); });
 app.get('/api/version', function(req,res){ res.json({ ok:true, version:'98', build:'IOMASTAVKA_FILE_80' }); });
 app.get('/api/config', function(req,res){ res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.GROQ_API_KEY || process.env.DEEPSEEK_API_KEY), pexelsConfigured: Boolean(process.env.PEXELS_API_KEY) }); });
@@ -1650,24 +1652,29 @@ app.get('/api/my-orders', function(req, res) {
 
 app.post('/api/login', function(req,res){
   const body = req.body || {};
-  const email = String(body.email || '').trim();
+  const email = String(body.email || '').trim().toLowerCase();
   const password = String(body.password || '');
 
-  // Путь 1: клиент по email+паролю
-  if (email) {
-    const clients = require('./lib/clients');
-    const c = clients.verifyClient(email, password);
-    if (!c) return res.status(401).json({ ok:false, error:'invalid credentials' });
-    res.cookie('auth', 'client:' + c.id, { httpOnly:true, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
-    res.cookie('authUser', c.name, { httpOnly:false, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
-    return res.json({ ok:true, role:'client', name:c.name, email:c.email });
+  if (!email) return res.status(400).json({ ok:false, error:'email required' });
+  if (!password) return res.status(400).json({ ok:false, error:'password required' });
+
+  const adminEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+
+  // Админ: email совпадает с ADMIN_EMAIL
+  if (adminEmail && email === adminEmail) {
+    if (!verifyPassword(password)) return res.status(401).json({ ok:false, error:'invalid credentials' });
+    res.cookie('auth','admin',{httpOnly:true,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
+    res.cookie('authUser','admin',{httpOnly:false,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
+    return res.json({ ok:true, role:'admin' });
   }
 
-  // Путь 2: админ по паролю (как раньше)
-  if (!verifyPassword(password)) return res.status(401).json({ ok:false });
-  res.cookie('auth','admin',{httpOnly:true,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
-  res.cookie('authUser','admin',{httpOnly:false,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
-  res.json({ ok:true, role:'admin' });
+  // Клиент
+  const clients = require('./lib/clients');
+  const c = clients.verifyClient(email, password);
+  if (!c) return res.status(401).json({ ok:false, error:'invalid credentials' });
+  res.cookie('auth', 'client:' + c.id, { httpOnly:true, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
+  res.cookie('authUser', c.name, { httpOnly:false, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
+  res.json({ ok:true, role:'client', name:c.name, email:c.email });
 });
 
 // ========== РЕГИСТРАЦИЯ КЛИЕНТА ==========

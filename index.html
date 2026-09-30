@@ -11,6 +11,7 @@
   (function(){try{var t=localStorage.getItem('iomastavka_theme');var d=t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content=d?'#0b2238':'#bfe6f8'}catch(e){}})();
 </script>
 <link rel="stylesheet" href="/styles.css?v=20260921-v300">
+<link rel="stylesheet" href="/cabinet.css?v=1">
 </head>
 <body>
 <div id="weatherScene" class="weather-scene" aria-hidden="true"><div class="stars"></div><div class="sun"></div><div class="moon"></div></div>
@@ -69,6 +70,7 @@
     }
   } catch(e){}
 </script>
+<script src="/cabinet.js?v=1" defer></script>
 <script src="/app.js?v=20260921-v300" defer></script>
 
 

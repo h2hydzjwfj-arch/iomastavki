@@ -1,0 +1,154 @@
+(function(){
+  if (window.__iomaCabinet) return;
+  window.__iomaCabinet = true;
+
+  var authHTML = ''
+    + '<div class="ioma-modal-overlay" id="iomaAuthOverlay" hidden>'
+    + '  <div class="ioma-modal" role="dialog" aria-modal="true">'
+    + '    <button class="ioma-modal-close" type="button" data-ioma-close="auth">&times;</button>'
+    + '    <div class="ioma-tabs">'
+    + '      <button type="button" class="ioma-tab is-active" data-ioma-tab="login">Вход</button>'
+    + '      <button type="button" class="ioma-tab" data-ioma-tab="register">Регистрация</button>'
+    + '    </div>'
+    + '    <div class="ioma-tab-pane" data-ioma-pane="login">'
+    + '      <label class="ioma-field"><span>Email</span><input type="email" id="iomaLoginEmail" autocomplete="email"></label>'
+    + '      <label class="ioma-field"><span>Пароль</span><input type="password" id="iomaLoginPassword" autocomplete="current-password"></label>'
+    + '      <button type="button" class="ioma-btn-primary" id="iomaLoginSubmit">Войти</button>'
+    + '      <div class="ioma-error" id="iomaLoginError" hidden></div>'
+    + '    </div>'
+    + '    <div class="ioma-tab-pane" data-ioma-pane="register" hidden>'
+    + '      <label class="ioma-field"><span>Имя</span><input type="text" id="iomaRegName" autocomplete="name" maxlength="80"></label>'
+    + '      <label class="ioma-field"><span>Email</span><input type="email" id="iomaRegEmail" autocomplete="email"></label>'
+    + '      <label class="ioma-field"><span>Пароль (мин. 6 символов)</span><input type="password" id="iomaRegPassword" autocomplete="new-password"></label>'
+    + '      <input type="text" id="iomaRegWebsite" name="website" tabindex="-1" autocomplete="off" class="ioma-honeypot" aria-hidden="true">'
+    + '      <button type="button" class="ioma-btn-primary" id="iomaRegSubmit">Зарегистрироваться</button>'
+    + '      <div class="ioma-error" id="iomaRegError" hidden></div>'
+    + '      <div class="ioma-hint">Оставаясь на сайте, вы соглашаетесь с обработкой персональных данных.</div>'
+    + '    </div>'
+    + '  </div>'
+    + '</div>';
+
+  var cabHTML = ''
+    + '<div class="ioma-modal-overlay" id="iomaCabinetOverlay" hidden>'
+    + '  <div class="ioma-modal ioma-modal-wide" role="dialog" aria-modal="true">'
+    + '    <button class="ioma-modal-close" type="button" data-ioma-close="cabinet">&times;</button>'
+    + '    <h2 class="ioma-modal-title">Мой кабинет</h2>'
+    + '    <div class="ioma-cabinet-hello" id="iomaCabHello"></div>'
+    + '    <div class="ioma-orders-wrap">'
+    + '      <div class="ioma-orders-head"><span>Мои заявки</span><button type="button" class="ioma-btn-secondary" id="iomaNewOrderBtn">Оставить заявку</button></div>'
+    + '      <div class="ioma-orders-list" id="iomaOrdersList"><div class="ioma-orders-empty">Загрузка…</div></div>'
+    + '    </div>'
+    + '  </div>'
+    + '</div>';
+
+  function inject(){
+    if (!document.getElementById('iomaAuthOverlay')){
+      var d = document.createElement('div'); d.innerHTML = authHTML; document.body.appendChild(d.firstChild);
+    }
+    if (!document.getElementById('iomaCabinetOverlay')){
+      var d2 = document.createElement('div'); d2.innerHTML = cabHTML; document.body.appendChild(d2.firstChild);
+    }
+  }
+
+  function openAuth(tab){ inject(); document.getElementById('iomaAuthOverlay').hidden = false; setTab(tab || 'login'); }
+  function closeAuth(){ var ov = document.getElementById('iomaAuthOverlay'); if (ov) ov.hidden = true; }
+  function openCabinet(){ inject(); document.getElementById('iomaCabinetOverlay').hidden = false; loadOrders(); }
+  function closeCabinet(){ var ov = document.getElementById('iomaCabinetOverlay'); if (ov) ov.hidden = true; }
+
+  function setTab(name){
+    document.querySelectorAll('.ioma-tab').forEach(function(t){ t.classList.toggle('is-active', t.getAttribute('data-ioma-tab') === name); });
+    document.querySelectorAll('.ioma-tab-pane').forEach(function(p){ p.hidden = p.getAttribute('data-ioma-pane') !== name; });
+    if (name === 'register') window.__iomaRegT = Date.now();
+  }
+
+  function showError(id, msg){
+    var el = document.getElementById(id); if (!el) return;
+    if (!msg){ el.hidden = true; el.textContent = ''; return; }
+    el.hidden = false; el.textContent = msg;
+  }
+
+  function doLogin(){
+    var email = (document.getElementById('iomaLoginEmail').value || '').trim();
+    var pw = document.getElementById('iomaLoginPassword').value || '';
+    showError('iomaLoginError', '');
+    if (!email || !pw){ showError('iomaLoginError', 'Введите email и пароль'); return; }
+    fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body: JSON.stringify({ email: email, password: pw }) })
+      .then(function(r){ return r.json().then(function(d){ return { s: r.status, d: d }; }); })
+      .then(function(x){ if (x.d && x.d.ok){ location.reload(); return; } showError('iomaLoginError', (x.d && x.d.error) || 'Неверный email или пароль'); })
+      .catch(function(){ showError('iomaLoginError', 'Ошибка соединения'); });
+  }
+
+  function doRegister(){
+    var name = (document.getElementById('iomaRegName').value || '').trim();
+    var email = (document.getElementById('iomaRegEmail').value || '').trim();
+    var pw = document.getElementById('iomaRegPassword').value || '';
+    var website = document.getElementById('iomaRegWebsite').value || '';
+    var t = window.__iomaRegT || (Date.now() - 5000);
+    showError('iomaRegError', '');
+    if (!email || !pw){ showError('iomaRegError', 'Укажите email и пароль'); return; }
+    if (pw.length < 6){ showError('iomaRegError', 'Пароль не короче 6 символов'); return; }
+    fetch('/api/register', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body: JSON.stringify({ name: name, email: email, password: pw, website: website, t: t }) })
+      .then(function(r){ return r.json().then(function(d){ return { s: r.status, d: d }; }); })
+      .then(function(x){
+        if (x.d && x.d.ok){
+          return fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body: JSON.stringify({ email: email, password: pw }) }).then(function(){ location.reload(); });
+        }
+        var msg = (x.d && x.d.error) || 'Не удалось зарегистрироваться';
+        if (x.s === 409) msg = 'Такой email уже зарегистрирован';
+        if (x.s === 429) msg = 'Слишком много попыток, попробуйте позже';
+        showError('iomaRegError', msg);
+      })
+      .catch(function(){ showError('iomaRegError', 'Ошибка соединения'); });
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
+  }
+
+  function loadOrders(){
+    var list = document.getElementById('iomaOrdersList'); if (!list) return;
+    list.innerHTML = '<div class="ioma-orders-empty">Загрузка…</div>';
+    fetch('/api/my-orders?t=' + Date.now(), { credentials:'same-origin', cache:'no-store' })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (!d || !d.ok || !d.orders || !d.orders.length){
+          list.innerHTML = '<div class="ioma-orders-empty">У вас пока нет заявок. Оставьте первую — мы свяжемся.</div>'; return;
+        }
+        list.innerHTML = d.orders.map(function(o){
+          var when = ''; try { when = new Date(o.at).toLocaleString('ru-RU', { timeZone:'Europe/Moscow' }); } catch(e){ when = o.at || ''; }
+          return '<div class="ioma-order"><div class="ioma-order-head"><b>#' + (o.id || '') + '</b><span>' + when + ' (МСК)</span></div><div class="ioma-order-body">' + escapeHtml(o.body || '—') + '</div></div>';
+        }).join('');
+      })
+      .catch(function(){ list.innerHTML = '<div class="ioma-orders-empty">Ошибка загрузки.</div>'; });
+  }
+
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if (t.closest && t.closest('#loginGateBtn')){ e.preventDefault(); e.stopImmediatePropagation(); openAuth('login'); return; }
+    if (t.closest && t.closest('#iomaCabinetBtn')){ e.preventDefault(); e.stopImmediatePropagation(); openCabinet(); return; }
+    if (t.closest && t.closest('[data-ioma-close]')){
+      var w = t.closest('[data-ioma-close]').getAttribute('data-ioma-close');
+      if (w === 'auth') closeAuth(); if (w === 'cabinet') closeCabinet(); return;
+    }
+    if (t.classList && t.classList.contains('ioma-modal-overlay')){ t.hidden = true; return; }
+    if (t.closest && t.closest('.ioma-tab')){ setTab(t.closest('.ioma-tab').getAttribute('data-ioma-tab')); return; }
+    if (t.id === 'iomaLoginSubmit'){ e.preventDefault(); doLogin(); return; }
+    if (t.id === 'iomaRegSubmit'){ e.preventDefault(); doRegister(); return; }
+    if (t.id === 'iomaNewOrderBtn'){
+      e.preventDefault(); closeCabinet();
+      var btn = document.querySelector('[data-open-view="request"]') || document.querySelector('[data-view="request"]');
+      if (btn){ btn.click(); return; }
+      var req = document.getElementById('requestView');
+      if (req){ req.setAttribute('aria-hidden', 'false'); req.classList.add('is-open'); }
+      return;
+    }
+  }, true);
+
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape'){ closeAuth(); closeCabinet(); } });
+
+  window.iomaOpenAuth = openAuth;
+  window.iomaOpenCabinet = openCabinet;
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inject);
+  else inject();
+})();

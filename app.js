@@ -54,74 +54,58 @@ function friendlyError(e){
 
   var AUTH_ONLY = ['agentImportButton', 'customsButton'];
 
-  function apply(role){
+  function apply(role, username){
     var authed = (role === 'admin' || role === 'client');
     document.querySelectorAll('[data-client-only]').forEach(function(el){
-      if (authed){
-        el.removeAttribute('hidden');
-        el.style.removeProperty('display');
-      } else {
-        el.setAttribute('hidden', '');
-        el.style.setProperty('display', 'none', 'important');
-      }
+      if (authed){ el.removeAttribute('hidden'); el.style.removeProperty('display'); }
+      else { el.setAttribute('hidden', ''); el.style.setProperty('display', 'none', 'important'); }
     });
     AUTH_ONLY.forEach(function(id){
-      var el = document.getElementById(id);
-      if (!el) return;
-      if (authed) el.removeAttribute('hidden');
-      else el.setAttribute('hidden', '');
+      var el = document.getElementById(id); if (!el) return;
+      if (authed) el.removeAttribute('hidden'); else el.setAttribute('hidden', '');
     });
     var login  = document.getElementById('loginGateBtn');
     var logout = document.getElementById('iomaLogoutBtn');
+    var cab    = document.getElementById('iomaCabinetBtn');
     if (login)  login.style.display  = authed ? 'none' : 'inline-flex';
     if (logout) logout.style.display = authed ? 'inline-flex' : 'none';
+    if (cab)    cab.style.display    = (role === 'client') ? 'inline-flex' : 'none';
     document.documentElement.classList.toggle('is-authed', authed);
-    console.log('[gate]', role);
   }
 
   function check(){
     fetch('/api/whoami?t=' + Date.now(), { credentials:'same-origin', cache:'no-store' })
-      .then(function(r){ return r.json(); })
-      .then(function(d){ apply(d && d.role ? d.role : 'guest'); })
-      .catch(function(){ apply('guest'); });
+      .then(function(r){ return r.json().catch(function(){ return {}; }); })
+      .then(function(d){ apply((d && d.role) || 'guest', (d && d.username) || ''); })
+      .catch(function(){ apply('guest', ''); });
   }
 
-  function ensureLogout(){
-    if (document.getElementById('iomaLogoutBtn')) return;
-    var actions = document.querySelector('.top-actions');
-    if (!actions) return;
+  function ensureBtn(id, label, cls, handler){
+    if (document.getElementById(id)) return;
+    var actions = document.querySelector('.top-actions'); if (!actions) return;
     var b = document.createElement('button');
-    b.id = 'iomaLogoutBtn';
-    b.type = 'button';
-    b.className = 'login-gate-btn ioma-logout';
+    b.id = id; b.type = 'button'; b.className = 'login-gate-btn ' + cls;
     b.style.display = 'none';
-    b.innerHTML = '<span>Выйти</span>';
-    b.addEventListener('click', function(e){
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      window.location.href = '/api/logout?t=' + Date.now();
-    }, true);
+    b.innerHTML = '<span>' + label + '</span>';
+    b.addEventListener('click', handler, true);
     actions.appendChild(b);
   }
 
-  document.addEventListener('click', function(e){
-    var b = e.target.closest && e.target.closest('#loginGateBtn');
-    if (!b) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    var u = prompt('Логин:'); if (!u) return;
-    var p = prompt('Пароль:'); if (!p) return;
-    fetch('/api/login', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      credentials:'same-origin',
-      body: JSON.stringify({ username:u, password:p })
-    }).then(function(r){ return r.json(); })
-      .then(function(d){ if (d && d.ok) location.reload(); else alert('Неверный логин или пароль'); })
-      .catch(function(){ alert('Ошибка соединения'); });
-  }, true);
+  function ensureLogout(){
+    ensureBtn('iomaLogoutBtn', 'Выйти', 'ioma-logout', function(e){
+      e.preventDefault(); e.stopImmediatePropagation();
+      window.location.href = '/api/logout?t=' + Date.now();
+    });
+  }
 
-  function init(){ ensureLogout(); check(); }
+  function ensureCabinetBtn(){
+    ensureBtn('iomaCabinetBtn', 'Личный кабинет', 'ioma-cabinet', function(e){
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (window.iomaOpenCabinet) window.iomaOpenCabinet();
+    });
+  }
+
+  function init(){ ensureCabinetBtn(); ensureLogout(); check(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();
