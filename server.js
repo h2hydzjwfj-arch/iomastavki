@@ -1609,7 +1609,8 @@ app.post('/api/requests', async function(req, res){
     fs.mkdirSync(require('path').dirname(REQUESTS_FILE), { recursive:true });
     let list = [];
     try { list = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8')); } catch(e){ list = []; }
-    const entry = { id: Date.now(), name, contact, body, at: new Date().toISOString(), ip: req.ip };
+    const clientId = (req.cookies && String(req.cookies.auth||'').startsWith('client:')) ? String(req.cookies.auth).slice(7) : null;
+    const entry = { id: Date.now(), name, contact, body, clientId, at: new Date().toISOString(), ip: req.ip };
     list.unshift(entry);
     if (list.length > 500) list = list.slice(0, 500);
     fs.writeFileSync(REQUESTS_FILE, JSON.stringify(list, null, 2));
@@ -1631,6 +1632,20 @@ app.get('/api/requests', requireAuth, function(req, res){
     const list = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8'));
     res.json({ ok:true, requests: list });
   } catch(e){ res.json({ ok:true, requests: [] }); }
+});
+
+// ========== МОИ ЗАЯВКИ (для клиента) ==========
+app.get('/api/my-orders', function(req, res) {
+  const auth = req.cookies && req.cookies.auth;
+  if (!auth || !String(auth).startsWith('client:')) {
+    return res.status(401).json({ ok:false, error:'unauthorized' });
+  }
+  const clientId = String(auth).slice(7);
+  const fs = require('fs');
+  let all = [];
+  try { all = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8')) || []; } catch(e) { all = []; }
+  const mine = all.filter(function(r){ return String(r.clientId||'') === clientId; });
+  res.json({ ok:true, count: mine.length, orders: mine });
 });
 
 app.post('/api/login', function(req,res){
