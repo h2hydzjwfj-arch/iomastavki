@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сброс пароля — iomastavka</title>
+<link rel="stylesheet" href="/styles.css?v=1">
+<style>
+body{background:linear-gradient(135deg,#eef4fc,#dbe8f8);min-height:100vh;display:flex;align-items:center;justify-content:center;margin:0;padding:20px;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+.card{background:#fff;max-width:440px;width:100%;padding:36px 34px;border-radius:18px;box-shadow:0 20px 60px rgba(14,20,40,.12)}
+.card h1{margin:0 0 6px;font-size:24px;color:#0e1428}
+.card p.sub{margin:0 0 24px;color:#667;font-size:14px;line-height:1.5}
+.card label{display:block;margin-bottom:16px}
+.card label span{display:block;font-size:13px;color:#667;margin-bottom:6px;font-weight:500}
+.card input{width:100%;padding:12px 14px;font-size:15px;border-radius:10px;border:1px solid #d5dbe8;background:#fafbfe;box-sizing:border-box;font-family:inherit}
+.card input:focus{outline:none;border-color:#1257e0;background:#fff;box-shadow:0 0 0 3px rgba(18,87,224,.12)}
+.card button{width:100%;padding:12px 16px;font-size:15px;font-weight:600;border-radius:10px;border:none;background:#1257e0;color:#fff;cursor:pointer}
+.card button:disabled{opacity:.5;cursor:wait}
+.msg{margin-top:16px;padding:12px 14px;border-radius:10px;font-size:14px}
+.msg.ok{background:#e6f4ea;color:#1b7f3a}
+.msg.err{background:#fdecec;color:#a11}
+.msg[hidden]{display:none}
+.back{display:inline-block;margin-top:18px;color:#667;font-size:13px;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>Новый пароль</h1>
+<p class="sub">Введите новый пароль для входа. Минимум 6 символов.</p>
+<form id="f" autocomplete="off">
+<label><span>Новый пароль</span><input type="password" id="p1" required minlength="6"></label>
+<label><span>Повторите пароль</span><input type="password" id="p2" required minlength="6"></label>
+<button type="submit" id="b">Сохранить пароль</button>
+</form>
+<div class="msg" id="m" hidden></div>
+<a class="back" href="/">Вернуться на главную</a>
+</div>
+<script>
+(function(){
+var token = new URLSearchParams(location.search).get('token');
+var f = document.getElementById('f');
+var b = document.getElementById('b');
+var m = document.getElementById('m');
+function show(t, k){ m.hidden = false; m.className = 'msg ' + (k || 'ok'); m.textContent = t; }
+if (!token){ f.style.display = 'none'; show('Ссылка недействительна. Запросите сброс ещё раз.', 'err'); return; }
+f.addEventListener('submit', function(e){
+  e.preventDefault();
+  var p1 = document.getElementById('p1').value;
+  var p2 = document.getElementById('p2').value;
+  if (p1.length < 6){ show('Пароль минимум 6 символов', 'err'); return; }
+  if (p1 !== p2){ show('Пароли не совпадают', 'err'); return; }
+  b.disabled = true;
+  fetch('/api/password-reset/confirm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: token, password: p1 })
+  }).then(function(r){ return r.json(); }).then(function(d){
+    b.disabled = false;
+    if (d && d.ok){
+      show('Пароль обновлён! Перенаправляю на главную...', 'ok');
+      setTimeout(function(){ location.href = '/'; }, 2000);
+    } else { show((d && d.error) || 'Ошибка', 'err'); }
+  }).catch(function(){ b.disabled = false; show('Ошибка соединения', 'err'); });
+});
+})();
+</script>
+</body>
+</html>

@@ -15,7 +15,6 @@
     + '      <label class="ioma-field"><span>Пароль</span><input type="password" id="iomaLoginPassword" autocomplete="current-password"></label>'
     + '      <button type="button" class="ioma-btn-primary" id="iomaLoginSubmit">Войти</button>'
     + '      <div class="ioma-error" id="iomaLoginError" hidden></div>'
-    + '      <div class="ioma-hint" style="margin-top:14px"><a href="#" id="iomaForgotLink">Забыли пароль?</a></div>'
     + '    </div>'
     + '    <div class="ioma-tab-pane" data-ioma-pane="register" hidden>'
     + '      <label class="ioma-field"><span>Имя</span><input type="text" id="iomaRegName" autocomplete="name" maxlength="80"></label>'
@@ -42,25 +41,6 @@
     + '  </div>'
     + '</div>';
 
-  function attachEyes(){
-    ['iomaLoginPassword', 'iomaRegPassword'].forEach(function(id){
-      var input = document.getElementById(id);
-      if (!input || input.parentNode.classList.contains('ioma-pw-wrap')) return;
-      var wrap = document.createElement('div'); wrap.className = 'ioma-pw-wrap';
-      input.parentNode.insertBefore(wrap, input);
-      wrap.appendChild(input);
-      var btn = document.createElement('button');
-      btn.type = 'button'; btn.className = 'ioma-pw-toggle'; btn.setAttribute('aria-label', 'Показать пароль');
-      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-      btn.addEventListener('click', function(e){
-        e.preventDefault();
-        input.type = (input.type === 'password') ? 'text' : 'password';
-        btn.setAttribute('aria-label', input.type === 'password' ? 'Показать пароль' : 'Скрыть пароль');
-      });
-      wrap.appendChild(btn);
-    });
-  }
-
   function inject(){
     if (!document.getElementById('iomaAuthOverlay')){
       var d = document.createElement('div'); d.innerHTML = authHTML; document.body.appendChild(d.firstChild);
@@ -68,7 +48,6 @@
     if (!document.getElementById('iomaCabinetOverlay')){
       var d2 = document.createElement('div'); d2.innerHTML = cabHTML; document.body.appendChild(d2.firstChild);
     }
-    attachEyes();
   }
 
   function openAuth(tab){ inject(); document.getElementById('iomaAuthOverlay').hidden = false; setTab(tab || 'login'); }
@@ -172,100 +151,4 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inject);
   else inject();
-
-
-  // ========== СБРОС ПАРОЛЯ ==========
-  var resetHTML = ''
-    + '<div class="ioma-modal-overlay" id="iomaForgotOverlay" hidden>'
-    + '  <div class="ioma-modal" role="dialog" aria-modal="true">'
-    + '    <button class="ioma-modal-close" type="button" data-ioma-close="forgot">&times;</button>'
-    + '    <h2 class="ioma-modal-title">Восстановление пароля</h2>'
-    + '    <p style="margin:0 0 18px;font-size:14px;color:#667;line-height:1.5">Укажите email, который вы использовали при регистрации. Мы отправим ссылку для сброса пароля.</p>'
-    + '    <label class="ioma-field"><span>Email</span><input type="email" id="iomaForgotEmail" autocomplete="email"></label>'
-    + '    <button type="button" class="ioma-btn-primary" id="iomaForgotSubmit">Отправить ссылку</button>'
-    + '    <div class="ioma-error" id="iomaForgotError" hidden></div>'
-    + '    <div class="ioma-hint" id="iomaForgotSuccess" hidden style="color:#1b7f3a;margin-top:12px;line-height:1.5"></div>'
-    + '    <div id="iomaForgotLinkBox" hidden style="margin-top:12px;padding:10px 12px;background:#fff8e6;border:1px solid #f0d78c;border-radius:10px;font-size:12.5px;color:#7a5a10;line-height:1.5">'
-    + '      <div style="font-weight:600;margin-bottom:6px">Тестовый режим Resend — письмо не уходит</div>'
-    + '      <div>Откройте эту ссылку вручную:</div>'
-    + '      <div id="iomaForgotLinkUrl" style="margin-top:6px;word-break:break-all;color:#1257e0;user-select:all"></div>'
-    + '    </div>'
-    + '    <div class="ioma-hint" style="margin-top:16px"><a href="#" id="iomaForgotBack">← Вернуться ко входу</a></div>'
-    + '  </div>'
-    + '</div>';
-
-  function ensureForgotModal(){
-    if (document.getElementById('iomaForgotOverlay')) return;
-    var d = document.createElement('div');
-    d.innerHTML = resetHTML;
-    document.body.appendChild(d.firstChild);
-  }
-  function openForgot(){
-    ensureForgotModal();
-    var ov = document.getElementById('iomaForgotOverlay');
-    ov.hidden = false;
-    document.getElementById('iomaForgotError').hidden = true;
-    document.getElementById('iomaForgotSuccess').hidden = true;
-    setTimeout(function(){ var i = document.getElementById('iomaForgotEmail'); if (i) i.focus(); }, 50);
-  }
-  function closeForgot(){
-    var ov = document.getElementById('iomaForgotOverlay');
-    if (ov) ov.hidden = true;
-  }
-  function doForgot(){
-    var email = (document.getElementById('iomaForgotEmail').value || '').trim();
-    var errEl = document.getElementById('iomaForgotError');
-    var okEl = document.getElementById('iomaForgotSuccess');
-    var btn = document.getElementById('iomaForgotSubmit');
-    errEl.hidden = true; okEl.hidden = true;
-    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
-      errEl.hidden = false; errEl.textContent = 'Укажите корректный email';
-      return;
-    }
-    btn.disabled = true; btn.textContent = 'Отправляем…';
-    fetch('/api/password-reset/request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify({ email: email })
-    })
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        btn.disabled = false; btn.textContent = 'Отправить ссылку';
-        if (d && d.ok){
-          okEl.hidden = false;
-        } else {
-          errEl.hidden = false; errEl.textContent = (d && d.error) || 'Ошибка';
-        }
-      })
-      .catch(function(){
-        btn.disabled = false; btn.textContent = 'Отправить ссылку';
-        errEl.hidden = false; errEl.textContent = 'Ошибка соединения';
-      });
-  }
-
-  document.addEventListener('click', function(e){
-    if (e.target.closest && e.target.closest('#iomaForgotLink')){
-      e.preventDefault(); e.stopImmediatePropagation();
-      closeAuth(); openForgot(); return;
-    }
-    if (e.target.closest && e.target.closest('#iomaForgotSubmit')){
-      e.preventDefault(); e.stopImmediatePropagation();
-      doForgot(); return;
-    }
-    if (e.target.closest && e.target.closest('#iomaForgotBack')){
-      e.preventDefault(); e.stopImmediatePropagation();
-      closeForgot(); openAuth('login'); return;
-    }
-    if (e.target.closest && e.target.closest('[data-ioma-close="forgot"]')){
-      e.preventDefault(); e.stopImmediatePropagation();
-      closeForgot(); return;
-    }
-    // Клик по фону
-    if (e.target.id === 'iomaForgotOverlay'){ e.target.hidden = true; }
-  }, true);
-
-  document.addEventListener('keydown', function(e){
-    if (e.key === 'Escape') closeForgot();
-  });
 })();

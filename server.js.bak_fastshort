@@ -1728,20 +1728,16 @@ app.post('/api/assist', async function(req, res){
     const topScore = scored.length ? (scored[0]._score || 0) : 0;
     const context = scored.map(function(t){ return '### ' + t.title + '\n' + t.answer; }).join('\n\n');
 
-    // БЫСТРЫЙ ПУТЬ: score >= 12 И короткий вопрос -> короткий ответ мгновенно
-    const shortQ = question.trim().length < 80;
-    if (topScore >= 12 && shortQ){
+    // БЫСТРЫЙ ПУТЬ: если вопрос точно попадает в тему (score >= 12) — отдаём ответ сразу, без AI
+    if (topScore >= 12){
       const top = scored[0];
-      let replyFast = String(top.shortAnswer || top.answer || '').trim();
-      // Добавляем сноску
-      replyFast = replyFast + '\n\n_Уточните детали у вашего менеджера._';
       console.log('[assist] FAST match: ' + top.title + ' (score=' + topScore + ')');
       return res.json({
         ok: true,
         role: role,
         mode: 'fast',
         provider: 'playbook',
-        reply: replyFast,
+        reply: String(top.answer).trim(),
         matchedTopics: [{ title: String(top.title||''), id: String(top.id||'') }]
       });
     }
@@ -1753,20 +1749,18 @@ app.post('/api/assist', async function(req, res){
       // Есть ответ в playbook — используем его как основу
       mode = 'playbook';
       sysLines = [
-        'Ты — умный ассистент логистической компании (Китай → Россия).',
-        'Отвечай ТОЛЬКО на русском. Максимум 2-3 предложения.',
-        'Отвечай РОВНО на заданный вопрос, НЕ вываливай всю информацию из контекста.',
-        'Если вопрос про конкретный товар или услугу — в конце задай 1 уточняющий вопрос (например: «Уточните, что за товар?»).',
-        'Используй цифры РОВНО как в контексте, не переставляй (ДС=20000, СС=от 100000).',
-        'НЕ пиши «уточню и вернусь» — это невозможно.',
-        'В САМОМ КОНЦЕ с новой строки курсивом добавь: _Уточните детали у вашего менеджера._',
+        'Ты — AI-ассистент логистической компании (Китай → Россия, работа под ключ).',
+        'Отвечай ТОЛЬКО на русском. Пиши коротко (2-5 предложений), дружелюбно и по делу.',
+        'Формулируй ответ своими словами на основе фактов из контекста ниже.',
+        'НЕ выдумывай цифры. Если в контексте есть точная цифра (например 20 000 для ДС или «от 100 000» для СС) — используй РОВНО её, не заменяй и не переноси на другой термин.',
+        'НЕ пиши «Уточню и вернусь» — это раздражает. Если чего-то нет — скажи: «Этого нет в моей базе, уточните у менеджера».',
         '',
-        'РОЛЬ: ' + (role === 'admin' ? 'администратор компании' : (role === 'client' ? 'клиент' : 'гость сайта')),
+        'РОЛЬ СПРАШИВАЮЩЕГО: ' + (role === 'admin' ? 'администратор компании (твой создатель)' : (role === 'client' ? 'клиент' : 'гость сайта')),
         '',
-        'КОНТЕКСТ:',
+        'КОНТЕКСТ (факты из базы знаний):',
         context
       ];
-      userPrompt = 'Вопрос клиента: ' + question + '\n\nОтветь коротко (2-3 предложения). В конце уточняющий вопрос и курсивная сноска.';
+      userPrompt = 'Вопрос: ' + question + '\n\nОтветь коротко, своими словами, на основе контекста.';
     } else {
       // Нет ответа — свободный чат через облако
       mode = 'freechat';
@@ -1794,7 +1788,7 @@ app.post('/api/assist', async function(req, res){
     // Приоритет: облако (Groq → DeepSeek → Gemini) — быстрое и качественное
     try {
       const t1 = Date.now();
-      reply = await aiChatText(systemPrompt, userPrompt, 300);
+      reply = await aiChatText(systemPrompt, userPrompt, 400);
       provider = 'cloud';
       console.log('[assist] mode=' + mode + ' role=' + role + ' provider=cloud ' + (Date.now()-t1) + 'ms');
     } catch(ec){
@@ -1805,7 +1799,7 @@ app.post('/api/assist', async function(req, res){
     if (!reply || reply.length < 10){
       try {
         const t2 = Date.now();
-        reply = await ollamaChatText(systemPrompt, userPrompt, 300, { timeoutMs: 45000, temperature: 0.6 });
+        reply = await ollamaChatText(systemPrompt, userPrompt, 400, { timeoutMs: 45000, temperature: 0.6 });
         provider = 'ollama';
         console.log('[assist] mode=' + mode + ' provider=ollama ' + (Date.now()-t2) + 'ms');
       } catch(eo){

@@ -1,0 +1,1503 @@
+/* fix_app.js — новости, переводы, курсы, погода */
+(function(){
+  if (window.__iomaApp) return;
+  window.__iomaApp = true;
+
+  // ============ ПЕРЕВОДЫ ============
+  var I18N = {
+    ru: {
+      navTheme:'Тема', navRates:'Ставки', navCustoms:'Таможня',
+      heroEyebrow:'ЛОГИСТИКА · КИТАЙ → РОССИЯ',
+      heroText:'Точный расчёт. Умный помощник.<br>Всё необходимое для работы с грузом — в одном месте.',
+      tileRates:'Расчёт ставок', tileRatesSub:'Маршрут, ставка и транспорт',
+      tileAI:'AI-ассистент', tileAISub:'Текстом или голосом',
+      tileAgents:'Экспедиторы', tileAgentsSub:'Контакты и направления перевозок',
+      tileNews:'Новости ВЭД', tileNewsSub:'Китай · логистика · таможня',
+      tileRequest:'Оставить заявку', tileRequestSub:'Свяжемся и рассчитаем доставку',
+      requestEyebrow:'ЗАЯВКА', requestTitle:'Оставить заявку',
+      requestSub:'Опишите груз и маршрут — свяжемся и рассчитаем доставку.',
+      reqName:'Имя', reqNamePh:'Как к вам обращаться',
+      reqContact:'Контакт', reqBody:'Сообщение', reqSend:'Отправить',
+      reqEmail:'Email', loginGateBtn:'Войти в личный кабинет', logout:'Выйти', cabinet:'Личный кабинет',
+      reqFrom:'Откуда', reqTo:'Куда',
+      currencyCny:'CNY', currencyUsd:'USD', currencyEur:'EUR',
+      title:'Расчёт маршрута', from:'Откуда', to:'Куда', cargo:'ГРУЗ',
+      weight:'Вес, кг', pieces:'Количество мест', distance:'Расстояние, км',
+      autoVolumeLabel:'Объём', autoVolumetricLabel:'Объёмный вес', factorLabel:'Фактор',
+      dimensions:'ГАБАРИТЫ ОДНОГО МЕСТА, мм', length:'Длина', width:'Ширина', height:'Высота',
+      forwarder:'Экспедитор', chooseForwarder:'Выберите экспедитора',
+      transport:'Вид транспорта', chooseTransport:'Выберите транспорт',
+      incoterms:'Условия поставки', calculate:'Рассчитать',
+      directoryEyebrow:'СПРАВОЧНИК', agents:'Экспедиторы',
+      directorySub:'Поставщики и контакты по направлениям.',
+      company:'Компания', contact:'Контакт', phone:'Телефон', email:'Email',
+      website:'Сайт', directions:'Направления', note:'Примечание',
+      intelligence:'ИНТЕЛЛЕКТ', assistant:'AI-ассистент',
+      assistantSub2:'Логистика, расчёты и ВЭД — голосом или текстом.',
+      voice:'Микрофон', send:'Отправить', fileHint:'Файл можно добавить вместе с сообщением',
+      intelligenceFeed:'ИНФОРМАЦИОННАЯ ЛЕНТА', news:'Новости ВЭД', newsSub2:'Китай · логистика · таможня',
+      tarotLabel:'КАРТА ДНЯ',
+      customsEyebrow:'ТАМОЖЕННЫЙ КОНТРОЛЬ', customsTitle:'Проверка ТН ВЭД',
+      customsHelp:'Укажите код ТН ВЭД ЕАЭС — я автоматически проверю пошлину, НДС, сборы, маркировку и другие меры.',
+      customsPlaceholder:'Например, 8467890000', customsCheck:'Проверить код', close:'Закрыть'
+    },
+    en: {
+      navTheme:'Theme', navRates:'Rates', navCustoms:'Customs',
+      heroEyebrow:'LOGISTICS · CHINA → RUSSIA',
+      heroText:'Precise calculation. Smart assistant.<br>Everything for cargo work — in one place.',
+      tileRates:'Rate calculator', tileRatesSub:'Route, rate and transport',
+      tileAI:'AI assistant', tileAISub:'Text or voice',
+      tileAgents:'Forwarders', tileAgentsSub:'Contacts and transport directions',
+      tileNews:'Trade news', tileNewsSub:'China · logistics · customs',
+      tileRequest:'Submit request', tileRequestSub:'We will contact you and calculate delivery',
+      requestEyebrow:'REQUEST', requestTitle:'Submit request',
+      requestSub:'Describe your cargo and route — we will contact you and calculate delivery.',
+      reqName:'Name', reqNamePh:'Your name',
+      reqContact:'Contact', reqBody:'Message', reqSend:'Send',
+      reqEmail:'Email', loginGateBtn:'Log in', logout:'Log out', cabinet:'My account',
+      reqFrom:'From', reqTo:'To',
+      currencyCny:'CNY', currencyUsd:'USD', currencyEur:'EUR',
+      title:'Route calculation', from:'From', to:'To', cargo:'CARGO',
+      weight:'Weight, kg', pieces:'Pieces', distance:'Distance, km',
+      autoVolumeLabel:'Volume', autoVolumetricLabel:'Volumetric weight', factorLabel:'Factor',
+      dimensions:'DIMENSIONS OF ONE PIECE, mm', length:'Length', width:'Width', height:'Height',
+      forwarder:'Forwarder', chooseForwarder:'Choose forwarder',
+      transport:'Transport', chooseTransport:'Choose transport',
+      incoterms:'Incoterms', calculate:'Calculate',
+      directoryEyebrow:'DIRECTORY', agents:'Forwarders',
+      directorySub:'Suppliers and contacts by direction.',
+      company:'Company', contact:'Contact', phone:'Phone', email:'Email',
+      website:'Website', directions:'Directions', note:'Note',
+      intelligence:'INTELLIGENCE', assistant:'AI assistant',
+      assistantSub2:'Logistics, calculations and trade — voice or text.',
+      voice:'Microphone', send:'Send', fileHint:'File can be attached with a message',
+      intelligenceFeed:'INFORMATION FEED', news:'Trade news', newsSub2:'China · logistics · customs',
+      tarotLabel:'CARD OF THE DAY',
+      customsEyebrow:'CUSTOMS CONTROL', customsTitle:'HS code check',
+      customsHelp:'Enter HS code — I will check duty, VAT, fees, marking and other measures.',
+      customsPlaceholder:'For example, 8467890000', customsCheck:'Check code', close:'Close'
+    },
+    zh: {
+      navTheme:'主题', navRates:'运价', navCustoms:'海关',
+      heroEyebrow:'物流 · 中国 → 俄罗斯',
+      heroText:'精确计算。智能助手。<br>货物运输所需的一切 —— 尽在一处。',
+      tileRates:'运费计算', tileRatesSub:'路线、运价和运输方式',
+      tileAI:'AI 助手', tileAISub:'文字或语音',
+      tileAgents:'货运代理', tileAgentsSub:'联系方式与运输方向',
+      tileNews:'外贸新闻', tileNewsSub:'中国 · 物流 · 海关',
+      tileRequest:'提交申请', tileRequestSub:'我们会联系您并计算运费',
+      requestEyebrow:'申请', requestTitle:'提交申请',
+      requestSub:'请描述货物和路线 —— 我们会联系您并计算运费。',
+      reqName:'姓名', reqNamePh:'您的姓名',
+      reqContact:'联系方式', reqBody:'留言', reqSend:'发送',
+      reqEmail:'邮箱', loginGateBtn:'登录', logout:'退出', cabinet:'我的账户',
+      reqFrom:'出发地', reqTo:'目的地',
+      calculate:'计算', close:'关闭'
+    },
+    tr: {
+      navTheme:'Tema', navRates:'Oranlar', navCustoms:'Gümrük',
+      heroEyebrow:'LOJİSTİK · ÇİN → RUSYA',
+      tileNews:'Ticaret haberleri', tileNewsSub:'Çin · lojistik · gümrük',
+      tileRequest:'Talep gönder', tileRequestSub:'Sizinle iletişime geçip teslimatı hesaplayacağız',
+      requestEyebrow:'TALEP', requestTitle:'Talep gönder',
+      requestSub:'Kargo ve rotayı açıklayın — sizinle iletişime geçip teslimatı hesaplayacağız.',
+      reqName:'Ad', reqNamePh:'Adınız',
+      reqContact:'İletişim', reqBody:'Mesaj', reqSend:'Gönder',
+      reqEmail:'E-posta', loginGateBtn:'Giriş yap', logout:'Çıkış', cabinet:'Hesabım',
+      reqFrom:'Nereden', reqTo:'Nereye',
+      calculate:'Hesapla', close:'Kapat'
+    }
+  };
+
+  function applyTranslations(lang){
+    var dict = I18N[lang] || I18N.ru;
+    var fb = I18N.ru;
+    document.querySelectorAll('[data-i18n]').forEach(function(el){
+      var k = el.getAttribute('data-i18n');
+      var v = dict[k] !== undefined ? dict[k] : fb[k];
+      if (v !== undefined) el.innerHTML = v;
+    });
+    document.querySelectorAll('[data-i18n-aria]').forEach(function(el){
+      var k = el.getAttribute('data-i18n-aria');
+      var v = dict[k] !== undefined ? dict[k] : fb[k];
+      if (v) el.setAttribute('aria-label', v);
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach(function(el){
+      var k = el.getAttribute('data-i18n-title');
+      var v = dict[k] !== undefined ? dict[k] : fb[k];
+      if (v) el.setAttribute('title', v);
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el){
+      var k = el.getAttribute('data-i18n-placeholder');
+      var v = dict[k] !== undefined ? dict[k] : fb[k];
+      if (v) el.setAttribute('placeholder', v);
+    });
+    document.documentElement.setAttribute('lang', lang);
+    try { localStorage.setItem('ioma_lang', lang); } catch(e){}
+  }
+
+  function setLang(lang){
+    applyTranslations(lang);
+    document.querySelectorAll('.lang').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-lang') === lang);
+    });
+    // Обновляем погоду и курс под новый язык
+    if (lastWeatherData){
+      var wEl = document.getElementById('homeWeatherText');
+      if (wEl) wEl.textContent = buildWeatherText(lastWeatherData, lang);
+    }
+    if (window.iomaReloadCurrency) window.iomaReloadCurrency();
+  }
+  window.setLang = setLang;
+  window.translations = I18N;
+  window.lang = 'ru';
+
+  document.addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('.lang');
+    if (!b) return;
+    e.preventDefault();
+    var l = b.getAttribute('data-lang');
+    if (l) { window.lang = l; setLang(l); }
+  });
+
+  // ============ НОВОСТИ ============
+  function escapeHtml(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function formatDate(iso){
+    if (!iso) return '';
+    try {
+      var d = new Date(iso);
+      return d.toLocaleDateString('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric' });
+    } catch(e){ return ''; }
+  }
+  function renderNews(items){
+    var el = document.getElementById('newsList');
+    if (!el) return;
+    if (!items || !items.length){
+      el.innerHTML = '<div class="news-empty">Новости пока не загружены</div>';
+      return;
+    }
+    el.innerHTML = items.map(function(it){
+      var src = escapeHtml(it.source || '');
+      var date = escapeHtml(formatDate(it.date));
+      var title = escapeHtml(it.title || '');
+      var desc = escapeHtml(it.description || '');
+      var nid = escapeHtml(it.id || '');
+      return ''
+        + '<div class="news-card" data-news-id="' + nid + '" data-news-title="' + title.replace(/"/g,'&quot;') + '">'
+        +   '<div class="news-card-image loading" data-img-for="' + nid + '"></div>'
+        +   '<div class="news-card-body">'
+        +     '<div class="news-card-head"><span class="news-card-source">' + src + '</span><span>' + date + '</span></div>'
+        +     '<h3 class="news-card-title">' + title + '</h3>'
+        +     (desc ? '<p class="news-card-desc">' + desc + '</p>' : '')
+        +     '<span class="news-card-arrow">Читать полностью →</span>'
+        +   '</div>'
+        + '</div>';
+    }).join('');
+
+    // Асинхронно подгружаем картинки через /api/news/image?title=...
+    items.forEach(function(it){
+      if (!it || !it.id) return;
+      var title = String(it.title || '').trim();
+      if (!title) return;
+      fetch('/api/news/image?title=' + encodeURIComponent(title), { credentials:'same-origin' })
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          var box = document.querySelector('[data-img-for="' + it.id + '"]');
+          if (!box) return;
+          if (d && d.ok && d.image){
+            box.style.backgroundImage = 'url("' + d.image.replace(/"/g,'%22') + '")';
+            box.classList.remove('loading');
+          } else {
+            box.classList.remove('loading');
+            box.classList.add('no-img');
+          }
+        })
+        .catch(function(){
+          var box = document.querySelector('[data-img-for="' + it.id + '"]');
+          if (box){ box.classList.remove('loading'); box.classList.add('no-img'); }
+        });
+    });
+  }
+
+  function loadNews(){
+    var el = document.getElementById('newsList');
+    if (!el) return;
+    el.innerHTML = '<div class="news-loading">Загрузка…</div>';
+    fetch('/api/news?t=' + Date.now(), { credentials:'same-origin', cache:'no-store' })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ renderNews((d && d.items) || []); })
+      .catch(function(e){
+        el.innerHTML = '<div class="news-error">Не удалось загрузить новости</div>';
+        console.warn('[news]', e);
+      });
+  }
+  window.loadNews = loadNews;
+  window.renderNews = renderNews;
+
+  document.addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('[data-open-view="news"]');
+    if (!b) return;
+    setTimeout(loadNews, 50);
+  }, false);
+
+  // ============ КУРСЫ ============
+
+  // WMO коды для погоды
+  var WMO_I18N = {
+    ru: {0:'Ясно',1:'Преимущественно ясно',2:'Переменная облачность',3:'Облачно',45:'Туман',48:'Изморозь',51:'Слабая морось',53:'Морось',55:'Сильная морось',61:'Небольшой дождь',63:'Дождь',65:'Сильный дождь',71:'Небольшой снег',73:'Снег',75:'Сильный снег',80:'Небольшой ливень',81:'Ливень',82:'Сильный ливень',95:'Гроза',96:'Гроза с градом'},
+    en: {0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Cloudy',45:'Fog',48:'Rime',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',80:'Light showers',81:'Showers',82:'Heavy showers',95:'Thunderstorm',96:'Thunderstorm with hail'},
+    zh: {0:'晴',1:'大部晴朗',2:'局部多云',3:'多云',45:'雾',48:'雾凇',51:'小雨',53:'细雨',55:'强细雨',61:'小雨',63:'雨',65:'大雨',71:'小雪',73:'雪',75:'大雪',80:'小阵雨',81:'阵雨',82:'强阵雨',95:'雷暴',96:'雷暴伴冰雹'},
+    tr: {0:'Açık',1:'Çoğunlukla açık',2:'Parçalı bulutlu',3:'Bulutlu',45:'Sisli',48:'Kırağı',51:'Hafif çisenti',53:'Çisenti',55:'Yoğun çisenti',61:'Hafif yağmur',63:'Yağmur',65:'Şiddetli yağmur',71:'Hafif kar',73:'Kar',75:'Yoğun kar',80:'Hafif sağanak',81:'Sağanak',82:'Şiddetli sağanak',95:'Gök gürültülü',96:'Dolulu fırtına'}
+  };
+  var CITY_I18N = { 'Москва': {en:'Moscow', zh:'莫斯科', tr:'Moskova'}, 'Санкт-Петербург': {en:'St. Petersburg', zh:'圣彼得堡', tr:'Sankt-Peterburg'} };
+  var LOCALE = { ru:'ru-RU', en:'en-US', zh:'zh-CN', tr:'tr-TR' };
+  var lastWeatherData = null;
+  var lastCurrencyData = null;
+
+  function localizeCity(city, lang){
+    if (!city) return city;
+    if (lang === 'ru') return city;
+    var m = CITY_I18N[city];
+    return (m && m[lang]) || city;
+  }
+  function buildWeatherText(d, lang){
+    if (!d || d.temp == null) return '';
+    var dict = WMO_I18N[lang] || WMO_I18N.ru;
+    var desc = dict[d.code] || dict[0] || '';
+    var city = localizeCity(d.city, lang);
+    var t = d.temp > 0 ? '+' + d.temp : String(d.temp);
+    return city + ', ' + t + '°, ' + desc;
+  }
+  function formatDateI18n(dateStr, lang){
+    if (!dateStr) return '';
+    try {
+      var loc = LOCALE[lang] || 'ru-RU';
+      return new Date(dateStr).toLocaleDateString(loc);
+    } catch(e){ return String(dateStr).slice(0,10); }
+  }
+
+  function loadRates(){
+    fetch('/api/currency?t=' + Date.now(), { credentials:'same-origin', cache:'no-store' })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (!d || !d.ok || !d.items) return;
+        function setText(id, v){ var el = document.getElementById(id); if (el && v != null) el.textContent = Number(v).toFixed(3); }
+        setText('homeCny', d.items.CNY && d.items.CNY.value);
+        setText('homeUsd', d.items.USD && d.items.USD.value);
+        setText('homeEur', d.items.EUR && d.items.EUR.value);
+        var dEl = document.getElementById('homeCurrencyDate');
+        if (dEl && d.date){ dEl.textContent = formatDateI18n(d.date, window.lang || 'ru'); }
+      })
+      .catch(function(e){ console.warn('[currency]', e); });
+  }
+  window.iomaReloadCurrency = loadRates;
+
+  // ============ ПОГОДА ============
+  function loadWeather(){
+    fetch('/api/weather?t=' + Date.now(), { credentials:'same-origin', cache:'no-store' })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var el = document.getElementById('homeWeatherText');
+        if (!el || !d) return;
+        if (d.ok && d.temp != null){
+          el.textContent = buildWeatherText(d, window.lang || 'ru');
+          lastWeatherData = d;
+          document.documentElement.setAttribute('data-weather', (d.code != null ? d.code : 'unknown'));
+          document.documentElement.setAttribute('data-weather-desc', d.description || '');
+          // триггерим ночные частицы по погоде
+          if (window.__iomaParticles && window.__iomaParticles.setWeather) {
+            window.__iomaParticles.setWeather(d.code, d.description || '');
+          }
+        }
+      })
+      .catch(function(e){ console.warn('[weather]', e); });
+  }
+
+  // ============ СТИЛИ НОВОСТЕЙ ============
+  function injectStyles(){
+    if (document.getElementById('iomaNewsStyles')) return;
+    var st = document.createElement('style');
+    st.id = 'iomaNewsStyles';
+    st.textContent = ''
+      + '.news-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;padding:20px 0}'
+      + '@media(max-width:700px){.news-list{grid-template-columns:1fr;gap:16px}}'
+      + '.news-card{display:flex;flex-direction:column;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(14,20,40,.06);cursor:pointer;transition:transform .18s ease,box-shadow .18s ease;border:1px solid rgba(0,0,0,.05)}'
+      + '.news-card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(14,20,40,.14)}'
+      + '.news-card-image{width:100%;height:180px;background:#eef2fa center/cover no-repeat;position:relative;flex-shrink:0}'
+      + '.news-card-image.loading::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#eef2fa 25%,#e2ebf7 50%,#eef2fa 75%);background-size:200% 100%;animation:iomaShimmer 1.6s infinite}'
+      + '@keyframes iomaShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}'
+      + '.news-card-image.no-img{background:linear-gradient(135deg,#dfeaf8,#c5d9f1)}'
+      + '.news-card-body{padding:16px 18px 20px;display:flex;flex-direction:column;flex:1}'
+      + '.news-card-head{display:flex;justify-content:space-between;font-size:12px;color:#889;margin-bottom:8px;gap:10px;letter-spacing:.02em}'
+      + '.news-card-source{color:#1257e0;font-weight:600;text-transform:uppercase}'
+      + '.news-card-title{font-size:16px;font-weight:600;line-height:1.35;margin:0 0 10px;color:#0e1428;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}'
+      + '.news-card-desc{font-size:13.5px;color:#556;line-height:1.5;margin:0;flex:1;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}'
+      + '.news-card-arrow{margin-top:14px;font-size:13px;color:#1257e0;font-weight:600;display:inline-flex;align-items:center;gap:6px;opacity:0;transition:opacity .18s}'
+      + '.news-card:hover .news-card-arrow{opacity:1}'
+      + '.news-loading,.news-empty,.news-error{padding:40px;text-align:center;color:#889;grid-column:1/-1}'
+      + '.news-error{color:#c11}';
+    document.head.appendChild(st);
+  }
+
+  // ============ INIT ============
+  function initTheme(){
+    var btn = document.getElementById('themeToggleButton');
+    if (!btn || btn.dataset.iomaTheme) return;
+    btn.dataset.iomaTheme = '1';
+    try {
+      var saved = localStorage.getItem('iomastavka_theme');
+      if (saved === 'dark') document.documentElement.classList.add('dark');
+      else if (saved === 'light') document.documentElement.classList.remove('dark');
+    } catch(e){}
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+
+      // Находим небесные тела (солнце/луну) — исключаем иконку в шапке
+      var skyEls = [];
+      try {
+        document.querySelectorAll('.sun, .moon, .hero-sun, .hero-moon, [class*="sun"], [class*="moon"]').forEach(function(el){
+          if (el.closest('.top-nav-btn') || el.closest('.top-nav') || el.closest('#themeToggleButton')) return;
+          skyEls.push(el);
+        });
+      } catch(err){}
+
+      // 1) Плавно прячем текущее (вращается и сжимается)
+      skyEls.forEach(function(el){ el.classList.add('fading-out'); });
+
+      // 2) Меняем тему (сразу — чтобы новое тело проявилось)
+      var isDark = document.documentElement.classList.toggle('dark');
+      try { localStorage.setItem('iomastavka_theme', isDark ? 'dark' : 'light'); } catch(e2){}
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.content = isDark ? '#0b2238' : '#bfe6f8';
+      try { if (window.__iomaCelestialBoost) window.__iomaCelestialBoost(); } catch(e3){}
+
+      // 3) Иконка в шапке крутится
+      btn.classList.remove('spinning');
+      void btn.offsetWidth;
+      btn.classList.add('spinning');
+      setTimeout(function(){ btn.classList.remove('spinning'); }, 900);
+
+      // 4) Через 500 мс — прячем fading-out, показываем новые тела с fading-in
+      setTimeout(function(){
+        skyEls.forEach(function(el){ el.classList.remove('fading-out'); });
+        var newEls = [];
+        try {
+          document.querySelectorAll('.sun, .moon, .hero-sun, .hero-moon, [class*="sun"], [class*="moon"]').forEach(function(el){
+            if (el.closest('.top-nav-btn') || el.closest('.top-nav') || el.closest('#themeToggleButton')) return;
+            newEls.push(el);
+          });
+        } catch(err){}
+        newEls.forEach(function(el){
+          el.classList.remove('fading-in');
+          void el.offsetWidth;
+          el.classList.add('fading-in');
+          setTimeout(function(){ el.classList.remove('fading-in'); }, 1100);
+        });
+      }, 500);
+    });
+  }
+
+  function init(){
+    injectStyles();
+    initTheme();
+    var saved = 'ru';
+    try { saved = localStorage.getItem('ioma_lang') || 'ru'; } catch(e){}
+    window.lang = saved;
+    setLang(saved);
+    var nv = document.getElementById('newsView');
+    if (nv && nv.classList.contains('open')) loadNews();
+    loadRates();
+    loadWeather();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+
+// ========== МОДАЛКА НОВОСТИ С РЕРАЙТОМ ==========
+(function(){
+  if (window.__iomaNewsModal) return;
+  window.__iomaNewsModal = true;
+
+  function injectStyles(){
+    if (document.getElementById('iomaNewsModalStyles')) return;
+    var st = document.createElement('style');
+    st.id = 'iomaNewsModalStyles';
+    st.textContent = ''
+      + '.ioma-news-overlay{position:fixed;inset:0;background:rgba(6,12,24,.72);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;z-index:999998;padding:24px;overflow-y:auto}'
+      + '.ioma-news-overlay[hidden]{display:none}'
+      + '.ioma-news-modal{background:#fff;color:#0e1428;border-radius:18px;width:100%;max-width:780px;box-shadow:0 30px 80px rgba(0,0,0,.4);position:relative;overflow:hidden;margin:auto}'
+      + '.ioma-news-close{position:absolute;top:12px;right:14px;width:38px;height:38px;background:rgba(255,255,255,.9);border:none;font-size:22px;border-radius:50%;cursor:pointer;z-index:2;color:#334}'
+      + '.ioma-news-close:hover{background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.15)}'
+      + '.ioma-news-hero{height:320px;background:#eef2fa center/cover no-repeat;position:relative}'
+      + '.ioma-news-hero.no-img{background:linear-gradient(135deg,#dfeaf8,#c5d9f1)}'
+      + '.ioma-news-body{padding:26px 32px 32px}'
+      + '.ioma-news-meta{display:flex;gap:14px;font-size:13px;color:#889;margin-bottom:14px;flex-wrap:wrap}'
+      + '.ioma-news-meta b{color:#1257e0;font-weight:600}'
+      + '.ioma-news-title{font-size:22px;font-weight:700;line-height:1.3;margin:0 0 18px}'
+      + '.ioma-news-text{font-size:15px;line-height:1.65;color:#223}'
+      + '.ioma-news-text p{margin:0 0 14px}'
+      + '.ioma-news-text h1,.ioma-news-text h2,.ioma-news-text h3{font-size:17px;font-weight:600;margin:22px 0 10px;color:#0e1428}'
+      + '.ioma-news-text ul,.ioma-news-text ol{margin:0 0 16px;padding-left:22px}'
+      + '.ioma-news-text li{margin-bottom:6px}'
+      + '.ioma-news-text strong{font-weight:600;color:#0e1428}'
+      + '.ioma-news-source{margin-top:24px;padding-top:16px;border-top:1px solid #e6eaf3;font-size:13px;color:#889}'
+      + '.ioma-news-loading{padding:60px 30px;text-align:center}'
+      + '.ioma-news-spinner{width:44px;height:44px;border:3px solid #e0e6f0;border-top-color:#1257e0;border-radius:50%;margin:0 auto 18px;animation:iomaSpin 1s linear infinite}'
+      + '@keyframes iomaSpin{to{transform:rotate(360deg)}}'
+      + '.ioma-news-loading-text{font-size:15px;color:#556;font-weight:500}'
+      + '.ioma-news-loading-sub{font-size:13px;color:#889;margin-top:8px}'
+      + '.ioma-news-error{padding:40px 30px;text-align:center;color:#c11}'
+      + '@media(max-width:640px){.ioma-news-hero{height:200px}.ioma-news-body{padding:20px 22px 26px}.ioma-news-title{font-size:18px}}';
+    document.head.appendChild(st);
+  }
+
+  function escapeHtml(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  // Простой markdown → HTML (жирный, курсив, списки, абзацы, заголовки)
+  function mdToHtml(md){
+    if (!md) return '';
+    var lines = String(md).split(/\r?\n/);
+    var html = [], buf = [], inList = false;
+    function flushP(){
+      if (buf.length){ html.push('<p>' + buf.join(' ') + '</p>'); buf = []; }
+    }
+    function flushList(){
+      if (inList){ html.push('</ul>'); inList = false; }
+    }
+    lines.forEach(function(line){
+      var t = line.trim();
+      if (!t){ flushP(); flushList(); return; }
+      var h = t.match(/^(#{1,6})\s+(.*)$/);
+      if (h){ flushP(); flushList(); html.push('<h3>' + inline(h[2]) + '</h3>'); return; }
+      var li = t.match(/^[-*•]\s+(.*)$/);
+      if (li){
+        flushP();
+        if (!inList){ html.push('<ul>'); inList = true; }
+        html.push('<li>' + inline(li[1]) + '</li>'); return;
+      }
+      buf.push(inline(t));
+    });
+    flushP(); flushList();
+    return html.join('');
+    function inline(s){
+      return escapeHtml(s)
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+    }
+  }
+
+  function formatDate(d){
+    if (!d) return '';
+    try { return new Date(d).toLocaleDateString('ru-RU', { day:'2-digit', month:'long', year:'numeric' }); }
+    catch(e){ return String(d); }
+  }
+
+  function ensureModal(){
+    if (document.getElementById('iomaNewsOverlay')) return;
+    var ov = document.createElement('div');
+    ov.className = 'ioma-news-overlay';
+    ov.id = 'iomaNewsOverlay';
+    ov.hidden = true;
+    ov.innerHTML = ''
+      + '<div class="ioma-news-modal" role="dialog" aria-modal="true">'
+      + '  <button class="ioma-news-back" type="button" id="iomaNewsBack">'
+      + '    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>'
+      + '    <span>Назад</span>'
+      + '  </button>'
+      + '  <button class="ioma-news-close" type="button" id="iomaNewsClose" aria-label="Закрыть">&times;</button>'
+      + '  <div class="ioma-news-scroll">'
+      + '    <div class="ioma-news-hero" id="iomaNewsHero"></div>'
+      + '    <div class="ioma-news-body" id="iomaNewsBody"></div>'
+      + '  </div>'
+      + '</div>';
+    document.body.appendChild(ov);
+
+    ov.addEventListener('click', function(e){
+      if (e.target === ov || e.target.id === 'iomaNewsClose' || e.target.closest('#iomaNewsBack')) closeModal();
+    });
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape') closeModal();
+    });
+  }
+
+  function closeModal(){
+    var ov = document.getElementById('iomaNewsOverlay');
+    if (ov) ov.hidden = true;
+  }
+
+  function openModal(item){
+    injectStyles();
+    ensureModal();
+    var ov = document.getElementById('iomaNewsOverlay');
+    var hero = document.getElementById('iomaNewsHero');
+    var body = document.getElementById('iomaNewsBody');
+    ov.hidden = false;
+    hero.className = 'ioma-news-hero';
+    hero.style.backgroundImage = '';
+    body.innerHTML = ''
+      + '<div class="ioma-news-loading">'
+      + '  <div class="ioma-news-spinner"></div>'
+      + '  <div class="ioma-news-loading-text">Готовлю статью для вас…</div>'
+      + '  <div class="ioma-news-loading-sub">Это может занять 30–60 секунд</div>'
+      + '</div>';
+
+    var id = item && item.id;
+    if (!id){ body.innerHTML = '<div class="ioma-news-error">Нет идентификатора новости</div>'; return; }
+
+    fetch('/api/news/rewrite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ id: id })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d || !d.ok){ body.innerHTML = '<div class="ioma-news-error">Не удалось загрузить статью</div>'; return; }
+      if (d.image){
+        hero.style.backgroundImage = 'url("' + d.image.replace(/"/g,'%22') + '")';
+      } else {
+        hero.classList.add('no-img');
+      }
+      var src = escapeHtml(d.source || item.source || '');
+      var date = formatDate(d.publishedAt || item.date);
+      body.innerHTML = ''
+        + '<div class="ioma-news-meta">'
+        +   '<span>Источник: <b>' + src + '</b></span>'
+        +   '<span>' + escapeHtml(date) + '</span>'
+        + '</div>'
+        + '<h1 class="ioma-news-title">' + escapeHtml(d.title || item.title || '') + '</h1>'
+        + '<div class="ioma-news-text">' + mdToHtml(d.markdown || '') + '</div>'
+        + '<div class="ioma-news-source">Информация переработана на основе открытых данных источника. При использовании в СМИ ссылка на первоисточник приветствуется.</div>';
+    })
+    .catch(function(){
+      body.innerHTML = '<div class="ioma-news-error">Ошибка соединения</div>';
+    });
+  }
+
+  document.addEventListener('click', function(e){
+    var card = e.target.closest && e.target.closest('.news-card');
+    if (!card) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var id = card.getAttribute('data-news-id');
+    var source = card.querySelector('.news-card-source');
+    openModal({ id: id, title: card.getAttribute('data-news-title') || '', source: source ? source.textContent : '' });
+  }, true);
+
+  window.iomaOpenNews = openModal;
+})();
+
+// ========== НОЧНЫЕ ЧАСТИЦЫ (звёзды / дождь / снег / облака) ==========
+(function(){
+  if (window.__iomaParticles) return;
+  window.__iomaParticles = { setWeather: function(){} };
+
+  var canvas, ctx, dpr, W, H, raf;
+  var mode = 'stars';   // stars | rain | snow | clouds | fog
+  var particles = [];
+
+  function initCanvas(){
+    if (canvas) return;
+    canvas = document.createElement('canvas');
+    canvas.id = 'iomaParticlesCanvas';
+    canvas.setAttribute('aria-hidden', 'true');
+    Object.assign(canvas.style, {
+      position: 'fixed',
+      top: 0, left: 0,
+      width: '100vw', height: '100vh',
+      pointerEvents: 'none',
+      zIndex: 1,
+      opacity: 0,
+      transition: 'opacity .8s ease'
+    });
+    document.body.appendChild(canvas);
+    ctx = canvas.getContext('2d');
+    resize();
+    window.addEventListener('resize', resize);
+  }
+  function resize(){
+    dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    rebuild();
+  }
+
+  function rebuild(){
+    particles = [];
+    // Очень плотное звёздное небо — мелкие точки
+    var n = Math.max(400, Math.min(1200, Math.round(W / 2)));
+    for (var i = 0; i < n; i++){
+      particles.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: 0.3 + Math.random() * 0.7,      // ОЧЕНЬ мелкие: 0.3-1.0px
+        tw: Math.random() * Math.PI * 2,
+        sp: 0.02 + Math.random() * 0.08,   // Резкая вспышка (бенгальский огонь)
+        alpha: 0.5 + Math.random() * 0.5
+      });
+    }
+  }
+
+  var meteors = [];
+  var nextMeteorAt = Date.now() + 8000 + Math.random() * 7000;
+
+  function spawnMeteor(){
+    if (mode !== 'stars' && mode !== 'clouds') return;
+    var fromRight = Math.random() < 0.7;
+    var startX, startY;
+    if (fromRight){
+      startX = W * (0.2 + Math.random() * 0.8);
+      startY = -50;
+    } else {
+      startX = W + 60;
+      startY = H * (0.05 + Math.random() * 0.45);
+    }
+    var angle = Math.PI * 0.72 + (Math.random() - 0.5) * Math.PI * 0.36;
+    var speed = 6.5 + Math.random() * 4.5;
+    var length = 160 + Math.random() * 120;
+    meteors.push({
+      x: startX, y: startY,
+      vx: Math.cos(angle) * speed,
+      vy: Math.abs(Math.sin(angle)) * speed,
+      life: 0, maxLife: 200,
+      len: length,
+      alpha: 0.85 + Math.random() * 0.15,
+      size: 2.4 + Math.random() * 1.4
+    });
+    nextMeteorAt = Date.now() + 8000 + Math.random() * 7000;
+  }
+
+  function drawMeteors(){
+    if (meteors.length === 0 && Date.now() > nextMeteorAt){
+      spawnMeteor();
+    }
+    for (var i = meteors.length - 1; i >= 0; i--){
+      var m = meteors[i];
+      m.x += m.vx;
+      m.y += m.vy;
+      m.life++;
+      var lifeRatio = m.life / m.maxLife;
+      var alpha = m.alpha * (1 - lifeRatio);
+
+      var tailX = m.x - m.vx * (m.len / 10);
+      var tailY = m.y - m.vy * (m.len / 10);
+      var grad = ctx.createLinearGradient(m.x, m.y, tailX, tailY);
+      grad.addColorStop(0, 'rgba(255,255,255,' + alpha + ')');
+      grad.addColorStop(0.3, 'rgba(200,220,255,' + alpha * 0.6 + ')');
+      grad.addColorStop(1, 'rgba(140,180,255,0)');
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(m.x, m.y);
+      ctx.lineTo(tailX, tailY);
+      ctx.stroke();
+
+      var sz = m.size || 4;
+      var headGrad = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, sz * 2);
+      headGrad.addColorStop(0, 'rgba(255,255,255,' + alpha + ')');
+      headGrad.addColorStop(0.4, 'rgba(210,225,255,' + (alpha * 0.6) + ')');
+      headGrad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = headGrad;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, sz * 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (m.life > m.maxLife || m.x < -100 || m.y > H + 100){
+        meteors.splice(i, 1);
+      }
+    }
+  }
+
+  function draw(){
+    if (!ctx) return;
+    ctx.clearRect(0, 0, W, H);
+
+    for (var i = 0; i < particles.length; i++){
+      var p = particles[i];
+      p.tw += p.sp;
+      // Резкая вспышка — бенгальский огонь: пик и сразу тускло
+      var t = (p.tw % (Math.PI * 2)) / (Math.PI * 2);
+      var flick = t < 0.15 ? (t / 0.15) : (1 - (t - 0.15) / 0.85);
+      var a = p.alpha * (0.15 + 0.85 * flick);
+
+      ctx.fillStyle = 'rgba(255,255,255,' + a.toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (isDark()) drawMeteors();
+    raf = requestAnimationFrame(draw);
+  }
+
+  function start(){
+    initCanvas();
+    canvas.style.opacity = '1';
+    if (!raf) draw();
+  }
+  function stop(){
+    if (canvas) canvas.style.opacity = '0';
+    if (raf){ cancelAnimationFrame(raf); raf = null; }
+  }
+  function isDark(){
+    return document.documentElement.classList.contains('dark');
+  }
+  function tick(){
+    if (isDark()) start(); else stop();
+  }
+
+  function pickModeByCode(code){
+    // Только звёзды — никаких облаков, тумана, дождя и снега
+    return 'stars';
+  }
+
+  window.__iomaParticles.setWeather = function(code, desc){
+    meteors.length = 0;
+    nextMeteorAt = Date.now() + 8000 + Math.random() * 7000;
+    mode = pickModeByCode(code);
+    if (ctx) rebuild();
+    console.log('[particles] mode=' + mode + ' for code=' + code + ' (' + desc + ')');
+  };
+
+  // Следим за переключением темы
+  var mo = new MutationObserver(tick);
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+  // Стартуем после загрузки
+  function boot(){ tick(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+
+// ========== AI-АССИСТЕНТ (ЧАТ) ==========
+(function(){
+  if (window.__iomaChat) return;
+  window.__iomaChat = true;
+
+  var history = [];
+  var pendingFiles = [];
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function injectStyles(){
+    if (document.getElementById('iomaChatStyles')) return;
+    var st = document.createElement('style');
+    st.id = 'iomaChatStyles';
+    st.textContent = ''
+      + '.ioma-chat-overlay{position:fixed;inset:0;background:rgba(10,20,40,.55);backdrop-filter:blur(10px);display:flex;align-items:stretch;justify-content:center;z-index:999999;padding:20px;animation:iomaChatFade .22s ease-out}'
+      + '@keyframes iomaChatFade{from{opacity:0}to{opacity:1}}'
+      + '.ioma-chat-overlay[hidden]{display:none}'
+      + '.ioma-chat-window{background:#ffffff;color:#1a1f36;border-radius:20px;width:100%;max-width:860px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 32px 80px rgba(14,20,40,.25),0 4px 12px rgba(14,20,40,.08);animation:iomaChatRise .32s cubic-bezier(.34,1.3,.64,1);border:1px solid rgba(20,30,50,.05)}'
+      + '@keyframes iomaChatRise{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}'
+
+      // HEAD
+      + '.ioma-chat-head{padding:18px 24px;border-bottom:1px solid #eef1f6;display:flex;align-items:center;gap:14px;flex-shrink:0;background:#ffffff}'
+      + '.ioma-chat-head .orb{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#5aaeff 0%,#1a6be0 100%);box-shadow:0 4px 12px rgba(26,107,224,.25);flex-shrink:0;display:flex;align-items:center;justify-content:center}'
+      + '.ioma-chat-head .orb svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}'
+      + '.ioma-chat-head .txt{flex:1}'
+      + '.ioma-chat-head h2{margin:0;font-size:15.5px;font-weight:700;color:#1a1f36;letter-spacing:-.01em}'
+      + '.ioma-chat-head .sub{font-size:12.5px;color:#8a93a6;margin-top:1px}'
+      + '.ioma-chat-head .status{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#3a4a5e;font-weight:500;background:#f4f7fc;padding:5px 12px;border-radius:20px}'
+      + '.ioma-chat-head .status i{width:6px;height:6px;background:#22c55e;border-radius:50%;box-shadow:0 0 0 3px rgba(34,197,94,.15)}'
+      + '.ioma-chat-close{width:34px;height:34px;background:transparent;border:none;font-size:22px;border-radius:10px;cursor:pointer;color:#8a93a6;flex-shrink:0;transition:all .15s;display:flex;align-items:center;justify-content:center;line-height:1}'
+      + '.ioma-chat-close:hover{background:#f1f4fa;color:#1a1f36}'
+
+      // BODY
+      + '.ioma-chat-body{flex:1;overflow-y:auto;padding:28px 32px 20px;background:#f7f9fc}'
+      + '.ioma-chat-body::-webkit-scrollbar{width:6px}'
+      + '.ioma-chat-body::-webkit-scrollbar-thumb{background:#d0d7e2;border-radius:3px}'
+      + '.ioma-chat-body::-webkit-scrollbar-thumb:hover{background:#b8c2d1}'
+      + '.ioma-chat-msg{margin-bottom:16px;max-width:78%;animation:iomaMsgIn .25s ease-out}'
+      + '@keyframes iomaMsgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}'
+      + '.ioma-chat-msg.user{margin-left:auto}'
+      + '.ioma-chat-msg.user .ioma-chat-bubble{background:linear-gradient(135deg,#3a8fff 0%,#1a6be0 100%);color:#fff;border-radius:18px 18px 6px 18px;box-shadow:0 3px 10px rgba(26,107,224,.2)}'
+      + '.ioma-chat-msg.ai .ioma-chat-bubble{background:#ffffff;color:#1a1f36;border:1px solid #eef1f6;border-radius:18px 18px 18px 6px;box-shadow:0 1px 4px rgba(14,20,40,.04)}'
+      + '.ioma-chat-msg.error .ioma-chat-bubble{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:16px}'
+      + '.ioma-chat-bubble{padding:12px 16px;font-size:14.5px;line-height:1.6;white-space:pre-wrap;word-wrap:break-word}'
+      + '.ioma-chat-dots{display:inline-flex;gap:4px;align-items:center;height:16px;padding:2px 0}'
+      + '.ioma-chat-dots span{width:7px;height:7px;background:#b8c2d1;border-radius:50%;animation:iomaChatBounce 1.3s infinite}'
+      + '.ioma-chat-dots span:nth-child(2){animation-delay:.16s}'
+      + '.ioma-chat-dots span:nth-child(3){animation-delay:.32s}'
+      + '@keyframes iomaChatBounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-6px);opacity:1}}'
+
+      // EMPTY
+      + '.ioma-chat-empty{text-align:center;padding:44px 20px}'
+      + '.ioma-chat-empty .big{width:72px;height:72px;margin:0 auto 22px;border-radius:20px;background:linear-gradient(135deg,#5aaeff 0%,#1a6be0 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 28px rgba(26,107,224,.22);animation:iomaFloat 3.2s ease-in-out infinite}'
+      + '@keyframes iomaFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}'
+      + '.ioma-chat-empty .big svg{width:34px;height:34px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}'
+      + '.ioma-chat-empty h3{color:#1a1f36;font-size:20px;margin:0 0 8px;font-weight:700;letter-spacing:-.02em}'
+      + '.ioma-chat-empty p{color:#667085;font-size:14px;max-width:460px;margin:0 auto;line-height:1.55}'
+      + '.ioma-chat-sugg{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:26px;max-width:580px;margin-left:auto;margin-right:auto}'
+      + '.ioma-chat-sugg button{background:#fff;border:1px solid #e4e9f2;border-radius:12px;padding:10px 16px;font-size:13.5px;color:#1a1f36;cursor:pointer;transition:all .18s;font-weight:500}'
+      + '.ioma-chat-sugg button:hover{border-color:#1a6be0;color:#1a6be0;transform:translateY(-1px);box-shadow:0 4px 14px rgba(26,107,224,.12)}'
+
+      // FOOTER
+      + '.ioma-chat-foot{padding:14px 20px 16px;border-top:1px solid #eef1f6;background:#ffffff;flex-shrink:0}'
+      + '.ioma-chat-files{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}'
+      + '.ioma-chat-files[hidden]{display:none}'
+      + '.ioma-chat-file{display:inline-flex;align-items:center;gap:6px;background:#f1f5fb;color:#1a6be0;padding:5px 10px;border-radius:8px;font-size:12.5px;max-width:220px}'
+      + '.ioma-chat-file b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}'
+      + '.ioma-chat-file button{background:transparent;border:none;cursor:pointer;color:#1a6be0;font-size:16px;line-height:1;padding:0 2px}'
+      + '.ioma-chat-input-row{display:flex;gap:6px;align-items:flex-end;background:#f7f9fc;border:1.5px solid transparent;border-radius:16px;padding:8px 8px 8px 14px;transition:all .18s}'
+      + '.ioma-chat-input-row:focus-within{border-color:#1a6be0;background:#fff;box-shadow:0 0 0 4px rgba(26,107,224,.08)}'
+      + '.ioma-chat-iconbtn{width:34px;height:34px;background:transparent;border:none;color:#8a93a6;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}'
+      + '.ioma-chat-iconbtn:hover{background:#eef3fb;color:#1a6be0}'
+      + '.ioma-chat-iconbtn.recording{background:#fef2f2;color:#dc2626;animation:iomaChatPulse 1.2s infinite}'
+      + '@keyframes iomaChatPulse{0%,100%{opacity:1}50%{opacity:.5}}'
+      + '.ioma-chat-iconbtn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}'
+      + '.ioma-chat-textarea{flex:1;border:none;background:transparent;resize:none;font-family:inherit;font-size:15px;line-height:1.5;color:#1a1f36;max-height:160px;padding:8px 2px;outline:none}'
+      + '.ioma-chat-textarea::placeholder{color:#a8b0c0}'
+      + '.ioma-chat-send{width:38px;height:38px;background:linear-gradient(135deg,#3a8fff 0%,#1a6be0 100%);color:#fff;border:none;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .18s;box-shadow:0 3px 8px rgba(26,107,224,.25)}'
+      + '.ioma-chat-send:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(26,107,224,.35)}'
+      + '.ioma-chat-send:disabled{background:#d0d7e2;box-shadow:none;cursor:default;transform:none}'
+      + '.ioma-chat-send svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}'
+      + '.ioma-chat-hint{font-size:11.5px;color:#a8b0c0;margin-top:8px;text-align:center}'
+      + '.ioma-chat-hint kbd{background:#f1f4fa;border-radius:4px;padding:2px 6px;font-family:inherit;font-size:11px;color:#667085;font-weight:500}'
+
+      // DARK MODE — глубокий, но не плоский
+      + 'html.dark .ioma-chat-overlay{background:rgba(0,0,0,.72)}'
+      + 'html.dark .ioma-chat-window{background:#0f1523;color:#e8edf5;border-color:rgba(255,255,255,.06);box-shadow:0 32px 80px rgba(0,0,0,.6)}'
+      + 'html.dark .ioma-chat-head{background:#0f1523;border-color:rgba(255,255,255,.06)}'
+      + 'html.dark .ioma-chat-head h2{color:#fff}'
+      + 'html.dark .ioma-chat-head .sub{color:#7c8aa3}'
+      + 'html.dark .ioma-chat-head .status{background:rgba(34,197,94,.1);color:#4ade80}'
+      + 'html.dark .ioma-chat-close{color:#7c8aa3}'
+      + 'html.dark .ioma-chat-close:hover{background:rgba(255,255,255,.08);color:#fff}'
+      + 'html.dark .ioma-chat-body{background:#0a0f1a}'
+      + 'html.dark .ioma-chat-msg.ai .ioma-chat-bubble{background:#161e30;border-color:rgba(255,255,255,.06);color:#e8edf5;box-shadow:0 1px 4px rgba(0,0,0,.2)}'
+      + 'html.dark .ioma-chat-empty h3{color:#fff}'
+      + 'html.dark .ioma-chat-empty p{color:#8a96ab}'
+      + 'html.dark .ioma-chat-sugg button{background:#161e30;border-color:rgba(255,255,255,.08);color:#b8c8e0}'
+      + 'html.dark .ioma-chat-sugg button:hover{border-color:#3a8fff;color:#5aaeff;box-shadow:0 4px 14px rgba(58,143,255,.15)}'
+      + 'html.dark .ioma-chat-foot{background:#0f1523;border-color:rgba(255,255,255,.06)}'
+      + 'html.dark .ioma-chat-input-row{background:#161e30}'
+      + 'html.dark .ioma-chat-input-row:focus-within{background:#1a2338;border-color:#3a8fff;box-shadow:0 0 0 4px rgba(58,143,255,.1)}'
+      + 'html.dark .ioma-chat-textarea{color:#e8edf5}'
+      + 'html.dark .ioma-chat-textarea::placeholder{color:#5a6a85}'
+      + 'html.dark .ioma-chat-iconbtn{color:#5a6a85}'
+      + 'html.dark .ioma-chat-iconbtn:hover{background:#1a2338;color:#5aaeff}'
+      + 'html.dark .ioma-chat-file{background:#1a2338;color:#5aaeff}'
+      + 'html.dark .ioma-chat-hint{color:#5a6a85}'
+      + 'html.dark .ioma-chat-hint kbd{background:#161e30;color:#8a96ab}'
+      + '@media(max-width:700px){.ioma-chat-overlay{padding:0}.ioma-chat-window{border-radius:0;max-width:none;max-height:100vh;height:100vh;border:none}.ioma-chat-body{padding:18px 16px}.ioma-chat-msg{max-width:92%}.ioma-chat-head{padding:14px 18px}.ioma-chat-foot{padding:12px 14px 14px}}';
+    document.head.appendChild(st);
+  }
+
+  function ensure(){
+    if (document.getElementById('iomaChatOverlay')) return;
+    var ov = document.createElement('div');
+    ov.className = 'ioma-chat-overlay';
+    ov.id = 'iomaChatOverlay';
+    ov.hidden = true;
+    ov.innerHTML = ''
+      + '<div class="ioma-chat-window">'
+      + '  <div class="ioma-chat-head">'
+      + '    <div class="orb"><svg viewBox="0 0 24 24"><path d="M12 2l2.1 6.3L20 10l-5.9 1.7L12 18l-2.1-6.3L4 10l5.9-1.7z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></div>'
+      + '    <div class="txt">'
+      + '      <h2>AI-ассистент</h2>'
+      + '      <div class="sub">Задайте вопрос — отвечу на основе базы знаний компании</div>'
+      + '    </div>'
+      + '    <span class="status"><i></i>онлайн</span>'
+      + '    <button class="ioma-chat-close" type="button" id="iomaChatClose" aria-label="Закрыть">&times;</button>'
+      + '  </div>'
+      + '  <div class="ioma-chat-body" id="iomaChatBody"></div>'
+      + '  <div class="ioma-chat-foot">'
+      + '    <div class="ioma-chat-files" id="iomaChatFiles" hidden></div>'
+      + '    <div class="ioma-chat-input-row">'
+      + '      <button class="ioma-chat-iconbtn" type="button" id="iomaChatAttach" title="Прикрепить файл" aria-label="Прикрепить файл">'
+      + '        <svg viewBox="0 0 24 24"><path d="M8.5 12.5 14.9 6.1a3.3 3.3 0 0 1 4.7 4.7l-8.9 8.9a5 5 0 0 1-7.1-7.1l9.2-9.2a2.9 2.9 0 0 1 4.1 4.1l-8.8 8.8a1.4 1.4 0 0 1-2-2l7.9-7.9"/></svg>'
+      + '      </button>'
+      + '      <input type="file" id="iomaChatFileInput" hidden multiple accept=".txt,.csv,.json,.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp">'
+      + '      <button class="ioma-chat-iconbtn" type="button" id="iomaChatMic" title="Голосовой ввод" aria-label="Голосовой ввод">'
+      + '        <svg viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="12" rx="4"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>'
+      + '      </button>'
+      + '      <textarea class="ioma-chat-textarea" id="iomaChatText" rows="1" placeholder="Напишите сообщение..." maxlength="4000"></textarea>'
+      + '      <button class="ioma-chat-send" type="button" id="iomaChatSend" aria-label="Отправить">'
+      + '        <svg viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>'
+      + '      </button>'
+      + '    </div>'
+      + '    <div class="ioma-chat-hint"><kbd>Enter</kbd> — отправить, <kbd>Shift+Enter</kbd> — новая строка</div>'
+      + '  </div>'
+      + '</div>';
+    document.body.appendChild(ov);
+
+    ov.addEventListener('click', function(e){ if (e.target === ov) close(); });
+    document.getElementById('iomaChatClose').addEventListener('click', close);
+    document.getElementById('iomaChatSend').addEventListener('click', send);
+    document.getElementById('iomaChatAttach').addEventListener('click', function(){
+      document.getElementById('iomaChatFileInput').click();
+    });
+    document.getElementById('iomaChatFileInput').addEventListener('change', handleFiles);
+
+    var ta = document.getElementById('iomaChatText');
+    ta.addEventListener('input', autoResize);
+    ta.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(); }
+    });
+
+    document.getElementById('iomaChatMic').addEventListener('click', toggleMic);
+
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape'){ close(); }
+    });
+  }
+
+  function autoResize(){
+    var ta = document.getElementById('iomaChatText');
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+  }
+
+  function handleFiles(){
+    var inp = document.getElementById('iomaChatFileInput');
+    var files = Array.from(inp.files || []);
+    files.forEach(function(f){
+      if (f.size > 2 * 1024 * 1024){ alert('Файл больше 2 МБ: ' + f.name); return; }
+      var reader = new FileReader();
+      var isText = /\.(txt|csv|json|md|log)$/i.test(f.name);
+      if (isText){
+        reader.onload = function(ev){
+          pendingFiles.push({ name: f.name, text: String(ev.target.result).slice(0, 8000) });
+          renderFiles();
+        };
+        reader.readAsText(f);
+      } else {
+        pendingFiles.push({ name: f.name, text: '[файл ' + f.name + ', ' + Math.round(f.size/1024) + ' КБ]' });
+        renderFiles();
+      }
+    });
+    inp.value = '';
+  }
+
+  function renderFiles(){
+    var el = document.getElementById('iomaChatFiles');
+    if (!el) return;
+    if (!pendingFiles.length){ el.hidden = true; el.innerHTML = ''; return; }
+    el.hidden = false;
+    el.innerHTML = pendingFiles.map(function(f, i){
+      return '<div class="ioma-chat-file"><b>' + esc(f.name) + '</b><button type="button" data-i="' + i + '">&times;</button></div>';
+    }).join('');
+    el.querySelectorAll('button').forEach(function(b){
+      b.addEventListener('click', function(){
+        var i = Number(b.getAttribute('data-i'));
+        pendingFiles.splice(i, 1);
+        renderFiles();
+      });
+    });
+  }
+
+  var recognition = null;
+  var recognizing = false;
+
+  function toggleMic(){
+    var btn = document.getElementById('iomaChatMic');
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR){ alert('Голосовой ввод не поддерживается в этом браузере'); return; }
+    if (recognizing && recognition){
+      recognition.stop();
+      recognizing = false;
+      btn.classList.remove('recording');
+      return;
+    }
+    recognition = new SR();
+    recognition.lang = (window.lang === 'en') ? 'en-US' : (window.lang === 'zh' ? 'zh-CN' : (window.lang === 'tr' ? 'tr-TR' : 'ru-RU'));
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.onresult = function(e){
+      var t = '';
+      for (var i = e.resultIndex; i < e.results.length; i++){
+        t += e.results[i][0].transcript;
+      }
+      var ta = document.getElementById('iomaChatText');
+      ta.value = t;
+      autoResize();
+    };
+    recognition.onend = function(){
+      recognizing = false;
+      btn.classList.remove('recording');
+    };
+    recognition.onerror = function(){ recognizing = false; btn.classList.remove('recording'); };
+    recognizing = true;
+    btn.classList.add('recording');
+    recognition.start();
+  }
+
+  function addMsg(text, kind){
+    var body = document.getElementById('iomaChatBody');
+    var empty = body.querySelector('.ioma-chat-empty');
+    if (empty) empty.remove();
+    var div = document.createElement('div');
+    div.className = 'ioma-chat-msg ' + (kind === 'user' ? 'user' : (kind === 'error' ? 'error' : 'ai'));
+    div.innerHTML = '<div class="ioma-chat-bubble"></div>';
+    div.querySelector('.ioma-chat-bubble').textContent = text;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+    return div;
+  }
+
+  function addTyping(){
+    var body = document.getElementById('iomaChatBody');
+    var empty = body.querySelector('.ioma-chat-empty');
+    if (empty) empty.remove();
+    var div = document.createElement('div');
+    div.className = 'ioma-chat-msg ai';
+    div.innerHTML = '<div class="ioma-chat-bubble"><div class="ioma-chat-dots"><span></span><span></span><span></span></div></div>';
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+    return div;
+  }
+
+  function send(){
+    var ta = document.getElementById('iomaChatText');
+    var btn = document.getElementById('iomaChatSend');
+    var text = String(ta.value || '').trim();
+    var filesText = pendingFiles.map(function(f){ return '\n\n[Файл: ' + f.name + ']\n' + f.text; }).join('');
+    if (!text && !pendingFiles.length) return;
+
+    // Собираем полный вопрос
+    var fullText = text + filesText;
+    addMsg(text + (pendingFiles.length ? '\n\n📎 ' + pendingFiles.map(function(f){ return f.name; }).join(', ') : ''), 'user');
+    history.push({ role: 'user', content: fullText });
+
+    ta.value = '';
+    pendingFiles = [];
+    renderFiles();
+    autoResize();
+    btn.disabled = true;
+
+    var typing = addTyping();
+
+    fetch('/api/assist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ question: fullText, history: history.slice(-6) })
+    })
+      .then(function(r){ return r.json().then(function(d){ return { s: r.status, d: d }; }); })
+      .then(function(x){
+        btn.disabled = false;
+        typing.remove();
+        if (x.d && x.d.ok && x.d.reply){
+          addMsg(String(x.d.reply), 'ai');
+          history.push({ role: 'assistant', content: String(x.d.reply) });
+        } else {
+          addMsg((x.d && x.d.error) || 'Не удалось получить ответ', 'error');
+        }
+      })
+      .catch(function(e){
+        btn.disabled = false;
+        typing.remove();
+        addMsg('Ошибка соединения: ' + (e.message || 'неизвестно'), 'error');
+      });
+  }
+
+  function open(){
+    injectStyles();
+    ensure();
+    var ov = document.getElementById('iomaChatOverlay');
+    ov.hidden = false;
+    var body = document.getElementById('iomaChatBody');
+    if (!body.children.length){
+      body.innerHTML = ''
+        + '<div class="ioma-chat-empty">'
+        + '<div class="big"><svg viewBox="0 0 24 24"><path d="M12 2l2.1 6.3L20 10l-5.9 1.7L12 18l-2.1-6.3L4 10l5.9-1.7z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></div>'
+        + '<h3>Здравствуйте!</h3>'
+        + '<p>Я AI-ассистент компании. Могу подсказать про сроки доставки, курс, оплату, условия поставки, доп. расходы, документы.</p>'
+        + '<div class="ioma-chat-sugg">'
+        + '<button data-q="Сколько идёт авиа из Китая в Москву?">Сколько идёт авиа?</button>'
+        + '<button data-q="Как рассчитывается курс оплаты?">Как считается курс?</button>'
+        + '<button data-q="Что входит в ставку под наш контракт?">Что входит в ставку?</button>'
+        + '<button data-q="Сколько стоит декларация соответствия?">Сколько стоит ДС?</button>'
+        + '</div>'
+        + '</div>';
+      body.querySelectorAll('.ioma-chat-sugg button').forEach(function(b){
+        b.addEventListener('click', function(){
+          document.getElementById('iomaChatText').value = b.getAttribute('data-q');
+          send();
+        });
+      });
+    }
+    setTimeout(function(){ document.getElementById('iomaChatText').focus(); }, 60);
+  }
+
+  function close(){
+    var ov = document.getElementById('iomaChatOverlay');
+    if (ov) ov.hidden = true;
+  }
+
+  // Открываем по клику на карточку AI-ассистент
+  document.addEventListener('click', function(e){
+    var card = e.target.closest && e.target.closest('[data-open-view="assistant"]');
+    if (card){
+      e.preventDefault(); e.stopImmediatePropagation();
+      open();
+    }
+  }, true);
+
+  window.iomaOpenAssist = open;
+  window.iomaOpenAdminAssist = open;
+})();
+
+// ========== ИСТОРИЯ КУРСА ЦБ ПО ДАТЕ ==========
+(function(){
+  if (window.__iomaCbrHistory) return;
+  window.__iomaCbrHistory = true;
+
+  function injectStyles(){
+    if (document.getElementById('iomaCbrStyles')) return;
+    var st = document.createElement('style');
+    st.id = 'iomaCbrStyles';
+    st.textContent = ''
+      + '.ioma-cbr-overlay{position:fixed;inset:0;background:rgba(6,12,24,.72);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;z-index:999999;padding:20px}'
+      + '.ioma-cbr-overlay[hidden]{display:none}'
+      + '.ioma-cbr-modal{background:#fff;color:#0e1428;border-radius:18px;width:100%;max-width:600px;padding:32px 36px;box-shadow:0 30px 80px rgba(0,0,0,.45);position:relative}'
+      + '.ioma-cbr-title{margin:0 0 8px;font-size:24px;font-weight:700}'
+      + '.ioma-cbr-sub{margin:0 0 22px;font-size:15px;color:#889}'
+      + '.ioma-cbr-close{position:absolute;top:12px;right:14px;width:34px;height:34px;background:#f1f4fa;border:none;font-size:18px;border-radius:50%;cursor:pointer;color:#556}'
+      + '.ioma-cbr-close:hover{background:#e2e8f3}'
+      + '.ioma-cbr-field{display:block;margin-bottom:16px}'
+      + '.ioma-cbr-field > span{display:block;font-size:15px;color:#556;margin-bottom:8px;font-weight:600}'
+      + '.ioma-cbr-field input{width:100%;padding:16px 20px;font-size:20px;border-radius:10px;border:1px solid #d5dbe8;background:#fafbfe;color:#0e1428;box-sizing:border-box;font-family:inherit}'
+      + '.ioma-cbr-field input:focus{outline:none;border-color:#1257e0;background:#fff;box-shadow:0 0 0 3px rgba(18,87,224,.12)}'
+      + '.ioma-cbr-result{padding:16px 0 0;border-top:1px solid #e6eaf3;margin-top:6px}'
+      + '.ioma-cbr-loading{color:#889;font-size:14px;padding:12px 0;text-align:center}'
+      + '.ioma-cbr-error{color:#a11;font-size:14px;padding:12px 0;text-align:center}'
+      + '.ioma-cbr-date{font-size:13px;color:#556;margin-bottom:10px}'
+      + '.ioma-cbr-row{display:flex;justify-content:space-between;padding:18px 22px;border-radius:12px;background:#f7f9fd;margin-bottom:10px;font-size:19px}'
+      + '.ioma-cbr-row b{color:#1257e0;font-weight:700}'
+      + '.ioma-cbr-hint{font-size:12px;color:#889;margin-top:12px;text-align:center}'
+      + '#homeCurrencyDate{cursor:pointer;transition:color .15s}'
+      + '#homeCurrencyDate:hover{color:#1257e0}';
+    document.head.appendChild(st);
+  }
+
+  function ensureModal(){
+    if (document.getElementById('iomaCbrOverlay')) return;
+    var ov = document.createElement('div');
+    ov.className = 'ioma-cbr-overlay';
+    ov.id = 'iomaCbrOverlay';
+    ov.hidden = true;
+    ov.innerHTML = ''
+      + '<div class="ioma-cbr-modal">'
+      + '  <button class="ioma-cbr-close" type="button" id="iomaCbrClose">&times;</button>'
+      + '  <h2 class="ioma-cbr-title">Курс ЦБ РФ по дате</h2>'
+      + '  <p class="ioma-cbr-sub">Выберите дату — покажем официальный курс на этот день.</p>'
+      + '  <label class="ioma-cbr-field">'
+      + '    <span>Дата</span>'
+      + '    <input type="date" id="iomaCbrDate">'
+      + '  </label>'
+      + '  <div id="iomaCbrResult"></div>'
+      + '</div>';
+    document.body.appendChild(ov);
+
+    ov.addEventListener('click', function(e){
+      if (e.target === ov || e.target.id === 'iomaCbrClose') ov.hidden = true;
+    });
+
+    var dateInput = document.getElementById('iomaCbrDate');
+    var today = new Date();
+    var iso = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+    dateInput.value = iso;
+    dateInput.addEventListener('change', loadRate);
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape') ov.hidden = true; });
+  }
+
+  function fmt(n){ return Number(n).toFixed(4).replace(/0+$/, '').replace(/\.$/, ''); }
+
+  function loadRate(){
+    var date = document.getElementById('iomaCbrDate').value;
+    var out = document.getElementById('iomaCbrResult');
+    if (!date){ out.innerHTML = ''; return; }
+    out.innerHTML = '<div class="ioma-cbr-loading">Загружаю…</div>';
+    fetch('/api/currency/history?date=' + date, { credentials:'same-origin' })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (!d || !d.ok){ out.innerHTML = '<div class="ioma-cbr-error">Курс на эту дату недоступен</div>'; return; }
+        var items = d.items || d.rates || {};
+        var usd = items.USD && (items.USD.value || items.USD.Value);
+        var eur = items.EUR && (items.EUR.value || items.EUR.Value);
+        var cny = items.CNY && (items.CNY.value || items.CNY.Value);
+        var displayDate = d.date || date;
+        function row(label, val){
+          if (!val) return '';
+          return '<div class="ioma-cbr-row"><span>' + label + '</span><b>' + fmt(val) + ' ₽</b></div>';
+        }
+        out.innerHTML = '<div class="ioma-cbr-result">'
+          + '<div class="ioma-cbr-date">Курс на ' + displayDate + ':</div>'
+          + row('1 USD', usd)
+          + row('1 EUR', eur)
+          + row('1 CNY', cny)
+          + '<div class="ioma-cbr-hint">Источник: cbr.ru</div>'
+          + '</div>';
+      })
+      .catch(function(){
+        out.innerHTML = '<div class="ioma-cbr-error">Ошибка соединения</div>';
+      });
+  }
+
+  document.addEventListener('click', function(e){
+    var dateEl = e.target.closest && e.target.closest('#homeCurrencyDate');
+    if (!dateEl) return;
+    e.preventDefault();
+    e.stopPropagation();
+    injectStyles();
+    ensureModal();
+    document.getElementById('iomaCbrOverlay').hidden = false;
+    loadRate();
+  }, true);
+
+  injectStyles();
+  window.iomaOpenCbrHistory = function(){
+    injectStyles(); ensureModal();
+    document.getElementById('iomaCbrOverlay').hidden = false;
+    loadRate();
+  };
+})();
+
+// ========== ЭКСПЕДИТОРЫ (таблица + модалка) ==========
+(function(){
+  if (window.__iomaAgents) return;
+  window.__iomaAgents = true;
+
+  var allRecords = [];
+  var activeFilter = 'all';
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function catOf(r){
+    return r.fullCategory || r.category || 'Прочие';
+  }
+
+  function injectStyles(){
+    if (document.getElementById('iomaAgentStyles')) return;
+    var st = document.createElement('style');
+    st.id = 'iomaAgentStyles';
+    st.textContent = ''
+      + '.directory-filters{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}'
+      + '.dir-chip{background:#eef2fa;color:#1257e0;border:1px solid transparent;border-radius:14px;padding:5px 12px;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .12s;line-height:1.3;white-space:nowrap}'
+      + '.dir-chip:hover{background:#dde6f7}'
+      + '.dir-chip.active{background:#1257e0;color:#fff}'
+      + '.dir-chip b{opacity:.65;font-weight:500;margin-left:4px;font-size:11px}'
+      + '.agent-row{cursor:pointer;transition:background .12s}'
+      + '.agent-row:hover{background:#f1f6fc}'
+      + '.agent-row td{padding:12px 10px;vertical-align:top;font-size:13.5px}'
+      + '.agent-row b{color:#0e1428}'
+      + '.agent-row .agent-dir{display:inline-block;background:#eef2fa;color:#1257e0;border-radius:6px;padding:2px 8px;font-size:11.5px;margin:1px 2px 1px 0}'
+      + 'html.dark .dir-chip{background:rgba(99,176,220,.14);color:#8bc9f0}'
+      + 'html.dark .dir-chip.active{background:#0d7bd8;color:#fff}'
+      + 'html.dark .agent-row:hover{background:rgba(99,176,220,.08)}'
+      + 'html.dark .agent-row b{color:#fff}'
+      + 'html.dark .agent-row .agent-dir{background:rgba(99,176,220,.18);color:#8bc9f0}'
+      // Модалка экспедитора
+      + '.ioma-agent-modal{position:fixed;inset:0;background:rgba(6,12,24,.75);backdrop-filter:blur(5px);display:flex;align-items:flex-start;justify-content:center;z-index:999999;padding:24px;overflow-y:auto}'
+      + '.ioma-agent-modal[hidden]{display:none}'
+      + '.ioma-agent-card{background:#fff;color:#0e1428;border-radius:18px;width:100%;max-width:640px;padding:0;box-shadow:0 30px 80px rgba(0,0,0,.45);position:relative;margin:auto;overflow:hidden}'
+      + '.ioma-agent-head{padding:26px 32px 20px;border-bottom:1px solid #e6eaf3;background:linear-gradient(135deg,#f8fbff 0%,#eef4fc 100%)}'
+      + '.ioma-agent-head h2{margin:0 0 6px;font-size:22px;font-weight:700;color:#0e1428;line-height:1.3}'
+      + '.ioma-agent-cat{display:inline-block;background:#1257e0;color:#fff;padding:3px 12px;border-radius:12px;font-size:12px;font-weight:600}'
+      + '.ioma-agent-close{position:absolute;top:16px;right:18px;width:38px;height:38px;background:#fff;border:none;font-size:22px;border-radius:50%;cursor:pointer;color:#556;box-shadow:0 2px 8px rgba(0,0,0,.1)}'
+      + '.ioma-agent-close:hover{background:#f1f4fa}'
+      + '.ioma-agent-body{padding:24px 32px 28px}'
+      + '.ioma-agent-field{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid #f1f4fa;align-items:flex-start}'
+      + '.ioma-agent-field:last-child{border-bottom:none}'
+      + '.ioma-agent-field .lbl{width:130px;flex-shrink:0;color:#889;font-size:13px;font-weight:500;padding-top:2px}'
+      + '.ioma-agent-field .val{flex:1;font-size:15px;color:#0e1428;word-break:break-word;line-height:1.45}'
+      + '.ioma-agent-field .val a{color:#1257e0;text-decoration:none}'
+      + '.ioma-agent-field .val a:hover{text-decoration:underline}'
+      + '.ioma-agent-field .val.empty{color:#aab}'
+      + '.ioma-agent-actions{display:flex;gap:10px;padding:18px 32px 24px;border-top:1px solid #e6eaf3;background:#fafbfe;flex-wrap:wrap}'
+      + '.ioma-agent-btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;font-size:14px;font-weight:600;border-radius:10px;border:none;cursor:pointer;text-decoration:none;color:#fff;background:#1257e0}'
+      + '.ioma-agent-btn:hover{filter:brightness(1.1)}'
+      + '.ioma-agent-btn.ghost{background:#eef2fa;color:#1257e0}'
+      + 'html.dark .ioma-agent-card{background:#132a42;color:#e6eef8}'
+      + 'html.dark .ioma-agent-head{background:linear-gradient(135deg,#132a42 0%,#0e2039 100%);border-color:rgba(255,255,255,.08)}'
+      + 'html.dark .ioma-agent-head h2{color:#fff}'
+      + 'html.dark .ioma-agent-field{border-color:rgba(255,255,255,.05)}'
+      + 'html.dark .ioma-agent-field .lbl{color:#8ba3bd}'
+      + 'html.dark .ioma-agent-field .val{color:#e6eef8}'
+      + 'html.dark .ioma-agent-field .val a{color:#7cc0f5}'
+      + 'html.dark .ioma-agent-actions{background:#0e2039;border-color:rgba(255,255,255,.06)}'
+      + 'html.dark .ioma-agent-close{background:#132a42;color:#8ba3bd}'
+      + 'html.dark .ioma-agent-close:hover{background:#1a3a5c}';
+    document.head.appendChild(st);
+  }
+
+  function renderFilters(){
+    var el = document.getElementById('directoryFilters');
+    if (!el) return;
+    var counts = { all: allRecords.length };
+    allRecords.forEach(function(r){
+      var c = catOf(r);
+      counts[c] = (counts[c] || 0) + 1;
+    });
+    // Стабильный порядок
+    var ORDER = ['Авто','Авиа','ЖД','Море','Мультимодал','Негабарит','Опасные','Реф','Посылки','СФС','Брокер','Европа','Турция','США','СНГ','Китай'];
+    var cats = Object.keys(counts).filter(function(k){ return k !== 'all'; });
+    cats.sort(function(a, b){
+      function rank(c){
+        for (var i = 0; i < ORDER.length; i++){
+          if (c.indexOf(ORDER[i]) === 0) return i;
+        }
+        return 100;
+      }
+      return rank(a) - rank(b) || a.localeCompare(b);
+    });
+    var html = '<button type="button" class="dir-chip' + (activeFilter === 'all' ? ' active' : '') + '" data-cat="all">Все <b>' + counts.all + '</b></button>';
+    cats.forEach(function(c){
+      html += '<button type="button" class="dir-chip' + (activeFilter === c ? ' active' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + ' <b>' + counts[c] + '</b></button>';
+    });
+    el.innerHTML = html;
+  }
+
+  function renderRows(){
+    var tbody = document.getElementById('directoryGrid');
+    if (!tbody) return;
+    var rows = allRecords;
+    if (activeFilter !== 'all'){
+      rows = rows.filter(function(r){ return catOf(r) === activeFilter; });
+    }
+    if (!rows.length){
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#889">Ничего не найдено</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(function(r){
+      var site = r.site ? esc(r.site) : '';
+      var siteHtml = site ? '<a href="' + (site.indexOf('http') === 0 ? site : 'http://' + site) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">' + site + '</a>' : '—';
+      var emailHtml = r.email ? '<a href="mailto:' + esc(r.email) + '" onclick="event.stopPropagation()">' + esc(r.email) + '</a>' : '—';
+      var phoneHtml = r.phone ? '<a href="tel:' + esc(String(r.phone).replace(/\D/g,'')) + '" onclick="event.stopPropagation()">' + esc(r.phone) + '</a>' : '—';
+      var catTag = '<span class="agent-dir">' + esc(catOf(r)) + '</span>';
+      return '<tr class="agent-row" data-agent-id="' + esc(String(r.id)) + '">'
+        + '<td><b>' + esc(r.company || '—') + '</b></td>'
+        + '<td>' + esc(r.contact || '—') + '</td>'
+        + '<td>' + phoneHtml + '</td>'
+        + '<td>' + emailHtml + '</td>'
+        + '<td>' + siteHtml + '</td>'
+        + '<td>' + catTag + '</td>'
+        + '<td>' + esc(r.notes || '—') + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function loadAgents(){
+    var tbody = document.getElementById('directoryGrid');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#889">Загрузка…</td></tr>';
+    fetch('/api/agents?t=' + Date.now(), { credentials:'same-origin', cache:'no-store' })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        allRecords = (d && d.records) || [];
+        console.log('[agents] loaded', allRecords.length, 'admin:', d.isAdmin);
+        renderFilters();
+        renderRows();
+      })
+      .catch(function(e){
+        console.warn('[agents]', e);
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#c11">Ошибка загрузки</td></tr>';
+      });
+  }
+
+  function showAgentModal(id){
+    var r = allRecords.find(function(x){ return String(x.id) === String(id); });
+    if (!r) return;
+    injectStyles();
+    var overlay = document.getElementById('iomaAgentOverlay');
+    if (!overlay){
+      overlay = document.createElement('div');
+      overlay.id = 'iomaAgentOverlay';
+      overlay.className = 'ioma-agent-modal';
+      overlay.hidden = true;
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', function(e){
+        if (e.target === overlay || e.target.id === 'iomaAgentClose') overlay.hidden = true;
+      });
+      document.addEventListener('keydown', function(e){
+        if (e.key === 'Escape'){ var o = document.getElementById('iomaAgentOverlay'); if (o) o.hidden = true; }
+      });
+    }
+
+    var phoneLink = r.phone ? '<a href="tel:' + esc(String(r.phone).replace(/\D/g,'')) + '">' + esc(r.phone) + '</a>' : '';
+    var emailLink = r.email ? '<a href="mailto:' + esc(r.email) + '">' + esc(r.email) + '</a>' : '';
+    var siteLink = r.site ? '<a href="' + (String(r.site).indexOf('http') === 0 ? esc(r.site) : 'http://' + esc(r.site)) + '" target="_blank" rel="noopener">' + esc(r.site) + '</a>' : '';
+
+    function field(label, val){
+      var v = val && val.toString().trim() ? val : '<span class="empty">— не указано</span>';
+      return '<div class="ioma-agent-field"><div class="lbl">' + label + '</div><div class="val">' + v + '</div></div>';
+    }
+
+    overlay.innerHTML = ''
+      + '<div class="ioma-agent-card">'
+      + '  <button class="ioma-agent-close" type="button" id="iomaAgentClose" aria-label="Закрыть">&times;</button>'
+      + '  <div class="ioma-agent-head">'
+      + '    <span class="ioma-agent-cat">' + esc(catOf(r)) + '</span>'
+      + '    <h2 style="margin-top:12px">' + esc(r.company || 'Без названия') + '</h2>'
+      + '  </div>'
+      + '  <div class="ioma-agent-body">'
+      + field('Контактное лицо', esc(r.contact || ''))
+      + field('Телефон', phoneLink)
+      + field('Email', emailLink)
+      + field('Сайт', siteLink)
+      + field('Локация', esc(r.location || ''))
+      + field('Направления', esc(r.notes || ''))
+      + '  </div>'
+      + '  <div class="ioma-agent-actions">'
+      + (r.phone ? '<a class="ioma-agent-btn" href="tel:' + esc(String(r.phone).replace(/\D/g,'')) + '">📞 Позвонить</a>' : '')
+      + (r.email ? '<a class="ioma-agent-btn ghost" href="mailto:' + esc(r.email) + '">✉ Написать</a>' : '')
+      + (r.site ? '<a class="ioma-agent-btn ghost" href="' + (String(r.site).indexOf('http') === 0 ? esc(r.site) : 'http://' + esc(r.site)) + '" target="_blank" rel="noopener">🌐 Сайт</a>' : '')
+      + '  </div>'
+      + '</div>';
+    overlay.hidden = false;
+  }
+
+  document.addEventListener('click', function(e){
+    var card = e.target.closest && e.target.closest('[data-open-view="forwarders"]');
+    if (card){
+      setTimeout(function(){ injectStyles(); if (!allRecords.length) loadAgents(); }, 60);
+      return;
+    }
+    var chip = e.target.closest && e.target.closest('.dir-chip');
+    if (chip){
+      activeFilter = chip.getAttribute('data-cat') || 'all';
+      renderFilters();
+      renderRows();
+      return;
+    }
+    var row = e.target.closest && e.target.closest('.agent-row');
+    if (row){
+      showAgentModal(row.getAttribute('data-agent-id'));
+      return;
+    }
+  }, false);
+
+  var obs = new MutationObserver(function(){
+    var nv = document.getElementById('forwardersView');
+    if (nv && nv.classList.contains('open') && !allRecords.length){
+      injectStyles();
+      loadAgents();
+    }
+  });
+  document.addEventListener('DOMContentLoaded', function(){
+    var nv = document.getElementById('forwardersView');
+    if (nv) obs.observe(nv, { attributes: true, attributeFilter: ['class'] });
+  });
+})();

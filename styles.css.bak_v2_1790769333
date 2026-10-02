@@ -3080,6 +3080,16 @@ html.dark .ioma-orbit-ring,html.dark .ioma-orbit-moon{opacity:1}
 .live-pill { display: none !important; }
 
 
+/* IOMA_DISABLE_FLIP */
+.celestial-flip-out, .celestial-flip-in,
+.celestial-spin-out, .celestial-spin-in,
+.sun.boosting, .moon.boosting,
+.hero-sun.boosting, .hero-moon.boosting {
+  animation: none !important;
+}
+
+
+
 /* IOMA_INSTANT_SWAP — солнце/луна меняются мгновенно, без анимации */
 .sun, .moon, .hero-sun, .hero-moon,
 .celestial-fade-in, .celestial-fade-out,
@@ -3092,23 +3102,17 @@ html.dark .ioma-orbit-ring,html.dark .ioma-orbit-moon{opacity:1}
   transform: none !important;
 }
 
-
-
-
-/* IOMA_HORIZONTAL_SWAP — движение по горизонтали при смене темы */
-
-
-
-
-
-
-/* IOMA_NO_CELESTIAL_ANIM */
+/* IOMA_CLEAN_NO_ANIM */
 .sun, .moon, .hero-sun, .hero-moon,
-.sun.leaving, .moon.leaving, .sun.arriving, .moon.arriving,
+[class*="hero-sun"], [class*="hero-moon"] {
+  animation: none !important;
+  transition: none !important;
+}
+.sun.spinning, .moon.spinning,
+.sun.boosting, .moon.boosting,
 .celestial-flip-in, .celestial-flip-out,
 .celestial-spin-in, .celestial-spin-out,
-.celestial-fade-in, .celestial-fade-out,
-.sun.spinning, .moon.spinning, .sun.boosting, .moon.boosting {
+.celestial-fade-in, .celestial-fade-out {
   animation: none !important;
   transition: none !important;
   transform: none !important;

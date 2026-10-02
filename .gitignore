@@ -19,3 +19,4 @@ logs/
 make-hash.js
 test_telegram.js
 clean_css.py
+archive/

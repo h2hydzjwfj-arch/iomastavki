@@ -3041,75 +3041,14 @@ html.dark .ioma-orbit-ring,html.dark .ioma-orbit-moon{opacity:1}
 
 .ioma-orbit-ring, .ioma-orbit-moon { display: none !important; }
 
-100% { transform: rotate(180deg)   scale(0.15); opacity: 0; filter: brightness(1.6); }
+@keyframes iomaSpinOut {
+  0%   { transform: rotate(0deg)     scale(1);    opacity: 1; filter: brightness(1);   }
+  100% { transform: rotate(180deg)   scale(0.15); opacity: 0; filter: brightness(1.6); }
 }
-100% { transform: rotate(0deg)     scale(1);    opacity: 1; filter: brightness(1);   }
+@keyframes iomaSpinIn {
+  0%   { transform: rotate(-180deg)  scale(0.15); opacity: 0; filter: brightness(1.6); }
+  100% { transform: rotate(0deg)     scale(1);    opacity: 1; filter: brightness(1);   }
 }
+.celestial-spin-out { animation: iomaSpinOut 0.36s cubic-bezier(.5,.05,.55,.95) forwards !important; transform-origin: 50% 50% !important; }
+.celestial-spin-in  { animation: iomaSpinIn  0.36s cubic-bezier(.45,.05,.5,.95)  forwards !important; transform-origin: 50% 50% !important; }
 .sun, .moon, .hero-sun, .hero-moon { transform-origin: 50% 50%; }
-
-
-@keyframes iomaFlipOut {
-  0%   { transform: scaleX(1)   rotate(0deg);    opacity: 1; }
-  50%  { transform: scaleX(0.1) rotate(90deg);   opacity: 0.6; }
-  100% { transform: scaleX(0)   rotate(180deg);  opacity: 0; }
-}
-@keyframes iomaFlipIn {
-  0%   { transform: scaleX(0)   rotate(-180deg); opacity: 0; }
-  50%  { transform: scaleX(0.1) rotate(-90deg);  opacity: 0.6; }
-  100% { transform: scaleX(1)   rotate(0deg);    opacity: 1; }
-}
-.celestial-flip-out { animation: iomaFlipOut 0.4s cubic-bezier(.5,.05,.55,.95) forwards !important; transform-origin: 50% 50% !important; }
-.celestial-flip-in  { animation: iomaFlipIn  0.4s cubic-bezier(.45,.05,.5,.95)  forwards !important; transform-origin: 50% 50% !important; }
-
-
-@keyframes iomaFlipOut {
-  0%   { transform: scaleX(1)   rotate(0deg);    opacity: 1; }
-  50%  { transform: scaleX(0.1) rotate(90deg);   opacity: 0.6; }
-  100% { transform: scaleX(0)   rotate(180deg);  opacity: 0; }
-}
-@keyframes iomaFlipIn {
-  0%   { transform: scaleX(0)   rotate(-180deg); opacity: 0; }
-  50%  { transform: scaleX(0.1) rotate(-90deg);  opacity: 0.6; }
-  100% { transform: scaleX(1)   rotate(0deg);    opacity: 1; }
-}
-.celestial-flip-out { animation: iomaFlipOut 0.4s cubic-bezier(.5,.05,.55,.95) forwards !important; transform-origin: 50% 50% !important; }
-.celestial-flip-in  { animation: iomaFlipIn  0.4s cubic-bezier(.45,.05,.5,.95)  forwards !important; transform-origin: 50% 50% !important; }
-
-
-/* IOMA_HIDE_LIVE */
-.live-pill { display: none !important; }
-
-
-/* IOMA_INSTANT_SWAP — солнце/луна меняются мгновенно, без анимации */
-.sun, .moon, .hero-sun, .hero-moon,
-.celestial-fade-in, .celestial-fade-out,
-.celestial-flip-in, .celestial-flip-out,
-.celestial-spin-in, .celestial-spin-out,
-.sun.spinning, .moon.spinning,
-.sun.boosting, .moon.boosting {
-  animation: none !important;
-  transition: none !important;
-  transform: none !important;
-}
-
-
-
-
-/* IOMA_HORIZONTAL_SWAP — движение по горизонтали при смене темы */
-
-
-
-
-
-
-/* IOMA_NO_CELESTIAL_ANIM */
-.sun, .moon, .hero-sun, .hero-moon,
-.sun.leaving, .moon.leaving, .sun.arriving, .moon.arriving,
-.celestial-flip-in, .celestial-flip-out,
-.celestial-spin-in, .celestial-spin-out,
-.celestial-fade-in, .celestial-fade-out,
-.sun.spinning, .moon.spinning, .sun.boosting, .moon.boosting {
-  animation: none !important;
-  transition: none !important;
-  transform: none !important;
-}

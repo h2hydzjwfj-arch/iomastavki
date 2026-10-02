@@ -32,10 +32,3 @@
 .ioma-order-head b { color: #1257e0; }
 .ioma-order-body { color: #223; white-space: pre-wrap; font-size: 14px; }
 .ioma-cabinet-hello { margin-bottom: 14px; color: #556; }
-
-/* Глазик для пароля */
-.ioma-pw-wrap { position: relative; display: block; }
-.ioma-pw-wrap input { padding-right: 40px; }
-.ioma-pw-toggle { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; background: transparent; border: none; cursor: pointer; color: #889; display: flex; align-items: center; justify-content: center; border-radius: 8px; padding: 0; }
-.ioma-pw-toggle:hover { color: #1257e0; background: #f1f4fa; }
-.ioma-pw-toggle svg { width: 18px; height: 18px; }

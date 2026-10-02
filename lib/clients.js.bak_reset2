@@ -82,36 +82,3 @@ function listClients() {
 }
 
 module.exports = { load, save, findByEmail, findById, createClient, verifyClient, listClients, hashPassword, verifyPassword };
-
-function setResetToken(email) {
-  const list = load();
-  const e = String(email || '').trim().toLowerCase();
-  const idx = list.findIndex(c => String(c.email || '').toLowerCase() === e);
-  if (idx < 0) return null;
-  const token = crypto.randomBytes(32).toString('hex');
-  const expires = Date.now() + 60 * 60 * 1000;
-  list[idx].resetToken = token;
-  list[idx].resetExpires = expires;
-  save(list);
-  return { token, client: list[idx] };
-}
-function findByResetToken(token) {
-  if (!token || typeof token !== 'string') return null;
-  const list = load();
-  const now = Date.now();
-  return list.find(c => c.resetToken === token && c.resetExpires && c.resetExpires > now) || null;
-}
-function setPassword(clientId, newPassword) {
-  const list = load();
-  const idx = list.findIndex(c => String(c.id) === String(clientId));
-  if (idx < 0) return false;
-  if (!newPassword || newPassword.length < 6) return false;
-  list[idx].passHash = hashPassword(newPassword);
-  delete list[idx].resetToken;
-  delete list[idx].resetExpires;
-  save(list);
-  return true;
-}
-module.exports.setResetToken = setResetToken;
-module.exports.findByResetToken = findByResetToken;
-module.exports.setPassword = setPassword;

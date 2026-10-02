@@ -1701,12 +1701,20 @@ app.get('/reset', function(req, res){
   res.sendFile(path.join(ROOT, 'reset.html'));
 });
 
-app.post('/api/assist', async function(req, res){
+app.post('/api/assist', requireAuth, async function(req, res){
   try {
     const question = String((req.body && req.body.question) || '').slice(0, 2000);
     if (!question.trim()) return res.status(400).json({ ok:false, error:'question required' });
     const auth = req.cookies && req.cookies.auth;
-    const role = (auth === 'admin' || auth === '1') ? 'admin' : (auth && String(auth).startsWith('client:') ? 'client' : 'guest');
+    const role = (auth === 'admin' || auth === '1') ? 'admin' : 'client';
+
+    if (question.trim().length < 5){
+      return res.json({
+        ok: true, role: role,
+        reply: 'Здравствуйте! Задайте вопрос — про сроки доставки, курс, условия поставки, доп. расходы, сертификаты. Я подскажу.',
+        matchedTopics: []
+      });
+    }
 
     const pb = loadPlaybook();
     const q = question.toLowerCase();
@@ -1714,8 +1722,6 @@ app.post('/api/assist', async function(req, res){
       if (role === 'admin') return true;
       return (t.role || 'public') === 'public';
     });
-
-    // Подбор релевантных тем
     const scored = allowed.map(function(t){
       let score = 0;
       const text = (t.title + ' ' + t.answer + ' ' + (t.keywords||[]).join(' ')).toLowerCase();
@@ -1724,106 +1730,52 @@ app.post('/api/assist', async function(req, res){
       words.forEach(function(w){ if (text.includes(w)) score += 3; });
       return Object.assign({}, t, { _score: score });
     }).sort(function(a,b){ return b._score - a._score; }).slice(0, 4);
-
-    const topScore = scored.length ? (scored[0]._score || 0) : 0;
     const context = scored.map(function(t){ return '### ' + t.title + '\n' + t.answer; }).join('\n\n');
 
-    // БЫСТРЫЙ ПУТЬ: score >= 12 И короткий вопрос -> короткий ответ мгновенно
-    const shortQ = question.trim().length < 80;
-    if (topScore >= 12 && shortQ){
-      const top = scored[0];
-      let replyFast = String(top.shortAnswer || top.answer || '').trim();
-      // Добавляем сноску
-      replyFast = replyFast + '\n\n_Уточните детали у вашего менеджера._';
-      console.log('[assist] FAST match: ' + top.title + ' (score=' + topScore + ')');
-      return res.json({
-        ok: true,
-        role: role,
-        mode: 'fast',
-        provider: 'playbook',
-        reply: replyFast,
-        matchedTopics: [{ title: String(top.title||''), id: String(top.id||'') }]
-      });
-    }
-
-    let sysLines, userPrompt;
-    let mode = 'chat';
-
-    if (topScore > 0){
-      // Есть ответ в playbook — используем его как основу
-      mode = 'playbook';
-      sysLines = [
-        'Ты — умный ассистент логистической компании (Китай → Россия).',
-        'Отвечай ТОЛЬКО на русском. Максимум 2-3 предложения.',
-        'Отвечай РОВНО на заданный вопрос, НЕ вываливай всю информацию из контекста.',
-        'Если вопрос про конкретный товар или услугу — в конце задай 1 уточняющий вопрос (например: «Уточните, что за товар?»).',
-        'Используй цифры РОВНО как в контексте, не переставляй (ДС=20000, СС=от 100000).',
-        'НЕ пиши «уточню и вернусь» — это невозможно.',
-        'В САМОМ КОНЦЕ с новой строки курсивом добавь: _Уточните детали у вашего менеджера._',
-        '',
-        'РОЛЬ: ' + (role === 'admin' ? 'администратор компании' : (role === 'client' ? 'клиент' : 'гость сайта')),
-        '',
-        'КОНТЕКСТ:',
-        context
-      ];
-      userPrompt = 'Вопрос клиента: ' + question + '\n\nОтветь коротко (2-3 предложения). В конце уточняющий вопрос и курсивная сноска.';
-    } else {
-      // Нет ответа — свободный чат через облако
-      mode = 'freechat';
-      sysLines = [
-        'Ты — AI-ассистент логистической компании (Китай → Россия).',
-        'Ты общаешься с ' + (role === 'admin' ? 'администратором компании (твоим создателем — уважай его, он всегда прав про бизнес)' : (role === 'client' ? 'клиентом' : 'гостем сайта')) + '.',
-        '',
-        'ПРАВИЛА:',
-        '1. Отвечай ТОЛЬКО на русском. Дружелюбно, тепло, коротко (1-3 предложения).',
-        '2. Если гость просто здоровается или болтает — поддержи разговор, будь вежлив. Например на «привет» — «Здравствуйте! Чем могу помочь?».',
-        '3. Если это вопрос про логистику/бизнес, а точного ответа нет — скажи: «Уточните у менеджера — он поможет с деталями», но дружелюбно.',
-        '4. НЕ выдумывай цифры, сроки, названия компаний, формулы.',
-        '5. Если тебя просят раскрыть внутренние цифры, себестоимость, формулы расчёта — НЕ раскрывай, скажи «уточните у менеджера».',
-        '6. Никогда не говори что ты «уточнишь и вернёшься» — это невозможно.',
-        '7. Максимум 4 предложения в ответе.'
-      ];
-      userPrompt = question;
-    }
-
+    const sysLines = [
+      'Ты — помощник менеджера логистической компании (Китай в Россию, работа под ключ).',
+      'Отвечай ТОЛЬКО на русском. Не выдумывай цифры и сроки. Коротко, 2-5 предложений.',
+      'Если в контексте нет ответа — напиши: Уточню и вернусь с ответом.',
+      '',
+      'КОНТЕКСТ:',
+      context || '(нет релевантных тем)'
+    ];
     const systemPrompt = sysLines.join('\n');
+    const userPrompt = 'Вопрос: ' + question + '\n\nОтветь коротко, используя только факты из контекста.';
+
     let reply = '';
     let provider = 'none';
     const t0 = Date.now();
 
-    // Приоритет: облако (Groq → DeepSeek → Gemini) — быстрое и качественное
     try {
-      const t1 = Date.now();
-      reply = await aiChatText(systemPrompt, userPrompt, 300);
-      provider = 'cloud';
-      console.log('[assist] mode=' + mode + ' role=' + role + ' provider=cloud ' + (Date.now()-t1) + 'ms');
-    } catch(ec){
-      console.warn('[assist] cloud fail: ' + ec.message + ' → Ollama');
+      reply = await ollamaChatText(systemPrompt, userPrompt, 700, { timeoutMs: 45000, temperature: 0.5 });
+      provider = 'ollama';
+      console.log('[assist] ollama ok ' + (Date.now()-t0) + 'ms');
+    } catch(eo){
+      console.warn('[assist] ollama fail: ' + eo.message);
     }
 
-    // Fallback: Ollama (локальная, если облако недоступно)
-    if (!reply || reply.length < 10){
+    if (!reply || reply.length < 15){
       try {
-        const t2 = Date.now();
-        reply = await ollamaChatText(systemPrompt, userPrompt, 300, { timeoutMs: 45000, temperature: 0.6 });
-        provider = 'ollama';
-        console.log('[assist] mode=' + mode + ' provider=ollama ' + (Date.now()-t2) + 'ms');
-      } catch(eo){
-        console.warn('[assist] ollama fail: ' + eo.message);
+        const t1 = Date.now();
+        reply = await aiChatText(systemPrompt, userPrompt, 700);
+        provider = 'cloud';
+        console.log('[assist] cloud ok ' + (Date.now()-t1) + 'ms');
+      } catch(ec){
+        console.warn('[assist] cloud fail: ' + ec.message);
       }
     }
 
-    if (!reply || reply.length < 5){
-      return res.status(502).json({ ok:false, error:'AI недоступен. Попробуйте через минуту.' });
+    if (!reply || reply.length < 15){
+      return res.status(502).json({ ok:false, error:'AI недоступен, попробуйте через минуту' });
     }
 
     res.json({
       ok: true,
       role: role,
-      mode: mode,
       provider: provider,
       reply: String(reply).trim(),
-      matchedTopics: scored.filter(function(t){ return t._score > 0; }).map(function(t){ return { title: String(t.title||''), id: String(t.id||'') }; })
+      matchedTopics: scored.map(function(t){ return { title: String(t.title||''), id: String(t.id||'') }; })
     });
   } catch(e){
     console.warn('[assist] error: ' + e.message);

@@ -1,0 +1,278 @@
+/* fix_app.js — новости, переводы, курсы, погода */
+(function(){
+  if (window.__iomaApp) return;
+  window.__iomaApp = true;
+
+  // ============ ПЕРЕВОДЫ ============
+  var I18N = {
+    ru: {
+      navTheme:'Тема', navRates:'Ставки', navCustoms:'Таможня',
+      heroEyebrow:'ЛОГИСТИКА · КИТАЙ → РОССИЯ',
+      heroText:'Точный расчёт. Умный помощник.<br>Всё необходимое для работы с грузом — в одном месте.',
+      tileRates:'Расчёт ставок', tileRatesSub:'Маршрут, ставка и транспорт',
+      tileAI:'AI-ассистент', tileAISub:'Текстом или голосом',
+      tileAgents:'Экспедиторы', tileAgentsSub:'Контакты и направления перевозок',
+      tileNews:'Новости ВЭД', tileNewsSub:'Китай · логистика · таможня',
+      tileRequest:'Оставить заявку', tileRequestSub:'Свяжемся и рассчитаем доставку',
+      requestEyebrow:'ЗАЯВКА', requestTitle:'Оставить заявку',
+      requestSub:'Опишите груз и маршрут — свяжемся и рассчитаем доставку.',
+      reqName:'Имя', reqNamePh:'Как к вам обращаться',
+      reqContact:'Контакт', reqBody:'Сообщение', reqSend:'Отправить',
+      reqFrom:'Откуда', reqTo:'Куда',
+      currencyCny:'CNY', currencyUsd:'USD', currencyEur:'EUR',
+      title:'Расчёт маршрута', from:'Откуда', to:'Куда', cargo:'ГРУЗ',
+      weight:'Вес, кг', pieces:'Количество мест', distance:'Расстояние, км',
+      autoVolumeLabel:'Объём', autoVolumetricLabel:'Объёмный вес', factorLabel:'Фактор',
+      dimensions:'ГАБАРИТЫ ОДНОГО МЕСТА, мм', length:'Длина', width:'Ширина', height:'Высота',
+      forwarder:'Экспедитор', chooseForwarder:'Выберите экспедитора',
+      transport:'Вид транспорта', chooseTransport:'Выберите транспорт',
+      incoterms:'Условия поставки', calculate:'Рассчитать',
+      directoryEyebrow:'СПРАВОЧНИК', agents:'Экспедиторы',
+      directorySub:'Поставщики и контакты по направлениям.',
+      company:'Компания', contact:'Контакт', phone:'Телефон', email:'Email',
+      website:'Сайт', directions:'Направления', note:'Примечание',
+      intelligence:'ИНТЕЛЛЕКТ', assistant:'AI-ассистент',
+      assistantSub2:'Логистика, расчёты и ВЭД — голосом или текстом.',
+      voice:'Микрофон', send:'Отправить', fileHint:'Файл можно добавить вместе с сообщением',
+      intelligenceFeed:'ИНФОРМАЦИОННАЯ ЛЕНТА', news:'Новости ВЭД', newsSub2:'Китай · логистика · таможня',
+      tarotLabel:'КАРТА ДНЯ',
+      customsEyebrow:'ТАМОЖЕННЫЙ КОНТРОЛЬ', customsTitle:'Проверка ТН ВЭД',
+      customsHelp:'Укажите код ТН ВЭД ЕАЭС — я автоматически проверю пошлину, НДС, сборы, маркировку и другие меры.',
+      customsPlaceholder:'Например, 8467890000', customsCheck:'Проверить код', close:'Закрыть'
+    },
+    en: {
+      navTheme:'Theme', navRates:'Rates', navCustoms:'Customs',
+      heroEyebrow:'LOGISTICS · CHINA → RUSSIA',
+      heroText:'Precise calculation. Smart assistant.<br>Everything for cargo work — in one place.',
+      tileRates:'Rate calculator', tileRatesSub:'Route, rate and transport',
+      tileAI:'AI assistant', tileAISub:'Text or voice',
+      tileAgents:'Forwarders', tileAgentsSub:'Contacts and transport directions',
+      tileNews:'Trade news', tileNewsSub:'China · logistics · customs',
+      tileRequest:'Submit request', tileRequestSub:'We will contact you and calculate delivery',
+      requestEyebrow:'REQUEST', requestTitle:'Submit request',
+      requestSub:'Describe your cargo and route — we will contact you and calculate delivery.',
+      reqName:'Name', reqNamePh:'Your name',
+      reqContact:'Contact', reqBody:'Message', reqSend:'Send',
+      reqFrom:'From', reqTo:'To',
+      currencyCny:'CNY', currencyUsd:'USD', currencyEur:'EUR',
+      title:'Route calculation', from:'From', to:'To', cargo:'CARGO',
+      weight:'Weight, kg', pieces:'Pieces', distance:'Distance, km',
+      autoVolumeLabel:'Volume', autoVolumetricLabel:'Volumetric weight', factorLabel:'Factor',
+      dimensions:'DIMENSIONS OF ONE PIECE, mm', length:'Length', width:'Width', height:'Height',
+      forwarder:'Forwarder', chooseForwarder:'Choose forwarder',
+      transport:'Transport', chooseTransport:'Choose transport',
+      incoterms:'Incoterms', calculate:'Calculate',
+      directoryEyebrow:'DIRECTORY', agents:'Forwarders',
+      directorySub:'Suppliers and contacts by direction.',
+      company:'Company', contact:'Contact', phone:'Phone', email:'Email',
+      website:'Website', directions:'Directions', note:'Note',
+      intelligence:'INTELLIGENCE', assistant:'AI assistant',
+      assistantSub2:'Logistics, calculations and trade — voice or text.',
+      voice:'Microphone', send:'Send', fileHint:'File can be attached with a message',
+      intelligenceFeed:'INFORMATION FEED', news:'Trade news', newsSub2:'China · logistics · customs',
+      tarotLabel:'CARD OF THE DAY',
+      customsEyebrow:'CUSTOMS CONTROL', customsTitle:'HS code check',
+      customsHelp:'Enter HS code — I will check duty, VAT, fees, marking and other measures.',
+      customsPlaceholder:'For example, 8467890000', customsCheck:'Check code', close:'Close'
+    },
+    zh: {
+      navTheme:'主题', navRates:'运价', navCustoms:'海关',
+      heroEyebrow:'物流 · 中国 → 俄罗斯',
+      heroText:'精确计算。智能助手。<br>货物运输所需的一切 —— 尽在一处。',
+      tileRates:'运费计算', tileRatesSub:'路线、运价和运输方式',
+      tileAI:'AI 助手', tileAISub:'文字或语音',
+      tileAgents:'货运代理', tileAgentsSub:'联系方式与运输方向',
+      tileNews:'外贸新闻', tileNewsSub:'中国 · 物流 · 海关',
+      tileRequest:'提交申请', tileRequestSub:'我们会联系您并计算运费',
+      requestEyebrow:'申请', requestTitle:'提交申请',
+      requestSub:'请描述货物和路线 —— 我们会联系您并计算运费。',
+      reqName:'姓名', reqNamePh:'您的姓名',
+      reqContact:'联系方式', reqBody:'留言', reqSend:'发送',
+      reqFrom:'出发地', reqTo:'目的地',
+      calculate:'计算', close:'关闭'
+    },
+    tr: {
+      navTheme:'Tema', navRates:'Oranlar', navCustoms:'Gümrük',
+      heroEyebrow:'LOJİSTİK · ÇİN → RUSYA',
+      tileNews:'Ticaret haberleri', tileNewsSub:'Çin · lojistik · gümrük',
+      tileRequest:'Talep gönder', tileRequestSub:'Sizinle iletişime geçip teslimatı hesaplayacağız',
+      requestEyebrow:'TALEP', requestTitle:'Talep gönder',
+      requestSub:'Kargo ve rotayı açıklayın — sizinle iletişime geçip teslimatı hesaplayacağız.',
+      reqName:'Ad', reqNamePh:'Adınız',
+      reqContact:'İletişim', reqBody:'Mesaj', reqSend:'Gönder',
+      reqFrom:'Nereden', reqTo:'Nereye',
+      calculate:'Hesapla', close:'Kapat'
+    }
+  };
+
+  function applyTranslations(lang){
+    var dict = I18N[lang] || I18N.ru;
+    var fb = I18N.ru;
+    document.querySelectorAll('[data-i18n]').forEach(function(el){
+      var k = el.getAttribute('data-i18n');
+      var v = dict[k] !== undefined ? dict[k] : fb[k];
+      if (v !== undefined) el.innerHTML = v;
+    });
+    document.querySelectorAll('[data-i18n-aria]').forEach(function(el){
+      var k = el.getAttribute('data-i18n-aria');
+      var v = dict[k] !== undefined ? dict[k] : fb[k];
+      if (v) el.setAttribute('aria-label', v);
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach(function(el){
+      var k = el.getAttribute('data-i18n-title');
+      var v = dict[k] !== undefined ? dict[k] : fb[k];
+      if (v) el.setAttribute('title', v);
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el){
+      var k = el.getAttribute('data-i18n-placeholder');
+      var v = dict[k] !== undefined ? dict[k] : fb[k];
+      if (v) el.setAttribute('placeholder', v);
+    });
+    document.documentElement.setAttribute('lang', lang);
+    try { localStorage.setItem('ioma_lang', lang); } catch(e){}
+  }
+
+  function setLang(lang){
+    applyTranslations(lang);
+    document.querySelectorAll('.lang').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-lang') === lang);
+    });
+  }
+  window.setLang = setLang;
+  window.translations = I18N;
+  window.lang = 'ru';
+
+  document.addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('.lang');
+    if (!b) return;
+    e.preventDefault();
+    var l = b.getAttribute('data-lang');
+    if (l) { window.lang = l; setLang(l); }
+  });
+
+  // ============ НОВОСТИ ============
+  function escapeHtml(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function formatDate(iso){
+    if (!iso) return '';
+    try {
+      var d = new Date(iso);
+      return d.toLocaleDateString('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric' });
+    } catch(e){ return ''; }
+  }
+  function renderNews(items){
+    var el = document.getElementById('newsList');
+    if (!el) return;
+    if (!items || !items.length){
+      el.innerHTML = '<div class="news-empty">Новости пока не загружены</div>';
+      return;
+    }
+    el.innerHTML = items.map(function(it){
+      var src = escapeHtml(it.source || '');
+      var date = escapeHtml(formatDate(it.date));
+      var title = escapeHtml(it.title || '');
+      var desc = escapeHtml(it.description || '');
+      var link = it.link ? escapeHtml(it.link) : '';
+      var inner = ''
+        + '<div class="news-item-head"><span class="news-item-source">' + src + '</span><span class="news-item-date">' + date + '</span></div>'
+        + '<h3 class="news-item-title">' + title + '</h3>'
+        + (desc ? '<p class="news-item-desc">' + desc + '</p>' : '');
+      if (link) return '<a class="news-item" href="' + link + '" target="_blank" rel="noopener noreferrer">' + inner + '</a>';
+      return '<div class="news-item">' + inner + '</div>';
+    }).join('');
+  }
+  function loadNews(){
+    var el = document.getElementById('newsList');
+    if (!el) return;
+    el.innerHTML = '<div class="news-loading">Загрузка…</div>';
+    fetch('/api/news?t=' + Date.now(), { credentials:'same-origin', cache:'no-store' })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ renderNews((d && d.items) || []); })
+      .catch(function(e){
+        el.innerHTML = '<div class="news-error">Не удалось загрузить новости</div>';
+        console.warn('[news]', e);
+      });
+  }
+  window.loadNews = loadNews;
+  window.renderNews = renderNews;
+
+  document.addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('[data-open-view="news"]');
+    if (!b) return;
+    setTimeout(loadNews, 50);
+  }, false);
+
+  // ============ КУРСЫ ============
+  function loadRates(){
+    fetch('/api/rates?t=' + Date.now(), { credentials:'same-origin', cache:'no-store' })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var cny, usd, eur, date;
+        if (d && (d.cny || d.usd || d.eur)) { cny=d.cny; usd=d.usd; eur=d.eur; date=d.date; }
+        else if (d && d.rates) { cny=d.rates.cny; usd=d.rates.usd; eur=d.rates.eur; date=d.rates.date; }
+        else if (d && Array.isArray(d.records)) {
+          d.records.forEach(function(rec){
+            var n = String(rec.company||rec.source||'').toUpperCase();
+            if (/CNY/.test(n) && !cny) cny = rec.rate || rec.value;
+            if (/USD/.test(n) && !usd) usd = rec.rate || rec.value;
+            if (/EUR/.test(n) && !eur) eur = rec.rate || rec.value;
+            if (!date && rec.updatedAt) date = rec.updatedAt;
+          });
+        }
+        function setText(id, v){ var el=document.getElementById(id); if (el && v!=null) el.textContent = (typeof v==='number') ? v.toFixed(3) : v; }
+        setText('homeCny', cny); setText('homeUsd', usd); setText('homeEur', eur);
+        var dEl = document.getElementById('homeCurrencyDate');
+        if (dEl && date) { try { dEl.textContent = new Date(date).toLocaleDateString('ru-RU'); } catch(e){ dEl.textContent = date; } }
+      })
+      .catch(function(e){ console.warn('[rates]', e); });
+  }
+
+  // ============ ПОГОДА ============
+  function loadWeather(){
+    fetch('/api/weather?t=' + Date.now(), { credentials:'same-origin', cache:'no-store' })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var el = document.getElementById('homeWeatherText');
+        if (!el || !d) return;
+        if (d.ok && d.text) el.textContent = d.text;
+        else if (d.temp != null) el.textContent = d.temp + '°C';
+        else if (d.summary) el.textContent = d.summary;
+      })
+      .catch(function(e){ console.warn('[weather]', e); });
+  }
+
+  // ============ СТИЛИ НОВОСТЕЙ ============
+  function injectStyles(){
+    if (document.getElementById('iomaNewsStyles')) return;
+    var st = document.createElement('style');
+    st.id = 'iomaNewsStyles';
+    st.textContent = ''
+      + '.news-list{display:flex;flex-direction:column;gap:10px;padding:16px 0}'
+      + '.news-item{display:block;padding:14px 16px;background:var(--card,#fff);border:1px solid rgba(0,0,0,.06);border-radius:14px;text-decoration:none;color:inherit;transition:transform .15s,box-shadow .15s}'
+      + '.news-item:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.06)}'
+      + '.news-item-head{display:flex;justify-content:space-between;font-size:12px;color:#889;margin-bottom:4px;gap:10px}'
+      + '.news-item-title{margin:0 0 6px;font-size:15px;font-weight:600;line-height:1.35}'
+      + '.news-item-desc{margin:0;font-size:13px;color:#556;line-height:1.45}'
+      + '.news-loading,.news-empty,.news-error{padding:24px;text-align:center;color:#889}'
+      + '.news-error{color:#c11}';
+    document.head.appendChild(st);
+  }
+
+  // ============ INIT ============
+  function init(){
+    injectStyles();
+    var saved = 'ru';
+    try { saved = localStorage.getItem('ioma_lang') || 'ru'; } catch(e){}
+    window.lang = saved;
+    setLang(saved);
+    var nv = document.getElementById('newsView');
+    if (nv && nv.classList.contains('open')) loadNews();
+    loadRates();
+    loadWeather();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();

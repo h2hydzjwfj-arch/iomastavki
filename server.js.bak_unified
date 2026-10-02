@@ -748,8 +748,6 @@ app.get('/app.js', function(req,res){ res.sendFile(path.join(ROOT,'app.js')); })
 app.get('/styles.css', function(req,res){ res.sendFile(path.join(ROOT,'styles.css')); });
 app.get('/cabinet.css', function(req,res){ res.sendFile(path.join(ROOT,'cabinet.css')); });
 app.get('/cabinet.js',  function(req,res){ res.sendFile(path.join(ROOT,'cabinet.js')); });
-app.get('/fix_views.js', function(req,res){ res.sendFile(path.join(ROOT,'fix_views.js')); });
-app.get('/fix_app.js', function(req,res){ res.sendFile(path.join(ROOT,'fix_app.js')); });
 app.get('/api/health', function(req,res){ res.json({ ok:true }); });
 app.get('/api/version', function(req,res){ res.json({ ok:true, version:'98', build:'IOMASTAVKA_FILE_80' }); });
 app.get('/api/config', function(req,res){ res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.GROQ_API_KEY || process.env.DEEPSEEK_API_KEY), pexelsConfigured: Boolean(process.env.PEXELS_API_KEY) }); });
@@ -890,48 +888,14 @@ app.get('/api/currency/history', async function(req,res){
 });
 
 // ========== Weather (OpenWeather) — drives the animated background ==========
-// Погода через Open-Meteo (бесплатно, без ключа)
-const WMO_RU = {0:'Ясно',1:'Преимущественно ясно',2:'Переменная облачность',3:'Облачно',45:'Туман',48:'Изморозь',51:'Слабая морось',53:'Морось',55:'Сильная морось',56:'Ледяная морось',57:'Сильная ледяная морось',61:'Небольшой дождь',63:'Дождь',65:'Сильный дождь',66:'Ледяной дождь',67:'Сильный ледяной дождь',71:'Небольшой снег',73:'Снег',75:'Сильный снег',77:'Снежная крупа',80:'Небольшой ливень',81:'Ливень',82:'Сильный ливень',85:'Снегопад',86:'Сильный снегопад',95:'Гроза',96:'Гроза с градом',99:'Сильная гроза с градом'};
-const WEATHER_CACHE_MS = 10 * 60 * 1000;
-let weatherCache2 = { at: 0, data: null };
 app.get('/api/weather', async function(req,res){
+  const key = process.env.OPENWEATHER_API_KEY;
+  if (!key) return res.status(503).json({ ok:false, error:'OPENWEATHER_API_KEY is not set' });
   try {
-    if (weatherCache2.data && Date.now() - weatherCache2.at < WEATHER_CACHE_MS){
-      res.set('Cache-Control', 'public, max-age=300');
-      return res.json(weatherCache2.data);
-    }
-    const lat = Number(req.query.lat) || 55.7558;
-    const lon = Number(req.query.lon) || 37.6173;
-    const city = String(req.query.city || 'Москва').slice(0, 40);
-    const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,weather_code,wind_speed_10m,apparent_temperature&timezone=Europe%2FMoscow';
-    const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
-    if (!r.ok) throw new Error('Open-Meteo HTTP ' + r.status);
-    const j = await r.json();
-    const cur = j.current || {};
-    const temp = Math.round(Number(cur.temperature_2m));
-    const feels = Math.round(Number(cur.apparent_temperature));
-    const code = Number(cur.weather_code);
-    const wind = Math.round(Number(cur.wind_speed_10m) * 10) / 10;
-    const desc = WMO_RU[code] || 'Ясно';
-    const result = {
-      ok: true,
-      city: city,
-      temp: temp,
-      feels: feels,
-      wind: wind,
-      code: code,
-      description: desc,
-      text: city + ', ' + (temp > 0 ? '+' : '') + temp + '°, ' + desc
-    };
-    weatherCache2 = { at: Date.now(), data: result };
-    console.log('[weather] ' + result.text);
+    const d = await weatherLib.getWeather(req.query.lat || weatherLib.MOSCOW.lat, req.query.lon || weatherLib.MOSCOW.lon, key, String(req.query.lang || 'ru').slice(0, 2));
     res.set('Cache-Control', 'public, max-age=300');
-    res.json(result);
-  } catch(e){
-    console.warn('[weather] fail: ' + e.message);
-    if (weatherCache2.data) return res.json(weatherCache2.data);
-    res.status(502).json({ ok:false, error: e.message });
-  }
+    res.json(d);
+  } catch(e){ res.status(502).json({ ok:false, error:e.message }); }
 });
 
 // ========== Перевод заголовков новостей ==========
@@ -1027,274 +991,6 @@ app.get('/api/news/image', async function(req,res){
   res.json({ ok:true, image: image || '', query });
 });
 
-// ========== OLLAMA (локальный AI) ==========
-async function ollamaChatText(systemPrompt, userPrompt, maxTokens, opts){
-  const url = 'http://localhost:11434/api/chat';
-  const model = process.env.OLLAMA_MODEL || 'qwen2.5:7b';
-  const body = {
-    model: model,
-    messages: [
-      { role: 'system', content: String(systemPrompt || '') },
-      { role: 'user',   content: String(userPrompt || '') }
-    ],
-    stream: false,
-    options: {
-      temperature: (opts && opts.temperature) != null ? opts.temperature : 0.5,
-      num_predict: maxTokens || 2000,
-      num_ctx: 16384
-    }
-  };
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout((opts && opts.timeoutMs) || 120000)
-  });
-  if (!r.ok) throw new Error('Ollama HTTP ' + r.status);
-  const d = await r.json();
-  const txt = (d && d.message && d.message.content) || '';
-  return String(txt).trim();
-}
-
-// ========== PLAYBOOK ДЛЯ АДМИН-АССИСТЕНТА ==========
-const PLAYBOOK_FILE = path.join(DATA_DIR, 'admin-playbook.json');
-function loadPlaybook(){
-  try { return JSON.parse(fs.readFileSync(PLAYBOOK_FILE, 'utf8')); }
-  catch(e){ return { version: 0, topics: [] }; }
-}
-
-app.get('/api/admin/playbook', requireAuth, function(req, res){
-  res.json(loadPlaybook());
-});
-
-app.get('/api/admin/playbook/search', requireAuth, function(req, res){
-  const q = String(req.query.q || '').toLowerCase().trim();
-  const pb = loadPlaybook();
-  if (!q) return res.json({ ok:true, topics: [] });
-  const hits = (pb.topics || []).map(function(t){
-    let score = 0;
-    const text = (t.title + ' ' + t.answer + ' ' + (t.keywords||[]).join(' ')).toLowerCase();
-    (t.keywords || []).forEach(function(k){ if (q.includes(String(k).toLowerCase())) score += 10; });
-    if (text.includes(q)) score += 5;
-    const words = q.split(/\\s+/).filter(function(w){ return w.length > 2; });
-    words.forEach(function(w){ if (text.includes(w)) score += 2; });
-    return Object.assign({}, t, { _score: score });
-  }).filter(function(t){ return t._score > 0; })
-    .sort(function(a,b){ return b._score - a._score; })
-    .slice(0, 5);
-  res.json({ ok:true, topics: hits });
-});
-
-app.post('/api/admin/playbook', requireAuth, function(req, res){
-  try {
-    const body = req.body || {};
-    const topic = {
-      id: 't_' + Date.now(),
-      title: String(body.title || '').slice(0, 200),
-      keywords: Array.isArray(body.keywords) ? body.keywords.slice(0, 20) : String(body.keywords||'').split(',').map(s => s.trim()).filter(Boolean),
-      answer: String(body.answer || '').slice(0, 5000)
-    };
-    if (!topic.title || !topic.answer) return res.status(400).json({ ok:false, error:'title and answer required' });
-    const pb = loadPlaybook();
-    pb.topics = pb.topics || [];
-    pb.topics.push(topic);
-    pb.updatedAt = new Date().toISOString();
-    fs.writeFileSync(PLAYBOOK_FILE, JSON.stringify(pb, null, 2));
-    res.json({ ok:true, topic });
-  } catch(e){ res.status(500).json({ ok:false, error: e.message }); }
-});
-
-app.post('/api/admin/assist', requireAuth, async function(req, res){
-  try {
-    const question = String((req.body && req.body.question) || '').slice(0, 2000);
-    if (!question) return res.status(400).json({ ok:false, error:'question required' });
-
-    const pb = loadPlaybook();
-    const q = question.toLowerCase();
-    const scored = (pb.topics || []).map(function(t){
-      let score = 0;
-      const text = (t.title + ' ' + t.answer + ' ' + (t.keywords||[]).join(' ')).toLowerCase();
-      (t.keywords || []).forEach(function(k){ if (q.includes(String(k).toLowerCase())) score += 10; });
-      const words = q.split(/\\s+/).filter(function(w){ return w.length > 2; });
-      words.forEach(function(w){ if (text.includes(w)) score += 3; });
-      return Object.assign({}, t, { _score: score });
-    }).sort(function(a,b){ return b._score - a._score; }).slice(0, 4);
-
-    const context = scored.map(function(t){ return '### ' + t.title + '\\n' + t.answer; }).join('\\n\\n');
-
-    const systemPrompt = [
-      'Ты — помощник менеджера логистической компании (Китай → Россия, работа под ключ).',
-      'Менеджер получает вопрос от клиента. Ты предлагаешь готовый ответ менеджера.',
-      '',
-      'СТИЛЬ: деловой, но тёплый, без канцелярита. Структурированный (списки, разбивка).',
-      'Всегда предупреждает про доп. расходы и курсовую разницу. Не давит, не спорит.',
-      '',
-      'ФОРМАТ: короткий ответ по сути → детали пунктами → открытый вопрос или следующий шаг.',
-      '',
-      'Используй ТОЛЬКО факты из контекста. Если чего-то нет — скажи «уточню и вернусь».',
-      'НЕ выдумывай цифры и сроки.',
-      '',
-      'КОНТЕКСТ:',
-      context || '(нет релевантных тем)'
-    ].join('\\n');
-
-    const userPrompt = 'Вопрос клиента:\n\n' + question + '\n\nНапиши ответ менеджера в его стиле. Коротко и по делу.';
-    let reply = '';
-    let provider = 'none';
-    const t0 = Date.now();
-
-    // IOMA_ASSIST_FALLBACK: Ollama первой (быстро, локально, без лимитов)
-    try {
-      reply = await ollamaChatText(systemPrompt, userPrompt, 900, { timeoutMs: 45000, temperature: 0.6 });
-      provider = 'ollama';
-      console.log('[assist] provider=' + provider + ' in ' + (Date.now()-t0) + 'ms');
-    } catch(eo){
-      console.warn('[assist] ollama fail (' + (Date.now()-t0) + 'ms): ' + eo.message);
-    }
-
-    // Облако: Groq → DeepSeek → Gemini (внутри aiChatText)
-    if (!reply || reply.length < 20){
-      try {
-        const t1 = Date.now();
-        reply = await aiChatText(systemPrompt, userPrompt, 900);
-        provider = 'cloud';
-        console.log('[assist] provider=' + provider + ' in ' + (Date.now()-t1) + 'ms');
-      } catch(ec){
-        console.warn('[assist] cloud fail: ' + ec.message);
-      }
-    }
-
-    // Если ни один не справился
-    if (!reply || reply.length < 20){
-      return res.status(502).json({ ok:false, error:'Все AI-провайдеры сейчас недоступны. Попробуйте через минуту.' });
-    }
-    console.log('[assist] final provider=' + provider + ', length=' + reply.length);
-
-    if (!reply) return res.status(502).json({ ok:false, error:'empty reply' });
-
-    res.json({ ok:true, question, reply, matchedTopics: scored.map(t => ({ title: t.title, id: t.id })) });
-  } catch(e){
-    console.warn('[assist] error: ' + e.message);
-    res.status(500).json({ ok:false, error: e.message });
-  }
-});
-
-// ========== РЕРАЙТ СТАТЬИ ==========
-const REWRITE_DIR = path.join(DATA_DIR, 'articles-rewrite');
-try { fs.mkdirSync(REWRITE_DIR, { recursive: true }); } catch(e){}
-const rewriteMem = new Map();
-function rewriteFile(id){ return path.join(REWRITE_DIR, String(id).replace(/[^a-z0-9]/gi,'') + '.json'); }
-function rewriteGet(id){
-  if (rewriteMem.has(id)) return rewriteMem.get(id);
-  try {
-    const f = rewriteFile(id), st = fs.statSync(f);
-    if (Date.now() - st.mtimeMs > 30*24*60*60*1000) return null;
-    const rec = JSON.parse(fs.readFileSync(f,'utf8'));
-    rewriteMem.set(id, rec); return rec;
-  } catch(e){ return null; }
-}
-function rewriteSave(rec){
-  rewriteMem.set(rec.id, rec);
-  if (rewriteMem.size > 500) rewriteMem.delete(rewriteMem.keys().next().value);
-  try { fs.writeFileSync(rewriteFile(rec.id), JSON.stringify(rec), 'utf8'); } catch(e){}
-}
-const REWRITE_PROMPT = [
-  'Ты — редактор новостного сайта по логистике и ВЭД. Тебе дают оригинал новостной статьи.',
-  '',
-  'Задача: переписать текст своими словами — это называется рерайт.',
-  '',
-  'ЖЁСТКИЕ ПРАВИЛА:',
-  '1. Сохрани ВСЕ факты, цифры, даты, названия компаний, имена, цитаты, номера законов и нормативных актов — без изменений.',
-  '2. НЕ добавляй ничего от себя: ни новых фактов, ни комментариев, ни выводов.',
-  '3. НЕ убирай смысловые блоки.',
-  '4. Меняй формулировки: слова на синонимы, структуру предложений, порядок слов. Стиль — деловой, но живой.',
-  '5. Убери из текста все ссылки в квадратных и круглых скобках, а также html-теги. Оставь только текст.',
-  '6. НЕ упоминай источник, сайт, автора — это сделают отдельно.',
-  '7. Форматируй в Markdown: абзацы через пустую строку, при необходимости списки и подзаголовки.',
-  '8. Отвечай ТОЛЬКО переработанным текстом, без преамбул.',
-  '',
-  'Начни.'
-].join('\n');
-
-app.post('/api/news/rewrite', async function(req, res){
-  try {
-    const id = String((req.body && req.body.id) || '').trim();
-    if (!id) return res.status(400).json({ ok:false, error:'id required' });
-
-    const cached = rewriteGet(id);
-    if (cached && cached.markdown) {
-      return res.json({ ok:true, cached:true, id,
-        title:cached.title, image:cached.image, source:cached.source,
-        publishedAt:cached.publishedAt, sourceUrl:cached.sourceUrl, markdown:cached.markdown });
-    }
-
-    const item = (newsCache.items || []).find(function(x){ return x.id === id; }) || findNewsItem({ id: id });
-    if (!item) return res.status(404).json({ ok:false, error:'news item not found' });
-
-    const rec = await loadOriginal(item);
-    const orig = (rec && rec.orig) || {};
-    const originalText = String(orig.markdown || '').trim();
-    if (!originalText) return res.status(500).json({ ok:false, error:'original text empty' });
-
-    const userPrompt = 'Оригинал статьи:\n\n' + originalText.slice(0, 12000);
-    let rewritten = '';
-    // 1) Локальный Ollama — быстро, бесплатно, без лимитов
-    try {
-      rewritten = await ollamaChatText(REWRITE_PROMPT, userPrompt, 2400, { timeoutMs: 120000 });
-      console.log('[rewrite] via Ollama OK, len=' + rewritten.length);
-    } catch(eo){
-      console.warn('[rewrite] Ollama fail: ' + eo.message + ' → пробую облако');
-      // 2) Облачные провайдеры (Groq → Gemini → DeepSeek)
-      try {
-        rewritten = await aiChatText(REWRITE_PROMPT, userPrompt, 2200);
-        console.log('[rewrite] via cloud OK, len=' + rewritten.length);
-      } catch(ec){
-        console.warn('[rewrite] cloud fail: ' + ec.message + ' → fallback на анонс');
-      }
-    }
-    rewritten = String(rewritten || '').trim();
-    // 3) Последний fallback: если AI не справился, отдаём анонс как есть
-    if (rewritten.length < 100){
-      const desc = String(orig.description || '').trim();
-      const md = String(orig.markdown || '').trim();
-      rewritten = desc.length > 80 ? desc : (md.slice(0, 800) || item.description || item.title || 'Текст недоступен');
-      console.warn('[rewrite] используется fallback-текст, len=' + rewritten.length);
-    }
-
-    // Чистим заголовок от суффикса «— Название сайта»
-    let cleanTitle = String(orig.title || item.title || '').trim();
-    cleanTitle = cleanTitle.replace(/\s*[-–—]\s*(Портал[^\n]*|Официальный сайт[^\n]*|Главная[^\n]*)$/i, '').trim();
-    cleanTitle = cleanTitle.replace(/\s*[-–—]\s*[^-–—]{0,80}$/, '').trim() || cleanTitle;
-
-    // Если нет оригинальной картинки — берём из Pexels по заголовку
-    let imageUrl = String(orig.image || '').trim();
-    if (!imageUrl && typeof fetchPexelsImage === 'function' && typeof defaultImgQuery === 'function'){
-      try {
-        imageUrl = await fetchPexelsImage(defaultImgQuery(cleanTitle)) || '';
-        console.log('[rewrite] Pexels image: ' + (imageUrl ? 'OK' : 'none'));
-      } catch(e){ console.warn('[rewrite] Pexels fail: ' + e.message); }
-    }
-
-    const record = {
-      id,
-      title: cleanTitle,
-      image: imageUrl,
-      source: orig.siteName || item.source || '',
-      publishedAt: orig.publishedAt || item.date || '',
-      sourceUrl: orig.sourceUrl || item.link || '',
-      markdown: rewritten,
-      at: Date.now()
-    };
-    rewriteSave(record);
-
-    res.json({ ok:true, cached:false, id:record.id, title:record.title, image:record.image,
-      source:record.source, publishedAt:record.publishedAt, sourceUrl:record.sourceUrl, markdown:record.markdown });
-  } catch(e){
-    console.warn('[rewrite] error: ' + e.message);
-    res.status(500).json({ ok:false, error: e.message });
-  }
-});
-
 // ========== Articles v2: the real text of the real article. Nothing is written by an AI. ==========
 // Only translation (into en/zh/tr) uses an AI, and it is cached + prepared in the background.
 const ART2_DIR = path.join(DATA_DIR, 'articles-v2');
@@ -1360,48 +1056,6 @@ async function loadOriginal(item){
         }
       } catch(e){ console.warn('[article] download failed: ' + e.message + ' | ' + url.slice(0, 80)); }
     }
-    // Fallback: Jina Reader — превращает любую страницу в markdown
-    if (!orig && url && /^https?:\/\//i.test(url)){
-      try {
-        const jinaUrl = 'https://r.jina.ai/' + url;
-        const jinaRes = await fetch(jinaUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'text/plain' },
-          signal: AbortSignal.timeout(25000)
-        });
-        if (jinaRes.ok){
-          let txt = await jinaRes.text();
-          const idx = txt.indexOf('Markdown Content:');
-          if (idx !== -1) txt = txt.slice(idx + 'Markdown Content:'.length).trim();
-          // Чистим типичный мусор навигации
-          txt = txt
-            .replace(/\[!\[Image[^\]]*\]\([^)]*\)\]\([^)]*\)/g, '')
-            .replace(/\[Войти\]\([^)]*\)/gi, '')
-            .replace(/\[Евразийский экономический союз\]\([^)]*\)/gi, '')
-            .replace(/\[Евразийская экономическая комиссия\]\([^)]*\)/gi, '')
-            .replace(/\[Правовой портал\]\([^)]*\)/gi, '')
-            .replace(/\[Суд Евразийского экономического союза\]\([^)]*\)/gi, '')
-            .replace(/^\s*Оценка регулирующего воздействия[\s\S]{0,300}?воздействия\s*$/m, '')
-            .replace(/\n{3,}/g, '\n\n')
-            .trim();
-          if (txt.length > 400){
-            orig = {
-              ok: true,
-              title: item.title,
-              description: item.description || '',
-              markdown: txt.slice(0, 20000),
-              image: item.image || '',
-              siteName: item.source || '',
-              publishedAt: item.date,
-              sourceUrl: url,
-              fetchedAt: Date.now(),
-              viaJina: true
-            };
-            console.log('[article] via Jina OK: ' + url.slice(0, 80));
-          }
-        }
-      } catch(e){ console.warn('[article] Jina fail: ' + e.message); }
-    }
-
     if (!orig){
       art2Failed[item.id] = Date.now();
       orig = { ok:false, title: item.title, description: item.description || '', markdown: item.description || '', image: item.image || '', siteName: item.source || '', publishedAt: item.date, sourceUrl: url || item.link, fetchedAt: Date.now() };
@@ -1616,235 +1270,9 @@ app.post('/api/transcribe', upload.single('file'), async function(req,res){
   } catch(e){ res.status(502).json({ ok:false, error:e.message }); }
 });
 
-const RESET_RATE = new Map();
-const RESET_WINDOW_MS = 60 * 60 * 1000;
-const RESET_MAX = 3;
-
-app.post('/api/password-reset/request', async function(req, res){
-  try {
-    const email = String((req.body && req.body.email) || '').trim().toLowerCase();
-    if (!email) return res.status(400).json({ ok:false, error:'email required' });
-    const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim();
-    const now = Date.now();
-    const arr = (RESET_RATE.get(ip) || []).filter(function(t){ return now - t < RESET_WINDOW_MS; });
-    if (arr.length >= RESET_MAX) return res.status(429).json({ ok:false, error:'Слишком много попыток. Попробуйте через час.' });
-    arr.push(now); RESET_RATE.set(ip, arr);
-
-    const clients = require('./lib/clients');
-    const c = clients.findByEmail(email);
-    if (!c) {
-      return res.json({ ok:false, error:'not_found', message:'Email ' + email + ' не зарегистрирован. Проверьте написание или создайте новый аккаунт.' });
-    }
-
-    const r = clients.setResetToken(email);
-    if (!r) {
-      return res.json({ ok:false, error:'token_failed', message:'Не удалось создать токен. Попробуйте позже.' });
-    }
-
-    const host = req.headers.host || ('localhost:' + PORT);
-    const proto = req.headers['x-forwarded-proto'] || 'http';
-    const resetUrl = proto + '://' + host + '/reset?token=' + r.token;
-
-    const html = '<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#f7f9fd;border-radius:14px">'
-      + '<h2 style="color:#0e1428;margin-top:0">Восстановление пароля</h2>'
-      + '<p>Здравствуйте, ' + (c.name || c.email) + '!</p>'
-      + '<p>Вы запросили сброс пароля на сайте iomastavka.</p>'
-      + '<p style="margin:24px 0"><a href="' + resetUrl + '" style="display:inline-block;padding:12px 24px;background:#1257e0;color:#fff;text-decoration:none;border-radius:10px;font-weight:600">Сбросить пароль</a></p>'
-      + '<p style="font-size:13px;color:#889">Или скопируйте: ' + resetUrl + '</p>'
-      + '<p style="font-size:13px;color:#889">Ссылка действует 1 час.</p>'
-      + '</div>';
-
-    let emailSent = false;
-    try {
-      await sendEmail('Восстановление пароля на iomastavka', html);
-      emailSent = true;
-      console.log('[password-reset] email sent to ' + email);
-    } catch(e){
-      console.warn('[password-reset] email fail: ' + e.message);
-      console.log('[password-reset] ССЫЛКА: ' + resetUrl);
-    }
-    res.json({
-      ok: true,
-      emailSent: emailSent,
-      email: email,
-      resetUrl: emailSent ? null : resetUrl,
-      message: emailSent
-        ? 'Письмо со ссылкой отправлено на ' + email + '. Проверьте почту (включая Спам).'
-        : 'Письмо не удалось отправить (тестовый режим Resend). Используйте ссылку ниже.'
-    });
-  } catch(e){
-    console.warn('[password-reset] error: ' + e.message);
-    res.status(500).json({ ok:false, error:'Ошибка сервера' });
-  }
-});
-
-app.post('/api/password-reset/confirm', function(req, res){
-  try {
-    const token = String((req.body && req.body.token) || '').trim();
-    const password = String((req.body && req.body.password) || '');
-    if (!token) return res.status(400).json({ ok:false, error:'Не указан токен' });
-    if (password.length < 6) return res.status(400).json({ ok:false, error:'Пароль минимум 6 символов' });
-    const clients = require('./lib/clients');
-    const c = clients.findByResetToken(token);
-    if (!c) return res.status(400).json({ ok:false, error:'Ссылка недействительна или истекла' });
-    const ok = clients.setPassword(c.id, password);
-    if (!ok) return res.status(500).json({ ok:false, error:'Не удалось сохранить пароль' });
-    console.log('[password-reset] password changed for ' + c.email);
-    res.json({ ok:true, message:'Пароль обновлён' });
-  } catch(e){
-    console.warn('[password-reset] confirm error: ' + e.message);
-    res.status(500).json({ ok:false, error:'Ошибка сервера' });
-  }
-});
-
-app.get('/reset', function(req, res){
-  res.sendFile(path.join(ROOT, 'reset.html'));
-});
-
-app.post('/api/assist', async function(req, res){
-  try {
-    const question = String((req.body && req.body.question) || '').slice(0, 2000);
-    if (!question.trim()) return res.status(400).json({ ok:false, error:'question required' });
-    const auth = req.cookies && req.cookies.auth;
-    const role = (auth === 'admin' || auth === '1') ? 'admin' : (auth && String(auth).startsWith('client:') ? 'client' : 'guest');
-
-    const pb = loadPlaybook();
-    const q = question.toLowerCase();
-    const allowed = (pb.topics || []).filter(function(t){
-      if (role === 'admin') return true;
-      return (t.role || 'public') === 'public';
-    });
-
-    // Подбор релевантных тем
-    const scored = allowed.map(function(t){
-      let score = 0;
-      const text = (t.title + ' ' + t.answer + ' ' + (t.keywords||[]).join(' ')).toLowerCase();
-      (t.keywords || []).forEach(function(k){ if (q.includes(String(k).toLowerCase())) score += 10; });
-      const words = q.split(/\s+/).filter(function(w){ return w.length > 2; });
-      words.forEach(function(w){ if (text.includes(w)) score += 3; });
-      return Object.assign({}, t, { _score: score });
-    }).sort(function(a,b){ return b._score - a._score; }).slice(0, 4);
-
-    const topScore = scored.length ? (scored[0]._score || 0) : 0;
-    const context = scored.map(function(t){ return '### ' + t.title + '\n' + t.answer; }).join('\n\n');
-
-    // БЫСТРЫЙ ПУТЬ: score >= 12 И короткий вопрос -> короткий ответ мгновенно
-    const shortQ = question.trim().length < 80;
-    if (topScore >= 12 && shortQ){
-      const top = scored[0];
-      let replyFast = String(top.shortAnswer || top.answer || '').trim();
-      // Добавляем сноску
-      replyFast = replyFast + '\n\n_Уточните детали у вашего менеджера._';
-      console.log('[assist] FAST match: ' + top.title + ' (score=' + topScore + ')');
-      return res.json({
-        ok: true,
-        role: role,
-        mode: 'fast',
-        provider: 'playbook',
-        reply: replyFast,
-        matchedTopics: [{ title: String(top.title||''), id: String(top.id||'') }]
-      });
-    }
-
-    let sysLines, userPrompt;
-    let mode = 'chat';
-
-    if (topScore > 0){
-      // Есть ответ в playbook — используем его как основу
-      mode = 'playbook';
-      sysLines = [
-        'Ты — умный ассистент логистической компании (Китай → Россия).',
-        'Отвечай ТОЛЬКО на русском. Максимум 2-3 предложения.',
-        'Отвечай РОВНО на заданный вопрос, НЕ вываливай всю информацию из контекста.',
-        'Если вопрос про конкретный товар или услугу — в конце задай 1 уточняющий вопрос (например: «Уточните, что за товар?»).',
-        'Используй цифры РОВНО как в контексте, не переставляй (ДС=20000, СС=от 100000).',
-        'НЕ пиши «уточню и вернусь» — это невозможно.',
-        'В САМОМ КОНЦЕ с новой строки курсивом добавь: _Уточните детали у вашего менеджера._',
-        '',
-        'РОЛЬ: ' + (role === 'admin' ? 'администратор компании' : (role === 'client' ? 'клиент' : 'гость сайта')),
-        '',
-        'КОНТЕКСТ:',
-        context
-      ];
-      userPrompt = 'Вопрос клиента: ' + question + '\n\nОтветь коротко (2-3 предложения). В конце уточняющий вопрос и курсивная сноска.';
-    } else {
-      // Нет ответа — свободный чат через облако
-      mode = 'freechat';
-      sysLines = [
-        'Ты — AI-ассистент логистической компании (Китай → Россия).',
-        'Ты общаешься с ' + (role === 'admin' ? 'администратором компании (твоим создателем — уважай его, он всегда прав про бизнес)' : (role === 'client' ? 'клиентом' : 'гостем сайта')) + '.',
-        '',
-        'ПРАВИЛА:',
-        '1. Отвечай ТОЛЬКО на русском. Дружелюбно, тепло, коротко (1-3 предложения).',
-        '2. Если гость просто здоровается или болтает — поддержи разговор, будь вежлив. Например на «привет» — «Здравствуйте! Чем могу помочь?».',
-        '3. Если это вопрос про логистику/бизнес, а точного ответа нет — скажи: «Уточните у менеджера — он поможет с деталями», но дружелюбно.',
-        '4. НЕ выдумывай цифры, сроки, названия компаний, формулы.',
-        '5. Если тебя просят раскрыть внутренние цифры, себестоимость, формулы расчёта — НЕ раскрывай, скажи «уточните у менеджера».',
-        '6. Никогда не говори что ты «уточнишь и вернёшься» — это невозможно.',
-        '7. Максимум 4 предложения в ответе.'
-      ];
-      userPrompt = question;
-    }
-
-    const systemPrompt = sysLines.join('\n');
-    let reply = '';
-    let provider = 'none';
-    const t0 = Date.now();
-
-    // Приоритет: облако (Groq → DeepSeek → Gemini) — быстрое и качественное
-    try {
-      const t1 = Date.now();
-      reply = await aiChatText(systemPrompt, userPrompt, 300);
-      provider = 'cloud';
-      console.log('[assist] mode=' + mode + ' role=' + role + ' provider=cloud ' + (Date.now()-t1) + 'ms');
-    } catch(ec){
-      console.warn('[assist] cloud fail: ' + ec.message + ' → Ollama');
-    }
-
-    // Fallback: Ollama (локальная, если облако недоступно)
-    if (!reply || reply.length < 10){
-      try {
-        const t2 = Date.now();
-        reply = await ollamaChatText(systemPrompt, userPrompt, 300, { timeoutMs: 45000, temperature: 0.6 });
-        provider = 'ollama';
-        console.log('[assist] mode=' + mode + ' provider=ollama ' + (Date.now()-t2) + 'ms');
-      } catch(eo){
-        console.warn('[assist] ollama fail: ' + eo.message);
-      }
-    }
-
-    if (!reply || reply.length < 5){
-      return res.status(502).json({ ok:false, error:'AI недоступен. Попробуйте через минуту.' });
-    }
-
-    res.json({
-      ok: true,
-      role: role,
-      mode: mode,
-      provider: provider,
-      reply: String(reply).trim(),
-      matchedTopics: scored.filter(function(t){ return t._score > 0; }).map(function(t){ return { title: String(t.title||''), id: String(t.id||'') }; })
-    });
-  } catch(e){
-    console.warn('[assist] error: ' + e.message);
-    res.status(500).json({ ok:false, error: e.message });
-  }
-});
-
 app.get('/api/agents', function(req,res){
-  try {
-    const file = path.join(DATA_DIR,'agents.json');
-    let records = JSON.parse(fs.readFileSync(file,'utf8'));
-    const auth = req.cookies && req.cookies.auth;
-    const isAdmin = auth === 'admin' || auth === '1';
-    if (!isAdmin) records = records.filter(function(r){ return !r.private; });
-    res.json({ ok:true, records, total: records.length, isAdmin });
-  } catch(e){
-    try {
-      const b = JSON.parse(fs.readFileSync(path.join(ROOT,'agents.json'),'utf8'));
-      res.json({ ok:true, records:b, total: b.length, isAdmin: false });
-    } catch(e2){ res.json({ ok:true, records:[], total: 0, isAdmin: false }); }
-  }
+  try { const file = path.join(DATA_DIR,'agents.json'); const records = JSON.parse(fs.readFileSync(file,'utf8')); res.json({ ok:true, records }); }
+  catch(e){ try { const b = JSON.parse(fs.readFileSync(path.join(ROOT,'agents.json'),'utf8')); res.json({ ok:true, records:b }); } catch(e2){ res.json({ ok:true, records:[] }); } }
 });
 
 app.get('/api/rates', function(req,res){ res.json(ensureRateDb()); });
@@ -2224,29 +1652,24 @@ app.get('/api/my-orders', function(req, res) {
 
 app.post('/api/login', function(req,res){
   const body = req.body || {};
-  const email = String(body.email || '').trim().toLowerCase();
+  const email = String(body.email || '').trim();
   const password = String(body.password || '');
 
-  if (!email) return res.status(400).json({ ok:false, error:'email required' });
-  if (!password) return res.status(400).json({ ok:false, error:'password required' });
-
-  const adminEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-
-  // Админ: email совпадает с ADMIN_EMAIL
-  if (adminEmail && email === adminEmail) {
-    if (!verifyPassword(password)) return res.status(401).json({ ok:false, error:'invalid credentials' });
-    res.cookie('auth','admin',{httpOnly:true,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
-    res.cookie('authUser','admin',{httpOnly:false,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
-    return res.json({ ok:true, role:'admin' });
+  // Путь 1: клиент по email+паролю
+  if (email) {
+    const clients = require('./lib/clients');
+    const c = clients.verifyClient(email, password);
+    if (!c) return res.status(401).json({ ok:false, error:'invalid credentials' });
+    res.cookie('auth', 'client:' + c.id, { httpOnly:true, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
+    res.cookie('authUser', c.name, { httpOnly:false, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
+    return res.json({ ok:true, role:'client', name:c.name, email:c.email });
   }
 
-  // Клиент
-  const clients = require('./lib/clients');
-  const c = clients.verifyClient(email, password);
-  if (!c) return res.status(401).json({ ok:false, error:'invalid credentials' });
-  res.cookie('auth', 'client:' + c.id, { httpOnly:true, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
-  res.cookie('authUser', c.name, { httpOnly:false, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
-  res.json({ ok:true, role:'client', name:c.name, email:c.email });
+  // Путь 2: админ по паролю (как раньше)
+  if (!verifyPassword(password)) return res.status(401).json({ ok:false });
+  res.cookie('auth','admin',{httpOnly:true,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
+  res.cookie('authUser','admin',{httpOnly:false,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
+  res.json({ ok:true, role:'admin' });
 });
 
 // ========== РЕГИСТРАЦИЯ КЛИЕНТА ==========
