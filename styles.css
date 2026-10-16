@@ -3301,3 +3301,41 @@ html.dark .hero-copy { padding-bottom:8px; }
 @media(max-width:900px) { .freight-dashboard-grid {grid-template-columns:1fr}.freight-side-stack {grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto}.world-route-map{min-height:0}.freight-command-center{padding:16px}.transport-options{padding-bottom:12px} }
 @media(max-width:580px) { .freight-panel-head{align-items:flex-start;flex-direction:column;gap:12px}.network-status{align-self:flex-start}.freight-side-stack{grid-template-columns:1fr}.route-map-panel{padding:10px}.map-legend{gap:10px}.freight-bottom-strip{gap:10px 15px}.freight-command-center{border-radius:16px;margin-top:10px} }
 @media(prefers-reduced-motion:reduce) { .route-lines{animation:none} }
+
+
+/* Reference composition: compact brand headline + dashboard as the main content. */
+#homeView {
+  justify-content:flex-start !important;
+  align-items:stretch !important;
+  padding:24px clamp(12px,3vw,38px) 30px !important;
+  overflow-y:auto !important;
+  overscroll-behavior:contain;
+}
+#homeView > .hero-copy {
+  text-align:left !important;
+  width:min(1220px,100%);
+  margin:4px auto 18px !important;
+  padding:0 4px 0 !important;
+}
+#homeView > .hero-copy .eyebrow {font-size:10px;letter-spacing:.19em;color:#5edbe9 !important;}
+#homeView > .hero-copy h1 {font-size:clamp(38px,4.5vw,57px);letter-spacing:-.065em;margin:8px 0 7px;line-height:1;color:#eef8ff !important;}
+#homeView > .hero-copy p {font-size:14px;color:#91aec3 !important;line-height:1.55;}
+#homeView .freight-command-center {flex:0 0 auto;}
+#homeView > .quick-grid {flex:0 0 auto;}
+#homeView > .home-status {flex:0 0 auto;margin:16px auto 0 !important;padding-top:14px;}
+@media(min-width:1250px) {
+  #homeView {padding-top:20px !important;}
+  #homeView > .hero-copy h1 {font-size:46px;}
+  #homeView > .hero-copy {margin-bottom:14px !important;}
+  .freight-command-center {padding:20px 22px;}
+  .freight-dashboard-grid {grid-template-columns:minmax(0,1.85fr) minmax(260px,.76fr);}
+  .world-route-map {max-height:360px;}
+}
+@media(max-width:600px) {
+  #homeView {padding:14px 10px 24px !important;}
+  #homeView > .hero-copy h1 {font-size:38px;}
+  #homeView > .hero-copy p {font-size:12px;}
+  .freight-panel-head h2 {font-size:23px;}
+  .route-map-panel {padding:9px;}
+  .map-labels {font-size:12px;}
+}
