@@ -3580,3 +3580,19 @@ html:not(.dark) .admin-request-row p{color:#4f6a7d}
 .route-map-corridors .corridor-line.is-mode-active{opacity:.92;stroke-width:3.8;filter:drop-shadow(0 0 6px rgba(53,215,232,.72));}
 .route-map-corridors .corridor-line{transition:opacity .2s,stroke-width .2s;}
 @media(max-width:850px){.topbar{height:64px!important;}}
+
+/* Dedicated account entry */
+.account-landing-panel{width:min(650px,calc(100% - 28px));margin:clamp(24px,7vh,80px) auto;padding:clamp(22px,4vw,38px);border:1px solid rgba(100,180,219,.22);border-radius:20px;background:linear-gradient(145deg,rgba(12,29,46,.96),rgba(8,22,37,.97));box-shadow:0 25px 70px rgba(0,0,0,.22)}
+.account-landing-panel h1{margin:10px 0;color:#f0f8ff;font-size:clamp(28px,4vw,42px);letter-spacing:-.045em;line-height:1.1}
+.account-landing-panel>p{color:#8eabbd;font-size:13px;line-height:1.7}
+.account-action-row{display:flex;gap:9px;flex-wrap:wrap;margin:23px 0}
+.account-action-row button{border:1px solid rgba(55,215,232,.28);border-radius:9px;padding:12px 16px;background:linear-gradient(110deg,#159ab8,#286fc3);color:#fff;font-size:12px;font-weight:800;cursor:pointer}
+.account-action-row button+button{background:rgba(49,158,189,.08);color:#9de8f0}
+.account-guest-note{display:grid;gap:5px;padding:12px;border:1px solid rgba(100,178,215,.14);border-radius:9px;background:rgba(6,20,34,.4)}
+.account-guest-note b{color:#b7dce9;font-size:11px}
+.account-guest-note span{color:#809eaf;font-size:10px;line-height:1.55}
+html:not(.dark) .account-landing-panel{background:linear-gradient(145deg,#fff,#f1f7fb);border-color:#c9dfe9;box-shadow:0 18px 45px rgba(44,91,118,.1)}
+html:not(.dark) .account-landing-panel h1{color:#143c53}
+html:not(.dark) .account-landing-panel>p,html:not(.dark) .account-guest-note span{color:#5e7789}
+html:not(.dark) .account-guest-note{background:#f3f8fa;border-color:#d9e7ee}
+html:not(.dark) .account-guest-note b{color:#31576d}
