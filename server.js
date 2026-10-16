@@ -744,6 +744,11 @@ app.get('/favicon.ico', function(req,res){
 });
 
 app.get('/', function(req,res){ res.sendFile(path.join(ROOT,'index.html')); });
+// Named page routes share the existing application shell; route-planner.js selects the active section.
+['/routes','/services','/news','/rates','/forwarders','/assistant','/customs','/account','/admin','/tarot','/request'].forEach(function(route){
+  app.get(route, function(req,res){ res.sendFile(path.join(ROOT,'index.html')); });
+});
+app.get('/route-planner.js', function(req,res){ res.sendFile(path.join(ROOT,'route-planner.js')); });
 app.get('/app.js', function(req,res){ res.sendFile(path.join(ROOT,'app.js')); });
 app.get('/styles.css', function(req,res){ res.sendFile(path.join(ROOT,'styles.css')); });
 app.get('/cabinet.css', function(req,res){ res.sendFile(path.join(ROOT,'cabinet.css')); });
