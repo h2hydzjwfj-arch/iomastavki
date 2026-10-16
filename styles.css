@@ -3813,3 +3813,13 @@ html:not(.dark) .route-source-proof p,html:not(.dark) .route-source-muted { colo
   .topbar { height:64px!important; min-height:64px; }
   .app-shell { height:calc(100dvh - 64px - var(--site-nav-h))!important; }
 }
+
+
+/* Day palette overrides for the compact hero and interactive map controls. */
+html:not(.dark) #homeView>.hero-copy .eyebrow { color:#137d93!important; }
+html:not(.dark) #homeView>.hero-copy h1 { color:#153d54!important; }
+html:not(.dark) #homeView>.hero-copy p { color:#4d6a7e!important; }
+html:not(.dark) .map-transport { fill:#168da7; filter:drop-shadow(0 0 4px rgba(23,136,167,.35)); }
+html:not(.dark) .map-transport.ship { fill:#2777b7; }
+html:not(.dark) .route-lines { filter:drop-shadow(0 0 3px rgba(22,127,163,.3)); }
+html:not(.dark) .freight-kpi>a:hover { color:#075b76; }
