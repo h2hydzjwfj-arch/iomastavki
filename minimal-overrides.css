@@ -537,3 +537,52 @@ html.dark .route-planner-map.real-route-map { background:#242424 !important; }
 @media (prefers-reduced-motion: reduce) {
   *,*::before,*::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
 }
+
+
+/* Soft gray mode: low-glare alternative between paper white and dark gray */
+html[data-theme="soft"] {
+  color-scheme:light;
+  --ink:#282828 !important; --ink-2:#454545 !important; --muted:#6f6f6f !important;
+  --faint:#8b8b8b !important; --panel:#f7f7f7 !important; --panel-border:#dedede !important;
+  --card:#f7f7f7 !important; --card-border:#dedede !important; --line:#dedede !important;
+  --line-strong:#c4c4c4 !important; --field:#f8f8f8 !important; --field-border:#cecece !important;
+  --hover:#eaeaea !important; --chip:#ededed !important; --chip-hover:#e3e3e3 !important;
+  --btn:#303030 !important; --accent:#303030 !important; --accent-2:#555 !important;
+}
+html[data-theme="soft"],html[data-theme="soft"] body {
+  background:#f0f0f0 !important; color:var(--ink) !important;
+}
+html[data-theme="soft"] .topbar,
+html[data-theme="soft"] .route-start-panel,
+html[data-theme="soft"] .route-controls-panel,
+html[data-theme="soft"] .route-map-panel,
+html[data-theme="soft"] .route-option-card,
+html[data-theme="soft"] .freight-command-center {
+  background:#f7f7f7 !important; border-color:#dedede !important;
+}
+html[data-theme="soft"] .route-planner-map.real-route-map,
+html[data-theme="soft"] .world-route-map.real-world-map {
+  background:#e9e9e9 !important; border-color:#d7d7d7 !important;
+}
+html[data-theme="soft"] .route-planner-map .leaflet-control-zoom a {
+  background:#f8f8f8 !important; color:#282828 !important;
+}
+html[data-theme="soft"] .route-planner-map .leaflet-control-attribution {
+  background:rgba(248,248,248,.9) !important; color:#666 !important;
+}
+html[data-theme="soft"] .route-start-submit,
+html[data-theme="soft"] .route-show-button {
+  background:#303030 !important; color:#fff !important; border-color:#303030 !important;
+}
+html[data-theme="soft"] .login-gate-btn {
+  background:#303030 !important; color:#fff !important; border-color:#303030 !important;
+}
+.route-source-proof { margin-top:10px !important; padding-top:8px !important; border-top:1px solid var(--line) !important; }
+.route-source-proof summary {
+  color:var(--muted) !important; font-size:11px !important; cursor:pointer !important;
+  user-select:none !important; list-style:none !important;
+}
+.route-source-proof summary::-webkit-details-marker { display:none !important; }
+.route-source-proof summary::before { content:"+"; display:inline-block; width:16px; color:var(--ink); font-size:13px; }
+.route-source-proof[open] summary::before { content:"−"; }
+.route-source-proof p { margin:7px 0 0 !important; color:var(--muted) !important; font-size:11px !important; line-height:1.6 !important; }
