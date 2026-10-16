@@ -65,12 +65,21 @@ function ensureRateDb(){
   return { version: 2, updatedAt: null, records };
 }
 function normalizeText(s=''){ return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+function normalizeTransportMode(value){
+  const m=normalizeText(value).replace(/[.\s/_-]+/g,'');
+  if (/^(air|avia|aviation|авиа|авиация|авиатранспорт|aircargo|воздушный)$/.test(m)) return 'air';
+  if (/^(rail|train|railway|жд|ждтранспорт|железнодорожный|железнаядорога|поезд|traincargo)$/.test(m)) return 'rail';
+  if (/^(road|truck|trucking|auto|авто|автомобильный|автотранспорт|автоперевозка|машина)$/.test(m)) return 'road';
+  if (/^(sea|ocean|ship|морской|море|морскаяперевозка|морскойтранспорт|судно)$/.test(m)) return 'sea';
+  if (/^(multimodal|мультимодальный|комбинированный|всемаршруты|всеварианты)$/.test(m)) return 'multimodal';
+  return m;
+}
 function routeScore(record, from, to, mode, distance){
   const a=normalizeText(from), b=normalizeText(to), rf=normalizeText(record.from), rt=normalizeText(record.to);
   let score=0;
   if (rf && (rf===a || rf.includes(a) || a.includes(rf))) score+=8;
   if (rt && (rt===b || rt.includes(b) || b.includes(rt))) score+=8;
-  if (mode && record.mode && normalizeText(record.mode)===normalizeText(mode)) score+=5;
+  if (mode && record.mode && normalizeTransportMode(record.mode)===normalizeTransportMode(mode)) score+=5;
   if (Number.isFinite(distance) && Number(record.distanceKm)) score += Math.max(0,5-Math.abs(distance-Number(record.distanceKm))/1200);
   return score;
 }
@@ -765,6 +774,7 @@ Object.keys(SITE_PAGE_FILES).forEach(function(route){
   app.get(route, function(req,res){ res.sendFile(path.join(ROOT,SITE_PAGE_FILES[route])); });
 });
 app.get('/route-planner.js', function(req,res){ res.sendFile(path.join(ROOT,'route-planner.js')); });
+app.get('/features.js', function(req,res){ res.type('application/javascript').sendFile(path.join(ROOT,'features.js')); });
 app.get('/app.js', function(req,res){ res.sendFile(path.join(ROOT,'app.js')); });
 app.get('/styles.css', function(req,res){ res.sendFile(path.join(ROOT,'styles.css')); });
 app.get('/cabinet.css', function(req,res){ res.sendFile(path.join(ROOT,'cabinet.css')); });
@@ -774,7 +784,7 @@ app.get('/fix_app.js', function(req,res){ res.sendFile(path.join(ROOT,'fix_app.j
 app.get('/minimal-overrides.css', function(req,res){ res.type('text/css').sendFile(path.join(ROOT,'minimal-overrides.css')); });
 app.get('/home-map.js', function(req,res){ res.type('application/javascript').sendFile(path.join(ROOT,'home-map.js')); });
 app.get('/api/health', function(req,res){ res.json({ ok:true }); });
-app.get('/api/version', function(req,res){ res.set('Cache-Control','no-store'); res.json({ ok:true, version:'99', build:'IOMASTAVKA_PREVIEW_20261016' }); });
+app.get('/api/version', function(req,res){ res.set('Cache-Control','no-store'); res.json({ ok:true, version:'100', build:'IOMASTAVKA_PREVIEW_20261016_FEATURES1' }); });
 app.get('/api/config', function(req,res){ res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.GROQ_API_KEY || process.env.DEEPSEEK_API_KEY), pexelsConfigured: Boolean(process.env.PEXELS_API_KEY) }); });
 
 // ========== Дорожное расстояние через OSRM + Nominatim ==========
