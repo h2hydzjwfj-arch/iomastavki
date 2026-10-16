@@ -132,6 +132,7 @@
   }
   function openLegacyView(name,path){
     closeCurrentViews();
+    if(name==='request'){var requestTs=$('#requestTime');if(requestTs)requestTs.value=String(Date.now());}
     if(window.iomaOpenView)window.iomaOpenView(name);
     else {var el=document.getElementById(name+'View');if(el){el.classList.add('open');el.setAttribute('aria-hidden','false');document.body.classList.add('view-open');}}
     if(path)setUrl(path);
@@ -140,6 +141,8 @@
   function routeToPath(path,changeUrl){
     var u;try{u=new URL(path,location.origin);}catch(e){u=new URL('/',location.origin);}
     var p=u.pathname.replace(/\/+$/,'')||'/';
+    var activeNav=({'/':'home','/routes':'routes','/services':'services','/news':'news','/rates':'rates','/forwarders':'forwarders','/customs':'customs','/admin':'admin'})[p]||'';
+    $('[data-page-route]').forEach(function(a){if(a.dataset.pageRoute===activeNav)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
     if(p==='/admin'&&state.role!=='admin'){showToast('Администрирование доступно только администратору.');goAuth('login');return;}
     if(['/rates','/forwarders','/customs'].includes(p)&&state.role==='guest'){showToast('Вы в гостевом режиме. Войдите или зарегистрируйтесь для доступа к этому разделу.');goAuth('register');return;}
     if(changeUrl)setUrl(p+(u.search||''));
