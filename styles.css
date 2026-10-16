@@ -3543,3 +3543,35 @@ html:not(.dark) .admin-security-note{background:#f4f0ff;border-color:#ddd3fc}
 @media(max-width:850px){:root{--site-nav-h:74px}.primary-site-nav{align-items:flex-start;flex-direction:column;justify-content:center;gap:5px;padding:7px 10px;min-height:var(--site-nav-h)}.site-nav-links{width:100%;gap:2px}.site-nav-links a{padding:8px 10px;font-size:11px}.site-nav-meta{width:100%;justify-content:flex-start}.site-mode-note{max-width:none}.app-shell{height:calc(100dvh - 64px - var(--site-nav-h))!important}.route-planner-grid{grid-template-columns:1fr}.route-controls-panel{position:relative;top:auto}.route-options-grid{grid-template-columns:1fr}.route-guest-banner{align-items:flex-start;flex-wrap:wrap}.route-guest-banner>button{margin-left:49px}}
 @media(max-width:560px){:root{--site-nav-h:76px}.site-nav-links a{padding:7px 8px;font-size:10px}.site-nav-meta{gap:7px}.site-mode-note{font-size:9px}.view-layer.route-page-layer,.view-layer.services-page-layer,.view-layer.admin-page-layer{padding:10px 9px 20px}.route-page-header{align-items:flex-start;flex-direction:column}.route-page-header h2{font-size:25px}.route-mode-bar{gap:6px;padding:9px}.route-mode-label{width:100%;margin:2px 2px 4px}.route-mode-button{min-width:calc(50% - 4px);flex:1;padding:8px}.mode-icon{width:28px;height:28px;flex-basis:28px}.route-map-interactive{padding:9px}.route-planner-map{min-height:205px}.route-map-panel-head{align-items:flex-start;flex-direction:column}.route-map-panel-head h3,.route-controls-title h3,.route-results-head h3{font-size:18px}.map-legend-live{font-size:8px}.route-map-legend{gap:9px;font-size:9px}.route-controls-panel{padding:12px}.route-endpoint-switch button{padding:8px 6px;gap:6px}.service-hub-grid,.admin-tools-grid,.corridor-library-grid{grid-template-columns:1fr}.service-hub-card{min-height:0}.corridor-library-grid p{min-height:0}.freight-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.freight-panel-head{align-items:flex-start;flex-direction:column}.freight-panel-head h2{font-size:23px}#homeView{padding:14px 10px 20px!important}.freight-command-center{padding:12px;margin-top:9px}.home-status{padding-bottom:8px}}
 @media(prefers-reduced-motion:reduce){.route-map-corridors .corridor-line,.route-active-line{animation:none!important}}
+
+
+/* Admin workspace and cargo request form details */
+.admin-tools-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+.admin-detail-card,.admin-requests-card{min-width:0;padding:17px;border:1px solid rgba(103,178,217,.18);border-radius:13px;background:linear-gradient(145deg,rgba(14,34,53,.93),rgba(8,23,39,.94))}
+.admin-detail-card>div:first-child{margin-bottom:13px}
+.admin-detail-card h3,.admin-requests-head h3{margin:6px 0 8px;color:#e4f3fa;font-size:15px;line-height:1.4}
+.admin-detail-card p,.admin-requests-head p{color:#829fb2;font-size:11px;line-height:1.6;margin-bottom:12px}
+.admin-detail-card textarea,.admin-detail-card input,.request-message-label textarea{display:block;width:100%;min-width:0;padding:10px 11px;border:1px solid rgba(105,174,216,.22);border-radius:8px;background:#081a2b;color:#e5f4fb;font:inherit;font-size:12px;line-height:1.5;resize:vertical}
+.admin-detail-card textarea:focus,.admin-detail-card input:focus,.request-message-label textarea:focus{outline:none;border-color:#35d7e8;box-shadow:0 0 0 3px rgba(53,215,232,.1)}
+.admin-detail-card label{display:block;margin:10px 0 5px;color:#8daabd;font-size:10px;font-weight:750}
+.admin-detail-card .hub-action-button{margin-top:12px}
+#adminRateFileStatus,#adminAgentsStatus,#adminPlaybookStatus,#adminHealthStatus{display:block;margin-top:10px;color:#80b8c8;font-size:10px;line-height:1.5;overflow-wrap:anywhere}
+.admin-requests-card{margin-top:14px}
+.admin-requests-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.admin-requests-list{display:grid;gap:8px;margin-top:12px;color:#809caf;font-size:11px;line-height:1.55}
+.admin-request-row{padding:12px;border:1px solid rgba(105,178,216,.15);border-radius:9px;background:rgba(4,17,29,.5)}
+.admin-request-meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.admin-request-meta b{color:#d9eef7;font-size:12px}
+.admin-request-meta time{color:#7594a8;font-size:9px}
+.admin-request-row p{margin-top:7px;color:#97b0c1;white-space:pre-wrap;overflow-wrap:anywhere}
+.admin-detail-card button:disabled,.route-show-button:disabled{opacity:.55;cursor:wait}
+.request-message-label{display:block;margin:12px 0;color:var(--muted);font-size:13px}
+.request-message-label>span{display:block;margin-bottom:5px}
+.request-message-label textarea{min-height:84px;background:var(--field);border-color:var(--field-border);color:var(--ink)}
+html:not(.dark) .admin-detail-card,html:not(.dark) .admin-requests-card{background:linear-gradient(145deg,#fff,#f2f7fa);border-color:rgba(90,143,174,.23)}
+html:not(.dark) .admin-detail-card h3,html:not(.dark) .admin-requests-head h3,html:not(.dark) .admin-request-meta b{color:#173b50}
+html:not(.dark) .admin-detail-card p,html:not(.dark) .admin-requests-head p{color:#5c7586}
+html:not(.dark) .admin-detail-card textarea,html:not(.dark) .admin-detail-card input,html:not(.dark) .admin-request-row{background:#f5fafc;border-color:#d2e2ea;color:#14394f}
+html:not(.dark) .admin-request-row p{color:#4f6a7d}
+@media(max-width:1050px){.admin-tools-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.admin-tools-detail-grid{grid-template-columns:1fr}.admin-requests-head{flex-direction:column;align-items:stretch}.admin-requests-head .hub-action-button{align-self:flex-start}}
