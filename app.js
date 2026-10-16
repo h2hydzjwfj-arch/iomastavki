@@ -52,7 +52,7 @@ function friendlyError(e){
   if (window.__iomaGate) return;
   window.__iomaGate = true;
 
-  var AUTH_ONLY = ['agentImportButton', 'customsButton'];
+  var AUTH_ONLY = ['customsButton'];
 
   function apply(role, username){
     var authed = (role === 'admin' || role === 'client');
@@ -64,6 +64,12 @@ function friendlyError(e){
       var el = document.getElementById(id); if (!el) return;
       if (authed) el.removeAttribute('hidden'); else el.setAttribute('hidden', '');
     });
+    // Import rates changes shared commercial data and is reserved for admins.
+    var importRates = document.getElementById('agentImportButton');
+    if (importRates){
+      if (role === 'admin'){ importRates.removeAttribute('hidden'); importRates.style.removeProperty('display'); }
+      else { importRates.setAttribute('hidden', ''); importRates.style.setProperty('display', 'none', 'important'); }
+    }
     var login  = document.getElementById('loginGateBtn');
     var logout = document.getElementById('iomaLogoutBtn');
     var cab    = document.getElementById('iomaCabinetBtn');
