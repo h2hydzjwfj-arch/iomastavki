@@ -903,7 +903,7 @@
       + '      <button class="ioma-chat-iconbtn" type="button" id="iomaChatAttach" title="Прикрепить файл" aria-label="Прикрепить файл">'
       + '        <svg viewBox="0 0 24 24"><path d="M8.5 12.5 14.9 6.1a3.3 3.3 0 0 1 4.7 4.7l-8.9 8.9a5 5 0 0 1-7.1-7.1l9.2-9.2a2.9 2.9 0 0 1 4.1 4.1l-8.8 8.8a1.4 1.4 0 0 1-2-2l7.9-7.9"/></svg>'
       + '      </button>'
-      + '      <input type="file" id="iomaChatFileInput" hidden multiple accept=".txt,.csv,.json,.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp">'
+      + '      <input type="file" id="iomaChatFileInput" hidden multiple accept=".txt,.csv,.json,.md,.log">'
       + '      <button class="ioma-chat-iconbtn" type="button" id="iomaChatMic" title="Голосовой ввод" aria-label="Голосовой ввод">'
       + '        <svg viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="12" rx="4"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>'
       + '      </button>'
@@ -957,8 +957,7 @@
         };
         reader.readAsText(f);
       } else {
-        pendingFiles.push({ name: f.name, text: '[файл ' + f.name + ', ' + Math.round(f.size/1024) + ' КБ]' });
-        renderFiles();
+        alert('Этот чат пока читает только текстовые файлы TXT, CSV, JSON, MD и LOG. PDF, изображения и таблицы здесь не извлекаются — вставьте нужный текст в сообщение.');
       }
     });
     inp.value = '';
