@@ -234,36 +234,186 @@
   function routeSteps(ids){return compactIds(ids).map(function(id){var p=city(id);return {id:id,name:p.name,country:p.country};});}
   function reverseSteps(ids,from,to){return routeSteps(reverseForDirection(ids,from,to));}
   function defaultCorridors(from,to,mode){
-    var cnFirst=city(from).region==='cn';
-    var fromRegion=city(from).region,toRegion=city(to).region;
-    var pairs=[
-      {id:'manzhouli',mode:'rail',title:SOURCE.manzhouli.title,label:SOURCE.manzhouli.label,points:cnFirst?[from,'manzhouli','zabaikalsk','novosibirsk',to]:[from,'novosibirsk','zabaikalsk','manzhouli',to],desc:'Восточный вариант через погранстанцию Маньчжурия—Забайкальск и дальнейшую российскую железнодорожную сеть.',source:SOURCE.manzhouli,fit:'Подходит для проверки контейнерной Ж/Д схемы на центральные и дальние направления России.'},
-      {id:'kazakhstan',mode:'rail',title:SOURCE.kazakhstan.title,label:SOURCE.kazakhstan.label,points:cnFirst?[from,'alashankou','dostyk',to]:[from,'dostyk','alashankou',to],desc:'Западная железнодорожная схема через узлы китайско-казахстанской границы и далее через Казахстан/Россию.',source:SOURCE.kazakhstan,fit:'Альтернатива восточному маршруту; станция передачи зависит от направления, типа контейнера и оператора.'},
-      {id:'mongolia',mode:'rail',title:SOURCE.mongolia.title,label:SOURCE.mongolia.label,points:(function(){if(fromRegion==='cn'&&toRegion==='mn')return [from,'erenhot','zamyn-uud',to];if(fromRegion==='mn'&&toRegion==='cn')return [from,'zamyn-uud','erenhot',to];if(fromRegion==='mn'&&toRegion==='ru')return [from,'naushki',to];if(fromRegion==='ru'&&toRegion==='mn')return [from,'naushki',to];if(cnFirst)return [from,'erenhot','zamyn-uud','ulaanbaatar','naushki',to];return [from,'naushki','ulaanbaatar','zamyn-uud','erenhot',to];})(),desc:'Центральный железнодорожный сценарий через китайско-монгольский узел Эрэн-Хото—Замын-Ууд, сеть УБЖД и российское направление Наушки. Использовать только как вариант для запроса оператору: текущий сервис по конкретной паре городов не подтверждается этой схемой.',source:SOURCE.mongolia,fit:'Имеет смысл сравнить для контейнерной Ж/Д перевозки, если оператор подтверждает стык через Монголию, транзитные разрешения, перегрузку и слот.'},
-      {id:'suifenhe',mode:'rail',title:SOURCE.suifenhe.title, label:SOURCE.suifenhe.label, points:cnFirst?[from,'suifenhe','grodekovo','ussuriysk',to]:[from,'ussuriysk','grodekovo','suifenhe',to],desc:'Региональный дальневосточный сценарий через Суйфэньхэ—Гродеково с дальнейшей доставкой по российской сети.',source:SOURCE.suifenhe,fit:'Особенно уместно для Уссурийска, Владивостока и других точек Дальнего Востока.'},
-      {id:'heihe',mode:'multimodal',title:SOURCE.heihe.title,label:SOURCE.heihe.label,points:cnFirst?[from,'heihe','blagoveshchensk','khabarovsk',to]:[from,'khabarovsk','blagoveshchensk','heihe',to],desc:'Региональный сценарий через Хэйхэ—Благовещенск с последующей автодоставкой или передачей на внутреннюю железнодорожную сеть.',source:SOURCE.heihe,fit:'Больше подходит для приграничных и дальневосточных направлений; точный сервис нужно согласовать.'},
-      {id:'sea',mode:'sea',title:SOURCE.sea.title,label:SOURCE.sea.label,points:cnFirst?[from,'vladivostok','moscow',to]:[from,'moscow','vladivostok',to],desc:'Морской участок до российского дальневосточного порта, терминальная обработка и контейнерный поезд до Москвы; далее возможна автодоставка.',source:SOURCE.sea,fit:'Проверять вместе с морским фрахтом, портовыми расходами, таможенным плечом и доставкой до двери.'},
-      {id:'air',mode:'air',title:SOURCE.air.title,label:SOURCE.air.label,points:[from,to],desc:'Есть документированный пример комбинированной схемы: груз автотранспортом до хаба HKIA Dongguan Logistics Park, затем авиарейсы в Шереметьево. Для новой заявки отдельно подтверждаются авиакомпания, путь до хаба, число стыковок, доступный слот и аэропорт.',source:SOURCE.air,fit:'Для срочного или компактного груза. До бронирования проверить аккумуляторы, опасный груз, упаковку, объёмный вес, cut-off, таможенные документы и доступность груза к вылету.'},
-      {id:'road',mode:'road',title:'Автоперевозка через доступный погранпереход',label:'АВТО / CROSS-BORDER ROAD',points:cnFirst?[from,'manzhouli','zabaikalsk',to]:[from,'zabaikalsk','manzhouli',to],desc:'Автомобильный сценарий через согласованный перевозчиком пункт пропуска. Не все железнодорожные погранузлы принимают одинаковые автомобильные сервисы — подтверждайте именно автомобильный КПП.',source:SOURCE.road,fit:'Сравнивать тип кузова, грузовые ограничения, очередь, транзитные документы, возможность перегруза и доставку до двери.'},
-      {id:'road-kazakhstan',mode:'road',title:'Автокоридор через Хоргос — Алтынколь и Казахстан',label:'АВТО / ЗАПАДНЫЙ КОРИДОР',points:cnFirst?[from,'khorgos','altynkol',to]:[from,'altynkol','khorgos',to],desc:'Сухопутный вариант через китайско-казахстанский погранузел с последующей доставкой по согласованному маршруту через Казахстан и Россию.',source:SOURCE.kazakhstan,fit:'Сравнивать с восточным коридором по доступности перевозчика, транзитным требованиям, типу кузова и пункту назначения.'}
-    ];
-    if(!isChRu(from,to)){
-      return [{id:'domestic',mode:mode==='multimodal'?'rail':mode,title:'Внутреннее плечо: '+cityName(from)+' → '+cityName(to),label:'НЕТ МЕЖДУНАРОДНОГО ПЕРЕХОДА В ВЫБРАННОЙ ПАРЕ',points:[from,to],desc:'Указанные пункты находятся в одном регионе списка. Международные коридоры ниже не следует автоматически применять к этому маршруту.',source:null,fit:'Для такой пары нужен расчёт локального автомобильного или железнодорожного плеча; международный участок не включён.'}];
+    var fromCity=city(from),toCity=city(to);
+    var fromRegion=fromCity.region,toRegion=toCity.region;
+    var cnFirst=fromRegion==='cn';
+    var isChinaRussia=(fromRegion==='cn'&&toRegion==='ru')||(fromRegion==='ru'&&toRegion==='cn');
+    if(!isChinaRussia){
+      if(from===to)return [];
+      return [{
+        id:'domestic',mode:mode==='multimodal'?'road':mode,
+        title:(fromRegion===toRegion?'Внутренняя доставка':'Маршрут требует проверки')+': '+cityName(from)+' → '+cityName(to),
+        label:'ПРЕДВАРИТЕЛЬНЫЙ СЦЕНАРИЙ',
+        points:[from,to],
+        desc:'Этот подбор охватывает прежде всего коридоры Китай—Россия. Для выбранной пары требуется отдельно проверить внутренний или транзитный сервис; международный КПП автоматически не назначается.',
+        source:null,
+        fit:'Проверьте региональное плечо, документы и доступность перевозчика для выбранной пары.'
+      }];
     }
-    var filtered=pairs.filter(function(p){if(fromRegion==='mn'||toRegion==='mn')return p.id==='mongolia'&&(mode==='multimodal'||mode==='rail');return mode==='multimodal'||p.mode===mode||(mode==='rail'&&p.id==='sea')||(mode==='road'&&p.id==='heihe');});
-    if(city(to).id==='blagoveshchensk'||city(to).id==='ussuriysk'||city(to).id==='vladivostok'){
-      filtered.sort(function(a,b){var score={heihe:0,suifenhe:1,manzhouli:3,kazakhstan:4,sea:5,air:6,road:7};return (score[a.id]??10)-(score[b.id]??10);});
-    } else if(city(to).id==='moscow'||city(to).id==='saint-petersburg'||city(to).id==='yekaterinburg'||city(to).id==='novosibirsk'){
-      filtered.sort(function(a,b){var score={manzhouli:0,kazakhstan:1,sea:2,air:3,suifenhe:4,heihe:5,road:6};return (score[a.id]??10)-(score[b.id]??10);});
-    }
-    return filtered.slice(0,mode==='multimodal'?8:4).map(function(p){
-      p.steps=routeSteps(p.points);
-      p.estimated='';
-      if(p.id==='sea'&&city(to).id==='moscow') p.estimated='Опубликованный ориентир FESCO для участка поездом Владивосток—Москва: 10–14 дней; морское плечо и обработки не включены.';
-      return p;
-    });
-  }
 
+    var cnCity=cnFirst?from:to;
+    var ruCity=cnFirst?to:from;
+    var farEast=['vladivostok','ussuriysk','khabarovsk','blagoveshchensk'].includes(ruCity);
+    var southern=['novorossiysk','krasnodar','rostov-on-don','volgograd'].includes(ruCity);
+    var western=['moscow','saint-petersburg','nizhny-novgorod','kazan','samara','perm','yekaterinburg','novosibirsk'].includes(ruCity);
+
+    function trimAt(nodes,target){
+      var clean=compactIds(nodes||[]);
+      var idx=clean.indexOf(target);
+      return idx>=0?clean.slice(0,idx):clean;
+    }
+    function orient(cnPath){
+      var clean=compactIds(cnPath);
+      return cnFirst?clean:clean.slice().reverse();
+    }
+    function make(id,modeId,title,label,cnNodes,desc,source,fit,extra){
+      var cnPath=[cnCity].concat(cnNodes||[],[ruCity]);
+      var points=orient(cnPath);
+      var p={id:id,mode:modeId,title:title,label:label,points:points,desc:desc,source:source||null,fit:fit||'Параметры и доступность должны быть подтверждены оператором.'};
+      if(extra&&extra.estimated)p.estimated=extra.estimated;
+      p.steps=routeSteps(points);
+      return p;
+    }
+    function eastRailNodes(target){
+      var nodes;
+      if(farEast)nodes=['manzhouli','zabaikalsk','chita','khabarovsk','ussuriysk'];
+      else nodes=['manzhouli','zabaikalsk','chita','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
+      return trimAt(nodes,target);
+    }
+    function centralRailNodes(target){
+      var nodes=['alashankou','dostyk','almaty','astana','omsk','yekaterinburg','perm'];
+      return trimAt(nodes,target);
+    }
+    function khorgosRailNodes(target){
+      var nodes=['khorgos','altynkol','almaty','astana','omsk','yekaterinburg','perm'];
+      return trimAt(nodes,target);
+    }
+    function suifenheRailNodes(target){
+      var nodes=farEast?['suifenhe','grodekovo','ussuriysk','khabarovsk']:['suifenhe','grodekovo','ussuriysk','khabarovsk','chita','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
+      return trimAt(nodes,target);
+    }
+    function mongoliaRailNodes(target){
+      var nodes=['erenhot','zamyn-uud','ulaanbaatar','naushki','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
+      return trimAt(nodes,target);
+    }
+    function roadEastNodes(target){
+      var nodes=farEast?['manzhouli','zabaikalsk','chita','khabarovsk','ussuriysk']:['manzhouli','zabaikalsk','chita','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
+      return trimAt(nodes,target);
+    }
+    function roadKazakhNodes(target){
+      return trimAt(['khorgos','nur-zholy','almaty','astana','omsk','yekaterinburg','perm'],target);
+    }
+    function roadAmurNodes(target){
+      var nodes=farEast?['heihe','kanikurgan','blagoveshchensk','khabarovsk']:['heihe','kanikurgan','blagoveshchensk','chita','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
+      return trimAt(nodes,target);
+    }
+    function roadPrimoryeNodes(target){
+      var nodes=farEast?['suifenhe','pogranichny','ussuriysk','khabarovsk']:['suifenhe','pogranichny','ussuriysk','khabarovsk','chita','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
+      return trimAt(nodes,target);
+    }
+    function nearestChinesePort(id){
+      var ports=['shanghai','ningbo','qingdao','tianjin','dalian','nansha','yantian','xiamen'];
+      var origin=GEO[id]||GEO.shanghai,best='shanghai',bestD=Infinity;
+      ports.forEach(function(pid){
+        var ll=GEO[pid];if(!ll)return;
+        var dx=(ll[1]-origin[1])*Math.cos((ll[0]+origin[0])*Math.PI/360),dy=ll[0]-origin[0];
+        var d=dx*dx+dy*dy;
+        if(d<bestD){bestD=d;best=pid;}
+      });
+      return best;
+    }
+    function inlandFromVlad(target){
+      var line=['vladivostok','ussuriysk','khabarovsk','chita','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
+      if(target==='blagoveshchensk')line=['vladivostok','ussuriysk','khabarovsk','blagoveshchensk'];
+      return trimAt(line,target);
+    }
+    function inlandFromNovo(target){
+      if(target==='novorossiysk')return [];
+      if(target==='krasnodar')return ['krasnodar'];
+      if(target==='rostov-on-don')return ['rostov-on-don'];
+      if(target==='volgograd')return ['rostov-on-don','volgograd'];
+      var line=['rostov-on-don','voronezh','moscow'];
+      if(target==='saint-petersburg')line.push('saint-petersburg');
+      if(target==='nizhny-novgorod')line=['rostov-on-don','voronezh','nizhny-novgorod'];
+      if(target==='kazan')line=['rostov-on-don','voronezh','moscow','kazan'];
+      return trimAt(line,target);
+    }
+    function inlandFromSpb(target){
+      if(target==='saint-petersburg')return [];
+      var line=['saint-petersburg','moscow'];
+      if(target==='nizhny-novgorod')line.push('nizhny-novgorod');
+      if(target==='kazan')line.push('kazan');
+      return trimAt(line,target);
+    }
+    var cnPort=nearestChinesePort(cnCity);
+    var vladSea=['east-china-sea','korea-strait','sea-of-japan','vladivostok'].concat(inlandFromVlad(ruCity));
+    var novoSea=['malacca','colombo','suez','med-waypoint','novorossiysk'].concat(inlandFromNovo(ruCity));
+    var spbSea=['malacca','colombo','suez','med-waypoint','gibraltar','north-sea','baltic-sea','saint-petersburg'].concat(inlandFromSpb(ruCity));
+    var routes=[
+      make('rail-manzhouli','rail',SOURCE.manzhouli.title,SOURCE.manzhouli.label,eastRailNodes(ruCity),
+        'Железнодорожный вариант через китайскую станцию Маньчжурия, российский Забайкальск и далее по сети Транссиба. Промежуточные узлы на схеме — ориентир коридора, а не трек конкретного состава.',
+        SOURCE.manzhouli,'Проверять для контейнерных и вагонных партий: стык, станцию отправления, терминал и актуальный слот.'),
+      make('rail-dostyk','rail','Алашанькоу — Достык — Казахстан',SOURCE.kazakhstan.label,centralRailNodes(ruCity),
+        'Западный железнодорожный сценарий через Алашанькоу—Достык, Казахстан и российскую сеть. Колея, перегрузка, станция передачи и доступность сервиса зависят от оператора.',
+        SOURCE.kazakhstan,'Сравнить с восточным направлением по тарифу, типу контейнера, очереди на терминале и сроку, подтверждённому перевозчиком.'),
+      make('rail-khorgos','rail','Хоргос — Алтынколь — Казахстан',SOURCE.khorgosRail.label,khorgosRailNodes(ruCity),
+        'Альтернативный железнодорожный сценарий через Хоргос—Алтынколь. Алтынколь указан здесь именно как железнодорожный стык; для автомобиля используется другой КПП.',
+        SOURCE.khorgosRail,'Имеет смысл сравнить с Алашанькоу—Достык, но выбирать станцию следует по фактической схеме экспедитора.'),
+      make('rail-suifenhe','rail',SOURCE.suifenhe.title,SOURCE.suifenhe.label,suifenheRailNodes(ruCity),
+        'Дальневосточный железнодорожный сценарий через Суйфэньхэ—Гродеково и далее по российской сети. Особенно полезен для северо-восточных регионов Китая и Приморья.',
+        SOURCE.suifenhe,'Проверить доступность именно импортного сервиса, состав документов, перегрузку/смену колеи и станцию назначения.'),
+      make('rail-mongolia','rail',SOURCE.mongolia.title,SOURCE.mongolia.label,mongoliaRailNodes(ruCity),
+        'Кандидатный железнодорожный вариант через Эрэн-Хото, Замын-Ууд, Улан-Батор и Наушки. Не отображается как гарантированный сервис: оператор должен подтвердить движение на конкретной паре городов.',
+        SOURCE.mongolia,'Использовать как запрос оператору, если он работает с транзитом через Монголию и подтверждает разрешения, стык и слот.'),
+      make('road-manzhouli','road',SOURCE.roadManzhouli.title,SOURCE.roadManzhouli.label,roadEastNodes(ruCity),
+        'Автомобильный маршрут через МАПП Маньчжурия—Забайкальск. Для грузовика учитываются тип кузова, разрешения, режим КПП, очередь, ограничения товара и доставка до двери.',
+        SOURCE.roadManzhouli,'Сравнить с Казахстаном по текущим разрешениям, очередям и требованиям к документам на дату отправки.'),
+      make('road-kazakhstan','road',SOURCE.roadKazakhstan.title,SOURCE.roadKazakhstan.label,roadKazakhNodes(ruCity),
+        'Автомобильный коридор через Нур Жолы—Хоргос и Казахстан. Не путать с железнодорожной парой Хоргос—Алтынколь.',
+        SOURCE.roadKazakhstan,'Проверить международные разрешения, транзитные документы, тип кузова и доступность дальнейшего въезда в РФ.'),
+      make('road-amur','road',SOURCE.heihe.title,SOURCE.heihe.label,roadAmurNodes(ruCity),
+        'Автомобильный сценарий через Хэйхэ—Кани-Курган—Благовещенск. После перехода требуется внутреннее российское плечо; возможность перевозки зависит от груза и перевозчика.',
+        SOURCE.heihe,'В первую очередь рассматривать для северо-востока Китая и Амурского региона; для дальнего пункта сравнить общую стоимость и срок.'),
+      make('road-primorye','road',SOURCE.roadPrimorye.title,SOURCE.roadPrimorye.label,roadPrimoryeNodes(ruCity),
+        'Потенциальный автомобильный сценарий через Суйфэньхэ—Пограничный и Приморье. Не путать автомобильный КПП с железнодорожной связкой Гродеково—Суйфэньхэ.',
+        SOURCE.roadPrimorye,'Подтвердить действующий режим КПП, допуск машины и груза, очередь и документы перед расчётом.'),
+      make('sea-vladivostok','sea',SOURCE.seaVlad.title,SOURCE.seaVlad.label,[cnPort].concat(vladSea),
+        'Морское плечо до Владивостока, затем контейнерная железная дорога или авто по России. Для внутренней доставки до двери добавляются терминал, таможня и последняя миля.',
+        SOURCE.seaVlad,'Часто рассматривается для Дальнего Востока и как вариант море + Транссиб для центральных регионов.'),
+      make('sea-novorossiysk','sea',SOURCE.seaNovo.title,SOURCE.seaNovo.label,[cnPort].concat(novoSea),
+        'Морской сценарий через Суэцкий канал и Чёрное море до Новороссийска, далее авто или железная дорога. Фактическая линия, перевалка и доступность зависят от актуального сервиса и условий судоходства.',
+        SOURCE.seaNovo,'Особенно стоит сравнить для юга России; для других регионов нужно добавить внутреннее плечо и сопоставить его стоимость с Владивостоком/Балтикой.'),
+      make('sea-st-petersburg','sea',SOURCE.seaSpb.title,SOURCE.seaSpb.label,[cnPort].concat(spbSea),
+        'Морской сценарий через Суэц, Средиземное море и Балтику до Санкт-Петербурга. Из порта возможно внутреннее железнодорожное или автомобильное плечо к получателю.',
+        SOURCE.seaSpb,'Сравнить для Москвы и западной/северо-западной части России; прямой рейс и точный путь судна нельзя считать гарантированными.'),
+      make('air','air',SOURCE.air.title,SOURCE.air.label,[],
+        'Для авиа подбираются доступный грузовой аэропорт, при необходимости автодоставка до хаба, число стыковок и аэропорт прибытия. Маршрут на карте — только линия связи городов, а не траектория фактического рейса.',
+        SOURCE.air,'Для срочного или компактного груза; заранее проверяют опасные грузы, аккумуляторы, упаковку, объёмный вес, cut-off и доступность слота.')
+    ];
+
+    // The sea lanes are alternatives only where the inland leg is meaningful;
+    // the route card still makes the trade-offs explicit, not a promise of service.
+    routes=routes.filter(function(p){
+      if(p.id==='sea-novorossiysk'&&farEast)return false;
+      if(p.id==='sea-st-petersburg'&&(farEast||southern))return false;
+      if(p.id==='rail-mongolia'&&farEast)return false;
+      return true;
+    });
+    var filtered=routes.filter(function(p){return mode==='multimodal'||p.mode===mode;});
+    if(mode==='multimodal'){
+      var rank;
+      if(farEast)rank={'road-amur':0,'road-primorye':1,'rail-suifenhe':2,'sea-vladivostok':3,'rail-manzhouli':4,'road-manzhouli':5,'air':6,'rail-dostyk':7,'rail-khorgos':8,'sea-novorossiysk':9,'sea-st-petersburg':10};
+      else if(southern)rank={'sea-novorossiysk':0,'road-kazakhstan':1,'road-manzhouli':2,'rail-manzhouli':3,'rail-dostyk':4,'rail-khorgos':5,'sea-vladivostok':6,'air':7,'sea-st-petersburg':8};
+      else if(ruCity==='saint-petersburg')rank={'sea-st-petersburg':0,'rail-manzhouli':1,'rail-dostyk':2,'rail-khorgos':3,'road-kazakhstan':4,'road-manzhouli':5,'sea-vladivostok':6,'sea-novorossiysk':7,'air':8};
+      else rank={'rail-manzhouli':0,'rail-dostyk':1,'rail-khorgos':2,'road-manzhouli':3,'road-kazakhstan':4,'sea-vladivostok':5,'sea-novorossiysk':6,'sea-st-petersburg':7,'rail-suifenhe':8,'road-amur':9,'road-primorye':10,'rail-mongolia':11,'air':12};
+      filtered.sort(function(x,y){return (rank[x.id]===undefined?50:rank[x.id])-(rank[y.id]===undefined?50:rank[y.id]);});
+      return filtered.slice(0,9);
+    }
+    if(mode==='rail')return filtered.slice(0,5);
+    if(mode==='road')return filtered.slice(0,4);
+    if(mode==='sea')return filtered.slice(0,3);
+    return filtered.slice(0,1);
+  }
   function updateRoleUI(){
     var role=$('#siteRoleBadge'),note=$('#siteModeNote'),guest=$('#routeGuestBanner'),notice=$('#servicesAccessNotice'),homeGuest=$('#homeGuestNote');
     var labels={guest:'ГОСТЬ',client:'КЛИЕНТ',admin:'АДМИНИСТРАТОР'};
