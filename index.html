@@ -10,7 +10,7 @@
   /* Тема применяется до первой отрисовки — без вспышки светлой темы */
   (function(){try{var t=localStorage.getItem('iomastavka_theme');var d=t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content=d?'#0b2238':'#bfe6f8'}catch(e){}})();
 </script>
-<link rel="stylesheet" href="/styles.css?v=20261016-route-lab-v8">
+<link rel="stylesheet" href="/styles.css?v=20261016-corridor-dashboard-v1">
 <link rel="stylesheet" href="/cabinet.css?v=1">
 </head>
 <body>
@@ -42,6 +42,11 @@
 <main class="app-shell">
 <section id="homeView" class="home-view">
   <div class="hero-copy"><span class="eyebrow" data-i18n="heroEyebrow">ЛОГИСТИКА · КИТАЙ → РОССИЯ</span><h1>iomastavka</h1><p data-i18n="heroText">Точный расчёт. Умный помощник.<br>Всё необходимое для работы с грузом — в одном месте.</p></div>
+  <div class="home-guest-note" id="homeGuestNote">
+    <span class="guest-note-mark">i</span>
+    <div><strong>Вы в гостевом режиме</strong><span>Часть информации скрыта. Доступны обзор коридоров и открытые источники; персональные тарифы, сохранённые расчёты и расширенные данные — после входа в личный кабинет.</span></div>
+    <a href="/account?mode=register">Создать аккаунт ↗</a>
+  </div>
   <section class="freight-command-center" aria-label="Глобальная логистическая панель">
     <div class="freight-panel-head">
       <div><span class="eyebrow">IOMA NETWORK / 01</span><h2>Глобальная логистика</h2><p>Маршруты Китай → Россия и международные перевозки</p></div>
@@ -73,21 +78,53 @@
           </g>
           <g class="route-nodes"><circle cx="720" cy="143" r="8"/><circle cx="720" cy="143" r="15"/><circle cx="456" cy="107" r="6"/><circle cx="588" cy="124" r="5"/><circle cx="164" cy="113" r="5"/><circle cx="780" cy="255" r="5"/><circle cx="443" cy="220" r="5"/></g>
           <g class="map-labels"><text x="739" y="132">КИТАЙ</text><text x="475" y="96">РОССИЯ</text><text x="602" y="113">ЕВРОПА</text><text x="125" y="101">АМЕРИКА</text></g>
-          <g class="map-transport home-map-action" data-open-route-mode="air" tabindex="0" role="button" aria-label="Открыть маршрутизатор с выбором авиа-перевозки" transform="translate(624 73) rotate(-12)"><path d="M-18 0 2-3 13-15 18-14 14-3 26 1 26 5 13 5 8 13 4 13 5 5-18 4Z"/></g>
-          <g class="map-transport ship home-map-action" data-open-route-mode="sea" tabindex="0" role="button" aria-label="Открыть маршрутизатор с выбором морской перевозки" transform="translate(665 255)"><path d="M-22 0H22L13 12H-13Z"/><path d="M-8-10H5V0H-8Z"/></g>
+          <g class="map-transport home-map-action" data-open-route-mode="air" tabindex="0" role="button" aria-label="Открыть маршрутизатор с выбором авиа-перевозки" tabindex="0" role="button" aria-label="Открыть маршрутизатор с выбором авиа-перевозки" transform="translate(624 73) rotate(-12)"><path d="M-18 0 2-3 13-15 18-14 14-3 26 1 26 5 13 5 8 13 4 13 5 5-18 4Z"/></g>
+          <g class="map-transport ship home-map-action" data-open-route-mode="sea" tabindex="0" role="button" aria-label="Открыть маршрутизатор с выбором морской перевозки" tabindex="0" role="button" aria-label="Открыть маршрутизатор с выбором морской перевозки" transform="translate(665 255)"><path d="M-22 0H22L13 12H-13Z"/><path d="M-8-10H5V0H-8Z"/></g>
         </svg>
         <div class="map-legend"><span><i class="legend-air"></i> Авиа</span><span><i class="legend-rail"></i> Ж/Д</span><span><i class="legend-road"></i> Авто</span><span><i class="legend-sea"></i> Море</span></div>
+        <div class="map-interaction-hint"><span class="hint-point">⌖</span><p><strong>Это схема коридоров, не GPS-трекинг.</strong> Нажмите на самолёт или судно — откроется маршрутизатор. Там выберите города отправления и назначения, затем сравните возможные варианты.</p></div>
+        <div class="home-mode-shortcuts" aria-label="Построить маршрут по виду транспорта">
+          <a href="/routes?mode=air&amp;from=shanghai&amp;to=moscow"><span class="mode-shortcut-icon">✈</span><span><b>Авиа</b><small>Грузовой аэропорт → аэропорт</small></span><span class="mode-shortcut-arrow">↗</span></a>
+          <a href="/routes?mode=rail&amp;from=shanghai&amp;to=moscow"><span class="mode-shortcut-icon">▤</span><span><b>Железная дорога</b><small>Погранпереходы и терминалы</small></span><span class="mode-shortcut-arrow">↗</span></a>
+          <a href="/routes?mode=road&amp;from=shanghai&amp;to=moscow"><span class="mode-shortcut-icon">▰</span><span><b>Авто</b><small>КПП и сухопутные коридоры</small></span><span class="mode-shortcut-arrow">↗</span></a>
+          <a href="/routes?mode=sea&amp;from=shanghai&amp;to=moscow"><span class="mode-shortcut-icon">⚓</span><span><b>Море + Ж/Д</b><small>Порт и дальнейший поезд</small></span><span class="mode-shortcut-arrow">↗</span></a>
+          <a href="/routes?mode=multimodal&amp;from=shanghai&amp;to=moscow"><span class="mode-shortcut-icon">⇄</span><span><b>Сравнить все</b><small>Сопоставить возможные коридоры</small></span><span class="mode-shortcut-arrow">↗</span></a>
+        </div>
       </div>
       <aside class="freight-side-stack">
         <div class="freight-info-card"><div class="info-card-head"><span>КЛЮЧЕВОЕ НАПРАВЛЕНИЕ</span><span class="tiny-live-dot"></span></div><div class="route-big">CN <b>→</b> RU</div><strong>Китай — Россия</strong><p>Подбор способа доставки под груз, сроки и бюджет.</p><div class="route-chips"><span>Авиа</span><span>Ж/Д</span><span>Авто</span><span>Море</span></div></div>
         <div class="freight-info-card transport-options"><div class="info-card-head"><span>СПОСОБЫ ДОСТАВКИ</span><span>04</span></div><div class="transport-row"><span class="transport-symbol">✈</span><span><b>Авиа</b><small>Когда важны сроки</small></span><i>↗</i></div><div class="transport-row"><span class="transport-symbol">▤</span><span><b>Железная дорога</b><small>Баланс цены и срока</small></span><i>↗</i></div><div class="transport-row"><span class="transport-symbol">▰</span><span><b>Автомобиль</b><small>Гибкая доставка от двери до двери</small></span><i>↗</i></div><div class="transport-row"><span class="transport-symbol">⚓</span><span><b>Море</b><small>Для объёмных партий</small></span><i>↗</i></div></div>
       </aside>
     </div>
-    <div class="freight-kpi-grid" aria-label="Инструменты платформы">
-      <div class="freight-kpi"><span class="kpi-index">01 / РЕЖИМЫ</span><b>4</b><strong>способа доставки</strong><small>Авиа · Ж/Д · авто · море</small><i class="kpi-spark spark-a"></i></div>
-      <div class="freight-kpi"><span class="kpi-index">02 / НАПРАВЛЕНИЕ</span><b>CN <em>→</em> RU</b><strong>Китай — Россия</strong><small>Подбор маршрута под груз</small><i class="kpi-spark spark-b"></i></div>
-      <div class="freight-kpi"><span class="kpi-index">03 / ПОМОЩНИК</span><b>AI</b><strong>Логистический ассистент</strong><small>Вопросы текстом или голосом</small><i class="kpi-spark spark-c"></i></div>
-      <div class="freight-kpi"><span class="kpi-index">04 / ИНФОРМАЦИЯ</span><b>ВЭД</b><strong>Таможня и новости</strong><small>Инструменты для работы с импортом</small><i class="kpi-spark spark-d"></i></div>
+    <div class="freight-kpi-grid" aria-label="Проверенные данные о транспортных коридорах">
+      <article class="freight-kpi freight-kpi-fact">
+        <span class="kpi-index">EAST / ЖЕЛЕЗНАЯ ДОРОГА</span>
+        <b>Маньчжурия <em>↔</em> Забайкальск</b>
+        <strong>План расширения погранучастка</strong>
+        <small>Минтранс РФ: к 2030 году планируется добавить 11 млн тонн пропускной способности, почти до 50 пар поездов в сутки. Это целевой показатель проекта, не текущая мощность.</small>
+        <a href="https://www.mintrans.gov.ru/eye/press-center/news/12684" target="_blank" rel="noopener noreferrer">Минтранс РФ · 20.05.2026 ↗</a>
+      </article>
+      <article class="freight-kpi freight-kpi-fact">
+        <span class="kpi-index">WEST / КАЗАХСТАН</span>
+        <b>Алтынколь <em>·</em> Достык</b>
+        <strong>Две пары пограничных узлов</strong>
+        <small>Хоргос—Алтынколь и Алашанькоу—Достык — варианты для проверки западного железнодорожного плеча. Точный стык выбирают по станции отправления и оператору.</small>
+        <a href="https://www.gov.kz/org/maidd/activities/2110" target="_blank" rel="noopener noreferrer">Правительство Казахстана ↗</a>
+      </article>
+      <article class="freight-kpi freight-kpi-fact">
+        <span class="kpi-index">ROAD / АВТОПЕРЕВОЗКИ</span>
+        <b>6 млн <em>т</em></b>
+        <strong>Объём перевозок в 2025 году</strong>
+        <small>По данным Минтранса РФ, рост к 2024 году составил 46%. Это общий объём между странами, не прогноз по конкретному КПП или грузу.</small>
+        <a href="https://mintrans.gov.ru/press-center/news/12572" target="_blank" rel="noopener noreferrer">Минтранс РФ · 03.04.2026 ↗</a>
+      </article>
+      <article class="freight-kpi freight-kpi-fact">
+        <span class="kpi-index">SEA + RAIL / МУЛЬТИМОДАЛЬНЫЙ</span>
+        <b>10–14 <em>дней</em></b>
+        <strong>Только Ж/Д участок Владивосток — Москва</strong>
+        <small>Опубликованный ориентир FESCO. Морской путь из Китая, портовая обработка, таможня и доставка до двери в эти 10–14 дней не входят.</small>
+        <a href="https://www.fesco.com/en/clients/container/trains/fesco-moscow-shuttle/" target="_blank" rel="noopener noreferrer">FESCO Moscow Shuttle ↗</a>
+      </article>
     </div>
     <div class="freight-bottom-strip"><span><i></i> ЛОГИСТИЧЕСКАЯ ПЛАТФОРМА</span><span>Расчёт маршрута</span><span>Таможенная информация</span><span>AI-помощник</span></div>
   </section>
@@ -116,5 +153,5 @@
 <script src="/fix_views.js?v=1" defer></script>
 <script src="/cabinet.js?v=1" defer></script>
 <script src="/app.js?v=20261016-role-gate-v301" defer></script>
-<script src="/route-planner.js?v=20261016-route-lab-v9" defer></script>
+<script src="/route-planner.js?v=20261016-interactive-corridors-v1" defer></script>
 </body></html>
