@@ -3608,3 +3608,29 @@ html:not(.dark) .account-guest-note b{color:#31576d}
 html:not(.dark) .route-map-transport-action .transport-hit-ring{fill:rgba(42,147,180,.1);stroke:rgba(24,149,175,.55)}
 html:not(.dark) .map-aircraft-shape{fill:#158eab;stroke:#e5ffff}
 html:not(.dark) .map-ship-shape{fill:#2478bd;stroke:#f0f8ff}
+
+/* Dedicated article reader page */
+.article-reader-meta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 16px;padding-bottom:14px;border-bottom:1px solid rgba(105,178,216,.14);color:#7897aa;font-size:10px;line-height:1.5}
+.article-reader-meta b{color:#b8d8e7}
+.article-reader-title{margin:0 0 20px;color:#edf8ff;font-size:clamp(25px,3.6vw,40px);line-height:1.18;letter-spacing:-.04em}
+.article-reader-content{color:#c3d7e4;font-size:14px;line-height:1.85;overflow-wrap:anywhere}
+.article-reader-content p{margin:0 0 15px}
+.article-reader-content h1,.article-reader-content h2,.article-reader-content h3{margin:22px 0 10px;color:#eef8ff;line-height:1.3}
+.article-reader-content h1{font-size:23px}.article-reader-content h2{font-size:20px}.article-reader-content h3{font-size:17px}
+.article-reader-content ul{padding-left:22px;margin:0 0 16px}
+.article-reader-content li{margin:5px 0}
+.article-reader-image{display:block;width:100%;max-height:360px;object-fit:cover;border-radius:12px;margin:0 0 18px;border:1px solid rgba(105,178,216,.15)}
+.article-reader-footnote{margin-top:20px;padding:12px;border-left:2px solid rgba(53,215,232,.4);background:rgba(53,215,232,.05);color:#7f9daf;font-size:10px;line-height:1.6}
+.article-reader-loading,.article-reader-empty{display:grid;gap:12px;justify-items:start;padding:26px;color:#8ca8ba;font-size:12px;line-height:1.6}
+.article-reader-loading small{color:#708ea2}
+.article-reader-spinner{width:26px;height:26px;border:2px solid rgba(62,203,225,.18);border-top-color:#42d8e8;border-radius:50%;animation:ioma-article-spin .8s linear infinite}
+.article-reader-empty h1{color:#edf8ff;font-size:25px}
+.article-reader-empty a{color:#67c7e3;text-decoration:none;font-weight:800;font-size:11px}
+@keyframes ioma-article-spin{to{transform:rotate(360deg)}}
+html:not(.dark) .article-reader-meta{color:#637c8e;border-color:#d7e5ec}
+html:not(.dark) .article-reader-meta b{color:#27526a}
+html:not(.dark) .article-reader-title,html:not(.dark) .article-reader-content h1,html:not(.dark) .article-reader-content h2,html:not(.dark) .article-reader-content h3,html:not(.dark) .article-reader-empty h1{color:#153c53}
+html:not(.dark) .article-reader-content{color:#405f74}
+html:not(.dark) .article-reader-footnote{color:#5f7889;background:#edf8fa;border-color:#6fbfce}
+html:not(.dark) .article-reader-loading,html:not(.dark) .article-reader-empty{color:#607d90}
+@media(prefers-reduced-motion:reduce){.article-reader-spinner{animation:none}}
