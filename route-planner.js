@@ -792,9 +792,16 @@
     var health=$('#adminHealthCheck');if(health)health.addEventListener('click',function(){var out=$('#adminHealthStatus');if(out)out.textContent='Проверяем…';fetch('/api/health?t='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(function(d){if(out)out.textContent=d&&d.ok?'Сервис отвечает':'Сервис вернул неожиданный ответ';}).catch(function(){if(out)out.textContent='Не удалось получить ответ сервера';});});
   }
   function initTheme(){
-    var b=$('#themeToggleButton');if(!b)return;
-    // Existing application has a theme handler. This listener only synchronizes the body/header after it toggles html.dark.
-    b.addEventListener('click',function(){setTimeout(function(){var dark=document.documentElement.classList.contains('dark');try{localStorage.setItem('iomastavka_theme',dark?'dark':'light');}catch(e){}document.querySelector('meta[name="theme-color"]').content=dark?'#071321':'#edf6fb';},80);});
+    var b=$('#themeToggleButton');if(!b||b.dataset.routeThemeSync)return;
+    b.dataset.routeThemeSync='1';
+    // fix_app.js owns the three-state toggle; this listener only resynchronizes map tiles.
+    b.addEventListener('click',function(){setTimeout(function(){
+      var root=document.documentElement;
+      var dark=root.classList.contains('dark'),soft=root.getAttribute('data-theme')==='soft';
+      try{localStorage.setItem('iomastavka_theme',dark?'dark':soft?'soft':'light');}catch(e){}
+      var meta=document.querySelector('meta[name="theme-color"]');
+      if(meta)meta.content=dark?'#191919':soft?'#f1f1f1':'#ffffff';
+    },80);});
   }
   function normalizeRoutePath(path){
     var p=(path||'/').replace(/\/+$/,'')||'/';
