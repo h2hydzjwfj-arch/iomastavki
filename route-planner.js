@@ -144,7 +144,7 @@
     var p=u.pathname.replace(/\/+$/,'')||'/';
     var activeNav=({'/':'home','/routes':'routes','/services':'services','/news':'news','/rates':'rates','/forwarders':'forwarders','/customs':'customs','/admin':'admin'})[p]||'';
     $('[data-page-route]').forEach(function(a){if(a.dataset.pageRoute===activeNav)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
-    if(p==='/admin'&&state.role!=='admin'){showToast('Администрирование доступно только администратору.');goAuth('login');return;}
+    if(p==='/admin'&&state.role!=='admin'){showToast(state.role==='guest'?'Войдите, чтобы проверить доступ к административному разделу.':'Администрирование доступно только администратору.');if(state.role==='guest')goAuth('login');else window.location.href='/services';return;}
     if(['/rates','/forwarders','/customs'].includes(p)&&state.role==='guest'){showToast('Вы в гостевом режиме. Войдите или зарегистрируйтесь для доступа к этому разделу.');goAuth('register');return;}
     if(changeUrl)setUrl(p+(u.search||''));
     if(p==='/'){closeCurrentViews();return;}
@@ -306,7 +306,7 @@
     var auth=e.target.closest&&e.target.closest('[data-open-auth]');
     if(auth){e.preventDefault();goAuth(auth.dataset.openAuth);return;}
     var plane=e.target.closest&&e.target.closest('[data-open-route-mode]');
-    if(plane){e.preventDefault();var m=plane.dataset.openRouteMode||'multimodal';window.location.href='/routes?mode='+encodeURIComponent(m);return;}
+    if(plane){e.preventDefault();var m=plane.dataset.openRouteMode||'multimodal';if((location.pathname.replace(/\/+$/,'')||'/')==='/routes'){setMode(m);var modeBar=$('.route-mode-bar');if(modeBar)modeBar.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'});}else{window.location.href='/routes?mode='+encodeURIComponent(m);}return;}
     var nav=e.target.closest&&e.target.closest('[data-page-route]');
     if(nav){e.preventDefault();window.location.href=nav.getAttribute('href')||'/';return;}
     var gate=e.target.closest&&e.target.closest('[data-gated-link]');
