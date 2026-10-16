@@ -12,6 +12,7 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=20261016-logistics-v7">
 <link rel="stylesheet" href="/cabinet.css?v=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body>
 <div id="weatherScene" class="weather-scene" aria-hidden="true"><div class="stars"></div><div class="sun"></div><div class="moon"></div></div>
@@ -61,42 +62,7 @@
       <section class="route-map-panel route-map-interactive">
         <div class="route-map-panel-head"><div><span class="eyebrow">ПУБЛИЧНЫЕ КОРИДОРЫ · СХЕМА</span><h3>Карта коридоров</h3></div><span class="map-legend-live"><i></i> Выберите вид перевозки</span></div>
         <div class="route-map-stage">
-          <svg id="routePlannerMap" class="route-planner-map" viewBox="0 0 900 410" role="img" aria-label="Интерактивная схема транспортных коридоров из Китая в Россию. Нажмите на узел города, чтобы выбрать отправление или назначение.">
-            <defs>
-              <linearGradient id="routeLandFill" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#21475f"/><stop offset="1" stop-color="#10283c"/></linearGradient>
-              <linearGradient id="routeLineGradient" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#35d9e8"/><stop offset="1" stop-color="#559cff"/></linearGradient>
-              <filter id="routeMapGlow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-            </defs>
-            <g class="route-map-grid"><path d="M0 60H900M0 120H900M0 180H900M0 240H900M0 300H900M0 360H900M90 0V410M180 0V410M270 0V410M360 0V410M450 0V410M540 0V410M630 0V410M720 0V410M810 0V410"/></g>
-            <g class="route-map-continents" fill="url(#routeLandFill)" stroke="#355e77" stroke-width="1.5" stroke-linejoin="round">
-              <path d="M41 87 72 48 126 31 167 42 203 59 240 73 263 105 241 128 208 126 192 150 161 158 148 181 117 189 101 165 73 158 64 129 40 115Z"/>
-              <path d="M179 199 211 207 233 234 226 271 208 302 196 346 179 366 167 337 176 302 162 275 168 239Z"/>
-              <path d="M366 74 402 52 439 57 465 73 496 72 516 90 544 88 567 105 599 108 622 130 610 151 582 149 559 165 536 154 514 175 491 162 468 140 441 139 416 120 382 113Z"/>
-              <path d="M424 154 455 157 474 184 464 216 448 243 435 276 415 296 400 270 407 236 392 206 401 178Z"/>
-              <path d="M500 174 535 162 567 177 594 190 613 207 601 226 577 220 554 210 529 204Z"/>
-              <path d="M617 119 653 100 697 107 739 125 778 144 813 165 797 187 768 178 744 194 712 180 690 159 662 156 638 140Z"/>
-              <path d="M707 239 734 226 765 236 785 256 777 286 754 305 732 291 718 267Z"/>
-              <path d="M319 57 341 44 361 52 354 72 332 76Z"/>
-              <path d="M839 321 855 315 866 329 856 343 842 340Z"/>
-            </g>
-            <g class="route-map-corridors" fill="none" stroke="url(#routeLineGradient)" stroke-width="2.8" stroke-linecap="round" filter="url(#routeMapGlow)">
-              <path class="corridor-line corridor-air" data-corridor="air" d="M624 225 Q505 95 390 125"/>
-              <path class="corridor-line corridor-manzhouli" data-corridor="manzhouli" d="M624 225 Q625 135 548 125 Q465 108 390 125"/>
-              <path class="corridor-line corridor-kazakhstan" data-corridor="kazakhstan" d="M624 225 Q558 190 495 176 Q445 150 390 125"/>
-              <path class="corridor-line corridor-mongolia" data-corridor="mongolia" d="M590 144 Q520 98 460 113 Q422 111 390 125"/>
-              <path class="corridor-line corridor-suifenhe" data-corridor="suifenhe" d="M650 156 Q700 180 710 225 Q568 248 390 125"/>
-              <path class="corridor-line corridor-heihe" data-corridor="heihe" d="M608 146 Q635 157 643 169 Q515 210 390 125"/>
-              <path class="corridor-line corridor-sea" data-corridor="sea" d="M624 225 Q695 234 710 225 Q568 264 390 125"/>
-            </g>
-            <g id="routeMapMarkers" class="route-map-markers"></g>
-            <g class="route-map-map-labels"><text x="66" y="205">СЕВЕРНАЯ</text><text x="66" y="220">АМЕРИКА</text><text x="377" y="88">ЕВРОПА</text><text x="504" y="94">РОССИЯ</text><text x="731" y="101">КИТАЙ</text></g>
-            <g class="route-map-transport-action" data-open-route-mode="air" transform="translate(571 130)" tabindex="0" role="button" aria-label="Выбрать авиаперевозку">
-              <circle r="19" class="transport-hit-ring"/><path class="map-aircraft-shape" d="M-15 1 1-3 9-15 14-14 11-3 23 1 23 5 9 4 3 14-1 14 2 4-15 5Z"/>
-            </g>
-            <g class="route-map-transport-action is-sea" data-open-route-mode="sea" transform="translate(694 273)" tabindex="0" role="button" aria-label="Выбрать морскую перевозку">
-              <circle r="19" class="transport-hit-ring"/><path class="map-ship-shape" d="M-16 1H16L9 10H-9Z"/><path class="map-ship-shape" d="M-7-9H4V1H-7Z"/><path class="map-ship-shape" d="M-3-13H2V-9H-3Z"/>
-            </g>
-          </svg>
+          <div id="routePlannerMap" class="route-planner-map real-route-map" role="application" aria-label="Интерактивная географическая карта транспортных узлов. Можно приближать, отдалять и перемещать карту."></div>
         </div>
         <div class="route-map-legend"><span><i class="legend-dot air"></i> Авиа</span><span><i class="legend-dot rail"></i> Железная дорога</span><span><i class="legend-dot road"></i> Автотранспорт</span><span><i class="legend-dot sea"></i> Море / ЖД</span></div>
         <div class="map-instruction"><span>⌖</span> Выберите активное поле «Откуда» или «Куда» справа, затем нажмите на точку города на карте.</div>
@@ -156,5 +122,6 @@
 <script src="/fix_views.js?v=1" defer></script>
 <script src="/cabinet.js?v=1" defer></script>
 <script src="/app.js?v=20261016-role-gate-v301" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="/route-planner.js?v=20261016-logistics-v7" defer></script>
 </body></html>
