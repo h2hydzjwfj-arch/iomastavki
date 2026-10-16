@@ -24,6 +24,49 @@
 <main class="app-shell">
 <section id="homeView" class="home-view">
   <div class="hero-copy"><span class="eyebrow" data-i18n="heroEyebrow">ЛОГИСТИКА · КИТАЙ → РОССИЯ</span><h1>iomastavka</h1><p data-i18n="heroText">Точный расчёт. Умный помощник.<br>Всё необходимое для работы с грузом — в одном месте.</p></div>
+  <section class="freight-command-center" aria-label="Глобальная логистическая панель">
+    <div class="freight-panel-head">
+      <div><span class="eyebrow">IOMA NETWORK / 01</span><h2>Глобальная логистика</h2><p>Маршруты Китай → Россия и международные перевозки</p></div>
+      <span class="network-status"><i></i> СЕТЬ ДОСТУПНА</span>
+    </div>
+    <div class="freight-dashboard-grid">
+      <div class="route-map-panel">
+        <div class="map-panel-top"><span>КАРТА МАРШРУТОВ</span><span class="map-live"><i></i> LIVE ROUTES</span></div>
+        <svg class="world-route-map" viewBox="0 0 900 390" role="img" aria-label="Стилизованная карта мира с маршрутами между Китаем, Россией и Европой">
+          <defs>
+            <linearGradient id="landTone" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#244d67"/><stop offset="1" stop-color="#142c42"/></linearGradient>
+            <linearGradient id="routeTone" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#31d8e6"/><stop offset="1" stop-color="#4a92ff"/></linearGradient>
+            <filter id="routeGlow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <g class="map-grid-lines"><path d="M0 65H900M0 130H900M0 195H900M0 260H900M0 325H900M90 0V390M180 0V390M270 0V390M360 0V390M450 0V390M540 0V390M630 0V390M720 0V390M810 0V390"/></g>
+          <g class="map-land" fill="url(#landTone)" stroke="#3e6d87" stroke-width="1.4" stroke-linejoin="round">
+            <path d="M54 83 82 49 139 33 185 44 217 65 255 73 275 103 252 121 224 119 207 145 180 150 166 180 137 190 119 168 92 160 82 131 56 117Z"/>
+            <path d="M210 190 239 201 257 227 250 260 230 293 217 329 197 350 183 323 190 290 178 264 186 237Z"/>
+            <path d="M391 72 422 51 461 58 485 76 516 75 534 91 563 91 590 111 614 117 632 145 608 161 580 149 556 166 530 159 510 177 489 163 470 142 444 139 424 118 403 112Z"/>
+            <path d="M431 153 464 158 483 185 472 217 455 244 445 278 425 295 411 270 415 237 401 207 407 179Z"/>
+            <path d="M512 169 546 159 579 174 604 190 625 201 614 220 584 216 563 204 537 201Z"/>
+            <path d="M626 116 669 97 718 103 760 121 798 139 829 166 811 184 780 173 754 187 721 176 698 157 669 154 647 137Z"/>
+            <path d="M724 231 750 219 780 227 802 247 791 276 771 295 748 282 734 258Z"/>
+            <path d="M335 55 356 43 377 50 371 69 350 73Z"/>
+            <path d="M842 305 857 299 867 312 858 327 844 324Z"/>
+          </g>
+          <g class="route-lines" fill="none" stroke="url(#routeTone)" stroke-width="2.5" filter="url(#routeGlow)">
+            <path d="M720 143 Q580 18 456 107"/><path d="M720 143 Q676 95 588 124"/><path d="M720 143 Q525 235 456 107"/><path d="M720 143 Q760 208 780 255"/><path d="M456 107 Q335 34 164 113"/><path d="M456 107 Q455 184 443 220"/>
+          </g>
+          <g class="route-nodes"><circle cx="720" cy="143" r="8"/><circle cx="720" cy="143" r="15"/><circle cx="456" cy="107" r="6"/><circle cx="588" cy="124" r="5"/><circle cx="164" cy="113" r="5"/><circle cx="780" cy="255" r="5"/><circle cx="443" cy="220" r="5"/></g>
+          <g class="map-labels"><text x="739" y="132">КИТАЙ</text><text x="475" y="96">РОССИЯ</text><text x="602" y="113">ЕВРОПА</text><text x="125" y="101">АМЕРИКА</text></g>
+          <g class="map-transport" transform="translate(624 73) rotate(-12)"><path d="M-18 0 2-3 13-15 18-14 14-3 26 1 26 5 13 5 8 13 4 13 5 5-18 4Z"/></g>
+          <g class="map-transport ship" transform="translate(665 255)"><path d="M-22 0H22L13 12H-13Z"/><path d="M-8-10H5V0H-8Z"/></g>
+        </svg>
+        <div class="map-legend"><span><i class="legend-air"></i> Авиа</span><span><i class="legend-rail"></i> Ж/Д</span><span><i class="legend-road"></i> Авто</span><span><i class="legend-sea"></i> Море</span></div>
+      </div>
+      <aside class="freight-side-stack">
+        <div class="freight-info-card"><div class="info-card-head"><span>КЛЮЧЕВОЕ НАПРАВЛЕНИЕ</span><span class="tiny-live-dot"></span></div><div class="route-big">CN <b>→</b> RU</div><strong>Китай — Россия</strong><p>Подбор способа доставки под груз, сроки и бюджет.</p><div class="route-chips"><span>Авиа</span><span>Ж/Д</span><span>Авто</span><span>Море</span></div></div>
+        <div class="freight-info-card transport-options"><div class="info-card-head"><span>СПОСОБЫ ДОСТАВКИ</span><span>04</span></div><div class="transport-row"><span class="transport-symbol">✈</span><span><b>Авиа</b><small>Когда важны сроки</small></span><i>↗</i></div><div class="transport-row"><span class="transport-symbol">▤</span><span><b>Железная дорога</b><small>Баланс цены и срока</small></span><i>↗</i></div><div class="transport-row"><span class="transport-symbol">▰</span><span><b>Автомобиль</b><small>Гибкая доставка от двери до двери</small></span><i>↗</i></div><div class="transport-row"><span class="transport-symbol">⚓</span><span><b>Море</b><small>Для объёмных партий</small></span><i>↗</i></div></div>
+      </aside>
+    </div>
+    <div class="freight-bottom-strip"><span><i></i> ЛОГИСТИЧЕСКАЯ ПЛАТФОРМА</span><span>Расчёт маршрута</span><span>Таможенная информация</span><span>AI-помощник</span></div>
+  </section>
   <div class="quick-grid">
     <button class="service-card service-main" data-open-view="calculator" data-client-only hidden><span class="service-icon icon-route"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H16a3.5 3.5 0 0 0 0-7H8a3.5 3.5 0 0 1 0-7h7.5"/></svg></span><span class="service-text"><b data-i18n="tileRates">Расчёт ставок</b><small data-i18n="tileRatesSub">Маршрут, ставка и транспорт</small></span><span class="service-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
     <button class="service-card" data-open-view="assistant"><span class="service-icon icon-ai"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span><span class="service-text"><b data-i18n="tileAI">AI-ассистент</b><small data-i18n="tileAISub">Текстом или голосом</small></span><span class="service-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
