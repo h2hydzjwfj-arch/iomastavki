@@ -588,10 +588,17 @@
     var card = e.target.closest && e.target.closest('.news-card');
     if (!card) return;
     e.preventDefault();
-    e.stopPropagation();
+    e.stopImmediatePropagation();
     var id = card.getAttribute('data-news-id');
     var source = card.querySelector('.news-card-source');
-    openModal({ id: id, title: card.getAttribute('data-news-title') || '', source: source ? source.textContent : '' });
+    var date = card.querySelector('.news-card-date');
+    var item = { id:id, title:card.getAttribute('data-news-title') || '', source:source ? source.textContent : '', date:date ? date.textContent : '' };
+    if (id) {
+      try { localStorage.setItem('iomaNewsSelected', JSON.stringify(item)); } catch(ignore) {}
+      window.location.href = '/article?id=' + encodeURIComponent(id);
+      return;
+    }
+    openModal(item);
   }, true);
 
   window.iomaOpenNews = openModal;
