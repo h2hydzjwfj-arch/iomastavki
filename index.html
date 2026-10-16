@@ -8,7 +8,7 @@
 <title>Главная · iomastavka</title>
 <script>
   /* Тема применяется до первой отрисовки — без вспышки светлой темы */
-  (function(){try{var t=localStorage.getItem('iomastavka_theme');var d=t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content=d?'#0b2238':'#bfe6f8'}catch(e){}})();
+  (function(){try{var t=localStorage.getItem('iomastavka_theme'),r=document.documentElement;if(t==='dark')r.classList.add('dark');else if(t==='soft')r.setAttribute('data-theme','soft');else if(!t&&matchMedia('(prefers-color-scheme: dark)').matches)r.classList.add('dark');var d=r.classList.contains('dark'),g=r.getAttribute('data-theme')==='soft';document.querySelector('meta[name="theme-color"]').content=d?'#191919':g?'#f1f1f1':'#ffffff'}catch(e){}})();
 </script>
 <link rel="stylesheet" href="/styles.css?v=20261016-logistics-v7">
 <link rel="stylesheet" href="/minimal-overrides.css?v=20261016-minimal-3">
