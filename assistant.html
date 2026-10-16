@@ -11,7 +11,7 @@
   (function(){try{var t=localStorage.getItem('iomastavka_theme');var d=t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content=d?'#0b2238':'#bfe6f8'}catch(e){}})();
 </script>
 <link rel="stylesheet" href="/styles.css?v=20261016-logistics-v7">
-<link rel="stylesheet" href="/minimal-overrides.css?v=20261016-minimal-2">
+<link rel="stylesheet" href="/minimal-overrides.css?v=20261016-minimal-3">
 <link rel="stylesheet" href="/cabinet.css?v=1">
 </head>
 <body>
@@ -19,12 +19,7 @@
 <header class="topbar">
     
 <div class="topbar-left"><nav class="top-nav" id="topNav" aria-label="Быстрые действия"><button id="themeToggleButton" class="top-nav-btn" type="button" aria-label="Тема" title="Тема" data-i18n-aria="navTheme" data-i18n-title="navTheme"><svg class="top-nav-svg" viewBox="0 0 24 24"><g class="icon-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g><path class="icon-moon" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span data-i18n="navTheme">Тема</span></button><button id="agentImportButton" data-client-only hidden class="top-nav-btn" type="button" aria-label="Обновить ставки" title="Обновить ставки" data-i18n-aria="navRates" data-i18n-title="navRates"><svg class="top-nav-svg" viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span data-i18n="navRates">Ставки</span></button><button id="customsButton" data-client-only hidden class="top-nav-btn" type="button" aria-label="Проверка ТН ВЭД" title="Проверка ТН ВЭД" data-i18n-aria="navCustoms" data-i18n-title="navCustoms"><svg class="top-nav-svg" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5z"/><circle cx="12" cy="10" r="2.5"/><path d="M7 19c1-2.5 3-3.5 5-3.5s4 1 5 3.5"/></svg><span data-i18n="navCustoms">Таможня</span></button></nav></div>
-  <div class="brand" aria-label="iomastavka"><span>i</span><span>o</span><span>m</span><span>a</span><span>s</span><span>t</span><span>a</span><span>v</span><span>k</span><span>a</span></div>
-  <div class="top-actions"><span class="live-pill"><i></i> LIVE</span><button class="lang active" data-lang="ru">🇷🇺</button><button class="lang" data-lang="en">🇬🇧</button><button class="lang" data-lang="zh">🇨🇳</button><button class="lang" data-lang="tr">🇹🇷</button><button type="button" class="login-gate-btn" id="loginGateBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg><span data-i18n="loginGateBtn">Войти в личный кабинет</span></button></div>
-</header>
-
-<nav class="primary-site-nav" id="primarySiteNav" aria-label="Основная навигация">
-  <div class="site-nav-links">
+  <nav class="site-nav-links" id="primarySiteNav" aria-label="Основная навигация">
     <a href="/" data-page-route="home">Обзор</a>
     <a href="/routes" data-page-route="routes">Маршрутизатор</a>
     <a href="/services" data-page-route="services">Услуги</a>
@@ -33,12 +28,15 @@
     <a href="/forwarders" data-page-route="forwarders" data-auth-nav hidden>Экспедиторы</a>
     <a href="/customs" data-page-route="customs" data-auth-nav hidden>ТН ВЭД</a>
     <a href="/admin" data-page-route="admin" data-admin-nav hidden>Администрирование</a>
-  </div>
-  <div class="site-nav-meta">
+  </nav>
+  <div class="brand" aria-label="iomastavka"><span>i</span><span>o</span><span>m</span><span>a</span><span>s</span><span>t</span><span>a</span><span>v</span><span>k</span><span>a</span></div>
+  <div class="top-actions"><div class="site-nav-meta">
     <span class="site-role-pill" id="siteRoleBadge">ГОСТЬ</span>
     <span class="site-mode-note" id="siteModeNote">Гостевой режим · часть информации скрыта</span>
-  </div>
-</nav>
+  </div><button class="lang active" data-lang="ru" aria-label="Русский" title="Русский">RU</button><button class="lang" data-lang="en" aria-label="English" title="English">EN</button><button class="lang" data-lang="zh" aria-label="中文" title="中文">中文</button><button class="lang" data-lang="tr" aria-label="Türkçe" title="Türkçe">TR</button><button type="button" class="login-gate-btn" id="loginGateBtn" aria-label="Войти в личный кабинет" title="Войти в личный кабинет"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg><span>Войти</span></button></div>
+</header>
+
+
 
 <main class="app-shell">
 <section id="assistantView" class="view-layer" aria-hidden="true"><div class="assistant-shell"><button class="close-button" data-close-view="assistant" data-i18n-aria="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="assistant-head"><div><span class="eyebrow" data-i18n="intelligence">ИНТЕЛЛЕКТ</span><h2 data-i18n="assistant">AI-ассистент</h2><small data-i18n="assistantSub2">Логистика, расчёты и ВЭД — голосом или текстом.</small></div></div><div class="voice-orb-stage"><div class="voice-orb" id="voiceOrb" aria-hidden="true"><span></span><span></span><span></span></div></div><div id="chatMessages" class="chat-messages"></div><div class="voice-state" id="voiceState">Готов к разговору</div><div class="chat-compose"><div class="attachment-row"><label class="attach-button icon-only" for="aiFile" aria-label="Прикрепить файл" title="Прикрепить файл"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 12.5 14.9 6.1a3.3 3.3 0 0 1 4.7 4.7l-8.9 8.9a5 5 0 0 1-7.1-7.1l9.2-9.2a2.9 2.9 0 0 1 4.1 4.1l-8.8 8.8a1.4 1.4 0 0 1-2-2l7.9-7.9"/></svg></label><input id="aiFile" type="file" accept=".pdf,.txt,.csv,.xlsx,.xls,.doc,.docx,.rtf,.json,.png,.jpg,.jpeg,.webp" multiple><span id="fileNames" class="file-names" data-i18n="fileHint">Файл можно добавить вместе с сообщением</span></div><textarea id="assistantInput" placeholder="Напишите сообщение или отправьте КП со ставкой…"></textarea><div class="compose-actions"><button id="voiceButton" class="voice-button icon-only" type="button" data-i18n-aria="voice" aria-label="Микрофон" title="Микрофон"><svg class="mic-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="8" height="12" rx="4"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg></button><button id="sendAI" class="assistant-save" data-i18n="send">Отправить</button></div></div><div id="assistantStatus"></div></div></section>
