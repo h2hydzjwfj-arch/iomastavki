@@ -2264,6 +2264,13 @@ app.get('/api/my-orders', function(req, res) {
     return res.status(401).json({ ok:false, error:'unauthorized' });
   }
   const clientId = String(auth).slice(7);
+  try {
+    const clients = require('./lib/clients');
+    const client = clients.findById(clientId);
+    if (!client || !client.active) return res.status(401).json({ ok:false, error:'account inactive' });
+  } catch(e) {
+    return res.status(401).json({ ok:false, error:'account unavailable' });
+  }
   const fs = require('fs');
   let all = [];
   try { all = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8')) || []; } catch(e) { all = []; }
@@ -2380,6 +2387,7 @@ app.post('/api/logout', function(req, res){
   res.clearCookie('authUser', { path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
   res.clearCookie('auth', { path: '/' });
   res.clearCookie('authUser', { path: '/' });
+  res.clearCookie('authSig', { path: '/' });
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
   res.setHeader('Pragma', 'no-cache');
   console.log('[logout] POST cleared');
