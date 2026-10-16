@@ -58,17 +58,18 @@
   function city(id){return CITIES[id]||{id:id,name:id,country:'',region:'',x:450,y:200,kind:'city'};}
   function cityName(id){var c=city(id);return c.name+(c.country?', '+c.country:'');}
   function isCrossBorder(from,to){return city(from).region!==city(to).region;}
-  function isChRu(from,to){return (city(from).region==='cn'&&city(to).region==='ru')||(city(from).region==='ru'&&city(to).region==='cn');}
+  function isChRu(from,to){var a=city(from).region,b=city(to).region;return a!==b&&['cn','ru','mn'].includes(a)&&['cn','ru','mn'].includes(b);}
   function reverseForDirection(points,from,to){return city(from).region==='ru'&&city(to).region==='cn'?points.slice().reverse():points.slice();}
   function compactIds(ids){return (ids||[]).filter(function(id,i,all){return i===0||id!==all[i-1];});}
   function routeSteps(ids){return compactIds(ids).map(function(id){var p=city(id);return {id:id,name:p.name,country:p.country};});}
   function reverseSteps(ids,from,to){return routeSteps(reverseForDirection(ids,from,to));}
   function defaultCorridors(from,to,mode){
     var cnFirst=city(from).region==='cn';
+    var fromRegion=city(from).region,toRegion=city(to).region;
     var pairs=[
       {id:'manzhouli',mode:'rail',title:SOURCE.manzhouli.title,label:SOURCE.manzhouli.label,points:cnFirst?[from,'manzhouli','zabaikalsk','novosibirsk',to]:[from,'novosibirsk','zabaikalsk','manzhouli',to],desc:'Восточный вариант через погранстанцию Маньчжурия—Забайкальск и дальнейшую российскую железнодорожную сеть.',source:SOURCE.manzhouli,fit:'Подходит для проверки контейнерной Ж/Д схемы на центральные и дальние направления России.'},
       {id:'kazakhstan',mode:'rail',title:SOURCE.kazakhstan.title,label:SOURCE.kazakhstan.label,points:cnFirst?[from,'alashankou','dostyk',to]:[from,'dostyk','alashankou',to],desc:'Западная железнодорожная схема через узлы китайско-казахстанской границы и далее через Казахстан/Россию.',source:SOURCE.kazakhstan,fit:'Альтернатива восточному маршруту; станция передачи зависит от направления, типа контейнера и оператора.'},
-      {id:'mongolia',mode:'rail',title:SOURCE.mongolia.title,label:SOURCE.mongolia.label,points:cnFirst?[from,'erenhot','zamyn-uud','ulaanbaatar','naushki',to]:[from,'naushki','ulaanbaatar','zamyn-uud','erenhot',to],desc:'Центральный железнодорожный сценарий через китайско-монгольский узел Эрэн-Хото—Замын-Ууд, сеть УБЖД и российское направление Наушки. Использовать только как вариант для запроса оператору: текущий сервис по конкретной паре городов не подтверждается этой схемой.',source:SOURCE.mongolia,fit:'Имеет смысл сравнить для контейнерной Ж/Д перевозки, если оператор подтверждает стык через Монголию, транзитные разрешения, перегрузку и слот.'},
+      {id:'mongolia',mode:'rail',title:SOURCE.mongolia.title,label:SOURCE.mongolia.label,points:(function(){if(fromRegion==='cn'&&toRegion==='mn')return [from,'erenhot','zamyn-uud',to];if(fromRegion==='mn'&&toRegion==='cn')return [from,'zamyn-uud','erenhot',to];if(fromRegion==='mn'&&toRegion==='ru')return [from,'naushki',to];if(fromRegion==='ru'&&toRegion==='mn')return [from,'naushki',to];if(cnFirst)return [from,'erenhot','zamyn-uud','ulaanbaatar','naushki',to];return [from,'naushki','ulaanbaatar','zamyn-uud','erenhot',to];})(),desc:'Центральный железнодорожный сценарий через китайско-монгольский узел Эрэн-Хото—Замын-Ууд, сеть УБЖД и российское направление Наушки. Использовать только как вариант для запроса оператору: текущий сервис по конкретной паре городов не подтверждается этой схемой.',source:SOURCE.mongolia,fit:'Имеет смысл сравнить для контейнерной Ж/Д перевозки, если оператор подтверждает стык через Монголию, транзитные разрешения, перегрузку и слот.'},
       {id:'suifenhe',mode:'rail',title:SOURCE.suifenhe.title, label:SOURCE.suifenhe.label, points:cnFirst?[from,'suifenhe','grodekovo','ussuriysk',to]:[from,'ussuriysk','grodekovo','suifenhe',to],desc:'Региональный дальневосточный сценарий через Суйфэньхэ—Гродеково с дальнейшей доставкой по российской сети.',source:SOURCE.suifenhe,fit:'Особенно уместно для Уссурийска, Владивостока и других точек Дальнего Востока.'},
       {id:'heihe',mode:'multimodal',title:SOURCE.heihe.title,label:SOURCE.heihe.label,points:cnFirst?[from,'heihe','blagoveshchensk','khabarovsk',to]:[from,'khabarovsk','blagoveshchensk','heihe',to],desc:'Региональный сценарий через Хэйхэ—Благовещенск с последующей автодоставкой или передачей на внутреннюю железнодорожную сеть.',source:SOURCE.heihe,fit:'Больше подходит для приграничных и дальневосточных направлений; точный сервис нужно согласовать.'},
       {id:'sea',mode:'sea',title:SOURCE.sea.title,label:SOURCE.sea.label,points:cnFirst?[from,'vladivostok','moscow',to]:[from,'moscow','vladivostok',to],desc:'Морской участок до российского дальневосточного порта, терминальная обработка и контейнерный поезд до Москвы; далее возможна автодоставка.',source:SOURCE.sea,fit:'Проверять вместе с морским фрахтом, портовыми расходами, таможенным плечом и доставкой до двери.'},
@@ -79,7 +80,7 @@
     if(!isChRu(from,to)){
       return [{id:'domestic',mode:mode==='multimodal'?'rail':mode,title:'Внутреннее плечо: '+cityName(from)+' → '+cityName(to),label:'НЕТ МЕЖДУНАРОДНОГО ПЕРЕХОДА В ВЫБРАННОЙ ПАРЕ',points:[from,to],desc:'Указанные пункты находятся в одном регионе списка. Международные коридоры ниже не следует автоматически применять к этому маршруту.',source:SOURCE.sea,fit:'Для такой пары нужен расчёт локального автомобильного или железнодорожного плеча; международный участок не включён.'}];
     }
-    var filtered=pairs.filter(function(p){return mode==='multimodal'||p.mode===mode||(mode==='rail'&&p.id==='sea');});
+    var filtered=pairs.filter(function(p){if(fromRegion==='mn'||toRegion==='mn')return p.id==='mongolia'&&(mode==='multimodal'||mode==='rail');return mode==='multimodal'||p.mode===mode||(mode==='rail'&&p.id==='sea');});
     if(city(to).id==='blagoveshchensk'||city(to).id==='ussuriysk'||city(to).id==='vladivostok'){
       filtered.sort(function(a,b){var score={heihe:0,suifenhe:1,manzhouli:3,kazakhstan:4,sea:5,air:6,road:7};return (score[a.id]??10)-(score[b.id]??10);});
     } else if(city(to).id==='moscow'||city(to).id==='saint-petersburg'||city(to).id==='yekaterinburg'||city(to).id==='novosibirsk'){
@@ -280,6 +281,7 @@
     if(count)count.textContent=opts.length===1?'1 вариант':opts.length+' вариантов';
     if(host){
       if(city(state.from).id===city(state.to).id)host.innerHTML='<div class="route-empty-state">Выберите разные пункты отправления и назначения, чтобы сравнить коридоры.</div>';
+      else if(!opts.length)host.innerHTML='<div class="route-empty-state">В открытом справочнике пока нет подтверждённого сценария для этого сочетания городов и вида транспорта. Попробуйте Ж/Д или мультимодальный режим либо запросите проверку у логиста. Мы не показываем неподтверждённые рейсы, ставки или сроки.</div>';
       else host.innerHTML=opts.map(routeCard).join('');
     }
     renderDynamicRoute();
