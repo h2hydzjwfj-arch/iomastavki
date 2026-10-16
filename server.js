@@ -1853,19 +1853,19 @@ app.post('/api/assist', async function(req, res){
 });
 
 app.get('/api/agents', function(req,res){
+  const auth = getAuth(req);
+  const isAdmin = auth === 'admin' || auth === '1';
+  let records = [];
   try {
-    const file = path.join(DATA_DIR,'agents.json');
-    let records = JSON.parse(fs.readFileSync(file,'utf8'));
-    const auth = getAuth(req);
-    const isAdmin = auth === 'admin' || auth === '1';
-    if (!isAdmin) records = records.filter(function(r){ return !r.private; });
-    res.json({ ok:true, records, total: records.length, isAdmin });
-  } catch(e){
-    try {
-      const b = JSON.parse(fs.readFileSync(path.join(ROOT,'agents.json'),'utf8'));
-      res.json({ ok:true, records:b, total: b.length, isAdmin: false });
-    } catch(e2){ res.json({ ok:true, records:[], total: 0, isAdmin: false }); }
+    records = JSON.parse(fs.readFileSync(path.join(DATA_DIR,'agents.json'),'utf8'));
+  } catch(e) {
+    try { records = JSON.parse(fs.readFileSync(path.join(ROOT,'agents.json'),'utf8')); }
+    catch(e2) { records = []; }
   }
+  if (!Array.isArray(records)) records = [];
+  // Apply the same privacy filter regardless of which storage file was available.
+  if (!isAdmin) records = records.filter(function(record){ return !record.private; });
+  res.json({ ok:true, records, total: records.length, isAdmin });
 });
 
 app.get('/api/rates', requireClientOrAdmin, function(req,res){ res.json(ensureRateDb()); });
