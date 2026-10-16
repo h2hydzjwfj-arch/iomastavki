@@ -3798,3 +3798,18 @@ html:not(.dark) .map-aircraft-shape,.route-lines { filter:drop-shadow(0 0 5px rg
 @media(prefers-reduced-motion:reduce) {
   .home-map-action[data-open-route-mode="air"],.route-lines { animation:none!important; }
 }
+
+
+/* Route evidence block: keep source facts and caveats readable inside each option. */
+.route-source-proof { display:grid;gap:5px;margin:12px 0 8px;padding:10px 11px;border-left:2px solid rgba(55,202,222,.45);border-radius:0 8px 8px 0;background:rgba(45,186,210,.055); }
+.route-source-proof b { color:#9fdae6;font-size:10px;letter-spacing:.02em; }
+.route-source-proof p { margin:0;color:#87a4b7;font-size:10px;line-height:1.55; }
+.route-source-muted { color:#7894a7;font-size:10px;line-height:1.4; }
+html:not(.dark) .route-source-proof { background:#eef8fa;border-left-color:#78c7d3; }
+html:not(.dark) .route-source-proof b { color:#286d7d; }
+html:not(.dark) .route-source-proof p,html:not(.dark) .route-source-muted { color:#526e81; }
+/* The mobile top bar is 64px, so reserve the exact remaining height for the page viewport. */
+@media(max-width:560px) {
+  .topbar { height:64px!important; min-height:64px; }
+  .app-shell { height:calc(100dvh - 64px - var(--site-nav-h))!important; }
+}
