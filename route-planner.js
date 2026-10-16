@@ -150,7 +150,7 @@
     var pathIds=selected?compactIds(selected.points||[state.from,state.to]):[];
     var visibleIds=[state.from,state.to];
     if(selected)visibleIds=visibleIds.concat(pathIds);
-    visibleIds=visibleIds.filter(function(id,i,all){return GEO[id]&&all.indexOf(id)===i;});
+    visibleIds=visibleIds.filter(function(id,i,all){return GEO[id]&&city(id).kind!=='waypoint'&&all.indexOf(id)===i;});
 
     visibleIds.forEach(function(id){
       var ll=GEO[id],c=city(id);
@@ -174,7 +174,7 @@
       var isAir=selected.mode==='air',isSea=selected.mode==='sea';
       var line=L.polyline(coords,{
         color:'#222',weight:isAir?1.8:2.4,opacity:.92,
-        dashArray:isAir?'4 7':isSea?'8 6':null,lineCap:'round',lineJoin:'round'
+        dashArray:isAir?'4 7':isSea?'8 6':null,lineCap:'round',lineJoin:'round',className:'ioma-route-line'
       }).addTo(leafletRouteLayer);
       var explanation=geometrySource==='osrm'
         ?'Линия построена по дорожной сети OpenStreetMap для выбранных узлов. Допуск КПП, проезд, документы, ограничения товара и срок всё равно подтверждаются перевозчиком.'
