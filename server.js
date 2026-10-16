@@ -774,7 +774,7 @@ app.get('/fix_app.js', function(req,res){ res.sendFile(path.join(ROOT,'fix_app.j
 app.get('/minimal-overrides.css', function(req,res){ res.type('text/css').sendFile(path.join(ROOT,'minimal-overrides.css')); });
 app.get('/home-map.js', function(req,res){ res.type('application/javascript').sendFile(path.join(ROOT,'home-map.js')); });
 app.get('/api/health', function(req,res){ res.json({ ok:true }); });
-app.get('/api/version', function(req,res){ res.json({ ok:true, version:'98', build:'IOMASTAVKA_FILE_80' }); });
+app.get('/api/version', function(req,res){ res.set('Cache-Control','no-store'); res.json({ ok:true, version:'99', build:'IOMASTAVKA_PREVIEW_20261016' }); });
 app.get('/api/config', function(req,res){ res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.GROQ_API_KEY || process.env.DEEPSEEK_API_KEY), pexelsConfigured: Boolean(process.env.PEXELS_API_KEY) }); });
 
 // ========== Дорожное расстояние через OSRM + Nominatim ==========
