@@ -151,7 +151,7 @@
     var u;try{u=new URL(path,location.origin);}catch(e){u=new URL('/',location.origin);}
     var p=u.pathname.replace(/\/+$/,'')||'/';
     var activeNav=({'/':'home','/routes':'routes','/services':'services','/news':'news','/rates':'rates','/forwarders':'forwarders','/customs':'customs','/admin':'admin'})[p]||'';
-    $('[data-page-route]').forEach(function(a){if(a.dataset.pageRoute===activeNav)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
+    $$('[data-page-route]').forEach(function(a){if(a.dataset.pageRoute===activeNav)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
     if(p==='/admin'&&state.role!=='admin'){showToast(state.role==='guest'?'Войдите, чтобы проверить доступ к административному разделу.':'Администрирование доступно только администратору.');if(state.role==='guest')goAuth('login');else window.location.href='/services';return;}
     if(['/rates','/forwarders','/customs'].includes(p)&&state.role==='guest'){showToast('Вы в гостевом режиме. Войдите или зарегистрируйтесь для доступа к этому разделу.');goAuth('register');return;}
     if(changeUrl)setUrl(p+(u.search||''));
@@ -249,8 +249,8 @@
   function setMode(mode){
     if(!MODES[mode])mode='multimodal';
     state.mode=mode;state.selectedOption=null;
-    $('[data-route-mode]').forEach(function(b){b.classList.toggle('is-active',b.dataset.routeMode===mode);b.setAttribute('aria-pressed',b.dataset.routeMode===mode?'true':'false');});
-    $('.corridor-line').forEach(function(line){var id=line.dataset.corridor;var show=mode==='multimodal'||id===mode||(mode==='rail'&&['manzhouli','kazakhstan','mongolia','suifenhe'].includes(id))||(mode==='road'&&['manzhouli','kazakhstan','heihe','suifenhe'].includes(id))||(mode==='sea'&&id==='sea');line.classList.toggle('is-mode-active',show);});
+    $$('[data-route-mode]').forEach(function(b){b.classList.toggle('is-active',b.dataset.routeMode===mode);b.setAttribute('aria-pressed',b.dataset.routeMode===mode?'true':'false');});
+    $$('.corridor-line').forEach(function(line){var id=line.dataset.corridor;var show=mode==='multimodal'||id===mode||(mode==='rail'&&['manzhouli','kazakhstan','mongolia','suifenhe'].includes(id))||(mode==='road'&&['manzhouli','kazakhstan','heihe','suifenhe'].includes(id))||(mode==='sea'&&id==='sea');line.classList.toggle('is-mode-active',show);});
     renderRouteResults();
   }
   function buildStepsMarkup(steps){
