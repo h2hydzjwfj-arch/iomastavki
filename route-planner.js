@@ -100,6 +100,15 @@
     gibraltar:[36.14,-5.35],'north-sea':[55,3],'baltic-sea':[56.5,18],
     'east-china-sea':[29,128],'korea-strait':[34.3,129.5],'sea-of-japan':[40,133]
   };
+  // Cities the customer can select as endpoints. Border crossings, transfer points,
+  // and sea waypoints stay internal so the customer is not forced to choose a hub.
+  var PICKABLE_CITIES=[
+    'shanghai','beijing','guangzhou','shenzhen','yiwu','shenyang','ningbo','qingdao','tianjin','dalian',
+    'xiamen','chengdu','xian','zhengzhou','chongqing',
+    'moscow','saint-petersburg','vladivostok','blagoveshchensk','ussuriysk','khabarovsk',
+    'novosibirsk','yekaterinburg','chita','irkutsk','nizhny-novgorod','kazan','samara',
+    'rostov-on-don','krasnodar','novorossiysk','volgograd','perm'
+  ];
   var leafletMap=null,leafletTileLayer=null,leafletRouteLayer=null,leafletMarkerLayer=null;
   function initLeafletMap(){
     var el=$('#routePlannerMap');
@@ -694,7 +703,59 @@
     });
   }
 
-  function init(){
+  function fillCitySelect(select){
+    if(!select)return;
+    var previous=select.value;
+    var optgroups=[
+      {label:'Китай',ids:PICKABLE_CITIES.filter(function(id){return city(id).region==='cn';})},
+      {label:'Россия',ids:PICKABLE_CITIES.filter(function(id){return city(id).region==='ru';})}
+    ];
+    select.innerHTML='';
+    optgroups.forEach(function(group){
+      var og=document.createElement('optgroup');og.label=group.label;
+      group.ids.forEach(function(id){
+        var c=city(id),opt=document.createElement('option');
+        opt.value=id;opt.textContent=c.name+' · '+c.country;
+        og.appendChild(opt);
+      });
+      select.appendChild(og);
+    });
+    if(previous&&PICKABLE_CITIES.indexOf(previous)>=0)select.value=previous;
+    else select.value=select.id==='routeTo'||select.id==='homeRouteTo'?'moscow':'shanghai';
+  }
+  function initRouteCitySelects(){
+    fillCitySelect($('#routeFrom'));fillCitySelect($('#routeTo'));
+    fillCitySelect($('#homeRouteFrom'));fillCitySelect($('#homeRouteTo'));
+    var form=$('#homeRouteStartForm');
+    if(!form||form.dataset.bound==='1')return;
+    form.dataset.bound='1';
+    var mode='multimodal';
+    $('[data-home-route-mode]').forEach(function(button){
+      button.addEventListener('click',function(){
+        mode=MODES[button.dataset.homeRouteMode]?button.dataset.homeRouteMode:'multimodal';
+        $('[data-home-route-mode]').forEach(function(b){
+          var active=b.dataset.homeRouteMode===mode;
+          b.classList.toggle('is-active',active);b.setAttribute('aria-pressed',active?'true':'false');
+        });
+      });
+    });
+    var swap=$('#homeRouteSwap');
+    if(swap)swap.addEventListener('click',function(){
+      var from=$('#homeRouteFrom'),to=$('#homeRouteTo');if(!from||!to)return;
+      var old=from.value;from.value=to.value;to.value=old;
+    });
+    form.addEventListener('submit',function(e){
+      e.preventDefault();
+      var from=$('#homeRouteFrom'),to=$('#homeRouteTo');
+      if(!from||!to||!PICKABLE_CITIES.includes(from.value)||!PICKABLE_CITIES.includes(to.value)){
+        showToast('Выберите пункты отправления и назначения.');return;
+      }
+      if(from.value===to.value){showToast('Пункты отправления и назначения должны отличаться.');return;}
+      window.location.href='/routes?mode='+encodeURIComponent(mode)+'&from='+encodeURIComponent(from.value)+'&to='+encodeURIComponent(to.value);
+    });
+  }
+  function init(){ 
+    initRouteCitySelects();
     checkRole().then(function(){bootPath();});
     if($('#routeFrom'))$('#routeFrom').addEventListener('change',function(){state.from=this.value;state.selectedOption=null;syncEndpoints();renderRouteResults();});
     if($('#routeTo'))$('#routeTo').addEventListener('change',function(){state.to=this.value;state.selectedOption=null;syncEndpoints();renderRouteResults();});
