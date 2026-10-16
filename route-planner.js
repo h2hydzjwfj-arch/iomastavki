@@ -295,6 +295,32 @@
       var idx=clean.indexOf(target);
       return idx>=0?clean.slice(0,idx):clean;
     }
+    function finishLandward(nodes,target){
+      var clean=compactIds(nodes||[]);
+      var found=clean.indexOf(target);
+      if(found>=0)return clean.slice(0,found);
+      var omsk=clean.indexOf('omsk');
+      var eastTarget=['novosibirsk','krasnoyarsk','irkutsk','chita','blagoveshchensk','khabarovsk','ussuriysk','vladivostok'].indexOf(target)>=0;
+      if(omsk>=0&&eastTarget){
+        var prefix=clean.slice(0,omsk+1);
+        var spine=['novosibirsk','krasnoyarsk','irkutsk','ulan-ude','chita','khabarovsk','ussuriysk','vladivostok'];
+        if(target==='blagoveshchensk')return prefix.concat(spine.slice(0,5));
+        var targetIndex=spine.indexOf(target);
+        if(targetIndex>=0)return prefix.concat(spine.slice(0,targetIndex));
+      }
+      var perm=clean.indexOf('perm');
+      var base=perm>=0?clean.slice(0,perm+1):clean;
+      if(target==='moscow')return base;
+      if(target==='saint-petersburg')return base.concat(['moscow']);
+      if(target==='voronezh')return base.concat(['moscow']);
+      if(target==='rostov-on-don')return base.concat(['moscow','voronezh']);
+      if(target==='volgograd')return base.concat(['moscow','voronezh']);
+      if(target==='krasnodar')return base.concat(['moscow','voronezh','rostov-on-don']);
+      if(target==='novorossiysk')return base.concat(['moscow','voronezh','rostov-on-don','krasnodar']);
+      if(target==='samara')return base.concat(['kazan']);
+      if(target==='blagoveshchensk'&&omsk<0)return clean.concat(['chita']);
+      return clean;
+    }
     function orient(cnPath){
       var clean=compactIds(cnPath);
       return cnFirst?clean:clean.slice().reverse();
@@ -308,41 +334,49 @@
       return p;
     }
     function eastRailNodes(target){
-      var nodes;
-      if(farEast)nodes=['manzhouli','zabaikalsk','chita','khabarovsk','ussuriysk'];
-      else nodes=['manzhouli','zabaikalsk','chita','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
-      return trimAt(nodes,target);
+      if(target==='blagoveshchensk')return ['manzhouli','zabaikalsk','chita'];
+      var east=['manzhouli','zabaikalsk','chita','khabarovsk','ussuriysk','vladivostok'];
+      if(['vladivostok','ussuriysk','khabarovsk'].includes(target))return trimAt(east,target);
+      var west=['manzhouli','zabaikalsk','chita','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
+      return finishLandward(west,target);
     }
     function centralRailNodes(target){
-      var nodes=['alashankou','dostyk','almaty','astana','omsk','yekaterinburg','perm'];
-      return trimAt(nodes,target);
+      return finishLandward(['alashankou','dostyk','almaty','astana','omsk','yekaterinburg','perm'],target);
     }
     function khorgosRailNodes(target){
-      var nodes=['khorgos','altynkol','almaty','astana','omsk','yekaterinburg','perm'];
-      return trimAt(nodes,target);
+      return finishLandward(['khorgos','altynkol','almaty','astana','omsk','yekaterinburg','perm'],target);
     }
     function suifenheRailNodes(target){
-      var nodes=farEast?['suifenhe','grodekovo','ussuriysk','khabarovsk']:['suifenhe','grodekovo','ussuriysk','khabarovsk','chita','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
-      return trimAt(nodes,target);
+      if(target==='vladivostok')return ['suifenhe','grodekovo','ussuriysk'];
+      if(target==='ussuriysk')return ['suifenhe','grodekovo'];
+      if(target==='khabarovsk')return ['suifenhe','grodekovo','ussuriysk'];
+      var nodes=['suifenhe','grodekovo','ussuriysk','khabarovsk','chita','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
+      return finishLandward(nodes,target);
     }
     function mongoliaRailNodes(target){
       var nodes=['erenhot','zamyn-uud','ulaanbaatar','naushki','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
-      return trimAt(nodes,target);
+      return finishLandward(nodes,target);
     }
     function roadEastNodes(target){
-      var nodes=farEast?['manzhouli','zabaikalsk','chita','khabarovsk','ussuriysk']:['manzhouli','zabaikalsk','chita','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
-      return trimAt(nodes,target);
+      if(target==='blagoveshchensk')return ['manzhouli','zabaikalsk','chita'];
+      var east=['manzhouli','zabaikalsk','chita','khabarovsk','ussuriysk','vladivostok'];
+      if(['vladivostok','ussuriysk','khabarovsk'].includes(target))return trimAt(east,target);
+      var west=['manzhouli','zabaikalsk','chita','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
+      return finishLandward(west,target);
     }
     function roadKazakhNodes(target){
-      return trimAt(['khorgos','nur-zholy','almaty','astana','omsk','yekaterinburg','perm'],target);
+      return finishLandward(['khorgos','nur-zholy','almaty','astana','omsk','yekaterinburg','perm'],target);
     }
     function roadAmurNodes(target){
       var nodes=farEast?['heihe','kanikurgan','blagoveshchensk','khabarovsk']:['heihe','kanikurgan','blagoveshchensk','chita','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
-      return trimAt(nodes,target);
+      return finishLandward(nodes,target);
     }
     function roadPrimoryeNodes(target){
+      if(target==='vladivostok')return ['suifenhe','pogranichny','ussuriysk'];
+      if(target==='ussuriysk')return ['suifenhe','pogranichny'];
+      if(target==='khabarovsk')return ['suifenhe','pogranichny','ussuriysk'];
       var nodes=farEast?['suifenhe','pogranichny','ussuriysk','khabarovsk']:['suifenhe','pogranichny','ussuriysk','khabarovsk','chita','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
-      return trimAt(nodes,target);
+      return finishLandward(nodes,target);
     }
     function nearestChinesePort(id){
       var ports=['shanghai','ningbo','qingdao','tianjin','dalian','nansha','yantian','xiamen'];
@@ -356,27 +390,33 @@
       return best;
     }
     function inlandFromVlad(target){
+      if(target==='blagoveshchensk')return ['ussuriysk','khabarovsk'];
       var line=['vladivostok','ussuriysk','khabarovsk','chita','ulan-ude','irkutsk','krasnoyarsk','novosibirsk','omsk','yekaterinburg','perm'];
-      if(target==='blagoveshchensk')line=['vladivostok','ussuriysk','khabarovsk','blagoveshchensk'];
-      return trimAt(line,target);
+      return finishLandward(line,target);
     }
     function inlandFromNovo(target){
       if(target==='novorossiysk')return [];
-      if(target==='krasnodar')return ['krasnodar'];
-      if(target==='rostov-on-don')return ['rostov-on-don'];
-      if(target==='volgograd')return ['rostov-on-don','volgograd'];
-      var line=['rostov-on-don','voronezh','moscow'];
-      if(target==='saint-petersburg')line.push('saint-petersburg');
-      if(target==='nizhny-novgorod')line=['rostov-on-don','voronezh','nizhny-novgorod'];
-      if(target==='kazan')line=['rostov-on-don','voronezh','moscow','kazan'];
-      return trimAt(line,target);
+      var line=['krasnodar','rostov-on-don','voronezh','moscow','perm','yekaterinburg','omsk','novosibirsk','krasnoyarsk','irkutsk','ulan-ude','chita','khabarovsk','ussuriysk','vladivostok'];
+      var hit=line.indexOf(target);
+      if(hit>=0)return line.slice(0,hit);
+      if(target==='volgograd')return ['krasnodar','rostov-on-don'];
+      if(target==='saint-petersburg'||target==='nizhny-novgorod'||target==='kazan'||target==='samara')return ['krasnodar','rostov-on-don','voronezh','moscow'];
+      if(target==='blagoveshchensk')return line.slice(0,line.indexOf('chita')+1);
+      return line.slice(0,line.indexOf('moscow')+1);
     }
     function inlandFromSpb(target){
       if(target==='saint-petersburg')return [];
-      var line=['saint-petersburg','moscow'];
-      if(target==='nizhny-novgorod')line.push('nizhny-novgorod');
-      if(target==='kazan')line.push('kazan');
-      return trimAt(line,target);
+      var east=['moscow','perm','yekaterinburg','omsk','novosibirsk','krasnoyarsk','irkutsk','ulan-ude','chita','khabarovsk','ussuriysk','vladivostok'];
+      var eastIndex=east.indexOf(target);
+      if(eastIndex>=0)return east.slice(0,eastIndex);
+      if(target==='blagoveshchensk')return ['moscow','perm','yekaterinburg','omsk','novosibirsk','krasnoyarsk','irkutsk','ulan-ude','chita'];
+      if(target==='voronezh')return ['moscow'];
+      if(target==='rostov-on-don')return ['moscow','voronezh'];
+      if(target==='volgograd')return ['moscow','voronezh'];
+      if(target==='krasnodar')return ['moscow','voronezh','rostov-on-don'];
+      if(target==='novorossiysk')return ['moscow','voronezh','rostov-on-don','krasnodar'];
+      var center=['moscow','nizhny-novgorod','kazan','samara'];
+      return trimAt(center,target);
     }
     var cnPort=nearestChinesePort(cnCity);
     var vladSea=['east-china-sea','korea-strait','sea-of-japan','vladivostok'].concat(inlandFromVlad(ruCity));
