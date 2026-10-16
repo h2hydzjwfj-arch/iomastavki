@@ -747,6 +747,7 @@ app.get('/', function(req,res){ res.sendFile(path.join(ROOT,'index.html')); });
 // Named page routes share the existing application shell; route-planner.js selects the active section.
 const SITE_PAGE_FILES = {
   '/routes':'routes.html',
+  '/article':'article.html',
   '/services':'services.html',
   '/news':'news.html',
   '/rates':'rates.html',
