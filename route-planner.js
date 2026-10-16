@@ -405,7 +405,7 @@
       if(farEast)rank={'road-amur':0,'road-primorye':1,'rail-suifenhe':2,'sea-vladivostok':3,'rail-manzhouli':4,'road-manzhouli':5,'air':6,'rail-dostyk':7,'rail-khorgos':8,'sea-novorossiysk':9,'sea-st-petersburg':10};
       else if(southern)rank={'sea-novorossiysk':0,'road-kazakhstan':1,'road-manzhouli':2,'rail-manzhouli':3,'rail-dostyk':4,'rail-khorgos':5,'sea-vladivostok':6,'air':7,'sea-st-petersburg':8};
       else if(ruCity==='saint-petersburg')rank={'sea-st-petersburg':0,'rail-manzhouli':1,'rail-dostyk':2,'rail-khorgos':3,'road-kazakhstan':4,'road-manzhouli':5,'sea-vladivostok':6,'sea-novorossiysk':7,'air':8};
-      else rank={'rail-manzhouli':0,'rail-dostyk':1,'rail-khorgos':2,'road-manzhouli':3,'road-kazakhstan':4,'sea-vladivostok':5,'sea-novorossiysk':6,'sea-st-petersburg':7,'rail-suifenhe':8,'road-amur':9,'road-primorye':10,'rail-mongolia':11,'air':12};
+      else rank={'rail-manzhouli':0,'rail-dostyk':1,'rail-khorgos':2,'road-manzhouli':3,'road-kazakhstan':4,'sea-vladivostok':5,'sea-novorossiysk':6,'sea-st-petersburg':7,'air':8,'rail-suifenhe':9,'road-amur':10,'road-primorye':11,'rail-mongolia':12};
       filtered.sort(function(x,y){return (rank[x.id]===undefined?50:rank[x.id])-(rank[y.id]===undefined?50:rank[y.id]);});
       return filtered.slice(0,9);
     }
@@ -623,7 +623,7 @@
     var p=opts.find(function(o){return o.id===id;})||opts[0];
     if(!p)return;
     state.routeTitle=p.title;state.routeDescription=p.desc;
-    var data={from:cityName(state.from),to:cityName(state.to),mode:MODES[state.mode].label,title:p.title,description:p.desc,steps:(p.steps||routeSteps(p.points||[state.from,state.to])).map(function(s){return s.name;}).join(' → '),at:new Date().toISOString(),source:p.source.source};
+    var data={from:cityName(state.from),to:cityName(state.to),mode:MODES[state.mode].label,title:p.title,description:p.desc,steps:(p.steps||routeSteps(p.points||[state.from,state.to])).map(function(s){return s.name;}).join(' → '),at:new Date().toISOString(),source:(p.source&&p.source.source)||''};
     try{localStorage.setItem('iomaRouteDraft',JSON.stringify(data));}catch(e){}
     var message=$('#requestMessage');
     if(message)message.value='Маршрут: '+data.from+' → '+data.to+'\nВид перевозки: '+data.mode+'\nПредлагаемый коридор: '+data.title+'\nПромежуточные узлы: '+data.steps+'\nПараметры груза, срок и бюджет уточнить при расчёте.\nИсточник/описание коридора: '+data.source;
