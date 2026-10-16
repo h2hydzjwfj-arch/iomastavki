@@ -132,31 +132,65 @@
   function renderLeafletMap(){
     if(!initLeafletMap()||!leafletMap)return;
     leafletRouteLayer.clearLayers();leafletMarkerLayer.clearLayers();
-    var ids=Object.keys(GEO);
-    ids.forEach(function(id){
-      var c=CITIES[id],ll=GEO[id];if(!c||!ll)return;
-      var selected=id===state.from||id===state.to;
-      var icon=L.divIcon({className:'ioma-map-marker-wrap',html:'<span class="ioma-map-marker '+(id===state.from?'is-origin':id===state.to?'is-destination':'')+'"></span>',iconSize:[14,14],iconAnchor:[7,7]});
+
+    // The map deliberately starts with the two endpoints only. Intermediate
+    // nodes appear only after the visitor explicitly selects a route option.
+    var options=defaultCorridors(state.from,state.to,state.mode);
+    var selected=state.selectedOption ? options.find(function(o){return o.id===state.selectedOption;}) : null;
+    var pathIds=selected ? compactIds(selected.points||[state.from,state.to]) : [];
+    var visibleIds=[state.from,state.to];
+    if(selected) visibleIds=visibleIds.concat(pathIds);
+    visibleIds=visibleIds.filter(function(id,i,all){return GEO[id]&&all.indexOf(id)===i;});
+
+    visibleIds.forEach(function(id){
+      var ll=GEO[id], c=city(id);
+      var isFrom=id===state.from, isTo=id===state.to, isIntermediate=!isFrom&&!isTo;
+      var icon=L.divIcon({
+        className:'ioma-map-marker-wrap',
+        html:'<span class="ioma-map-marker '+(isFrom?'is-origin':isTo?'is-destination':isIntermediate?'is-intermediate':'')+'"></span>',
+        iconSize:[16,16],iconAnchor:[8,8]
+      });
       var marker=L.marker(ll,{icon:icon,title:c.name,keyboard:true,alt:c.name}).addTo(leafletMarkerLayer);
-      marker.bindTooltip(c.name+' · '+c.country,{direction:'top',offset:[0,-7],className:'ioma-map-tooltip'});
-      marker.on('click',function(){selectMapCity(id);});
+      marker.bindTooltip(c.name+(c.country?' · '+c.country:''),{
+        direction:'top',offset:[0,-7],className:'ioma-map-tooltip',permanent:false
+      });
+      marker.on('click',function(){
+        if(isIntermediate){
+          marker.openTooltip();
+          return;
+        }
+        selectMapCity(id);
+      });
     });
-    var opts=defaultCorridors(state.from,state.to,state.mode);
-    var opt=opts.find(function(o){return o.id===state.selectedOption;})||opts[0];
-    if(opt){
-      var idsPath=compactIds(opt.points||[state.from,state.to]);
-      var latlngs=idsPath.map(function(id){return GEO[id];}).filter(Boolean);
+
+    if(selected && pathIds.length>1){
+      var latlngs=pathIds.map(function(id){return GEO[id];}).filter(Boolean);
       if(latlngs.length>1){
-        L.polyline(latlngs,{color:'#777',weight:2.2,opacity:.9,dashArray:state.mode==='air'?'5 8':null,lineCap:'round'}).addTo(leafletRouteLayer);
-        L.circleMarker(latlngs[0],{radius:5,color:'#fff',weight:2,fillColor:'#222',fillOpacity:1}).addTo(leafletRouteLayer);
-        L.circleMarker(latlngs[latlngs.length-1],{radius:5,color:'#fff',weight:2,fillColor:'#777',fillOpacity:1}).addTo(leafletRouteLayer);
+        var isAir=selected.mode==='air'||state.mode==='air';
+        var isSea=String(selected.id).indexOf('sea-')===0;
+        var line=L.polyline(latlngs,{
+          color:'#222',weight:isAir?1.8:2.4,opacity:.92,
+          dashArray:isAir?'4 7':isSea?'8 6':null,
+          lineCap:'round',lineJoin:'round'
+        }).addTo(leafletRouteLayer);
+        line.bindPopup(
+          '<div><strong>'+esc(selected.title)+'</strong><br><small>Предварительный коридор. Геометрия схематична; точный маршрут, стыки, КПП и расписание подтверждает оператор.</small></div>',
+          {className:'ioma-route-popup',closeButton:false}
+        );
       }
     }
-    var from=GEO[state.from],to=GEO[state.to];
-    if(from&&to){
-      var b=L.latLngBounds([from,to]);
-      if(b.isValid())leafletMap.fitBounds(b.pad(.3),{maxZoom:6,animate:true});
+
+    var boundsIds=selected&&pathIds.length>1?pathIds:[state.from,state.to];
+    var boundsPoints=boundsIds.map(function(id){return GEO[id];}).filter(Boolean);
+    if(boundsPoints.length>1){
+      var bounds=L.latLngBounds(boundsPoints);
+      if(bounds.isValid())leafletMap.fitBounds(bounds.pad(selected?.15:.28),{
+        maxZoom:selected?5:6,animate:true
+      });
+    }else if(boundsPoints.length===1){
+      leafletMap.setView(boundsPoints[0],5,{animate:true});
     }
+    setTimeout(function(){if(leafletMap)leafletMap.invalidateSize();},80);
   }
   var MODES={
     multimodal:{label:'Мультимодальная',short:'Мультимодальный',description:'Сочетание видов транспорта с перегрузкой в терминальных узлах.'},
