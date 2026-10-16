@@ -348,56 +348,31 @@
     var btn = document.getElementById('themeToggleButton');
     if (!btn || btn.dataset.iomaTheme) return;
     btn.dataset.iomaTheme = '1';
+    function applyTheme(name){
+      var root=document.documentElement;
+      root.classList.toggle('dark',name==='dark');
+      if(name==='soft')root.setAttribute('data-theme','soft');
+      else root.removeAttribute('data-theme');
+      try{localStorage.setItem('iomastavka_theme',name);}catch(e){}
+      var meta=document.querySelector('meta[name="theme-color"]');
+      if(meta)meta.content=name==='dark'?'#191919':name==='soft'?'#f1f1f1':'#ffffff';
+      btn.setAttribute('aria-label',name==='light'?'Тема: светлая':name==='soft'?'Тема: мягкая серая':'Тема: тёмная');
+      btn.title=name==='light'?'Светлая тема':name==='soft'?'Мягкая серая тема':'Тёмная тема';
+      btn.dataset.currentTheme=name;
+    }
     try {
-      var saved = localStorage.getItem('iomastavka_theme');
-      if (saved === 'dark') document.documentElement.classList.add('dark');
-      else if (saved === 'light') document.documentElement.classList.remove('dark');
-    } catch(e){}
-    btn.addEventListener('click', function(e){
+      var saved=localStorage.getItem('iomastavka_theme');
+      if(['light','soft','dark'].indexOf(saved)>=0)applyTheme(saved);
+      else applyTheme(document.documentElement.classList.contains('dark')?'dark':'light');
+    } catch(e){ applyTheme('light'); }
+    btn.addEventListener('click',function(e){
       e.preventDefault();
-
-      // Находим небесные тела (солнце/луну) — исключаем иконку в шапке
-      var skyEls = [];
-      try {
-        document.querySelectorAll('.sun, .moon, .hero-sun, .hero-moon, [class*="sun"], [class*="moon"]').forEach(function(el){
-          if (el.closest('.top-nav-btn') || el.closest('.top-nav') || el.closest('#themeToggleButton')) return;
-          skyEls.push(el);
-        });
-      } catch(err){}
-
-      // 1) Плавно прячем текущее (вращается и сжимается)
-      skyEls.forEach(function(el){ el.classList.add('fading-out'); });
-
-      // 2) Меняем тему (сразу — чтобы новое тело проявилось)
-      var isDark = document.documentElement.classList.toggle('dark');
-      try { localStorage.setItem('iomastavka_theme', isDark ? 'dark' : 'light'); } catch(e2){}
-      var meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.content = isDark ? '#0b2238' : '#bfe6f8';
-      try { if (window.__iomaCelestialBoost) window.__iomaCelestialBoost(); } catch(e3){}
-
-      // 3) Иконка в шапке крутится
-      btn.classList.remove('spinning');
-      void btn.offsetWidth;
-      btn.classList.add('spinning');
-      setTimeout(function(){ btn.classList.remove('spinning'); }, 900);
-
-      // 4) Через 500 мс — прячем fading-out, показываем новые тела с fading-in
-      setTimeout(function(){
-        skyEls.forEach(function(el){ el.classList.remove('fading-out'); });
-        var newEls = [];
-        try {
-          document.querySelectorAll('.sun, .moon, .hero-sun, .hero-moon, [class*="sun"], [class*="moon"]').forEach(function(el){
-            if (el.closest('.top-nav-btn') || el.closest('.top-nav') || el.closest('#themeToggleButton')) return;
-            newEls.push(el);
-          });
-        } catch(err){}
-        newEls.forEach(function(el){
-          el.classList.remove('fading-in');
-          void el.offsetWidth;
-          el.classList.add('fading-in');
-          setTimeout(function(){ el.classList.remove('fading-in'); }, 1100);
-        });
-      }, 500);
+      var current=btn.dataset.currentTheme||'light';
+      var nextTheme=current==='light'?'soft':current==='soft'?'dark':'light';
+      applyTheme(nextTheme);
+      // Keep only a restrained micro-animation; no decorative scene is used in the minimal theme.
+      btn.classList.remove('spinning');void btn.offsetWidth;btn.classList.add('spinning');
+      setTimeout(function(){btn.classList.remove('spinning');},300);
     });
   }
 
