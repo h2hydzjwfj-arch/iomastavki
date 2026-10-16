@@ -287,7 +287,7 @@
     if(message)message.value='Маршрут: '+data.from+' → '+data.to+'\nВид перевозки: '+data.mode+'\nПредлагаемый коридор: '+data.title+'\nПромежуточные узлы: '+data.steps+'\nПараметры груза, срок и бюджет уточнить при расчёте.\nИсточник/описание коридора: '+data.source;
     var status=$('#requestStatus');
     if(status)status.textContent='Маршрут добавлен в заявку. Проверьте описание груза, укажите контакт и отправьте запрос.';
-    routeToPath('/request',true);
+    window.location.href='/request';
   }
 
   function interceptClick(e){
@@ -306,15 +306,17 @@
     var auth=e.target.closest&&e.target.closest('[data-open-auth]');
     if(auth){e.preventDefault();goAuth(auth.dataset.openAuth);return;}
     var plane=e.target.closest&&e.target.closest('[data-open-route-mode]');
-    if(plane){e.preventDefault();var m=plane.dataset.openRouteMode||'multimodal';state.mode=m;state.selectedOption=null;routeToPath('/routes?mode='+encodeURIComponent(m),true);return;}
+    if(plane){e.preventDefault();var m=plane.dataset.openRouteMode||'multimodal';window.location.href='/routes?mode='+encodeURIComponent(m);return;}
     var nav=e.target.closest&&e.target.closest('[data-page-route]');
-    if(nav){e.preventDefault();routeToPath(nav.getAttribute('href')||'/',true);return;}
+    if(nav){e.preventDefault();window.location.href=nav.getAttribute('href')||'/';return;}
     var gate=e.target.closest&&e.target.closest('[data-gated-link]');
-    if(gate){e.preventDefault();var type=gate.dataset.gatedLink;if((type==='admin'&&state.role!=='admin')||(type==='client'&&state.role==='guest')){goAuth(type==='admin'?'login':'register');return;}routeToPath(gate.getAttribute('href'),true);return;}
+    if(gate){e.preventDefault();var type=gate.dataset.gatedLink;if((type==='admin'&&state.role!=='admin')||(type==='client'&&state.role==='guest')){goAuth(type==='admin'?'login':'register');return;}window.location.href=gate.getAttribute('href');return;}
     var link=e.target.closest&&e.target.closest('a[href^="/"]');
-    if(link&&!link.target&&link.origin===location.origin){var dest=link.getAttribute('href');if(dest&&/^\/(routes|services|news|rates|forwarders|assistant|customs|account|admin|tarot|request)(\?|$|\/)/.test(dest)){e.preventDefault();routeToPath(dest,true);return;}}
+    if(link&&!link.target&&link.origin===location.origin){var dest=link.getAttribute('href');if(dest&&/^\/(routes|services|news|rates|forwarders|assistant|customs|account|admin|tarot|request)(\?|$|\/)/.test(dest)){e.preventDefault();window.location.href=dest;return;}}
     var openView=e.target.closest&&e.target.closest('[data-open-view]');
-    if(openView){var name=openView.dataset.openView;setTimeout(function(){var p=routeForView(name);if(p!=='/'){setUrl(p);var key=p==='/request'?'':p.slice(1);$('[data-page-route]').forEach(function(a){if(a.dataset.pageRoute===key)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});}},0);}
+    if(openView){e.preventDefault();var name=openView.dataset.openView;window.location.href=routeForView(name);return;}
+    var closeView=e.target.closest&&e.target.closest('[data-close-view]');
+    if(closeView){e.preventDefault();window.location.href='/';return;}
   }
   function onPopState(){routeToPath(location.pathname+location.search,false);}
   function initAdmin(){
@@ -411,6 +413,14 @@
     form.dataset.routePlannerBound='1';
     var status=$('#requestStatus');
     var ts=$('#requestTime');
+    var messageField=$('#requestMessage');
+    try{
+      var savedDraft=JSON.parse(localStorage.getItem('iomaRouteDraft')||'null');
+      if(savedDraft&&messageField&&!messageField.value){
+        messageField.value='Маршрут: '+(savedDraft.from||'')+' → '+(savedDraft.to||'')+'\nВид перевозки: '+(savedDraft.mode||'')+'\nПредлагаемый коридор: '+(savedDraft.title||'')+'\nПромежуточные узлы: '+(savedDraft.steps||'')+'\n'+(savedDraft.description||'')+'\nСрок, тариф и ограничения требуют подтверждения перевозчика.';
+        if(status)status.textContent='Выбранный маршрут перенесён в заявку. Добавьте описание груза и контакт.';
+      }
+    }catch(ignore){}
     function markOpened(){if(ts&&!ts.value)ts.value=String(Date.now());}
     document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('[data-open-view="request"]'))markOpened();});
     form.addEventListener('submit',function(e){
