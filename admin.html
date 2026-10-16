@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="iomastavka — расчёт ставок, ИИ-ассистент, экспедиторы и новости ВЭД для логистики Китай → Россия">
+<meta name="theme-color" content="#bfe6f8">
+<title>Администрирование · iomastavka</title>
+<script>
+  /* Тема применяется до первой отрисовки — без вспышки светлой темы */
+  (function(){try{var t=localStorage.getItem('iomastavka_theme'),r=document.documentElement;if(t==='dark')r.classList.add('dark');else if(t==='soft')r.setAttribute('data-theme','soft');else if(!t&&matchMedia('(prefers-color-scheme: dark)').matches)r.classList.add('dark');var d=r.classList.contains('dark'),g=r.getAttribute('data-theme')==='soft';document.querySelector('meta[name="theme-color"]').content=d?'#191919':g?'#f1f1f1':'#ffffff'}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/styles.css?v=20261016-logistics-v7">
+<link rel="stylesheet" href="/minimal-overrides.css?v=20261016-minimal-6">
+<link rel="stylesheet" href="/cabinet.css?v=1">
+</head>
+<body>
+<div id="weatherScene" class="weather-scene" aria-hidden="true"><div class="stars"></div><div class="sun"></div><div class="moon"></div></div>
+<header class="topbar">
+    
+<div class="topbar-left"><nav class="top-nav" id="topNav" aria-label="Быстрые действия"><button id="themeToggleButton" class="top-nav-btn" type="button" aria-label="Тема" title="Тема" data-i18n-aria="navTheme" data-i18n-title="navTheme"><svg class="top-nav-svg" viewBox="0 0 24 24"><g class="icon-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g><path class="icon-moon" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span data-i18n="navTheme">Тема</span></button><button id="agentImportButton" data-client-only hidden class="top-nav-btn" type="button" aria-label="Обновить ставки" title="Обновить ставки" data-i18n-aria="navRates" data-i18n-title="navRates"><svg class="top-nav-svg" viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span data-i18n="navRates">Ставки</span></button><button id="customsButton" data-client-only hidden class="top-nav-btn" type="button" aria-label="Проверка ТН ВЭД" title="Проверка ТН ВЭД" data-i18n-aria="navCustoms" data-i18n-title="navCustoms"><svg class="top-nav-svg" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5z"/><circle cx="12" cy="10" r="2.5"/><path d="M7 19c1-2.5 3-3.5 5-3.5s4 1 5 3.5"/></svg><span data-i18n="navCustoms">Таможня</span></button></nav></div>
+  <nav class="site-nav-links" id="primarySiteNav" aria-label="Основная навигация">
+    <a href="/" data-page-route="home">Обзор</a>
+    <a href="/routes" data-page-route="routes">Маршрутизатор</a>
+    <a href="/services" data-page-route="services">Услуги</a>
+    <a href="/news" data-page-route="news">Новости ВЭД</a>
+    <a href="/rates" data-page-route="rates" data-auth-nav hidden>Калькулятор</a>
+    <a href="/forwarders" data-page-route="forwarders" data-auth-nav hidden>Экспедиторы</a>
+    <a href="/customs" data-page-route="customs" data-auth-nav hidden>ТН ВЭД</a>
+    <a href="/admin" data-page-route="admin" data-admin-nav hidden>Администрирование</a>
+  </nav>
+  <div class="brand" aria-label="iomastavka"><span>i</span><span>o</span><span>m</span><span>a</span><span>s</span><span>t</span><span>a</span><span>v</span><span>k</span><span>a</span></div>
+  <div class="top-actions"><div class="site-nav-meta">
+    <span class="site-role-pill" id="siteRoleBadge">ГОСТЬ</span>
+    <span class="site-mode-note" id="siteModeNote">Гостевой режим · часть информации скрыта</span>
+  </div><button class="lang active" data-lang="ru" aria-label="Русский" title="Русский">RU</button><button class="lang" data-lang="en" aria-label="English" title="English">EN</button><button class="lang" data-lang="zh" aria-label="中文" title="中文">中文</button><button class="lang" data-lang="tr" aria-label="Türkçe" title="Türkçe">TR</button><button type="button" class="login-gate-btn" id="loginGateBtn" aria-label="Войти в личный кабинет" title="Войти в личный кабинет"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg><span>Войти</span></button></div>
+</header>
+
+
+
+<main class="app-shell">
+<section id="adminView" class="view-layer admin-page-layer" aria-hidden="true">
+  <div class="service-workspace">
+    <div class="route-page-header"><div><span class="eyebrow">IOMA CONTROL · 04</span><h2>Администрирование</h2><p>Рабочие инструменты платформы. Серверные права остаются главным источником разрешений.</p></div><a class="route-home-link" href="/">← Обзор</a></div>
+    <div class="admin-security-note"><span>◆</span><div><b>Режим администратора</b><p>Показываются только те элементы управления, которые доступны текущей учётной записи. Не публикуйте тарифы и клиентские данные в открытом доступе.</p></div></div>
+    <div class="service-hub-grid admin-tools-grid">
+      <article class="service-hub-card"><span class="hub-card-index">01 · ТАРИФЫ</span><span class="hub-icon">⇧</span><h3>Загрузка тарифного файла</h3><p>Откройте существующий импорт ставок. Перед загрузкой проверьте формат, дату действия и единицы тарифа.</p><button type="button" id="adminImportRates" class="hub-action-button">Открыть импорт ставок →</button></article>
+      <article class="service-hub-card"><span class="hub-card-index">02 · ТАМОЖНЯ</span><span class="hub-icon">⌘</span><h3>Таможенные инструменты</h3><p>Открыть существующий модуль ТН ВЭД для проверки классификационных и расчётных данных.</p><a class="hub-card-link" href="/customs">Открыть модуль →</a></article>
+      <article class="service-hub-card"><span class="hub-card-index">03 · ЗАЯВКИ</span><span class="hub-icon">◎</span><h3>Клиентские обращения</h3><p>Переход к личному кабинету и существующим заявкам. Не показываем закрытые данные в гостевом режиме.</p><button type="button" id="adminOpenCabinet" class="hub-action-button">Открыть кабинет →</button></article>
+    </div>
+    <div class="admin-tools-detail-grid">
+      <section class="admin-detail-card"><div><span class="hub-card-index">04 · ТАРИФЫ</span><h3>Загрузить файл ставок</h3><p>Импорт CSV, TXT или JSON. Перед загрузкой проверьте валюту, единицы тарифа, маршрут и дату действия.</p></div><input id="adminRateFile" type="file" accept=".csv,.txt,.json,text/csv,text/plain,application/json" hidden><button class="hub-action-button" id="adminRateFileButton" type="button">Выбрать файл и импортировать →</button><span id="adminRateFileStatus" aria-live="polite"></span></section>
+      <section class="admin-detail-card"><div><span class="hub-card-index">05 · СПРАВОЧНИК</span><h3>Импорт экспедиторов</h3><p>Вставьте данные компаний, контакты и направления. После обработки проверьте итоговый справочник.</p></div><textarea id="adminAgentsText" rows="4" maxlength="60000" placeholder="Название компании, контакт, направления, телефоны, email…"></textarea><button class="hub-action-button" id="adminAgentsImport" type="button">Обработать и импортировать →</button><span id="adminAgentsStatus" aria-live="polite"></span></section>
+      <section class="admin-detail-card"><div><span class="hub-card-index">06 · AI БАЗА ЗНАНИЙ</span><h3>Добавить инструкцию для ассистента</h3><p>Сохраните проверенную процедуру, термин или внутренний регламент в базе знаний.</p></div><form id="adminPlaybookForm"><label>Название<input id="adminPlaybookTitle" maxlength="200" required placeholder="Например, документы для ЖД-перевозки"></label><label>Ключевые слова<input id="adminPlaybookKeywords" maxlength="500" placeholder="ЖД, Китай, инвойс, упаковочный лист"></label><label>Проверенный ответ<textarea id="adminPlaybookAnswer" rows="4" maxlength="5000" required placeholder="Добавьте проверенную инструкцию…"></textarea></label><button class="hub-action-button" type="submit">Сохранить в базе знаний →</button></form><span id="adminPlaybookStatus" aria-live="polite"></span></section>
+    </div>
+    <section class="admin-requests-card"><div class="admin-requests-head"><div><span class="hub-card-index">07 · КЛИЕНТЫ</span><h3>Входящие заявки</h3><p>Данные доступны только администратору. Список загружается с защищённого серверного endpoint.</p></div><button class="hub-action-button" id="adminLoadRequests" type="button">Загрузить заявки ↻</button></div><div id="adminRequestsList" class="admin-requests-list" aria-live="polite">Нажмите «Загрузить заявки».</div></section>
+    <div class="admin-health-card"><div><span class="eyebrow">SERVICE STATUS</span><h3>Состояние сервиса</h3><p>Проверка доступности приложения без вывода секретных настроек.</p></div><button id="adminHealthCheck" class="hub-action-button" type="button">Проверить сервис</button><span id="adminHealthStatus" aria-live="polite">Проверка не запускалась</span></div>
+  </div>
+</section>
+</main>
+
+<script>
+  try {
+    if (!sessionStorage.getItem('IOMA_CACHE_CLEARED_v123')) {
+      localStorage.removeItem('iomas_articles');
+      localStorage.removeItem('iomas_news');
+      console.warn('[IOMA] one-time cache cleanup done');
+      sessionStorage.setItem('IOMA_CACHE_CLEARED_v123', '1');
+    }
+  } catch(e){}
+</script>
+<script src="/fix_app.js?v=4" defer></script>
+<script src="/fix_views.js?v=1" defer></script>
+<script src="/cabinet.js?v=1" defer></script>
+<script src="/app.js?v=20261016-role-gate-v301" defer></script>
+<script src="/route-planner.js?v=20261016-logistics-v10" defer></script>
+<script src="/features.js?v=20261016-features-v1" defer></script>
+</body></html>

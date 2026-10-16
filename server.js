@@ -43,6 +43,8 @@ const MAX_RATE_RECORDS = 5000;
 
 const GROQ_MODELS = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b'];
 const EDGE_VOICES = { ru:'ru-RU-DmitryNeural', en:'en-US-GuyNeural', zh:'zh-CN-YunxiNeural', tr:'tr-TR-AhmetNeural' };
+// Stable across deploys when configured; random fallback fails closed after process restart.
+const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.ADMIN_PASSWORD_HASH ? crypto.createHash('sha256').update('iomastavka-session:' + process.env.ADMIN_PASSWORD_HASH).digest('hex') : crypto.randomBytes(32).toString('hex'));
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '1mb' }));
@@ -62,13 +64,67 @@ function ensureRateDb(){
   }
   return { version: 2, updatedAt: null, records };
 }
-function normalizeText(s=''){ return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+function normalizeText(s=''){ return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ё/g,'е').trim(); }
+const CITY_NAME_ALIASES = {
+  'шанхай':'shanghai','上海':'shanghai','shanghai':'shanghai',
+  'пекин':'beijing','北京':'beijing','beijing':'beijing',
+  'гуанчжоу':'guangzhou','广州':'guangzhou','guangzhou':'guangzhou',
+  'шэньчжэнь':'shenzhen','深圳':'shenzhen','shenzhen':'shenzhen',
+  'нинбо':'ningbo','宁波':'ningbo','ningbo':'ningbo',
+  'циндао':'qingdao','青岛':'qingdao','qingdao':'qingdao',
+  'тяньцзинь':'tianjin','天津':'tianjin','tianjin':'tianjin',
+  'далянь':'dalian','大连':'dalian','dalian':'dalian',
+  'шэньян':'shenyang','沈阳':'shenyang','shenyang':'shenyang',
+  'иу':'yiwu','义乌':'yiwu','yiwu':'yiwu',
+  'харбин':'harbin','哈尔滨':'harbin','harbin':'harbin',
+  'сиань':'xian','西安':'xian','xian':'xian','xi an':'xian',
+  'чжэнчжоу':'zhengzhou','郑州':'zhengzhou','zhengzhou':'zhengzhou',
+  'чэнду':'chengdu','成都':'chengdu','chengdu':'chengdu',
+  'чунцин':'chongqing','重庆':'chongqing','chongqing':'chongqing',
+  'москва':'moscow','莫斯科':'moscow','moscow':'moscow',
+  'санкт-петербург':'saint-petersburg','санкт петербург':'saint-petersburg','st petersburg':'saint-petersburg','saint petersburg':'saint-petersburg','saint-petersburg':'saint-petersburg',
+  'нижний новгород':'nizhny-novgorod','nizhny novgorod':'nizhny-novgorod','nizhny-novgorod':'nizhny-novgorod',
+  'владивосток':'vladivostok','海参崴':'vladivostok','vladivostok':'vladivostok',
+  'находка':'nakhodka','nakhodka':'nakhodka',
+  'уссурийск':'ussuriysk','ussuriysk':'ussuriysk',
+  'благовещенск':'blagoveshchensk','blagoveshchensk':'blagoveshchensk',
+  'хабаровск':'khabarovsk','khabarovsk':'khabarovsk',
+  'чита':'chita','chita':'chita',
+  'иркутск':'irkutsk','irkutsk':'irkutsk',
+  'новосибирск':'novosibirsk','novosibirsk':'novosibirsk',
+  'екатеринбург':'yekaterinburg','yekaterinburg':'yekaterinburg','yekaterinburg':'yekaterinburg','ekaterinburg':'yekaterinburg',
+  'омск':'omsk','omsk':'omsk',
+  'казань':'kazan','kazan':'kazan',
+  'самара':'samara','samara':'samara',
+  'уфа':'ufa','ufa':'ufa',
+  'челябинск':'chelyabinsk','chelyabinsk':'chelyabinsk',
+  'пермь':'perm','perm':'perm',
+  'тюмень':'tyumen','tyumen':'tyumen',
+  'ростов-на-дону':'rostov-on-don','ростов на дону':'rostov-on-don','rostov-on-don':'rostov-on-don','rostov on don':'rostov-on-don',
+  'краснодар':'krasnodar','krasnodar':'krasnodar',
+  'волгоград':'volgograd','volgograd':'volgograd',
+  'новороссийск':'novorossiysk','novorossiysk':'novorossiysk'
+};
+function normalizeLocation(value){
+  const full=normalizeText(value).replace(/[.;]+/g,' ').replace(/\s+/g,' ').trim();
+  const first=full.split(/[,;|]/)[0].trim();
+  return CITY_NAME_ALIASES[first] || CITY_NAME_ALIASES[full] || first;
+}
+function normalizeTransportMode(value){
+  const m=normalizeText(value).replace(/[.\s/_-]+/g,'');
+  if (/^(air|avia|aviation|авиа|авиация|авиатранспорт|aircargo|воздушный)$/.test(m)) return 'air';
+  if (/^(rail|train|railway|жд|ждтранспорт|железнодорожный|железнаядорога|поезд|traincargo)$/.test(m)) return 'rail';
+  if (/^(road|truck|trucking|auto|авто|автомобильный|автотранспорт|автоперевозка|машина)$/.test(m)) return 'road';
+  if (/^(sea|ocean|ship|морской|море|морскаяперевозка|морскойтранспорт|судно)$/.test(m)) return 'sea';
+  if (/^(multimodal|мультимодальный|комбинированный|всемаршруты|всеварианты)$/.test(m)) return 'multimodal';
+  return m;
+}
 function routeScore(record, from, to, mode, distance){
-  const a=normalizeText(from), b=normalizeText(to), rf=normalizeText(record.from), rt=normalizeText(record.to);
+  const a=normalizeLocation(from), b=normalizeLocation(to), rf=normalizeLocation(record.from), rt=normalizeLocation(record.to);
   let score=0;
   if (rf && (rf===a || rf.includes(a) || a.includes(rf))) score+=8;
   if (rt && (rt===b || rt.includes(b) || b.includes(rt))) score+=8;
-  if (mode && record.mode && normalizeText(record.mode)===normalizeText(mode)) score+=5;
+  if (mode && record.mode && normalizeTransportMode(record.mode)===normalizeTransportMode(mode)) score+=5;
   if (Number.isFinite(distance) && Number(record.distanceKm)) score += Math.max(0,5-Math.abs(distance-Number(record.distanceKm))/1200);
   return score;
 }
@@ -744,14 +800,36 @@ app.get('/favicon.ico', function(req,res){
 });
 
 app.get('/', function(req,res){ res.sendFile(path.join(ROOT,'index.html')); });
+// Named page routes share the existing application shell; route-planner.js selects the active section.
+const SITE_PAGE_FILES = {
+  '/routes':'routes.html',
+  '/article':'article.html',
+  '/services':'services.html',
+  '/news':'news.html',
+  '/rates':'rates.html',
+  '/forwarders':'forwarders.html',
+  '/assistant':'assistant.html',
+  '/customs':'customs.html',
+  '/account':'account.html',
+  '/admin':'admin.html',
+  '/tarot':'tarot.html',
+  '/request':'request.html'
+};
+Object.keys(SITE_PAGE_FILES).forEach(function(route){
+  app.get(route, function(req,res){ res.sendFile(path.join(ROOT,SITE_PAGE_FILES[route])); });
+});
+app.get('/route-planner.js', function(req,res){ res.sendFile(path.join(ROOT,'route-planner.js')); });
+app.get('/features.js', function(req,res){ res.type('application/javascript').sendFile(path.join(ROOT,'features.js')); });
 app.get('/app.js', function(req,res){ res.sendFile(path.join(ROOT,'app.js')); });
 app.get('/styles.css', function(req,res){ res.sendFile(path.join(ROOT,'styles.css')); });
 app.get('/cabinet.css', function(req,res){ res.sendFile(path.join(ROOT,'cabinet.css')); });
 app.get('/cabinet.js',  function(req,res){ res.sendFile(path.join(ROOT,'cabinet.js')); });
 app.get('/fix_views.js', function(req,res){ res.sendFile(path.join(ROOT,'fix_views.js')); });
 app.get('/fix_app.js', function(req,res){ res.sendFile(path.join(ROOT,'fix_app.js')); });
+app.get('/minimal-overrides.css', function(req,res){ res.type('text/css').sendFile(path.join(ROOT,'minimal-overrides.css')); });
+app.get('/home-map.js', function(req,res){ res.type('application/javascript').sendFile(path.join(ROOT,'home-map.js')); });
 app.get('/api/health', function(req,res){ res.json({ ok:true }); });
-app.get('/api/version', function(req,res){ res.json({ ok:true, version:'98', build:'IOMASTAVKA_FILE_80' }); });
+app.get('/api/version', function(req,res){ res.set('Cache-Control','no-store'); res.json({ ok:true, version:'100', build:'IOMASTAVKA_PREVIEW_20261016_FEATURES1' }); });
 app.get('/api/config', function(req,res){ res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.GROQ_API_KEY || process.env.DEEPSEEK_API_KEY), pexelsConfigured: Boolean(process.env.PEXELS_API_KEY) }); });
 
 // ========== Дорожное расстояние через OSRM + Nominatim ==========
@@ -1705,7 +1783,7 @@ app.post('/api/assist', async function(req, res){
   try {
     const question = String((req.body && req.body.question) || '').slice(0, 2000);
     if (!question.trim()) return res.status(400).json({ ok:false, error:'question required' });
-    const auth = req.cookies && req.cookies.auth;
+    const auth = getAuth(req);
     const role = (auth === 'admin' || auth === '1') ? 'admin' : (auth && String(auth).startsWith('client:') ? 'client' : 'guest');
 
     const pb = loadPlaybook();
@@ -1832,24 +1910,24 @@ app.post('/api/assist', async function(req, res){
 });
 
 app.get('/api/agents', function(req,res){
+  const auth = getAuth(req);
+  const isAdmin = auth === 'admin' || auth === '1';
+  let records = [];
   try {
-    const file = path.join(DATA_DIR,'agents.json');
-    let records = JSON.parse(fs.readFileSync(file,'utf8'));
-    const auth = req.cookies && req.cookies.auth;
-    const isAdmin = auth === 'admin' || auth === '1';
-    if (!isAdmin) records = records.filter(function(r){ return !r.private; });
-    res.json({ ok:true, records, total: records.length, isAdmin });
-  } catch(e){
-    try {
-      const b = JSON.parse(fs.readFileSync(path.join(ROOT,'agents.json'),'utf8'));
-      res.json({ ok:true, records:b, total: b.length, isAdmin: false });
-    } catch(e2){ res.json({ ok:true, records:[], total: 0, isAdmin: false }); }
+    records = JSON.parse(fs.readFileSync(path.join(DATA_DIR,'agents.json'),'utf8'));
+  } catch(e) {
+    try { records = JSON.parse(fs.readFileSync(path.join(ROOT,'agents.json'),'utf8')); }
+    catch(e2) { records = []; }
   }
+  if (!Array.isArray(records)) records = [];
+  // Apply the same privacy filter regardless of which storage file was available.
+  if (!isAdmin) records = records.filter(function(record){ return !record.private; });
+  res.json({ ok:true, records, total: records.length, isAdmin });
 });
 
-app.get('/api/rates', function(req,res){ res.json(ensureRateDb()); });
+app.get('/api/rates', requireClientOrAdmin, function(req,res){ res.json(ensureRateDb()); });
 
-app.get('/api/rates/recommend', function(req,res){
+app.get('/api/rates/recommend', requireClientOrAdmin, function(req,res){
   const db = ensureRateDb();
   const from = String(req.query.from||''), to = String(req.query.to||''), mode = String(req.query.mode||''), distance = Number(req.query.distance);
   const matches = db.records.map(function(r){ return Object.assign({}, r, { _score: routeScore(r, from, to, mode, Number.isFinite(distance)?distance:null) }); })
@@ -1859,7 +1937,7 @@ app.get('/api/rates/recommend', function(req,res){
   res.json({ ok:true, matches });
 });
 
-app.post('/api/agents/import', async function(req,res){
+app.post('/api/agents/import', requireAuth, async function(req,res){
   const text = String(req.body?.text || '').trim();
   if (!text) return res.status(400).json({ ok:false });
   try {
@@ -1878,18 +1956,61 @@ app.post('/api/agents/import', async function(req,res){
   } catch(e){ res.status(502).json({ ok:false, error:e.message }); }
 });
 
-app.post('/api/rates/import', upload.single('file'), async function(req,res){
-  if (!req.file?.buffer && !String(req.body?.text||'').trim()) return res.status(400).json({ ok:false });
+app.post('/api/rates/import', requireAuth, upload.single('file'), async function(req,res){
+  if (!req.file?.buffer && !String(req.body?.text||'').trim()) {
+    return res.status(400).json({ ok:false, error:'Загрузите TXT, CSV или JSON-файл со ставками.' });
+  }
   try {
-    const content = req.file?.buffer ? req.file.buffer.toString('utf8') : String(req.body?.text||'');
-    const sys = 'Extract logistics rates. Return JSON array: company, from, to, mode, incoterms, rate, currency.';
+    if (req.file) {
+      const ext = path.extname(String(req.file.originalname||'')).toLowerCase();
+      if (!['.txt','.csv','.json'].includes(ext)) {
+        return res.status(415).json({ ok:false, error:'Поддерживаются только текстовые TXT, CSV и JSON. PDF и Excel пока не извлекаются автоматически.' });
+      }
+    }
+    let content = req.file?.buffer ? req.file.buffer.toString('utf8') : String(req.body?.text||'');
+    content = content.replace(/^\uFEFF/,'').trim();
+    if (!content || content.indexOf('\u0000') !== -1) {
+      return res.status(400).json({ ok:false, error:'Файл пустой или не является обычным текстом.' });
+    }
+    const sys = 'Extract logistics rates from the supplied text. Return a JSON array, each object with fields company, from, to, mode, incoterms, rate, currency. Do not invent missing values; omit records without route or rate.';
     const parsed = await aiChatJSON(sys, content.slice(0,60000), 3000);
-    const records = Array.isArray(parsed) ? parsed : [parsed];
+    const incoming = Array.isArray(parsed) ? parsed : [parsed];
+    const records = incoming.filter(function(r){
+      return r && typeof r === 'object' && !Array.isArray(r) &&
+        String(r.from||'').trim() && String(r.to||'').trim() &&
+        r.rate !== undefined && r.rate !== null && String(r.rate).trim() !== '';
+    });
+    if (!records.length) {
+      return res.status(422).json({ ok:false, error:'Не удалось извлечь ставки с направлением и тарифом. Проверьте исходный текст/CSV/JSON.' });
+    }
     const db = ensureRateDb();
-    for (const r of records) db.records.push(r);
+    const existing = new Set(db.records.map(function(r){
+      return [r.company,r.from,r.to,r.mode,r.incoterms,r.rate,r.currency].map(function(v){return normalizeText(v||'');}).join('|');
+    }));
+    let added = 0, skipped = 0;
+    records.forEach(function(r){
+      const record = Object.assign({},r,{
+        company:String(r.company||'').trim(),
+        from:String(r.from).trim(),
+        to:String(r.to).trim(),
+        mode:String(r.mode||'').trim(),
+        incoterms:String(r.incoterms||'').trim(),
+        rate:r.rate,
+        currency:String(r.currency||'').trim(),
+        source:String(r.source||'admin import'),
+        importedAt:new Date().toISOString()
+      });
+      const key=[record.company,record.from,record.to,record.mode,record.incoterms,record.rate,record.currency].map(function(v){return normalizeText(v||'');}).join('|');
+      if(existing.has(key)){skipped++;return;}
+      existing.add(key);db.records.push(record);added++;
+    });
+    db.updatedAt = new Date().toISOString();
     saveRates(db);
-    res.json({ ok:true, added: records.length });
-  } catch(e){ res.status(502).json({ ok:false, error:e.message }); }
+    res.json({ ok:true, added:added, skipped:skipped, total:db.records.length });
+  } catch(e){
+    console.error('[rates/import] ' + e.message);
+    res.status(502).json({ ok:false, error:'Не удалось обработать файл ставок. Проверьте формат и попробуйте снова.' });
+  }
 });
 
 function saveRates(data){ fs.mkdirSync(DATA_DIR,{recursive:true}); fs.writeFileSync(RATES_FILE, JSON.stringify(data,null,2), 'utf8'); }
@@ -1924,7 +2045,7 @@ app.post('/api/ai', async function(req,res){
   res.end();
 });
 
-app.post('/api/customs/check', async function(req,res){
+app.post('/api/customs/check', requireClientOrAdmin, async function(req,res){
   const code = String(req.body?.code || '').replace(/\D/g,'').slice(0,10);
   if (code.length !== 10) return res.status(400).json({ ok:false, error:'Нужен 10-значный код' });
   console.log('[customs] запрос code=' + code + ' | Groq=' + (process.env.GROQ_API_KEY?'yes':'no') + ' Gemini=' + (process.env.GEMINI_API_KEY?'yes':'no') + ' DeepSeek=' + (process.env.DEEPSEEK_API_KEY?'yes':'no'));
@@ -1952,17 +2073,50 @@ app.post('/api/customs/check', async function(req,res){
 
 
 // ========== РОЛИ + ЗАЩИТА + ЗАЯВКИ ==========
+const SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000;
+function authSignature(value, issuedAt){
+  return crypto.createHmac('sha256', SESSION_SECRET).update(String(value) + '.' + String(issuedAt)).digest('hex');
+}
+function getAuth(req){
+  const cookies = req && req.cookies;
+  const value = cookies && cookies.auth;
+  const packed = cookies && cookies.authSig;
+  if (!value || !packed || typeof packed !== 'string') return null;
+  const parts = packed.split('.');
+  if (parts.length !== 2 || !/^\d{10,16}$/.test(parts[0]) || !/^[a-f0-9]{64}$/i.test(parts[1])) return null;
+  const issuedAt = Number(parts[0]);
+  const age = Date.now() - issuedAt;
+  if (!Number.isSafeInteger(issuedAt) || age < -60000 || age > SESSION_MAX_AGE_MS) return null;
+  const expected = authSignature(value, issuedAt);
+  const a = Buffer.from(parts[1], 'hex');
+  const b = Buffer.from(expected, 'hex');
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  return String(value);
+}
 function isAdmin(req){
-  return !!(req.cookies && (req.cookies.auth === 'admin' || req.cookies.auth === '1'));
+  const auth = getAuth(req);
+  return auth === 'admin' || auth === '1';
 }
 function requireAuth(req, res, next){
   if (isAdmin(req)) return next();
   return res.status(401).json({ ok:false, error:'Auth required' });
 }
+function requireClientOrAdmin(req, res, next){
+  if (isAdmin(req)) return next();
+  const auth = getAuth(req);
+  if (auth && String(auth).startsWith('client:')){
+    try {
+      const clients = require('./lib/clients');
+      const client = clients.findById(String(auth).slice(7));
+      if (client && client.active) return next();
+    } catch(e){}
+  }
+  return res.status(401).json({ ok:false, error:'Client or administrator login required' });
+}
 function esc(s){ return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 app.get('/api/whoami', function(req, res){
-  const auth = req.cookies && req.cookies.auth;
+  const auth = getAuth(req);
   if (!auth || auth === '') {
     return res.status(401).json({ ok: false, error: 'unauthorized' });
   }
@@ -2183,7 +2337,8 @@ app.post('/api/requests', async function(req, res){
     fs.mkdirSync(require('path').dirname(REQUESTS_FILE), { recursive:true });
     let list = [];
     try { list = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8')); } catch(e){ list = []; }
-    const clientId = (req.cookies && String(req.cookies.auth||'').startsWith('client:')) ? String(req.cookies.auth).slice(7) : null;
+    const verifiedAuth = getAuth(req);
+  const clientId = verifiedAuth && verifiedAuth.startsWith('client:') ? verifiedAuth.slice(7) : null;
     const entry = { id: Date.now(), name, contact, body, clientId, at: new Date().toISOString(), ip: req.ip };
     list.unshift(entry);
     if (list.length > 500) list = list.slice(0, 500);
@@ -2210,11 +2365,18 @@ app.get('/api/requests', requireAuth, function(req, res){
 
 // ========== МОИ ЗАЯВКИ (для клиента) ==========
 app.get('/api/my-orders', function(req, res) {
-  const auth = req.cookies && req.cookies.auth;
+  const auth = getAuth(req);
   if (!auth || !String(auth).startsWith('client:')) {
     return res.status(401).json({ ok:false, error:'unauthorized' });
   }
   const clientId = String(auth).slice(7);
+  try {
+    const clients = require('./lib/clients');
+    const client = clients.findById(clientId);
+    if (!client || !client.active) return res.status(401).json({ ok:false, error:'account inactive' });
+  } catch(e) {
+    return res.status(401).json({ ok:false, error:'account unavailable' });
+  }
   const fs = require('fs');
   let all = [];
   try { all = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8')) || []; } catch(e) { all = []; }
@@ -2235,8 +2397,10 @@ app.post('/api/login', function(req,res){
   // Админ: email совпадает с ADMIN_EMAIL
   if (adminEmail && email === adminEmail) {
     if (!verifyPassword(password)) return res.status(401).json({ ok:false, error:'invalid credentials' });
-    res.cookie('auth','admin',{httpOnly:true,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
-    res.cookie('authUser','admin',{httpOnly:false,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
+    res.cookie('auth','admin',{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:8*60*60*1000,path:'/'});
+    const sessionIssuedAt = Date.now();
+    res.cookie('authSig',String(sessionIssuedAt) + '.' + authSignature('admin',sessionIssuedAt),{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:SESSION_MAX_AGE_MS,path:'/'});
+    res.cookie('authUser','admin',{httpOnly:false,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:8*60*60*1000,path:'/'});
     return res.json({ ok:true, role:'admin' });
   }
 
@@ -2244,8 +2408,11 @@ app.post('/api/login', function(req,res){
   const clients = require('./lib/clients');
   const c = clients.verifyClient(email, password);
   if (!c) return res.status(401).json({ ok:false, error:'invalid credentials' });
-  res.cookie('auth', 'client:' + c.id, { httpOnly:true, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
-  res.cookie('authUser', c.name, { httpOnly:false, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
+  const authValue = 'client:' + c.id;
+  res.cookie('auth', authValue, { httpOnly:true, sameSite:'lax', secure:process.env.NODE_ENV==='production', maxAge:8*60*60*1000, path:'/' });
+  const sessionIssuedAt = Date.now();
+  res.cookie('authSig', String(sessionIssuedAt) + '.' + authSignature(authValue,sessionIssuedAt), { httpOnly:true, sameSite:'lax', secure:process.env.NODE_ENV==='production', maxAge:SESSION_MAX_AGE_MS, path:'/' });
+  res.cookie('authUser', c.name, { httpOnly:false, sameSite:'lax', secure:process.env.NODE_ENV==='production', maxAge:8*60*60*1000, path:'/' });
   res.json({ ok:true, role:'client', name:c.name, email:c.email });
 });
 
@@ -2312,6 +2479,7 @@ app.get('/api/logout', function(req, res){
   res.clearCookie('authUser', { path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
   res.clearCookie('auth', { path: '/' });
   res.clearCookie('authUser', { path: '/' });
+  res.clearCookie('authSig', { path: '/' });
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
   res.setHeader('Pragma', 'no-cache');
   console.log('[logout] GET cleared');
@@ -2327,6 +2495,7 @@ app.post('/api/logout', function(req, res){
   res.clearCookie('authUser', { path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
   res.clearCookie('auth', { path: '/' });
   res.clearCookie('authUser', { path: '/' });
+  res.clearCookie('authSig', { path: '/' });
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
   res.setHeader('Pragma', 'no-cache');
   console.log('[logout] POST cleared');

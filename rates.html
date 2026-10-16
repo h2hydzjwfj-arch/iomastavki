@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="iomastavka — расчёт ставок, ИИ-ассистент, экспедиторы и новости ВЭД для логистики Китай → Россия">
+<meta name="theme-color" content="#bfe6f8">
+<title>Калькулятор маршрутов · iomastavka</title>
+<script>
+  /* Тема применяется до первой отрисовки — без вспышки светлой темы */
+  (function(){try{var t=localStorage.getItem('iomastavka_theme'),r=document.documentElement;if(t==='dark')r.classList.add('dark');else if(t==='soft')r.setAttribute('data-theme','soft');else if(!t&&matchMedia('(prefers-color-scheme: dark)').matches)r.classList.add('dark');var d=r.classList.contains('dark'),g=r.getAttribute('data-theme')==='soft';document.querySelector('meta[name="theme-color"]').content=d?'#191919':g?'#f1f1f1':'#ffffff'}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/styles.css?v=20261016-logistics-v7">
+<link rel="stylesheet" href="/minimal-overrides.css?v=20261016-minimal-6">
+<link rel="stylesheet" href="/cabinet.css?v=1">
+</head>
+<body>
+<div id="weatherScene" class="weather-scene" aria-hidden="true"><div class="stars"></div><div class="sun"></div><div class="moon"></div></div>
+<header class="topbar">
+    
+<div class="topbar-left"><nav class="top-nav" id="topNav" aria-label="Быстрые действия"><button id="themeToggleButton" class="top-nav-btn" type="button" aria-label="Тема" title="Тема" data-i18n-aria="navTheme" data-i18n-title="navTheme"><svg class="top-nav-svg" viewBox="0 0 24 24"><g class="icon-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g><path class="icon-moon" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span data-i18n="navTheme">Тема</span></button><button id="agentImportButton" data-client-only hidden class="top-nav-btn" type="button" aria-label="Обновить ставки" title="Обновить ставки" data-i18n-aria="navRates" data-i18n-title="navRates"><svg class="top-nav-svg" viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span data-i18n="navRates">Ставки</span></button><button id="customsButton" data-client-only hidden class="top-nav-btn" type="button" aria-label="Проверка ТН ВЭД" title="Проверка ТН ВЭД" data-i18n-aria="navCustoms" data-i18n-title="navCustoms"><svg class="top-nav-svg" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5z"/><circle cx="12" cy="10" r="2.5"/><path d="M7 19c1-2.5 3-3.5 5-3.5s4 1 5 3.5"/></svg><span data-i18n="navCustoms">Таможня</span></button></nav></div>
+  <nav class="site-nav-links" id="primarySiteNav" aria-label="Основная навигация">
+    <a href="/" data-page-route="home">Обзор</a>
+    <a href="/routes" data-page-route="routes">Маршрутизатор</a>
+    <a href="/services" data-page-route="services">Услуги</a>
+    <a href="/news" data-page-route="news">Новости ВЭД</a>
+    <a href="/rates" data-page-route="rates" data-auth-nav hidden>Калькулятор</a>
+    <a href="/forwarders" data-page-route="forwarders" data-auth-nav hidden>Экспедиторы</a>
+    <a href="/customs" data-page-route="customs" data-auth-nav hidden>ТН ВЭД</a>
+    <a href="/admin" data-page-route="admin" data-admin-nav hidden>Администрирование</a>
+  </nav>
+  <div class="brand" aria-label="iomastavka"><span>i</span><span>o</span><span>m</span><span>a</span><span>s</span><span>t</span><span>a</span><span>v</span><span>k</span><span>a</span></div>
+  <div class="top-actions"><div class="site-nav-meta">
+    <span class="site-role-pill" id="siteRoleBadge">ГОСТЬ</span>
+    <span class="site-mode-note" id="siteModeNote">Гостевой режим · часть информации скрыта</span>
+  </div><button class="lang active" data-lang="ru" aria-label="Русский" title="Русский">RU</button><button class="lang" data-lang="en" aria-label="English" title="English">EN</button><button class="lang" data-lang="zh" aria-label="中文" title="中文">中文</button><button class="lang" data-lang="tr" aria-label="Türkçe" title="Türkçe">TR</button><button type="button" class="login-gate-btn" id="loginGateBtn" aria-label="Войти в личный кабинет" title="Войти в личный кабинет"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg><span>Войти</span></button></div>
+</header>
+
+
+
+<main class="app-shell">
+<section id="calculatorView" class="view-layer" aria-hidden="true"><section class="card calculator-card" id="calculator"><button class="close-button view-close" data-close-view="calculator" data-i18n-aria="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+<h1 data-i18n="title">Расчёт маршрута</h1>
+<div class="route"><div class="field autocomplete"><label data-i18n="from">Откуда</label><input id="fromCity" autocomplete="off" placeholder="Город в Китае"><div id="fromSuggestions" class="suggestions"></div></div><div class="route-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><div class="field autocomplete"><label data-i18n="to">Куда</label><input id="toCity" autocomplete="off" placeholder="Город в России"><div id="toSuggestions" class="suggestions"></div></div></div>
+<div class="section-title"><span data-i18n="cargo">ГРУЗ</span></div>
+<div class="grid three"><div class="field"><label data-i18n="weight">Вес, кг</label><input id="weight" type="number" min="0" placeholder="0"></div><div class="field"><label data-i18n="pieces">Количество мест</label><input id="pieces" type="number" min="1" placeholder="1"></div><div class="field"><label data-i18n="distance">Расстояние, км</label><input id="distance" type="number" min="0" placeholder="0"></div></div><div class="auto-calc-strip"><div><span data-i18n="autoVolumeLabel">Объём</span><b id="autoVolume">0 m³</b></div><div><span data-i18n="autoVolumetricLabel">Объёмный вес</span><b id="autoVolumetricWeight">0 kg</b></div><div><span data-i18n="factorLabel">Фактор</span><b id="autoFactor">167 kg/m³</b></div></div>
+<div class="dimensions"><div id="containerWarning" class="container-warning hidden"></div><div class="dimensions-head"><span id="dimensionsTitle" data-i18n="dimensions">ГАБАРИТЫ ОДНОГО МЕСТА, мм</span><div class="unit-switch" aria-label="Единицы измерения"><button type="button" class="unit-choice active" data-unit="mm">мм</button><button type="button" class="unit-choice" data-unit="cm">см</button><button type="button" class="unit-choice" data-unit="m">м</button></div></div><div class="grid three"><div class="field"><label data-i18n="length">Длина <span class="dimension-unit-label">мм</span></label><input id="length" type="number" min="0" placeholder="0"></div><div class="field"><label data-i18n="width">Ширина <span class="dimension-unit-label">мм</span></label><input id="width" type="number" min="0" placeholder="0"></div><div class="field"><label data-i18n="height">Высота <span class="dimension-unit-label">мм</span></label><input id="height" type="number" min="0" placeholder="0"></div></div></div>
+<div class="grid four centered-three"><div class="field hover-select"><label data-i18n="forwarder">Экспедитор</label><button class="fake-select" id="forwarderBtn"><span data-i18n="chooseForwarder">Выберите экспедитора</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="hover-menu" id="forwarderMenu"></div></div><div class="field hover-select"><label data-i18n="transport">Вид транспорта</label><button class="fake-select" id="transportBtn"><span data-i18n="chooseTransport">Выберите транспорт</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="hover-menu" id="transportMenu"></div></div><div class="field hover-select"><label data-i18n="incoterms">Условия поставки</label><button class="fake-select" id="incotermBtn"><span>EXW</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="hover-menu" id="incotermMenu"></div></div></div>
+<div id="recommendation" class="recommendation hidden"></div>
+<div id="routeAdvice" class="route-advice hidden"></div>
+<div class="rate-upload-area">
+    <input type="file" id="rateFileUpload" accept=".txt,.csv,.json" hidden>
+    <button type="button" class="attach-button" onclick="document.getElementById('rateFileUpload').click()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 12.5 14.9 6.1a3.3 3.3 0 0 1 4.7 4.7l-8.9 8.9a5 5 0 0 1-7.1-7.1l9.2-9.2a2.9 2.9 0 0 1 4.1 4.1l-8.8 8.8a1.4 1.4 0 0 1-2-2l7.9-7.9"/></svg>Импортировать TXT / CSV / JSON</button>
+    <span id="rateUploadStatus" role="status" aria-live="polite">Для импорта поддерживаются текстовые TXT, CSV и JSON. PDF / Excel пока не извлекаются автоматически.</span>
+</div>
+<button id="calculate" class="calculate" data-i18n="calculate">Рассчитать</button><div id="result" class="result hidden"></div>
+</section></section>
+</main>
+
+<script>
+  try {
+    if (!sessionStorage.getItem('IOMA_CACHE_CLEARED_v123')) {
+      localStorage.removeItem('iomas_articles');
+      localStorage.removeItem('iomas_news');
+      console.warn('[IOMA] one-time cache cleanup done');
+      sessionStorage.setItem('IOMA_CACHE_CLEARED_v123', '1');
+    }
+  } catch(e){}
+</script>
+<script src="/fix_app.js?v=4" defer></script>
+<script src="/fix_views.js?v=1" defer></script>
+<script src="/cabinet.js?v=1" defer></script>
+<script src="/app.js?v=20261016-role-gate-v301" defer></script>
+<script src="/route-planner.js?v=20261016-logistics-v10" defer></script>
+<script src="/features.js?v=20261016-features-v1" defer></script>
+</body></html>

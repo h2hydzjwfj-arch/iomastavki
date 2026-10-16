@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="iomastavka — расчёт ставок, ИИ-ассистент, экспедиторы и новости ВЭД для логистики Китай → Россия">
+<meta name="theme-color" content="#bfe6f8">
+<title>Маршрутизатор · iomastavka</title>
+<script>
+  /* Тема применяется до первой отрисовки — без вспышки светлой темы */
+  (function(){try{var t=localStorage.getItem('iomastavka_theme'),r=document.documentElement;if(t==='dark')r.classList.add('dark');else if(t==='soft')r.setAttribute('data-theme','soft');else if(!t&&matchMedia('(prefers-color-scheme: dark)').matches)r.classList.add('dark');var d=r.classList.contains('dark'),g=r.getAttribute('data-theme')==='soft';document.querySelector('meta[name="theme-color"]').content=d?'#191919':g?'#f1f1f1':'#ffffff'}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/styles.css?v=20261016-logistics-v7">
+<link rel="stylesheet" href="/minimal-overrides.css?v=20261016-minimal-6">
+<link rel="stylesheet" href="/cabinet.css?v=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+</head>
+<body>
+<div id="weatherScene" class="weather-scene" aria-hidden="true"><div class="stars"></div><div class="sun"></div><div class="moon"></div></div>
+<header class="topbar">
+    
+<div class="topbar-left"><nav class="top-nav" id="topNav" aria-label="Быстрые действия"><button id="themeToggleButton" class="top-nav-btn" type="button" aria-label="Тема" title="Тема" data-i18n-aria="navTheme" data-i18n-title="navTheme"><svg class="top-nav-svg" viewBox="0 0 24 24"><g class="icon-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g><path class="icon-moon" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span data-i18n="navTheme">Тема</span></button><button id="agentImportButton" data-client-only hidden class="top-nav-btn" type="button" aria-label="Обновить ставки" title="Обновить ставки" data-i18n-aria="navRates" data-i18n-title="navRates"><svg class="top-nav-svg" viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span data-i18n="navRates">Ставки</span></button><button id="customsButton" data-client-only hidden class="top-nav-btn" type="button" aria-label="Проверка ТН ВЭД" title="Проверка ТН ВЭД" data-i18n-aria="navCustoms" data-i18n-title="navCustoms"><svg class="top-nav-svg" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5z"/><circle cx="12" cy="10" r="2.5"/><path d="M7 19c1-2.5 3-3.5 5-3.5s4 1 5 3.5"/></svg><span data-i18n="navCustoms">Таможня</span></button></nav></div>
+  <nav class="site-nav-links" id="primarySiteNav" aria-label="Основная навигация">
+    <a href="/" data-page-route="home">Обзор</a>
+    <a href="/routes" data-page-route="routes">Маршрутизатор</a>
+    <a href="/services" data-page-route="services">Услуги</a>
+    <a href="/news" data-page-route="news">Новости ВЭД</a>
+    <a href="/rates" data-page-route="rates" data-auth-nav hidden>Калькулятор</a>
+    <a href="/forwarders" data-page-route="forwarders" data-auth-nav hidden>Экспедиторы</a>
+    <a href="/customs" data-page-route="customs" data-auth-nav hidden>ТН ВЭД</a>
+    <a href="/admin" data-page-route="admin" data-admin-nav hidden>Администрирование</a>
+  </nav>
+  <div class="brand" aria-label="iomastavka"><span>i</span><span>o</span><span>m</span><span>a</span><span>s</span><span>t</span><span>a</span><span>v</span><span>k</span><span>a</span></div>
+  <div class="top-actions"><div class="site-nav-meta">
+    <span class="site-role-pill" id="siteRoleBadge">ГОСТЬ</span>
+    <span class="site-mode-note" id="siteModeNote">Гостевой режим · часть информации скрыта</span>
+  </div><button class="lang active" data-lang="ru" aria-label="Русский" title="Русский">RU</button><button class="lang" data-lang="en" aria-label="English" title="English">EN</button><button class="lang" data-lang="zh" aria-label="中文" title="中文">中文</button><button class="lang" data-lang="tr" aria-label="Türkçe" title="Türkçe">TR</button><button type="button" class="login-gate-btn" id="loginGateBtn" aria-label="Войти в личный кабинет" title="Войти в личный кабинет"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg><span>Войти</span></button></div>
+</header>
+
+
+
+<main class="app-shell">
+<section id="routesView" class="view-layer route-page-layer" aria-hidden="true">
+  <div class="route-workspace">
+    <div class="route-page-header">
+      <div><span class="eyebrow">IOMA ROUTE LAB · 02</span><h2>Маршрутизатор перевозок</h2><p>Выберите города и тип транспорта — сравните реальные логистические коридоры.</p></div>
+      <a class="route-home-link" href="/">← Обзор платформы</a>
+    </div>
+    <div class="route-guest-banner" id="routeGuestBanner">
+      <span class="guest-shield">◈</span><div><b>Вы находитесь в гостевом режиме</b><p>Доступны схема коридоров и обзорные сценарии. Сохранение расчёта, персональные тарифы и расширенные сведения доступны после регистрации.</p></div><button type="button" data-open-auth="register">Зарегистрироваться</button>
+    </div>
+    <div class="route-mode-bar" aria-label="Выбор вида транспорта">
+      <span class="route-mode-label">ТИП ПЕРЕВОЗКИ</span>
+      <button class="route-mode-button is-active" type="button" data-route-mode="multimodal" aria-pressed="true"><span class="mode-icon">⇄</span><span><b>Все варианты</b><small>Сравнить коридоры</small></span></button>
+      <button class="route-mode-button" type="button" data-route-mode="air" aria-pressed="false"><span class="mode-icon">✈</span><span><b>Авиа</b><small>Срок в приоритете</small></span></button>
+      <button class="route-mode-button" type="button" data-route-mode="rail" aria-pressed="false"><span class="mode-icon">▤</span><span><b>Ж/Д</b><small>Магистральные линии</small></span></button>
+      <button class="route-mode-button" type="button" data-route-mode="road" aria-pressed="false"><span class="mode-icon">▰</span><span><b>Авто</b><small>Гибкая доставка</small></span></button>
+      <button class="route-mode-button" type="button" data-route-mode="sea" aria-pressed="false"><span class="mode-icon">⚓</span><span><b>Море</b><small>Портовые сервисы</small></span></button>
+    </div>
+    <div class="route-planner-grid">
+      <section class="route-map-panel route-map-interactive">
+        <div class="route-map-panel-head"><div><span class="eyebrow">ПУБЛИЧНЫЕ КОРИДОРЫ · СХЕМА</span><h3>Карта коридоров</h3></div><span class="map-legend-live"><i></i> Выберите вид перевозки</span></div>
+        <div class="route-map-stage">
+          <div id="routePlannerMap" class="route-planner-map real-route-map" role="application" aria-label="Интерактивная географическая карта. До выбора варианта отображаются только пункты отправления и назначения."></div>
+        </div>
+        <div class="route-map-legend"><span><i class="legend-dot route-from"></i> Откуда</span><span><i class="legend-dot route-to"></i> Куда</span><span class="route-map-legend-note">Промежуточные узлы появятся при выборе варианта</span></div>
+        <div class="map-instruction"><span>⌖</span> Карта показывает начало и конец. Выберите вариант доставки ниже, чтобы увидеть его коридор.</div>
+      </section>
+      <aside id="routeControlsPanel" class="route-controls-panel">
+        <div class="route-controls-title"><span class="eyebrow">01 / МАРШРУТ</span><h3>Откуда и куда</h3><p>Выберите пункты справа. Карта покажет только выбранный коридор после выбора варианта.</p></div>
+        <div class="route-endpoint-switch">
+          <button type="button" class="is-active" data-route-field="from" aria-pressed="true"><span class="endpoint-index">A</span><span><b>Откуда</b><small id="routeFromMini">Шанхай, Китай</small></span></button>
+          <button type="button" data-route-field="to" aria-pressed="false"><span class="endpoint-index">B</span><span><b>Куда</b><small id="routeToMini">Москва, Россия</small></span></button>
+        </div>
+        <label class="route-select-label" for="routeFrom">Пункт отправления</label>
+        <select id="routeFrom" class="route-city-select">
+          <option value="shanghai" selected>Шанхай · Китай</option><option value="beijing">Пекин · Китай</option><option value="guangzhou">Гуанчжоу · Китай</option><option value="shenzhen">Шэньчжэнь · Китай</option><option value="yiwu">Иу · Китай</option><option value="shenyang">Шэньян · Китай</option><option value="manzhouli">Маньчжурия · Китай</option><option value="suifenhe">Суйфэньхэ · Китай</option><option value="heihe">Хэйхэ · Китай</option><option value="khorgos">Хоргос · Китай</option><option value="alashankou">Алашанькоу · Китай</option><option value="erenhot">Эрэн-Хото · Китай</option><option value="zamyn-uud">Замын-Ууд · Монголия</option><option value="ulaanbaatar">Улан-Батор · Монголия</option><option value="naushki">Наушки · Россия</option>
+          <option value="moscow">Москва · Россия</option><option value="saint-petersburg">Санкт-Петербург · Россия</option><option value="vladivostok">Владивосток · Россия</option><option value="blagoveshchensk">Благовещенск · Россия</option><option value="ussuriysk">Уссурийск · Россия</option><option value="novosibirsk">Новосибирск · Россия</option><option value="yekaterinburg">Екатеринбург · Россия</option>
+        </select>
+        <label class="route-select-label" for="routeTo">Пункт назначения</label>
+        <select id="routeTo" class="route-city-select">
+          <option value="shanghai">Шанхай · Китай</option><option value="beijing">Пекин · Китай</option><option value="guangzhou">Гуанчжоу · Китай</option><option value="shenzhen">Шэньчжэнь · Китай</option><option value="yiwu">Иу · Китай</option><option value="shenyang">Шэньян · Китай</option><option value="manzhouli">Маньчжурия · Китай</option><option value="suifenhe">Суйфэньхэ · Китай</option><option value="heihe">Хэйхэ · Китай</option><option value="khorgos">Хоргос · Китай</option><option value="alashankou">Алашанькоу · Китай</option><option value="erenhot">Эрэн-Хото · Китай</option><option value="zamyn-uud">Замын-Ууд · Монголия</option><option value="ulaanbaatar">Улан-Батор · Монголия</option><option value="naushki">Наушки · Россия</option>
+          <option value="moscow" selected>Москва · Россия</option><option value="saint-petersburg">Санкт-Петербург · Россия</option><option value="vladivostok">Владивосток · Россия</option><option value="blagoveshchensk">Благовещенск · Россия</option><option value="ussuriysk">Уссурийск · Россия</option><option value="novosibirsk">Новосибирск · Россия</option><option value="yekaterinburg">Екатеринбург · Россия</option>
+        </select>
+        <button class="route-show-button" id="routeShowButton" type="button"><span>Показать варианты</span><b>→</b></button>
+        <div class="route-controls-disclaimer"><span>i</span><p>Это подбор возможных коридоров, а не онлайн-расписание. Доступность КПП, транзитные сроки, тариф и ограничения проверяются по дате отправки и параметрам груза.</p></div>
+      </aside>
+    </div>
+    <section class="route-results-block" id="routeResultsBlock">
+      <div class="route-results-head"><div><span class="eyebrow">02 / ВАРИАНТЫ</span><h3>Возможные маршруты</h3><p id="routeResultsSubtitle">Сценарии подбираются по выбранным городам и виду транспорта.</p></div><span class="route-count" id="routeCount">—</span></div>
+      <div id="routeOptions" class="route-options-grid" aria-live="polite"><div class="route-loading-state">Подбираем сценарии по транспортным коридорам…</div></div>
+    </section>
+    <section class="corridor-library">
+      <div class="route-results-head"><div><span class="eyebrow">03 / СПРАВОЧНИК</span><h3>Ключевые транспортные коридоры</h3><p>Источники и инфраструктура, на которых основан подбор.</p></div></div>
+      <div class="corridor-library-grid">
+        <article><span class="corridor-index">EAST / RAIL</span><h4>Маньчжурия — Забайкальск — Транссиб</h4><p>Базовый восточный ж/д сценарий для проверки контейнерной доставки в российскую сеть. В мае 2026 года Минтранс РФ сообщил о соглашении по второму главному пути; увеличение мощности заявлено как цель к 2030 году.</p><a href="https://mintrans.gov.ru/press-center/news/12684" target="_blank" rel="noopener noreferrer">Минтранс РФ · 20.05.2026 ↗</a></article>
+        <article><span class="corridor-index">WEST / RAIL + ROAD</span><h4>Хоргос—Алтынколь / Алашанькоу—Достык</h4><p>Западный сценарий через Китай и Казахстан. На границе меняется стандарт колеи; конкретная пара станций, перегрузка и дальнейший въезд в РФ зависят от схемы оператора.</p><a href="https://www.gov.kz/org/maidd/activities/2110" target="_blank" rel="noopener noreferrer">Правительство Казахстана · узлы перехода ↗</a></article>
+        <article><span class="corridor-index">FAR EAST / RAIL</span><h4>Суйфэньхэ — Приморье — Уссурийск</h4><p>Вариант для отправок из северо-восточного Китая в сторону Дальнего Востока РФ. Суйфэньхэ — железнодорожный узел восточного коридора; российский погранпереход и доступность участка Гродеково подтверждаются у действующего оператора.</p><a href="https://english.www.gov.cn/news/202501/27/content_WS6796d1f6c6d0868f4e8ef328.html" target="_blank" rel="noopener noreferrer">Правительство КНР · обновление инфраструктуры, 27.01.2025 ↗</a></article>
+        <article><span class="corridor-index">AMUR / ROAD + RAIL</span><h4>Хэйхэ — Благовещенск — внутренняя доставка</h4><p>Автодорожный мост между Хэйхэ и Благовещенском используется для трансграничного сообщения. После перехода — доставка автотранспортом или передача на российскую железнодорожную сеть; параметры грузового сервиса надо сверять для даты.</p><a href="https://www.mintrans.gov.ru/press-center/news/10281" target="_blank" rel="noopener noreferrer">Минтранс РФ · мост Кани-Курган—Хэйхэ ↗</a></article>
+        <article><span class="corridor-index">CENTRAL / RAIL</span><h4>Эрэн-Хото — Замын-Ууд — Улан-Батор — Наушки</h4><p>Центральный экономический коридор Китай—Монголия—Россия. Минтранс РФ сообщал о развитии экономического коридора и модернизации Улан-Баторской железной дороги. Этот вариант — кандидат для запроса оператору, а не подтверждение доступности конкретного поезда.</p><a href="https://mintrans.gov.ru/press-center/news/12241" target="_blank" rel="noopener noreferrer">Минтранс РФ · 31.10.2025 ↗</a></article>
+        <article><span class="corridor-index">SEA + RAIL</span><h4>Китайский порт — Владивосток — Москва</h4><p>Один из вариантов: морское плечо до Владивостока и контейнерный поезд по РФ. FESCO публикует 10–14 дней для участка Владивосток—Москва; морской участок, порт, таможня и «последняя миля» считаются отдельно.</p><a href="https://www.fesco.com/en/clients/container/trains/fesco-moscow-shuttle/" target="_blank" rel="noopener noreferrer">FESCO Moscow Shuttle ↗</a> · <a href="https://www.fesco.com/en/clients/container/line/" target="_blank" rel="noopener noreferrer">Морские линии FESCO ↗</a></article>
+        <article><span class="corridor-index">WEST / ROAD</span><h4>Европа — Западный Китай через Казахстан</h4><p>Отдельный международный автодорожный коридор через Казахстан; применимость и конкретная схема до Москвы зависят от перевозчика, разрешений, товара и актуальных условий транзита.</p><a href="https://www.mintrans.gov.ru/activities/215/217/25/28" target="_blank" rel="noopener noreferrer">Минтранс РФ · Европа—Западный Китай ↗</a></article>
+      </div>
+    </section>
+    <div class="route-source-footnote"><b>Статус данных:</b> маршруты ниже — предварительные коридоры, собранные по публичным источникам, а не live-трекинг, единое расписание или готовая котировка. Для каждого груза нужно подтвердить конкретный пункт пропуска, разрешения, стык/перегрузку, расписание, ограничения по товару и ставку у оператора. Даты и условия источников могут отличаться от даты отправки.</div>
+  </div>
+</section>
+</main>
+
+<script>
+  try {
+    if (!sessionStorage.getItem('IOMA_CACHE_CLEARED_v123')) {
+      localStorage.removeItem('iomas_articles');
+      localStorage.removeItem('iomas_news');
+      console.warn('[IOMA] one-time cache cleanup done');
+      sessionStorage.setItem('IOMA_CACHE_CLEARED_v123', '1');
+    }
+  } catch(e){}
+</script>
+<script src="/fix_app.js?v=4" defer></script>
+<script src="/fix_views.js?v=1" defer></script>
+<script src="/cabinet.js?v=1" defer></script>
+<script src="/app.js?v=20261016-role-gate-v301" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="/route-planner.js?v=20261016-logistics-v10" defer></script>
+<script src="/features.js?v=20261016-features-v1" defer></script>
+</body></html>
