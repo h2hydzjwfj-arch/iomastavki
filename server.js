@@ -64,7 +64,52 @@ function ensureRateDb(){
   }
   return { version: 2, updatedAt: null, records };
 }
-function normalizeText(s=''){ return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+function normalizeText(s=''){ return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ё/g,'е').trim(); }
+const CITY_NAME_ALIASES = {
+  'шанхай':'shanghai','上海':'shanghai','shanghai':'shanghai',
+  'пекин':'beijing','北京':'beijing','beijing':'beijing',
+  'гуанчжоу':'guangzhou','广州':'guangzhou','guangzhou':'guangzhou',
+  'шэньчжэнь':'shenzhen','深圳':'shenzhen','shenzhen':'shenzhen',
+  'нинбо':'ningbo','宁波':'ningbo','ningbo':'ningbo',
+  'циндао':'qingdao','青岛':'qingdao','qingdao':'qingdao',
+  'тяньцзинь':'tianjin','天津':'tianjin','tianjin':'tianjin',
+  'далянь':'dalian','大连':'dalian','dalian':'dalian',
+  'шэньян':'shenyang','沈阳':'shenyang','shenyang':'shenyang',
+  'иу':'yiwu','义乌':'yiwu','yiwu':'yiwu',
+  'харбин':'harbin','哈尔滨':'harbin','harbin':'harbin',
+  'сиань':'xian','西安':'xian','xian':'xian','xi an':'xian',
+  'чжэнчжоу':'zhengzhou','郑州':'zhengzhou','zhengzhou':'zhengzhou',
+  'чэнду':'chengdu','成都':'chengdu','chengdu':'chengdu',
+  'чунцин':'chongqing','重庆':'chongqing','chongqing':'chongqing',
+  'москва':'moscow','莫斯科':'moscow','moscow':'moscow',
+  'санкт-петербург':'saint-petersburg','санкт петербург':'saint-petersburg','st petersburg':'saint-petersburg','saint petersburg':'saint-petersburg','saint-petersburg':'saint-petersburg',
+  'нижний новгород':'nizhny-novgorod','nizhny novgorod':'nizhny-novgorod','nizhny-novgorod':'nizhny-novgorod',
+  'владивосток':'vladivostok','海参崴':'vladivostok','vladivostok':'vladivostok',
+  'находка':'nakhodka','nakhodka':'nakhodka',
+  'уссурийск':'ussuriysk','ussuriysk':'ussuriysk',
+  'благовещенск':'blagoveshchensk','blagoveshchensk':'blagoveshchensk',
+  'хабаровск':'khabarovsk','khabarovsk':'khabarovsk',
+  'чита':'chita','chita':'chita',
+  'иркутск':'irkutsk','irkutsk':'irkutsk',
+  'новосибирск':'novosibirsk','novosibirsk':'novosibirsk',
+  'екатеринбург':'yekaterinburg','yekaterinburg':'yekaterinburg','yekaterinburg':'yekaterinburg','ekaterinburg':'yekaterinburg',
+  'омск':'omsk','omsk':'omsk',
+  'казань':'kazan','kazan':'kazan',
+  'самара':'samara','samara':'samara',
+  'уфа':'ufa','ufa':'ufa',
+  'челябинск':'chelyabinsk','chelyabinsk':'chelyabinsk',
+  'пермь':'perm','perm':'perm',
+  'тюмень':'tyumen','tyumen':'tyumen',
+  'ростов-на-дону':'rostov-on-don','ростов на дону':'rostov-on-don','rostov-on-don':'rostov-on-don','rostov on don':'rostov-on-don',
+  'краснодар':'krasnodar','krasnodar':'krasnodar',
+  'волгоград':'volgograd','volgograd':'volgograd',
+  'новороссийск':'novorossiysk','novorossiysk':'novorossiysk'
+};
+function normalizeLocation(value){
+  const full=normalizeText(value).replace(/[.;]+/g,' ').replace(/\s+/g,' ').trim();
+  const first=full.split(/[,;|]/)[0].trim();
+  return CITY_NAME_ALIASES[first] || CITY_NAME_ALIASES[full] || first;
+}
 function normalizeTransportMode(value){
   const m=normalizeText(value).replace(/[.\s/_-]+/g,'');
   if (/^(air|avia|aviation|авиа|авиация|авиатранспорт|aircargo|воздушный)$/.test(m)) return 'air';
@@ -75,7 +120,7 @@ function normalizeTransportMode(value){
   return m;
 }
 function routeScore(record, from, to, mode, distance){
-  const a=normalizeText(from), b=normalizeText(to), rf=normalizeText(record.from), rt=normalizeText(record.to);
+  const a=normalizeLocation(from), b=normalizeLocation(to), rf=normalizeLocation(record.from), rt=normalizeLocation(record.to);
   let score=0;
   if (rf && (rf===a || rf.includes(a) || a.includes(rf))) score+=8;
   if (rt && (rt===b || rt.includes(b) || b.includes(rt))) score+=8;
