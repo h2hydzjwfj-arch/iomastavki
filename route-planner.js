@@ -152,7 +152,7 @@
     if(p==='/services'){openCustomLayer('servicesView',null);return;}
     if(p==='/admin'){openCustomLayer('adminView',null);return;}
     var map={'/rates':'calculator','/forwarders':'forwarders','/assistant':'assistant','/news':'news','/customs':'customs','/tarot':'tarot','/account':'account','/request':'request'};
-    if(map[p]==='account'){goAuth('login');return;}
+    if(map[p]==='account'){openCustomLayer('accountView',null);return;}
     if(map[p]){openLegacyView(map[p],null);return;}
     openCustomLayer('servicesView',null);
   }
