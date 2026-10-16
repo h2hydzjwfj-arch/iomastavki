@@ -510,7 +510,14 @@
     if($('#routeTo'))$('#routeTo').addEventListener('change',function(){state.to=this.value;state.selectedOption=null;syncEndpoints();renderRouteResults();});
     document.addEventListener('click',interceptClick,true);
     window.addEventListener('popstate',onPopState);
-    document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(location.pathname!=='/')setUrl('/');}});
+    document.addEventListener('keydown',function(e){
+      var transport=e.target.closest&&e.target.closest('[data-open-route-mode]');
+      if(transport&&(e.key==='Enter'||e.key===' ')){e.preventDefault();transport.click();return;}
+      if(e.key==='Escape'){
+        var modalOpen=!!document.querySelector('[aria-modal="true"]:not([hidden]),[role="dialog"]:not([hidden]),#iomaNewsOverlay:not([hidden])');
+        if(!modalOpen&&location.pathname!=='/'){window.location.href=location.pathname==='/article'?'/news':'/';}
+      }
+    });
     initAdmin();initTheme();initRequestForm();syncEndpoints();renderMapMarkers();renderRouteResults();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
