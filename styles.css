@@ -3823,3 +3823,62 @@ html:not(.dark) .map-transport { fill:#168da7; filter:drop-shadow(0 0 4px rgba(2
 html:not(.dark) .map-transport.ship { fill:#2777b7; }
 html:not(.dark) .route-lines { filter:drop-shadow(0 0 3px rgba(22,127,163,.3)); }
 html:not(.dark) .freight-kpi>a:hover { color:#075b76; }
+
+/* IOMA STAVKA — restrained monochrome editorial UI */
+:root{
+  --ink:#171717;--ink-2:#555;--muted:#777;--line:#dedede;
+  --paper:#fafafa;--panel:#fff;--accent:#252525;
+  --r-sm:5px;--r-md:8px;--r-lg:12px;--r-xl:16px;
+  --t-fast:.16s;--t-base:.22s;--t-slow:.34s;
+}
+html:not(.dark) body{background:#fafafa;color:#171717}
+html.dark{--ink:#f2f2f2;--ink-2:#c4c4c4;--muted:#929292;--line:#343434;--paper:#111;--panel:#171717;--accent:#f0f0f0;color-scheme:dark}
+html.dark body{background:#101010;color:#f1f1f1}
+body,button,input,select,textarea{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;letter-spacing:-.012em}
+h1,h2,h3,h4,.hero-copy h1{font-weight:450!important;letter-spacing:-.045em}
+button,a,.top-nav-btn,.site-nav-links a{transition:background .18s ease,border-color .18s ease,color .18s ease,opacity .18s ease,transform .18s ease}
+button{box-shadow:none!important;text-shadow:none!important}
+.topbar,.primary-site-nav,.site-nav-links a,.top-nav-btn{box-shadow:none!important}
+.primary-site-nav{background:var(--panel)!important;border-bottom:1px solid var(--line)!important;backdrop-filter:blur(18px)}
+.site-nav-links a{border-radius:5px!important;font-weight:450!important}
+.site-nav-links a:hover,.site-nav-links a[aria-current="page"]{background:rgba(120,120,120,.09)!important}
+.site-mode-note,.home-guest-note{box-shadow:none!important}
+.freight-command-center,.route-map-panel,.freight-info-card,.freight-kpi,.home-mode-shortcuts a,
+.route-option-card,.route-planner-intro,.route-mode-button,.route-input-panel,.route-results-panel{
+  box-shadow:none!important;border:1px solid var(--line)!important;border-radius:10px!important;
+}
+.freight-command-center,.route-map-panel,.freight-info-card,.freight-kpi,.home-mode-shortcuts a,
+.route-option-card,.route-planner-intro,.route-mode-button,.route-input-panel,.route-results-panel{
+  background:var(--panel)!important;color:var(--ink)!important;
+}
+.freight-panel-head h2,.route-map-panel-head h3,.route-option-card h4,.freight-kpi>b{font-weight:450!important;color:var(--ink)!important}
+.freight-panel-head p,.route-option-card p,.freight-info-card>p{color:var(--muted)!important}
+.freight-panel-head .eyebrow,.eyebrow,.route-option-tag{color:var(--muted)!important;letter-spacing:.12em!important;font-weight:500!important}
+.route-option-card{padding:20px!important}
+.route-option-card.is-selected{border-color:#777!important}
+.route-option-footer button,.route-request-button,.route-mode-button.is-active{
+  background:var(--ink)!important;color:var(--panel)!important;border-color:var(--ink)!important;
+}
+input,select,textarea{border:1px solid var(--line)!important;border-radius:6px!important;background:var(--panel)!important;color:var(--ink)!important;box-shadow:none!important}
+input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:2px solid #888!important;outline-offset:2px!important}
+.home-mode-shortcuts a:hover,.route-option-card:hover{transform:translateY(-1px)!important;border-color:#888!important}
+.home-mode-shortcuts b,.transport-row b,.freight-kpi>strong{font-weight:500!important}
+.route-map-stage{position:relative!important;overflow:hidden!important;border:1px solid var(--line)!important;border-radius:8px!important;background:var(--panel)!important}
+.real-route-map{width:100%;height:clamp(360px,52vw,620px);min-height:360px;background:#f3f3f3;z-index:1}
+html.dark .real-route-map{background:#171717}
+.ioma-map-marker-wrap{background:transparent!important;border:0!important}
+.ioma-map-marker{display:block;width:9px;height:9px;border:1.5px solid #333;border-radius:50%;background:#fff;box-shadow:0 0 0 3px rgba(90,90,90,.12)}
+.ioma-map-marker.is-origin{background:#111;border-color:#fff;box-shadow:0 0 0 4px rgba(80,80,80,.2)}
+.ioma-map-marker.is-destination{background:#999;border-color:#fff;box-shadow:0 0 0 4px rgba(80,80,80,.2)}
+html.dark .ioma-map-marker{background:#ddd;border-color:#111}
+html.dark .ioma-map-marker.is-origin{background:#fff;border-color:#111}
+html.dark .ioma-map-marker.is-destination{background:#777;border-color:#fff}
+.ioma-map-tooltip{font-size:12px;font-weight:450;border:1px solid var(--line);border-radius:4px;box-shadow:none;background:var(--panel);color:var(--ink)}
+.leaflet-control-zoom a{color:#222!important;background:#fff!important;border-color:#ddd!important;box-shadow:none!important}
+html.dark .leaflet-control-zoom a{color:#eee!important;background:#191919!important;border-color:#444!important}
+.leaflet-control-attribution{font-size:9px!important;background:rgba(255,255,255,.8)!important}
+html.dark .leaflet-control-attribution{background:rgba(15,15,15,.8)!important;color:#aaa!important}
+html.dark .leaflet-control-attribution a{color:#ccc!important}
+.route-map-legend,.map-legend-live{color:var(--muted)!important}
+@media(max-width:700px){.real-route-map{height:58vh;min-height:330px}.route-option-card{padding:15px!important}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
