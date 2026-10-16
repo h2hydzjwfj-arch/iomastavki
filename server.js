@@ -43,6 +43,8 @@ const MAX_RATE_RECORDS = 5000;
 
 const GROQ_MODELS = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b'];
 const EDGE_VOICES = { ru:'ru-RU-DmitryNeural', en:'en-US-GuyNeural', zh:'zh-CN-YunxiNeural', tr:'tr-TR-AhmetNeural' };
+// Stable across deploys when configured; random fallback fails closed after process restart.
+const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.ADMIN_PASSWORD_HASH ? crypto.createHash('sha256').update('iomastavka-session:' + process.env.ADMIN_PASSWORD_HASH).digest('hex') : crypto.randomBytes(32).toString('hex'));
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '1mb' }));
@@ -1724,7 +1726,7 @@ app.post('/api/assist', async function(req, res){
   try {
     const question = String((req.body && req.body.question) || '').slice(0, 2000);
     if (!question.trim()) return res.status(400).json({ ok:false, error:'question required' });
-    const auth = req.cookies && req.cookies.auth;
+    const auth = getAuth(req);
     const role = (auth === 'admin' || auth === '1') ? 'admin' : (auth && String(auth).startsWith('client:') ? 'client' : 'guest');
 
     const pb = loadPlaybook();
@@ -1854,7 +1856,7 @@ app.get('/api/agents', function(req,res){
   try {
     const file = path.join(DATA_DIR,'agents.json');
     let records = JSON.parse(fs.readFileSync(file,'utf8'));
-    const auth = req.cookies && req.cookies.auth;
+    const auth = getAuth(req);
     const isAdmin = auth === 'admin' || auth === '1';
     if (!isAdmin) records = records.filter(function(r){ return !r.private; });
     res.json({ ok:true, records, total: records.length, isAdmin });
@@ -1971,8 +1973,23 @@ app.post('/api/customs/check', requireClientOrAdmin, async function(req,res){
 
 
 // ========== РОЛИ + ЗАЩИТА + ЗАЯВКИ ==========
+function authSignature(value){
+  return crypto.createHmac('sha256', SESSION_SECRET).update(String(value)).digest('hex');
+}
+function getAuth(req){
+  const cookies = req && req.cookies;
+  const value = cookies && cookies.auth;
+  const signature = cookies && cookies.authSig;
+  if (!value || !signature || typeof signature !== 'string') return null;
+  const expected = authSignature(value);
+  const a = Buffer.from(signature, 'hex');
+  const b = Buffer.from(expected, 'hex');
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  return String(value);
+}
 function isAdmin(req){
-  return !!(req.cookies && (req.cookies.auth === 'admin' || req.cookies.auth === '1'));
+  const auth = getAuth(req);
+  return auth === 'admin' || auth === '1';
 }
 function requireAuth(req, res, next){
   if (isAdmin(req)) return next();
@@ -1980,7 +1997,7 @@ function requireAuth(req, res, next){
 }
 function requireClientOrAdmin(req, res, next){
   if (isAdmin(req)) return next();
-  const auth = req.cookies && req.cookies.auth;
+  const auth = getAuth(req);
   if (auth && String(auth).startsWith('client:')){
     try {
       const clients = require('./lib/clients');
@@ -1993,7 +2010,7 @@ function requireClientOrAdmin(req, res, next){
 function esc(s){ return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 app.get('/api/whoami', function(req, res){
-  const auth = req.cookies && req.cookies.auth;
+  const auth = getAuth(req);
   if (!auth || auth === '') {
     return res.status(401).json({ ok: false, error: 'unauthorized' });
   }
@@ -2214,7 +2231,8 @@ app.post('/api/requests', async function(req, res){
     fs.mkdirSync(require('path').dirname(REQUESTS_FILE), { recursive:true });
     let list = [];
     try { list = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8')); } catch(e){ list = []; }
-    const clientId = (req.cookies && String(req.cookies.auth||'').startsWith('client:')) ? String(req.cookies.auth).slice(7) : null;
+    const verifiedAuth = getAuth(req);
+  const clientId = verifiedAuth && verifiedAuth.startsWith('client:') ? verifiedAuth.slice(7) : null;
     const entry = { id: Date.now(), name, contact, body, clientId, at: new Date().toISOString(), ip: req.ip };
     list.unshift(entry);
     if (list.length > 500) list = list.slice(0, 500);
@@ -2241,7 +2259,7 @@ app.get('/api/requests', requireAuth, function(req, res){
 
 // ========== МОИ ЗАЯВКИ (для клиента) ==========
 app.get('/api/my-orders', function(req, res) {
-  const auth = req.cookies && req.cookies.auth;
+  const auth = getAuth(req);
   if (!auth || !String(auth).startsWith('client:')) {
     return res.status(401).json({ ok:false, error:'unauthorized' });
   }
@@ -2266,8 +2284,9 @@ app.post('/api/login', function(req,res){
   // Админ: email совпадает с ADMIN_EMAIL
   if (adminEmail && email === adminEmail) {
     if (!verifyPassword(password)) return res.status(401).json({ ok:false, error:'invalid credentials' });
-    res.cookie('auth','admin',{httpOnly:true,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
-    res.cookie('authUser','admin',{httpOnly:false,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
+    res.cookie('auth','admin',{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:8*60*60*1000,path:'/'});
+    res.cookie('authSig',authSignature('admin'),{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:8*60*60*1000,path:'/'});
+    res.cookie('authUser','admin',{httpOnly:false,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:8*60*60*1000,path:'/'});
     return res.json({ ok:true, role:'admin' });
   }
 
@@ -2275,8 +2294,10 @@ app.post('/api/login', function(req,res){
   const clients = require('./lib/clients');
   const c = clients.verifyClient(email, password);
   if (!c) return res.status(401).json({ ok:false, error:'invalid credentials' });
-  res.cookie('auth', 'client:' + c.id, { httpOnly:true, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
-  res.cookie('authUser', c.name, { httpOnly:false, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
+  const authValue = 'client:' + c.id;
+  res.cookie('auth', authValue, { httpOnly:true, sameSite:'lax', secure:process.env.NODE_ENV==='production', maxAge:8*60*60*1000, path:'/' });
+  res.cookie('authSig', authSignature(authValue), { httpOnly:true, sameSite:'lax', secure:process.env.NODE_ENV==='production', maxAge:8*60*60*1000, path:'/' });
+  res.cookie('authUser', c.name, { httpOnly:false, sameSite:'lax', secure:process.env.NODE_ENV==='production', maxAge:8*60*60*1000, path:'/' });
   res.json({ ok:true, role:'client', name:c.name, email:c.email });
 });
 
@@ -2343,6 +2364,7 @@ app.get('/api/logout', function(req, res){
   res.clearCookie('authUser', { path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
   res.clearCookie('auth', { path: '/' });
   res.clearCookie('authUser', { path: '/' });
+  res.clearCookie('authSig', { path: '/' });
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
   res.setHeader('Pragma', 'no-cache');
   console.log('[logout] GET cleared');
