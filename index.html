@@ -10,7 +10,7 @@
   /* Тема применяется до первой отрисовки — без вспышки светлой темы */
   (function(){try{var t=localStorage.getItem('iomastavka_theme');var d=t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content=d?'#0b2238':'#bfe6f8'}catch(e){}})();
 </script>
-<link rel="stylesheet" href="/styles.css?v=20261016-route-lab-v3">
+<link rel="stylesheet" href="/styles.css?v=20261016-route-lab-v4">
 <link rel="stylesheet" href="/cabinet.css?v=1">
 </head>
 <body>
@@ -187,7 +187,7 @@
         <article><span class="corridor-index">EAST / RAIL</span><h4>Маньчжурия — Забайкальск</h4><p>Восточный железнодорожный коридор; дальше — российская сеть и Транссиб.</p><a href="https://english.beijing.gov.cn/latest/news/202303/t20230320_2940077.html" target="_blank" rel="noopener">Пекинское правительство ↗</a></article>
         <article><span class="corridor-index">WEST / RAIL + ROAD</span><h4>Хоргос / Алашанькоу — Казахстан</h4><p>Западный маршрут через казахстанские узлы; вид транспорта и конкретный КПП подтверждаются отдельно.</p><a href="https://www.mintrans.gov.ru/activities/215/217/25/28" target="_blank" rel="noopener">Минтранс РФ ↗</a></article>
         <article><span class="corridor-index">FAR EAST / RAIL</span><h4>Суйфэньхэ — Гродеково</h4><p>Пограничное железнодорожное направление между КНР и Дальним Востоком России.</p><a href="https://english.www.gov.cn/news/202509/28/content_WS68d8864ec6d00ca5f9a06802.html" target="_blank" rel="noopener">Инфраструктурное обновление 2025 ↗</a></article>
-        <article><span class="corridor-index">BRIDGE / MULTIMODAL</span><h4>Хэйхэ — Благовещенск</h4><p>Автопереход через мост, терминальная обработка на российской стороне и дальнейшая доставка автотранспортом или ЖД.</p><a href="https://en.intrusco.ru/bridge" target="_blank" rel="noopener">Описание цепочки перевозки ↗</a></article>
+        <article><span class="corridor-index">BRIDGE / MULTIMODAL</span><h4>Хэйхэ — Благовещенск</h4><p>Автопереход через мост, терминальная обработка на российской стороне и дальнейшая доставка автотранспортом или ЖД.</p><a href="https://www.mintrans.gov.ru/press-center/news/10281" target="_blank" rel="noopener">Минтранс РФ · мост Кани-Курган—Хэйхэ ↗</a></article>
         <article><span class="corridor-index">SEA + RAIL</span><h4>Порт Владивосток — Москва</h4><p>Морской участок до Дальнего Востока, затем контейнерный поезд по России.</p><a href="https://cn.fesco.com/en/clients/container/trains/fesco-moscow-shuttle/" target="_blank" rel="noopener">Сервис FESCO Moscow Shuttle ↗</a></article>
       </div>
     </section>
@@ -273,7 +273,7 @@
 <script src="/fix_views.js?v=1" defer></script>
 <script src="/cabinet.js?v=1" defer></script>
 <script src="/app.js?v=20260921-v300" defer></script>
-<script src="/route-planner.js?v=20261016-route-lab-v3" defer></script>
+<script src="/route-planner.js?v=20261016-route-lab-v4" defer></script>
 
 
 <section id="requestView" class="view-layer" aria-hidden="true"><div class="request-shell"><button class="close-button view-close" data-close-view="request" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="request-head"><span class="eyebrow" data-i18n="requestEyebrow">ЗАЯВКА</span><h2 data-i18n="requestTitle">Оставить заявку</h2><p data-i18n="requestSub">Опишите груз и маршрут — свяжемся и рассчитаем доставку.</p></div><form class="request-form" id="requestForm">
