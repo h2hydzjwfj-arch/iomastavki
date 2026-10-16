@@ -78,8 +78,8 @@
     } else if(city(to).id==='moscow'||city(to).id==='saint-petersburg'||city(to).id==='yekaterinburg'||city(to).id==='novosibirsk'){
       filtered.sort(function(a,b){var score={manzhouli:0,kazakhstan:1,sea:2,air:3,suifenhe:4,heihe:5,road:6};return (score[a.id]??10)-(score[b.id]??10);});
     }
-    return filtered.slice(0,mode==='multimodal'?6:4).map(function(p){
-      p.steps=reverseSteps(p.points,from,to);
+    return filtered.slice(0,mode==='multimodal'?7:4).map(function(p){
+      p.steps=routeSteps(p.points);
       p.estimated='';
       if(p.id==='sea'&&city(to).id==='moscow') p.estimated='Опубликованный ориентир FESCO для участка поездом Владивосток—Москва: 10–14 дней; морское плечо и обработки не включены.';
       if(p.id==='manzhouli') p.estimated='В 2025 году публиковался пример поезда Пекин—Москва с оценкой около 16 дней; срок этой отправки не гарантируется.';
