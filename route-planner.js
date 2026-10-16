@@ -36,6 +36,76 @@
     altynkol:{id:'altynkol',name:'Алтынколь',country:'Казахстан',region:'kz',x:548,y:165,kind:'border'},
     khabarovsk:{id:'khabarovsk',name:'Хабаровск',country:'Россия',region:'ru',x:674,y:175,kind:'city'}
   };
+
+  // Географические координаты узлов (широта, долгота); карта использует реальную проекцию.
+  var GEO={
+    shanghai:[31.2304,121.4737],beijing:[39.9042,116.4074],guangzhou:[23.1291,113.2644],
+    shenzhen:[22.5431,114.0579],yiwu:[29.3068,120.0753],shenyang:[41.8057,123.4315],
+    manzhouli:[49.5989,117.3784],suifenhe:[44.3998,131.1575],heihe:[50.2458,127.5285],
+    khorgos:[44.2075,80.4128],erenhot:[43.6475,111.9767],'zamyn-uud':[43.7249,111.9045],
+    ulaanbaatar:[47.9184,106.9177],naushki:[50.3827,106.1056],alashankou:[45.1833,82.5667],
+    moscow:[55.7558,37.6173],'saint-petersburg':[59.9311,30.3609],vladivostok:[43.1155,131.8855],
+    blagoveshchensk:[50.2906,127.5272],ussuriysk:[43.7973,131.9518],novosibirsk:[55.0084,82.9357],
+    yekaterinburg:[56.8389,60.6057],zabaikalsk:[49.6514,117.3266],grodekovo:[44.399,131.291],
+    dostyk:[45.253,82.493],altynkol:[45.979,82.611],khabarovsk:[48.4802,135.0719]
+  };
+  var leafletMap=null,leafletTileLayer=null,leafletRouteLayer=null,leafletMarkerLayer=null;
+  function initLeafletMap(){
+    var el=$('#routePlannerMap');
+    if(!el||!window.L)return false;
+    if(leafletMap)return true;
+    leafletMap=L.map(el,{zoomControl:false,scrollWheelZoom:true,preferCanvas:true}).setView([48,100],3);
+    L.control.zoom({position:'topright'}).addTo(leafletMap);
+    leafletTileLayer=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+      subdomains:'abcd',maxZoom:18,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>'
+    }).addTo(leafletMap);
+    leafletRouteLayer=L.layerGroup().addTo(leafletMap);
+    leafletMarkerLayer=L.layerGroup().addTo(leafletMap);
+    var toggle=document.getElementById('themeToggleButton');
+    if(toggle)toggle.addEventListener('click',function(){setTimeout(updateLeafletTiles,80);});
+    var observer=new MutationObserver(updateLeafletTiles);
+    observer.observe(document.documentElement,{attributes:true,attributeFilter:['class']});
+    setTimeout(function(){leafletMap.invalidateSize();renderLeafletMap();},120);
+    return true;
+  }
+  function updateLeafletTiles(){
+    if(!leafletMap||!window.L)return;
+    var dark=document.documentElement.classList.contains('dark');
+    var url=dark
+      ?'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      :'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    if(leafletTileLayer)leafletMap.removeLayer(leafletTileLayer);
+    leafletTileLayer=L.tileLayer(url,{subdomains:'abcd',maxZoom:18,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>'}).addTo(leafletMap);
+  }
+  function renderLeafletMap(){
+    if(!initLeafletMap()||!leafletMap)return;
+    leafletRouteLayer.clearLayers();leafletMarkerLayer.clearLayers();
+    var ids=Object.keys(GEO);
+    ids.forEach(function(id){
+      var c=CITIES[id],ll=GEO[id];if(!c||!ll)return;
+      var selected=id===state.from||id===state.to;
+      var icon=L.divIcon({className:'ioma-map-marker-wrap',html:'<span class="ioma-map-marker '+(id===state.from?'is-origin':id===state.to?'is-destination':'')+'"></span>',iconSize:[14,14],iconAnchor:[7,7]});
+      var marker=L.marker(ll,{icon:icon,title:c.name,keyboard:true,alt:c.name}).addTo(leafletMarkerLayer);
+      marker.bindTooltip(c.name+' · '+c.country,{direction:'top',offset:[0,-7],className:'ioma-map-tooltip'});
+      marker.on('click',function(){selectMapCity(id);});
+    });
+    var opts=defaultCorridors(state.from,state.to,state.mode);
+    var opt=opts.find(function(o){return o.id===state.selectedOption;})||opts[0];
+    if(opt){
+      var idsPath=compactIds(opt.points||[state.from,state.to]);
+      var latlngs=idsPath.map(function(id){return GEO[id];}).filter(Boolean);
+      if(latlngs.length>1){
+        L.polyline(latlngs,{color:'#777',weight:2.2,opacity:.9,dashArray:state.mode==='air'?'5 8':null,lineCap:'round'}).addTo(leafletRouteLayer);
+        L.circleMarker(latlngs[0],{radius:5,color:'#fff',weight:2,fillColor:'#222',fillOpacity:1}).addTo(leafletRouteLayer);
+        L.circleMarker(latlngs[latlngs.length-1],{radius:5,color:'#fff',weight:2,fillColor:'#777',fillOpacity:1}).addTo(leafletRouteLayer);
+      }
+    }
+    var from=GEO[state.from],to=GEO[state.to];
+    if(from&&to&&state.selectedOption){
+      var b=L.latLngBounds([from,to]);
+      if(b.isValid())leafletMap.fitBounds(b.pad(.3),{maxZoom:6,animate:true});
+    }
+  }
   var MODES={
     multimodal:{label:'Мультимодальная',short:'Мультимодальный',description:'Сочетание видов транспорта с перегрузкой в терминальных узлах.'},
     air:{label:'Авиа',short:'Авиа',description:'Аэропорт отправления → доступный грузовой хаб → таможня → доставка до адреса.'},
@@ -191,6 +261,7 @@
     return layer;
   }
   function renderMapMarkers(){
+    if($('#routePlannerMap')&&$('#routePlannerMap').classList.contains('real-route-map')){renderLeafletMap();return;}
     var host=$('#routeMapMarkers');if(!host)return;
     host.innerHTML='';
     Object.keys(CITIES).filter(function(id){return ['shanghai','beijing','guangzhou','shenzhen','yiwu','shenyang','manzhouli','suifenhe','heihe','khorgos','alashankou','erenhot','zamyn-uud','ulaanbaatar','naushki','moscow','saint-petersburg','vladivostok','blagoveshchensk','ussuriysk','novosibirsk','yekaterinburg','zabaikalsk','grodekovo','dostyk','altynkol','khabarovsk'].includes(id);}).forEach(function(id){
@@ -208,6 +279,7 @@
     });
   }
   function renderDynamicRoute(){
+    if($('#routePlannerMap')&&$('#routePlannerMap').classList.contains('real-route-map')){renderLeafletMap();return;}
     var layer=ensureDynamicLayer();if(!layer)return;
     layer.innerHTML='';
     var opts=defaultCorridors(state.from,state.to,state.mode);
