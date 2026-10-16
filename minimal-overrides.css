@@ -603,3 +603,125 @@ html[data-theme="soft"] .login-gate-btn {
 .leaflet-overlay-pane .ioma-route-line { animation:ioma-route-entry .22s ease-out both; }
 @keyframes ioma-route-entry { from { opacity:0; } to { opacity:.92; } }
 @media (prefers-reduced-motion:reduce) { .leaflet-overlay-pane .ioma-route-line { animation:none !important; } }
+
+
+/* Functional modules — shared type, monochrome surfaces, restrained density */
+.feature-notice {
+  display:block !important; padding:12px 14px !important; margin:10px 0 !important;
+  border:1px solid var(--line-strong) !important; border-radius:4px !important;
+  background:transparent !important; color:var(--ink) !important; font-size:12px !important;
+  line-height:1.6 !important; box-shadow:none !important;
+}
+.feature-notice p { margin:0 0 8px !important; color:inherit !important; }
+.feature-notice.is-error { border-color:#aaa !important; }
+.feature-inline-action { min-height:32px !important; padding:0 11px !important; border:1px solid var(--ink) !important; border-radius:3px !important; background:var(--ink) !important; color:var(--panel) !important; font-size:12px !important; }
+.feature-suggestion-empty { padding:9px 10px !important; color:var(--muted) !important; font-size:11px !important; line-height:1.5 !important; }
+.suggestions[hidden],.hover-menu[hidden],.feature-notice[hidden],#customsResult[hidden],#result[hidden],#recommendation[hidden],#routeAdvice[hidden] { display:none !important; }
+.suggestions,.hover-menu {
+  z-index:1000 !important; max-height:240px !important; overflow:auto !important;
+  background:var(--panel) !important; color:var(--ink) !important; border:1px solid var(--line-strong) !important;
+  border-radius:3px !important; box-shadow:none !important;
+}
+.feature-suggestion,.feature-menu-option {
+  display:block !important; width:100% !important; min-height:34px !important; padding:8px 10px !important;
+  border:0 !important; border-bottom:1px solid var(--line) !important; border-radius:0 !important;
+  background:transparent !important; color:var(--ink) !important; text-align:left !important;
+  font-size:12px !important; font-weight:400 !important; cursor:pointer !important;
+}
+.feature-suggestion:hover,.feature-menu-option:hover { background:var(--hover) !important; }
+.feature-suggestion:last-child,.feature-menu-option:last-child { border-bottom:0 !important; }
+.feature-results-title { margin:4px 0 10px !important; color:var(--ink) !important; font-size:17px !important; font-weight:450 !important; letter-spacing:-.025em !important; }
+.feature-calculation-summary,.feature-rate-match-block { margin-top:14px !important; padding-top:13px !important; border-top:1px solid var(--line) !important; }
+.feature-rate-fields {
+  display:grid !important; grid-template-columns:minmax(120px,.55fr) minmax(0,1fr) !important;
+  margin:8px 0 0 !important; border-top:1px solid var(--line) !important;
+  font-size:12px !important; line-height:1.5 !important;
+}
+.feature-rate-fields dt,.feature-rate-fields dd {
+  min-width:0 !important; margin:0 !important; padding:8px 9px !important;
+  border-bottom:1px solid var(--line) !important; overflow-wrap:anywhere !important;
+}
+.feature-rate-fields dt { color:var(--muted) !important; font-weight:400 !important; }
+.feature-rate-fields dd { color:var(--ink) !important; font-weight:450 !important; }
+.feature-rate-card { margin:0 0 10px !important; padding:14px !important; border:1px solid var(--line) !important; border-radius:4px !important; background:var(--panel) !important; box-shadow:none !important; }
+.feature-rate-card h4 { margin:0 0 3px !important; font-size:14px !important; font-weight:500 !important; color:var(--ink) !important; }
+.feature-rate-route { margin:0 !important; font-size:12px !important; color:var(--muted) !important; }
+.feature-rate-disclaimer { margin:10px 0 0 !important; color:var(--muted) !important; font-size:11px !important; line-height:1.6 !important; }
+.feature-customs-fields { grid-template-columns:minmax(150px,.38fr) minmax(0,1fr) !important; margin-bottom:12px !important; }
+.feature-customs-fields dd.is-warning { font-weight:500 !important; }
+.feature-customs-raw { white-space:pre-wrap !important; overflow-wrap:anywhere !important; font:12px/1.65 inherit !important; color:var(--ink) !important; }
+.customs-status { margin-top:10px !important; color:var(--muted) !important; font-size:12px !important; line-height:1.55 !important; }
+.customs-status.is-error { color:var(--ink) !important; border-left:2px solid #777 !important; padding-left:9px !important; }
+#customsResult { margin-top:13px !important; padding-top:12px !important; border-top:1px solid var(--line) !important; }
+.feature-chat-message { display:flex !important; margin:0 0 12px !important; width:100% !important; }
+.feature-chat-message.is-user { justify-content:flex-end !important; }
+.feature-chat-bubble { max-width:min(760px,88%) !important; padding:10px 13px !important; border:1px solid var(--line) !important; border-radius:4px !important; background:transparent !important; color:var(--ink) !important; white-space:pre-wrap !important; overflow-wrap:anywhere !important; font-size:13px !important; line-height:1.65 !important; }
+.feature-chat-message.is-user .feature-chat-bubble { background:var(--hover) !important; border-color:var(--line-strong) !important; }
+.feature-chat-message.is-error .feature-chat-bubble { border-color:#aaa !important; }
+#chatMessages { padding:8px 0 !important; }
+#assistantStatus { margin-top:9px !important; color:var(--muted) !important; font-size:11px !important; line-height:1.5 !important; }
+#assistantInput { font:inherit !important; border:1px solid var(--field-border) !important; border-radius:3px !important; background:var(--panel) !important; color:var(--ink) !important; }
+#sendAI,#customsCheck,#calculate { box-shadow:none !important; }
+#result { padding-top:10px !important; }
+.rate-upload-area { gap:8px !important; flex-wrap:wrap !important; }
+#rateUploadStatus { color:var(--muted) !important; font-size:11px !important; line-height:1.5 !important; }
+
+/* The dynamically injected chat modal follows the same neutral design system */
+.ioma-chat-overlay {
+  background:rgba(0,0,0,.22) !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  padding:16px !important; animation:none !important;
+}
+.ioma-chat-window {
+  background:var(--panel) !important; color:var(--ink) !important; border:1px solid var(--line-strong) !important;
+  border-radius:5px !important; max-width:780px !important; box-shadow:none !important; animation:none !important;
+}
+.ioma-chat-head,.ioma-chat-foot { background:var(--panel) !important; border-color:var(--line) !important; }
+.ioma-chat-head { padding:15px 18px !important; gap:11px !important; }
+.ioma-chat-head .orb { display:none !important; }
+.ioma-chat-head h2 { color:var(--ink) !important; font-size:15px !important; font-weight:450 !important; }
+.ioma-chat-head .sub { color:var(--muted) !important; font-size:11px !important; }
+.ioma-chat-head .status { border:1px solid var(--line) !important; border-radius:3px !important; background:transparent !important; color:var(--muted) !important; padding:4px 7px !important; font-size:10px !important; }
+.ioma-chat-head .status i { background:#777 !important; box-shadow:none !important; }
+.ioma-chat-close { border-radius:3px !important; color:var(--muted) !important; }
+.ioma-chat-body { background:var(--panel) !important; padding:20px !important; }
+.ioma-chat-msg { animation:none !important; max-width:82% !important; }
+.ioma-chat-msg.user .ioma-chat-bubble {
+  background:var(--hover) !important; color:var(--ink) !important; border:1px solid var(--line-strong) !important;
+  border-radius:4px !important; box-shadow:none !important;
+}
+.ioma-chat-msg.ai .ioma-chat-bubble {
+  background:var(--panel) !important; color:var(--ink) !important; border:1px solid var(--line) !important;
+  border-radius:4px !important; box-shadow:none !important;
+}
+.ioma-chat-msg.error .ioma-chat-bubble { background:transparent !important; color:var(--ink) !important; border-color:#aaa !important; }
+.ioma-chat-bubble { padding:10px 13px !important; font-size:13px !important; line-height:1.65 !important; }
+.ioma-chat-dots span { background:#888 !important; }
+.ioma-chat-empty { padding:28px 16px !important; }
+.ioma-chat-empty .big { display:none !important; }
+.ioma-chat-empty h3 { color:var(--ink) !important; font-size:18px !important; font-weight:450 !important; }
+.ioma-chat-empty p { color:var(--muted) !important; font-size:12px !important; }
+.ioma-chat-sugg { gap:6px !important; margin-top:17px !important; }
+.ioma-chat-sugg button { background:transparent !important; color:var(--ink) !important; border:1px solid var(--line) !important; border-radius:3px !important; box-shadow:none !important; font-size:12px !important; font-weight:400 !important; }
+.ioma-chat-sugg button:hover { background:var(--hover) !important; border-color:var(--line-strong) !important; color:var(--ink) !important; transform:none !important; box-shadow:none !important; }
+.ioma-chat-files { gap:5px !important; }
+.ioma-chat-file { background:var(--hover) !important; color:var(--ink) !important; border:1px solid var(--line) !important; border-radius:3px !important; }
+.ioma-chat-file button { color:var(--ink) !important; }
+.ioma-chat-input-row { background:var(--panel) !important; border:1px solid var(--field-border) !important; border-radius:4px !important; padding:5px 6px 5px 10px !important; }
+.ioma-chat-input-row:focus-within { background:var(--panel) !important; border-color:var(--line-strong) !important; }
+.ioma-chat-iconbtn { border-radius:3px !important; color:var(--muted) !important; }
+.ioma-chat-iconbtn:hover { background:var(--hover) !important; color:var(--ink) !important; }
+.ioma-chat-textarea { color:var(--ink) !important; font-size:13px !important; }
+.ioma-chat-textarea::placeholder { color:var(--muted) !important; }
+.ioma-chat-send { height:34px !important; width:34px !important; background:var(--ink) !important; color:var(--panel) !important; border:1px solid var(--ink) !important; border-radius:3px !important; box-shadow:none !important; }
+.ioma-chat-send:hover { transform:none !important; box-shadow:none !important; opacity:.86 !important; }
+.ioma-chat-send:disabled { background:var(--muted) !important; color:var(--panel) !important; }
+html.dark .ioma-chat-window,html.dark .ioma-chat-head,html.dark .ioma-chat-foot,html.dark .ioma-chat-body { background:var(--panel) !important; color:var(--ink) !important; border-color:var(--line) !important; }
+html.dark .ioma-chat-head h2,html.dark .ioma-chat-empty h3,html.dark .ioma-chat-msg.ai .ioma-chat-bubble,html.dark .ioma-chat-textarea { color:var(--ink) !important; }
+html.dark .ioma-chat-sugg button,html.dark .ioma-chat-msg.ai .ioma-chat-bubble { background:var(--panel) !important; border-color:var(--line) !important; color:var(--ink) !important; }
+html[data-theme="soft"] .ioma-chat-window,html[data-theme="soft"] .ioma-chat-head,html[data-theme="soft"] .ioma-chat-foot,html[data-theme="soft"] .ioma-chat-body { background:var(--panel) !important; color:var(--ink) !important; border-color:var(--line) !important; }
+@media (max-width:700px) {
+  .ioma-chat-overlay { padding:0 !important; }
+  .ioma-chat-window { border-radius:0 !important; max-height:100dvh !important; height:100dvh !important; }
+  .ioma-chat-body { padding:15px !important; }
+  .feature-chat-bubble { max-width:94% !important; }
+}
