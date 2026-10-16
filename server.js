@@ -771,6 +771,8 @@ app.get('/cabinet.css', function(req,res){ res.sendFile(path.join(ROOT,'cabinet.
 app.get('/cabinet.js',  function(req,res){ res.sendFile(path.join(ROOT,'cabinet.js')); });
 app.get('/fix_views.js', function(req,res){ res.sendFile(path.join(ROOT,'fix_views.js')); });
 app.get('/fix_app.js', function(req,res){ res.sendFile(path.join(ROOT,'fix_app.js')); });
+app.get('/minimal-overrides.css', function(req,res){ res.type('text/css').sendFile(path.join(ROOT,'minimal-overrides.css')); });
+app.get('/home-map.js', function(req,res){ res.type('application/javascript').sendFile(path.join(ROOT,'home-map.js')); });
 app.get('/api/health', function(req,res){ res.json({ ok:true }); });
 app.get('/api/version', function(req,res){ res.json({ ok:true, version:'98', build:'IOMASTAVKA_FILE_80' }); });
 app.get('/api/config', function(req,res){ res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.GROQ_API_KEY || process.env.DEEPSEEK_API_KEY), pexelsConfigured: Boolean(process.env.PEXELS_API_KEY) }); });
