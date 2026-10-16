@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="iomastavka — расчёт ставок, ИИ-ассистент, экспедиторы и новости ВЭД для логистики Китай → Россия">
+<meta name="theme-color" content="#bfe6f8">
+<title>Оставить заявку · iomastavka</title>
+<script>
+  /* Тема применяется до первой отрисовки — без вспышки светлой темы */
+  (function(){try{var t=localStorage.getItem('iomastavka_theme');var d=t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content=d?'#0b2238':'#bfe6f8'}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/styles.css?v=20261016-route-lab-v5">
+<link rel="stylesheet" href="/cabinet.css?v=1">
+</head>
+<body>
+<div id="weatherScene" class="weather-scene" aria-hidden="true"><div class="stars"></div><div class="sun"></div><div class="moon"></div></div>
+<header class="topbar">
+    
+<div class="topbar-left"><nav class="top-nav" id="topNav" aria-label="Быстрые действия"><button id="themeToggleButton" class="top-nav-btn" type="button" aria-label="Тема" title="Тема" data-i18n-aria="navTheme" data-i18n-title="navTheme"><svg class="top-nav-svg" viewBox="0 0 24 24"><g class="icon-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g><path class="icon-moon" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span data-i18n="navTheme">Тема</span></button><button id="agentImportButton" data-client-only hidden class="top-nav-btn" type="button" aria-label="Обновить ставки" title="Обновить ставки" data-i18n-aria="navRates" data-i18n-title="navRates"><svg class="top-nav-svg" viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span data-i18n="navRates">Ставки</span></button><button id="customsButton" data-client-only hidden class="top-nav-btn" type="button" aria-label="Проверка ТН ВЭД" title="Проверка ТН ВЭД" data-i18n-aria="navCustoms" data-i18n-title="navCustoms"><svg class="top-nav-svg" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5z"/><circle cx="12" cy="10" r="2.5"/><path d="M7 19c1-2.5 3-3.5 5-3.5s4 1 5 3.5"/></svg><span data-i18n="navCustoms">Таможня</span></button></nav></div>
+  <div class="brand" aria-label="iomastavka"><span>i</span><span>o</span><span>m</span><span>a</span><span>s</span><span>t</span><span>a</span><span>v</span><span>k</span><span>a</span></div>
+  <div class="top-actions"><span class="live-pill"><i></i> LIVE</span><button class="lang active" data-lang="ru">🇷🇺</button><button class="lang" data-lang="en">🇬🇧</button><button class="lang" data-lang="zh">🇨🇳</button><button class="lang" data-lang="tr">🇹🇷</button><button type="button" class="login-gate-btn" id="loginGateBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg><span data-i18n="loginGateBtn">Войти в личный кабинет</span></button></div>
+</header>
+
+<nav class="primary-site-nav" id="primarySiteNav" aria-label="Основная навигация">
+  <div class="site-nav-links">
+    <a href="/" data-page-route="home">Обзор</a>
+    <a href="/routes" data-page-route="routes">Маршрутизатор</a>
+    <a href="/services" data-page-route="services">Услуги</a>
+    <a href="/news" data-page-route="news">Новости ВЭД</a>
+    <a href="/rates" data-page-route="rates" data-auth-nav hidden>Калькулятор</a>
+    <a href="/forwarders" data-page-route="forwarders" data-auth-nav hidden>Экспедиторы</a>
+    <a href="/customs" data-page-route="customs" data-auth-nav hidden>ТН ВЭД</a>
+    <a href="/admin" data-page-route="admin" data-admin-nav hidden>Администрирование</a>
+  </div>
+  <div class="site-nav-meta">
+    <span class="site-role-pill" id="siteRoleBadge">ГОСТЬ</span>
+    <span class="site-mode-note" id="siteModeNote">Гостевой режим · часть информации скрыта</span>
+  </div>
+</nav>
+
+<main class="app-shell">
+<section id="requestView" class="view-layer" aria-hidden="true"><div class="request-shell"><button class="close-button view-close" data-close-view="request" aria-label="Закрыть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="request-head"><span class="eyebrow" data-i18n="requestEyebrow">ЗАЯВКА</span><h2 data-i18n="requestTitle">Оставить заявку</h2><p data-i18n="requestSub">Опишите груз и маршрут — свяжемся и рассчитаем доставку.</p></div><form class="request-form" id="requestForm">
+<label><span data-i18n="reqName">Имя</span><input type="text" id="requestName" placeholder="Как к вам обращаться" data-i18n-placeholder="reqNamePh" required maxlength="120"></label>
+
+<label><span data-i18n="reqContact">Телефон</span>
+  <div class="phone-field" id="phoneField">
+    <button type="button" class="phone-country-btn" id="phoneCountryBtn" aria-haspopup="listbox" aria-expanded="false">
+      <span class="phone-flag" id="phoneFlag">🇷🇺</span>
+      <span class="phone-code" id="phoneCode">+7</span>
+      <svg class="phone-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <input type="tel" id="requestPhone" placeholder="999 123-45-67" required maxlength="20" inputmode="tel" autocomplete="tel-national">
+    <div class="phone-dropdown hidden" id="phoneDropdown">
+      <div class="phone-search-wrap">
+        <svg class="phone-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" id="phoneSearch" placeholder="Страна или код (+375, Belarus, 白俄罗斯)" autocomplete="off">
+      </div>
+      <div class="phone-list" id="phoneList" role="listbox"></div>
+    </div>
+  </div>
+</label>
+
+<label><span data-i18n="reqEmail">Email</span><input type="email" id="requestEmail" placeholder="you@mail.ru" maxlength="160"></label>
+<label class="request-message-label"><span>Описание груза и маршрута (необязательно)</span><textarea id="requestMessage" rows="3" maxlength="1800" placeholder="Что перевозим, вес, размеры, сроки, условия поставки…"></textarea></label>
+
+<div style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true"><label>Ваш сайт<input type="text" name="website" id="requestWebsite" tabindex="-1" autocomplete="off"></label></div>
+
+<input type="hidden" name="_t" id="requestTime" value="">
+
+<button type="submit" class="calculate" data-i18n="reqSend">Отправить</button>
+<div id="requestStatus" class="request-status"></div>
+</form></div></section>
+</main>
+
+<script>
+  try {
+    if (!sessionStorage.getItem('IOMA_CACHE_CLEARED_v123')) {
+      localStorage.removeItem('iomas_articles');
+      localStorage.removeItem('iomas_news');
+      console.warn('[IOMA] one-time cache cleanup done');
+      sessionStorage.setItem('IOMA_CACHE_CLEARED_v123', '1');
+    }
+  } catch(e){}
+</script>
+<script src="/fix_app.js?v=1" defer></script>
+<script src="/fix_views.js?v=1" defer></script>
+<script src="/cabinet.js?v=1" defer></script>
+<script src="/app.js?v=20260921-v300" defer></script>
+<script src="/route-planner.js?v=20261016-route-lab-v6" defer></script>
+</body></html>
