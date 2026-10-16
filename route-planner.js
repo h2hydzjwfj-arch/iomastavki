@@ -45,7 +45,7 @@
     suifenhe:{title:'Суйфэньхэ — Гродеково — Уссурийск',label:'ДАЛЬНЕВОСТОЧНЫЙ Ж/Д КОРИДОР',source:'https://english.www.gov.cn/news/202509/28/content_WS68d8864ec6d00ca5f9a06802.html',sourceLabel:'Правительство КНР · ЖД к Суйфэньхэ',proof:'Схема для северо-востока Китая и Дальнего Востока РФ; до Москвы потребуется отдельный дальнейший железнодорожный участок. Конкретный КПП подтверждается перевозчиком.'},
     heihe:{title:'Хэйхэ — Благовещенск — внутренняя доставка',label:'АМУРСКИЙ / МУЛЬТИМОДАЛЬНЫЙ СЦЕНАРИЙ',source:'https://www.mintrans.gov.ru/press-center/news/10281',sourceLabel:'Минтранс РФ · мост Кани-Курган—Хэйхэ',proof:'Вариант для грузов, которым подходит региональный переход через Амур. Наличие сервиса, допустимость груза и последующая отправка проверяются для конкретной даты.'},
     sea:{title:'Порт Владивосток — поезд до Москвы',label:'МОРЕ + ЖЕЛЕЗНАЯ ДОРОГА',source:'https://www.fesco.com/en/clients/container/trains/fesco-moscow-shuttle/',sourceLabel:'FESCO Moscow Shuttle',proof:'FESCO публикует сервис контейнерного поезда Владивосток—Москва с ориентиром железнодорожного участка 10–14 дней. Это не включает морской участок, портовые операции, таможню и последнюю милю.'},
-    air:{title:'Авиа через доступный грузовой хаб',label:'АВИА / AIR CARGO',source:'https://en.xa.gov.cn/MediaCenter/News/1807703489712353282.html',sourceLabel:'Портал Сианя · пример грузового маршрута 2024',proof:'В 2024 году городской портал Сианя описал запуск грузового маршрута Сиань—Красноярск. Это историческое подтверждение направления, не актуальное расписание: доступность рейса, авиакомпанию, пересадки и приём груза необходимо подтверждать перед отправкой.'},
+    air:{title:'Авиа через доступный грузовой хаб',label:'АВИА / AIR CARGO',source:'https://english.wuhan.gov.cn/H_1/NWP/202401/t20240127_2351133.shtml',sourceLabel:'Портал Уханя · грузовой маршрут Эчжоу—Москва (2024)',proof:'В январе 2024 года портал правительства Уханя сообщил об открытии грузового рейса Эчжоу—Москва с планом 1–2 рейса в неделю на тот момент. Это историческое сообщение, а не текущая бронь: доступность рейса, авиакомпания, пересадки и приём груза необходимо подтвердить перед отправкой.'},
     railExample:{title:'Китай — Москва на контейнерном поезде',label:'ОПУБЛИКОВАННЫЙ ПРИМЕР Ж/Д',source:'https://english.www.gov.cn/news/202504/16/content_WS67ffa7d8c6d0868f4e8f1c56.html',sourceLabel:'Правительство КНР · поезд Пекин—Москва',proof:'В апреле 2025 года был описан поезд Пекин—Москва с оценкой около 16 дней. Это исторический пример конкретного поезда, а не обещание срока для новой отправки.'}
   };
 
@@ -67,7 +67,8 @@
       {id:'heihe',mode:'multimodal',title:SOURCE.heihe.title,label:SOURCE.heihe.label,points:cnFirst?[from,'heihe','blagoveshchensk','khabarovsk',to]:[from,'khabarovsk','blagoveshchensk','heihe',to],desc:'Региональный сценарий через Хэйхэ—Благовещенск с последующей автодоставкой или передачей на внутреннюю железнодорожную сеть.',source:SOURCE.heihe,fit:'Больше подходит для приграничных и дальневосточных направлений; точный сервис нужно согласовать.'},
       {id:'sea',mode:'sea',title:SOURCE.sea.title,label:SOURCE.sea.label,points:cnFirst?[from,'vladivostok','moscow',to]:[from,'moscow','vladivostok',to],desc:'Морской участок до российского дальневосточного порта, терминальная обработка и контейнерный поезд до Москвы; далее возможна автодоставка.',source:SOURCE.sea,fit:'Проверять вместе с морским фрахтом, портовыми расходами, таможенным плечом и доставкой до двери.'},
       {id:'air',mode:'air',title:SOURCE.air.title,label:SOURCE.air.label,points:[from,to],desc:'Авиа-груз через доступный грузовой аэропорт/хаб, затем таможенное оформление и доставка до пункта назначения.',source:SOURCE.air,fit:'Для срочного или относительно компактного груза; ограничения по аккумуляторам, опасному грузу и упаковке проверяются отдельно.'},
-      {id:'road',mode:'road',title:'Автоперевозка через доступный погранпереход',label:'АВТО / CROSS-BORDER ROAD',points:cnFirst?[from,'manzhouli','zabaikalsk',to]:[from,'zabaikalsk','manzhouli',to],desc:'Автомобильная схема через подтверждённый перевозчиком пункт пропуска с дальнейшей доставкой до склада/адреса.',source:SOURCE.manzhouli,fit:'Проверить вид транспорта на каждом плече, доступность КПП, ограничения груза и возможность перецепки/перегруза.'}
+      {id:'road',mode:'road',title:'Автоперевозка через доступный погранпереход',label:'АВТО / CROSS-BORDER ROAD',points:cnFirst?[from,'manzhouli','zabaikalsk',to]:[from,'zabaikalsk','manzhouli',to],desc:'Автомобильная схема через подтверждённый перевозчиком пункт пропуска с дальнейшей доставкой до склада/адреса.',source:SOURCE.manzhouli,fit:'Проверить вид транспорта на каждом плече, доступность КПП, ограничения груза и возможность перецепки/перегруза.'},
+      {id:'road-kazakhstan',mode:'road',title:'Автокоридор через Хоргос — Алтынколь и Казахстан',label:'АВТО / ЗАПАДНЫЙ КОРИДОР',points:cnFirst?[from,'khorgos','altynkol','novosibirsk',to]:[from,'novosibirsk','altynkol','khorgos',to],desc:'Сухопутный вариант через китайско-казахстанский погранузел с последующей доставкой по согласованному маршруту через Казахстан и Россию.',source:SOURCE.kazakhstan,fit:'Сравнивать с восточным коридором по доступности перевозчика, транзитным требованиям, типу кузова и пункту назначения.'}
     ];
     if(!isChRu(from,to)){
       return [{id:'domestic',mode:mode==='multimodal'?'rail':mode,title:'Внутреннее плечо: '+cityName(from)+' → '+cityName(to),label:'НЕТ МЕЖДУНАРОДНОГО ПЕРЕХОДА В ВЫБРАННОЙ ПАРЕ',points:[from,to],desc:'Указанные пункты находятся в одном регионе списка. Международные коридоры ниже не следует автоматически применять к этому маршруту.',source:SOURCE.sea,fit:'Для такой пары нужен расчёт локального автомобильного или железнодорожного плеча; международный участок не включён.'}];
@@ -78,7 +79,7 @@
     } else if(city(to).id==='moscow'||city(to).id==='saint-petersburg'||city(to).id==='yekaterinburg'||city(to).id==='novosibirsk'){
       filtered.sort(function(a,b){var score={manzhouli:0,kazakhstan:1,sea:2,air:3,suifenhe:4,heihe:5,road:6};return (score[a.id]??10)-(score[b.id]??10);});
     }
-    return filtered.slice(0,mode==='multimodal'?7:4).map(function(p){
+    return filtered.slice(0,mode==='multimodal'?8:4).map(function(p){
       p.steps=routeSteps(p.points);
       p.estimated='';
       if(p.id==='sea'&&city(to).id==='moscow') p.estimated='Опубликованный ориентир FESCO для участка поездом Владивосток—Москва: 10–14 дней; морское плечо и обработки не включены.';
@@ -177,13 +178,15 @@
   function renderMapMarkers(){
     var host=$('#routeMapMarkers');if(!host)return;
     host.innerHTML='';
-    Object.keys(CITIES).filter(function(id){return ['shanghai','beijing','guangzhou','shenzhen','yiwu','shenyang','manzhouli','suifenhe','heihe','khorgos','alashankou','moscow','saint-petersburg','vladivostok','blagoveshchensk','ussuriysk','novosibirsk','yekaterinburg'].includes(id);}).forEach(function(id){
+    Object.keys(CITIES).filter(function(id){return ['shanghai','beijing','guangzhou','shenzhen','yiwu','shenyang','manzhouli','suifenhe','heihe','khorgos','alashankou','moscow','saint-petersburg','vladivostok','blagoveshchensk','ussuriysk','novosibirsk','yekaterinburg','zabaikalsk','grodekovo','dostyk','altynkol','khabarovsk'].includes(id);}).forEach(function(id){
       var c=city(id),g=makeSvg('g',{class:'route-map-city '+(id===state.from?'is-from':id===state.to?'is-to':''),'data-map-city':id,tabindex:'0',role:'button','aria-label':'Выбрать '+c.name});
       var ring=makeSvg('circle',{class:'city-marker-ring',cx:c.x,cy:c.y,r:id===state.from||id===state.to?11:6});
       var dot=makeSvg('circle',{class:'city-marker-dot',cx:c.x,cy:c.y,r:3.3});
-      var text=makeSvg('text',{class:'city-marker-label',x:c.x+8,y:c.y-8});
+      var offsets={manzhouli:{x:-72,y:-7},zabaikalsk:{x:9,y:16},heihe:{x:-35,y:-6},blagoveshchensk:{x:9,y:16},khorgos:{x:-23,y:-10},alashankou:{x:-52,y:13},altynkol:{x:9,y:-7},dostyk:{x:-32,y:15},suifenhe:{x:-49,y:-2},grodekovo:{x:8,y:14},ussuriysk:{x:9,y:15},khabarovsk:{x:8,y:-7}};
+      var off=offsets[id]||{x:8,y:-8};
+      var text=makeSvg('text',{class:'city-marker-label',x:c.x+off.x,y:c.y+off.y});
       text.textContent=c.name;
-      g.appendChild(ring);g.appendChild(dot);if(['shanghai','beijing','manzhouli','moscow','vladivostok','blagoveshchensk','khorgos','suifenhe'].includes(id))g.appendChild(text);
+      g.appendChild(ring);g.appendChild(dot);if(['shanghai','beijing','manzhouli','moscow','vladivostok','blagoveshchensk','khorgos','suifenhe','zabaikalsk','grodekovo','dostyk','altynkol','heihe','alashankou','khabarovsk','ussuriysk'].includes(id))g.appendChild(text);
       g.addEventListener('click',function(){selectMapCity(id);});
       g.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();selectMapCity(id);}});
       host.appendChild(g);
