@@ -265,6 +265,7 @@
       '<h4>'+esc(p.title)+'</h4><p>'+esc(p.desc)+'</p>'+
       buildStepsMarkup(steps)+
       '<div class="route-option-fit"><b>Когда рассматривать</b><span>'+esc(p.fit)+'</span></div>'+
+      (p.source&&p.source.proof?'<div class="route-source-proof"><b>Источник и ограничения</b><p>'+esc(p.source.proof)+'</p></div>':'')+
       (p.estimated?'<div class="route-time-note"><span>◷</span><span>'+esc(p.estimated)+'</span></div>':'')+
       '<div class="route-option-footer">'+(p.source&&p.source.source?'<a href="'+esc(p.source.source)+'" target="_blank" rel="noopener noreferrer">'+esc(p.source.sourceLabel)+' ↗</a>':'<span class="route-source-muted">Открытый источник не относится к этому локальному участку</span>')+'<button type="button" data-choose-route="'+esc(p.id)+'">'+(chosen?'Маршрут выбран':'Показать на карте')+' <span>→</span></button></div>'+
       '<button type="button" class="route-request-button" data-request-route="'+esc(p.id)+'">Запросить расчёт по маршруту ↗</button>'+
