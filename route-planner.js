@@ -56,7 +56,8 @@
     if(leafletMap)return true;
     leafletMap=L.map(el,{zoomControl:false,scrollWheelZoom:true,preferCanvas:true}).setView([48,100],3);
     L.control.zoom({position:'topright'}).addTo(leafletMap);
-    leafletTileLayer=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+    var initialTiles=document.documentElement.classList.contains('dark')?'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    leafletTileLayer=L.tileLayer(initialTiles,{
       subdomains:'abcd',maxZoom:18,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>'
     }).addTo(leafletMap);
     leafletRouteLayer=L.layerGroup().addTo(leafletMap);
@@ -101,7 +102,7 @@
       }
     }
     var from=GEO[state.from],to=GEO[state.to];
-    if(from&&to&&state.selectedOption){
+    if(from&&to){
       var b=L.latLngBounds([from,to]);
       if(b.isValid())leafletMap.fitBounds(b.pad(.3),{maxZoom:6,animate:true});
     }
