@@ -11,7 +11,7 @@
   (function(){try{var t=localStorage.getItem('iomastavka_theme'),r=document.documentElement;if(t==='dark')r.classList.add('dark');else if(t==='soft')r.setAttribute('data-theme','soft');else if(!t&&matchMedia('(prefers-color-scheme: dark)').matches)r.classList.add('dark');var d=r.classList.contains('dark'),g=r.getAttribute('data-theme')==='soft';document.querySelector('meta[name="theme-color"]').content=d?'#191919':g?'#f1f1f1':'#ffffff'}catch(e){}})();
 </script>
 <link rel="stylesheet" href="/styles.css?v=20261016-logistics-v7">
-<link rel="stylesheet" href="/minimal-overrides.css?v=20261016-minimal-5">
+<link rel="stylesheet" href="/minimal-overrides.css?v=20261016-minimal-6">
 <link rel="stylesheet" href="/cabinet.css?v=1">
 </head>
 <body>
@@ -49,9 +49,9 @@
 <div id="recommendation" class="recommendation hidden"></div>
 <div id="routeAdvice" class="route-advice hidden"></div>
 <div class="rate-upload-area">
-    <input type="file" id="rateFileUpload" accept=".pdf,.xlsx,.xls,.docx,.txt,.csv,.json,.png,.jpg,.jpeg" hidden>
-    <button type="button" class="attach-button" onclick="document.getElementById('rateFileUpload').click()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 12.5 14.9 6.1a3.3 3.3 0 0 1 4.7 4.7l-8.9 8.9a5 5 0 0 1-7.1-7.1l9.2-9.2a2.9 2.9 0 0 1 4.1 4.1l-8.8 8.8a1.4 1.4 0 0 1-2-2l7.9-7.9"/></svg>Загрузить КП / ставку</button>
-    <span id="rateUploadStatus" role="status" aria-live="polite"></span>
+    <input type="file" id="rateFileUpload" accept=".txt,.csv,.json" hidden>
+    <button type="button" class="attach-button" onclick="document.getElementById('rateFileUpload').click()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 12.5 14.9 6.1a3.3 3.3 0 0 1 4.7 4.7l-8.9 8.9a5 5 0 0 1-7.1-7.1l9.2-9.2a2.9 2.9 0 0 1 4.1 4.1l-8.8 8.8a1.4 1.4 0 0 1-2-2l7.9-7.9"/></svg>Импортировать TXT / CSV / JSON</button>
+    <span id="rateUploadStatus" role="status" aria-live="polite">Для импорта поддерживаются текстовые TXT, CSV и JSON. PDF / Excel пока не извлекаются автоматически.</span>
 </div>
 <button id="calculate" class="calculate" data-i18n="calculate">Рассчитать</button><div id="result" class="result hidden"></div>
 </section></section>
@@ -67,9 +67,10 @@
     }
   } catch(e){}
 </script>
-<script src="/fix_app.js?v=3" defer></script>
+<script src="/fix_app.js?v=4" defer></script>
 <script src="/fix_views.js?v=1" defer></script>
 <script src="/cabinet.js?v=1" defer></script>
 <script src="/app.js?v=20261016-role-gate-v301" defer></script>
-<script src="/route-planner.js?v=20261016-logistics-v9" defer></script>
+<script src="/route-planner.js?v=20261016-logistics-v10" defer></script>
+<script src="/features.js?v=20261016-features-v1" defer></script>
 </body></html>
