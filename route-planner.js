@@ -147,7 +147,7 @@
     if(p==='/routes'){openCustomLayer('routesView',null);if(u.searchParams.get('mode'))setMode(u.searchParams.get('mode'));renderRouteResults();return;}
     if(p==='/services'){openCustomLayer('servicesView',null);return;}
     if(p==='/admin'){openCustomLayer('adminView',null);return;}
-    var map={'/rates':'calculator','/forwarders':'forwarders','/assistant':'assistant','/news':'news','/customs':'customs','/tarot':'tarot','/account':'account'};
+    var map={'/rates':'calculator','/forwarders':'forwarders','/assistant':'assistant','/news':'news','/customs':'customs','/tarot':'tarot','/account':'account','/request':'request'};
     if(map[p]==='account'){goAuth('login');return;}
     if(map[p]){openLegacyView(map[p],null);return;}
     openCustomLayer('servicesView',null);
@@ -246,6 +246,7 @@
       '<div class="route-option-fit"><b>Когда рассматривать</b><span>'+esc(p.fit)+'</span></div>'+
       (p.estimated?'<div class="route-time-note"><span>◷</span><span>'+esc(p.estimated)+'</span></div>':'')+
       '<div class="route-option-footer"><a href="'+esc(p.source.source)+'" target="_blank" rel="noopener noreferrer">'+esc(p.source.sourceLabel)+' ↗</a><button type="button" data-choose-route="'+esc(p.id)+'">'+(chosen?'Маршрут выбран':'Показать на карте')+' <span>→</span></button></div>'+
+      '<button type="button" class="route-request-button" data-request-route="'+esc(p.id)+'">Запросить расчёт по маршруту ↗</button>'+
       '</article>';
   }
   function renderRouteResults(){
@@ -278,10 +279,12 @@
     var p=opts.find(function(o){return o.id===id;})||opts[0];
     if(!p)return;
     state.routeTitle=p.title;state.routeDescription=p.desc;
-    var data={from:cityName(state.from),to:cityName(state.to),mode:MODES[state.mode].label,title:p.title,description:p.desc,steps:(p.steps||routeSteps(p.points)).map(function(s){return s.name;}).join(' → '),at:new Date().toISOString(),source:p.source.source};
+    var data={from:cityName(state.from),to:cityName(state.to),mode:MODES[state.mode].label,title:p.title,description:p.desc,steps:(p.steps||routeSteps(p.points||[state.from,state.to])).map(function(s){return s.name;}).join(' → '),at:new Date().toISOString(),source:p.source.source};
     try{localStorage.setItem('iomaRouteDraft',JSON.stringify(data));}catch(e){}
+    var message=$('#requestMessage');
+    if(message)message.value='Маршрут: '+data.from+' → '+data.to+'\nВид перевозки: '+data.mode+'\nПредлагаемый коридор: '+data.title+'\nПромежуточные узлы: '+data.steps+'\nПараметры груза, срок и бюджет уточнить при расчёте.\nИсточник/описание коридора: '+data.source;
     var status=$('#requestStatus');
-    if(status)status.textContent='Предлагаемый маршрут: '+data.from+' → '+data.to+'. Сценарий: '+data.title+'. Добавьте эти сведения в сообщение менеджеру.';
+    if(status)status.textContent='Маршрут добавлен в заявку. Проверьте описание груза, укажите контакт и отправьте запрос.';
     routeToPath('/request',true);
   }
 
@@ -335,6 +338,47 @@
     if(p==='home'){routeToPath('/',false);return;}
     routeToPath('/'+p,false);
   }
+
+  function initRequestForm(){
+    var form=$('#requestForm');if(!form||form.dataset.routePlannerBound==='1')return;
+    form.dataset.routePlannerBound='1';
+    var status=$('#requestStatus');
+    var ts=$('#requestTime');
+    function markOpened(){if(ts&&!ts.value)ts.value=String(Date.now());}
+    document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('[data-open-view="request"]'))markOpened();});
+    form.addEventListener('submit',function(e){
+      e.preventDefault();
+      var name=$('#requestName'),phone=$('#requestPhone'),email=$('#requestEmail'),message=$('#requestMessage'),website=$('#requestWebsite'),code=$('#phoneCode');
+      var person=(name&&name.value||'').trim();
+      var number=(phone&&phone.value||'').trim();
+      if(!person||!number){if(status)status.textContent='Укажите имя и телефон для связи.';return;}
+      markOpened();
+      var contact=((code&&code.textContent)||'+7')+' '+number;
+      var body=(message&&message.value||'').trim();
+      var mail=(email&&email.value||'').trim();
+      if(mail)body+=(body?'\\n\\n':'')+'Email для обратной связи: '+mail;
+      var payload={name:person,contact:contact,body:body,website:(website&&website.value)||'',_t:Number((ts&&ts.value)||Date.now())};
+      var send=form.querySelector('button[type="submit"]');
+      if(send){send.disabled=true;send.textContent='Отправляем…';}
+      if(status)status.textContent='Отправка заявки…';
+      fetch('/api/requests',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+      .then(function(r){return r.json().catch(function(){return {ok:false,error:'Не удалось прочитать ответ сервера'};}).then(function(d){return {ok:r.ok,data:d};});})
+      .then(function(out){
+        if(out.ok&&out.data&&out.data.ok&&Number(out.data.id||0)>0){
+          if(status)status.textContent='Заявка отправлена. Номер: '+out.data.id+'. Менеджер сможет связаться с вами по указанному контакту.';
+          form.reset();if(ts)ts.value=String(Date.now());
+          try{localStorage.removeItem('iomaRouteDraft');}catch(e){}
+        } else if(out.ok&&out.data&&out.data.ok&&Number(out.data.id||0)===0){
+          if(status)status.textContent='Сервер не подтвердил приём заявки. Заполните форму и попробуйте ещё раз через несколько секунд.';
+        } else {
+          if(status)status.textContent=(out.data&&out.data.error)||'Не удалось отправить заявку. Повторите попытку позже.';
+        }
+      })
+      .catch(function(){if(status)status.textContent='Нет связи с сервером. Проверьте соединение и попробуйте ещё раз.';})
+      .finally(function(){if(send){send.disabled=false;send.textContent='Отправить';}});
+    });
+  }
+
   function init(){
     checkRole().then(function(){bootPath();});
     if($('#routeFrom'))$('#routeFrom').addEventListener('change',function(){state.from=this.value;state.selectedOption=null;syncEndpoints();renderRouteResults();});
@@ -342,7 +386,7 @@
     document.addEventListener('click',interceptClick,true);
     window.addEventListener('popstate',onPopState);
     document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(location.pathname!=='/')setUrl('/');}});
-    initAdmin();initTheme();syncEndpoints();renderMapMarkers();renderRouteResults();
+    initAdmin();initTheme();initRequestForm();syncEndpoints();renderMapMarkers();renderRouteResults();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
