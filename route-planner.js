@@ -110,6 +110,7 @@
     'rostov-on-don','krasnodar','novorossiysk','volgograd','perm'
   ];
   var leafletMap=null,leafletTileLayer=null,leafletRouteLayer=null,leafletMarkerLayer=null;
+  var leafletMapRenderPass=0;
   function initLeafletMap(){
     var el=$('#routePlannerMap');
     if(!el||!window.L)return false;
@@ -140,20 +141,20 @@
   }
   function renderLeafletMap(){
     if(!initLeafletMap()||!leafletMap)return;
+    var renderPass=++leafletMapRenderPass;
     leafletRouteLayer.clearLayers();leafletMarkerLayer.clearLayers();
 
-    // The map deliberately starts with the two endpoints only. Intermediate
-    // nodes appear only after the visitor explicitly selects a route option.
+    // The map starts with endpoints only; intermediate nodes appear after a route is chosen.
     var options=defaultCorridors(state.from,state.to,state.mode);
-    var selected=state.selectedOption ? options.find(function(o){return o.id===state.selectedOption;}) : null;
-    var pathIds=selected ? compactIds(selected.points||[state.from,state.to]) : [];
+    var selected=state.selectedOption?options.find(function(o){return o.id===state.selectedOption;}):null;
+    var pathIds=selected?compactIds(selected.points||[state.from,state.to]):[];
     var visibleIds=[state.from,state.to];
-    if(selected) visibleIds=visibleIds.concat(pathIds);
+    if(selected)visibleIds=visibleIds.concat(pathIds);
     visibleIds=visibleIds.filter(function(id,i,all){return GEO[id]&&all.indexOf(id)===i;});
 
     visibleIds.forEach(function(id){
-      var ll=GEO[id], c=city(id);
-      var isFrom=id===state.from, isTo=id===state.to, isIntermediate=!isFrom&&!isTo;
+      var ll=GEO[id],c=city(id);
+      var isFrom=id===state.from,isTo=id===state.to,isIntermediate=!isFrom&&!isTo;
       var icon=L.divIcon({
         className:'ioma-map-marker-wrap',
         html:'<span class="ioma-map-marker '+(isFrom?'is-origin':isTo?'is-destination':isIntermediate?'is-intermediate':'')+'"></span>',
@@ -163,29 +164,63 @@
       marker.bindTooltip(c.name+(c.country?' · '+c.country:''),{
         direction:'top',offset:[0,-7],className:'ioma-map-tooltip',permanent:false
       });
-      marker.on('click',function(){
-        if(isIntermediate){
-          marker.openTooltip();
-          return;
-        }
-        selectMapCity(id);
-      });
+      // Endpoint choices are controlled by the form so map clicks cannot accidentally
+      // replace an origin/destination. Pins only reveal their grounded place label.
+      marker.on('click',function(){marker.openTooltip();});
     });
 
-    if(selected && pathIds.length>1){
+    function drawLine(coords,geometrySource){
+      if(renderPass!==leafletMapRenderPass||!selected||!coords||coords.length<2)return;
+      var isAir=selected.mode==='air',isSea=selected.mode==='sea';
+      var line=L.polyline(coords,{
+        color:'#222',weight:isAir?1.8:2.4,opacity:.92,
+        dashArray:isAir?'4 7':isSea?'8 6':null,lineCap:'round',lineJoin:'round'
+      }).addTo(leafletRouteLayer);
+      var explanation=geometrySource==='osrm'
+        ?'Линия построена по дорожной сети OpenStreetMap для выбранных узлов. Допуск КПП, проезд, документы, ограничения товара и срок всё равно подтверждаются перевозчиком.'
+        :isAir
+          ?'Дуга показывает приближённую геодезическую линию между городами, а не траекторию рейса. Хаб, стыковки и разрешённый маршрут зависят от авиакомпании.'
+          :isSea
+            ?'Морской коридор показан через ориентировочные географические контрольные точки. Он не является маршрутом конкретного судна или подтверждением прямого рейса.'
+            :'Узлы показывают кандидатный транспортный коридор; линия между ними схематична, а не точная геометрия железнодорожных путей.';
+      line.bindPopup('<div><strong>'+esc(selected.title)+'</strong><br><small>'+esc(explanation)+'</small></div>',{className:'ioma-route-popup',closeButton:false});
+    }
+    function greatCircle(a,b,steps){
+      var rad=Math.PI/180,deg=180/Math.PI;
+      var lat1=a[0]*rad,lon1=a[1]*rad,lat2=b[0]*rad,lon2=b[1]*rad;
+      var v1=[Math.cos(lat1)*Math.cos(lon1),Math.cos(lat1)*Math.sin(lon1),Math.sin(lat1)];
+      var v2=[Math.cos(lat2)*Math.cos(lon2),Math.cos(lat2)*Math.sin(lon2),Math.sin(lat2)];
+      var dot=Math.max(-1,Math.min(1,v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2]));
+      var omega=Math.acos(dot),sinOmega=Math.sin(omega),out=[];
+      for(var i=0;i<=steps;i++){
+        var t=i/steps,scale1,scale2;
+        if(Math.abs(sinOmega)<1e-7){scale1=1-t;scale2=t;}
+        else{scale1=Math.sin((1-t)*omega)/sinOmega;scale2=Math.sin(t*omega)/sinOmega;}
+        var x=scale1*v1[0]+scale2*v2[0],y=scale1*v1[1]+scale2*v2[1],z=scale1*v1[2]+scale2*v2[2];
+        out.push([Math.atan2(z,Math.sqrt(x*x+y*y))*deg,Math.atan2(y,x)*deg]);
+      }
+      return out;
+    }
+
+    if(selected&&pathIds.length>1){
       var latlngs=pathIds.map(function(id){return GEO[id];}).filter(Boolean);
-      if(latlngs.length>1){
-        var isAir=selected.mode==='air'||state.mode==='air';
-        var isSea=String(selected.id).indexOf('sea-')===0;
-        var line=L.polyline(latlngs,{
-          color:'#222',weight:isAir?1.8:2.4,opacity:.92,
-          dashArray:isAir?'4 7':isSea?'8 6':null,
-          lineCap:'round',lineJoin:'round'
-        }).addTo(leafletRouteLayer);
-        line.bindPopup(
-          '<div><strong>'+esc(selected.title)+'</strong><br><small>Предварительный коридор. Геометрия схематична; точный маршрут, стыки, КПП и расписание подтверждает оператор.</small></div>',
-          {className:'ioma-route-popup',closeButton:false}
-        );
+      if(selected.mode==='air'&&latlngs.length>=2){
+        drawLine(greatCircle(latlngs[0],latlngs[latlngs.length-1],64),'air');
+      }else if(selected.mode==='road'&&latlngs.length>=2){
+        // Route the ordered border/transfer waypoints over the real OSM road graph.
+        // If the public router cannot connect a segment, degrade gracefully to a corridor line.
+        var coordinateString=latlngs.map(function(ll){return ll[1]+','+ll[0];}).join(';');
+        var routeUrl='https://router.project-osrm.org/route/v1/driving/'+coordinateString+'?overview=full&geometries=geojson&steps=false';
+        fetch(routeUrl,{mode:'cors',cache:'no-store',signal:AbortSignal.timeout(12000)})
+          .then(function(res){if(!res.ok)throw new Error('Routing service unavailable');return res.json();})
+          .then(function(data){
+            if(!data||data.code!=='Ok'||!data.routes||!data.routes[0]||!data.routes[0].geometry||!data.routes[0].geometry.coordinates)throw new Error('No road route');
+            var roadGeometry=data.routes[0].geometry.coordinates.map(function(pair){return [pair[1],pair[0]];});
+            drawLine(roadGeometry,'osrm');
+          })
+          .catch(function(){drawLine(latlngs,'schematic');});
+      }else{
+        drawLine(latlngs,'schematic');
       }
     }
 
@@ -193,9 +228,7 @@
     var boundsPoints=boundsIds.map(function(id){return GEO[id];}).filter(Boolean);
     if(boundsPoints.length>1){
       var bounds=L.latLngBounds(boundsPoints);
-      if(bounds.isValid())leafletMap.fitBounds(bounds.pad(selected?.15:.28),{
-        maxZoom:selected?5:6,animate:true
-      });
+      if(bounds.isValid())leafletMap.fitBounds(bounds.pad(selected?.15:.28),{maxZoom:selected?5:6,animate:true});
     }else if(boundsPoints.length===1){
       leafletMap.setView(boundsPoints[0],5,{animate:true});
     }
