@@ -1852,9 +1852,9 @@ app.get('/api/agents', function(req,res){
   }
 });
 
-app.get('/api/rates', function(req,res){ res.json(ensureRateDb()); });
+app.get('/api/rates', requireClientOrAdmin, function(req,res){ res.json(ensureRateDb()); });
 
-app.get('/api/rates/recommend', function(req,res){
+app.get('/api/rates/recommend', requireClientOrAdmin, function(req,res){
   const db = ensureRateDb();
   const from = String(req.query.from||''), to = String(req.query.to||''), mode = String(req.query.mode||''), distance = Number(req.query.distance);
   const matches = db.records.map(function(r){ return Object.assign({}, r, { _score: routeScore(r, from, to, mode, Number.isFinite(distance)?distance:null) }); })
@@ -1864,7 +1864,7 @@ app.get('/api/rates/recommend', function(req,res){
   res.json({ ok:true, matches });
 });
 
-app.post('/api/agents/import', async function(req,res){
+app.post('/api/agents/import', requireAuth, async function(req,res){
   const text = String(req.body?.text || '').trim();
   if (!text) return res.status(400).json({ ok:false });
   try {
@@ -1883,7 +1883,7 @@ app.post('/api/agents/import', async function(req,res){
   } catch(e){ res.status(502).json({ ok:false, error:e.message }); }
 });
 
-app.post('/api/rates/import', upload.single('file'), async function(req,res){
+app.post('/api/rates/import', requireAuth, upload.single('file'), async function(req,res){
   if (!req.file?.buffer && !String(req.body?.text||'').trim()) return res.status(400).json({ ok:false });
   try {
     const content = req.file?.buffer ? req.file.buffer.toString('utf8') : String(req.body?.text||'');
@@ -1929,7 +1929,7 @@ app.post('/api/ai', async function(req,res){
   res.end();
 });
 
-app.post('/api/customs/check', async function(req,res){
+app.post('/api/customs/check', requireClientOrAdmin, async function(req,res){
   const code = String(req.body?.code || '').replace(/\D/g,'').slice(0,10);
   if (code.length !== 10) return res.status(400).json({ ok:false, error:'Нужен 10-значный код' });
   console.log('[customs] запрос code=' + code + ' | Groq=' + (process.env.GROQ_API_KEY?'yes':'no') + ' Gemini=' + (process.env.GEMINI_API_KEY?'yes':'no') + ' DeepSeek=' + (process.env.DEEPSEEK_API_KEY?'yes':'no'));
@@ -1963,6 +1963,18 @@ function isAdmin(req){
 function requireAuth(req, res, next){
   if (isAdmin(req)) return next();
   return res.status(401).json({ ok:false, error:'Auth required' });
+}
+function requireClientOrAdmin(req, res, next){
+  if (isAdmin(req)) return next();
+  const auth = req.cookies && req.cookies.auth;
+  if (auth && String(auth).startsWith('client:')){
+    try {
+      const clients = require('./lib/clients');
+      const client = clients.findById(String(auth).slice(7));
+      if (client && client.active) return next();
+    } catch(e){}
+  }
+  return res.status(401).json({ ok:false, error:'Client or administrator login required' });
 }
 function esc(s){ return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
