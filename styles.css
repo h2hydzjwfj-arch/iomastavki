@@ -3575,3 +3575,8 @@ html:not(.dark) .admin-detail-card textarea,html:not(.dark) .admin-detail-card i
 html:not(.dark) .admin-request-row p{color:#4f6a7d}
 @media(max-width:1050px){.admin-tools-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.admin-tools-detail-grid{grid-template-columns:1fr}.admin-requests-head{flex-direction:column;align-items:stretch}.admin-requests-head .hub-action-button{align-self:flex-start}}
+
+/* Selected route mode follows the route type; keep the map nodes on top of the glow. */
+.route-map-corridors .corridor-line.is-mode-active{opacity:.92;stroke-width:3.8;filter:drop-shadow(0 0 6px rgba(53,215,232,.72));}
+.route-map-corridors .corridor-line{transition:opacity .2s,stroke-width .2s;}
+@media(max-width:850px){.topbar{height:64px!important;}}
