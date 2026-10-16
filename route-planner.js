@@ -40,12 +40,12 @@
     sea:{label:'Море',short:'Море + Ж/Д',description:'Морской участок до порта, терминальная обработка и возможное продолжение по железной дороге.'}
   };
   var SOURCE={
-    manzhouli:{title:'Маньчжурия — Забайкальск — Транссиб',label:'ВОСТОЧНЫЙ Ж/Д КОРИДОР',source:'https://english.www.gov.cn/policies/policywatch/202604/11/content_WS69d9a590c6d00ca5f9a0a593.html',sourceLabel:'Правительство КНР · порт Маньчжурия',proof:'Маньчжурия описывается правительством КНР как ключевой железнодорожный порт для торговли Китай—Россия. Конкретный поезд и пересечение границы подтверждает оператор.'},
-    kazakhstan:{title:'Хоргос / Алтынколь или Алашанькоу / Достык',label:'ЗАПАДНЫЙ КОРИДОР ЧЕРЕЗ КАЗАХСТАН',source:'https://www.gov.kz/org/maidd/activities/2110',sourceLabel:'Правительство Казахстана · переходы Китай—Казахстан',proof:'Узел Алтынколь—Хоргос обслуживает международные контейнерные потоки с перегрузкой между китайской колеёй 1435 мм и колеёй 1520 мм. Выбор пары станций зависит от отправки.'},
-    suifenhe:{title:'Суйфэньхэ — Гродеково — Уссурийск',label:'ДАЛЬНЕВОСТОЧНЫЙ Ж/Д КОРИДОР',source:'https://english.www.gov.cn/news/202509/28/content_WS68d8864ec6d00ca5f9a06802.html',sourceLabel:'Правительство КНР · ЖД к Суйфэньхэ',proof:'Схема для северо-востока Китая и Дальнего Востока РФ; до Москвы потребуется отдельный дальнейший железнодорожный участок. Конкретный КПП подтверждается перевозчиком.'},
-    heihe:{title:'Хэйхэ — Благовещенск — внутренняя доставка',label:'АМУРСКИЙ / МУЛЬТИМОДАЛЬНЫЙ СЦЕНАРИЙ',source:'https://www.mintrans.gov.ru/press-center/news/10281',sourceLabel:'Минтранс РФ · мост Кани-Курган—Хэйхэ',proof:'Вариант для грузов, которым подходит региональный переход через Амур. Наличие сервиса, допустимость груза и последующая отправка проверяются для конкретной даты.'},
-    sea:{title:'Порт Владивосток — поезд до Москвы',label:'МОРЕ + ЖЕЛЕЗНАЯ ДОРОГА',source:'https://www.fesco.com/en/clients/container/trains/fesco-moscow-shuttle/',sourceLabel:'FESCO Moscow Shuttle',proof:'FESCO публикует сервис контейнерного поезда Владивосток—Москва с ориентиром железнодорожного участка 10–14 дней. Это не включает морской участок, портовые операции, таможню и последнюю милю.'},
-    air:{title:'Авиа через доступный грузовой хаб',label:'АВИА / AIR CARGO',source:'https://english.wuhan.gov.cn/H_1/NWP/202401/t20240127_2351133.shtml',sourceLabel:'Портал Уханя · грузовой маршрут Эчжоу—Москва (2024)',proof:'В январе 2024 года портал правительства Уханя сообщил об открытии грузового рейса Эчжоу—Москва с планом 1–2 рейса в неделю на тот момент. Это историческое сообщение, а не текущая бронь: доступность рейса, авиакомпания, пересадки и приём груза необходимо подтвердить перед отправкой.'},
+    manzhouli:{title:'Маньчжурия — Забайкальск — Транссиб',label:'ВОСТОЧНЫЙ Ж/Д КОРИДОР',source:'https://www.mintrans.gov.ru/eye/press-center/news/12684',sourceLabel:'Минтранс РФ · соглашение от 20.05.2026',proof:'Минтранс РФ сообщил о соглашении по строительству второго главного пути 1435 мм на участке Забайкальск—Маньчжурия. Заявленная цель к 2030 году — дополнительно 11 млн тонн пропускной способности и почти 50 пар поездов в сутки; это целевой показатель проекта, не текущая доступность.'},
+    kazakhstan:{title:'Хоргос / Алтынколь или Алашанькоу / Достык',label:'ЗАПАДНЫЙ КОРИДОР ЧЕРЕЗ КАЗАХСТАН',source:'https://www.gov.kz/org/maidd/activities/2110',sourceLabel:'Правительство Казахстана · узлы перехода',proof:'Хоргос—Алтынколь и Алашанькоу—Достык — пары узлов китайско-казахстанской границы. Дальнейшее плечо через Казахстан и въезд в РФ должны быть подтверждены оператором; схема на карте — кандидат для сравнения, не подтверждённый поезд/рейс.'},
+    suifenhe:{title:'Суйфэньхэ — Гродеково — Уссурийск',label:'ДАЛЬНЕВОСТОЧНЫЙ Ж/Д КОРИДОР',source:'https://english.www.gov.cn/news/202501/27/content_WS6796d1f6c6d0868f4e8ef328.html',sourceLabel:'Правительство КНР · Суйфэньхэ, 27.01.2025',proof:'Публичный источник правительства КНР описывает железнодорожный коридор через порт Суйфэньхэ. Связку с российским участком Гродеково—Уссурийск мы показываем как сценарий для проверки, а не как обещание действующего отправления.'},
+    heihe:{title:'Хэйхэ — Благовещенск — внутренняя доставка',label:'АМУРСКИЙ / МУЛЬТИМОДАЛЬНЫЙ СЦЕНАРИЙ',source:'https://mintrans.gov.ru/press-center/news/12572',sourceLabel:'Минтранс РФ · транспортное сотрудничество, 03.04.2026',proof:'Минтранс РФ подтверждает развитие автопереходов и сотрудничество с КНР; мост Хэйхэ—Благовещенск открыт ранее. Доступность конкретного грузового сервиса, тип груза и последующее внутреннее плечо проверяются на дату отправки.'},
+    sea:{title:'Порт Владивосток — поезд до Москвы',label:'МОРЕ + ЖЕЛЕЗНАЯ ДОРОГА',source:'https://www.fesco.com/en/clients/container/trains/fesco-moscow-shuttle/',sourceLabel:'FESCO Moscow Shuttle · опубликованный сервис',proof:'FESCO публикует контейнерный поезд Владивосток—Москва и ориентир 10–14 дней для железнодорожного участка. Это не включает морской участок, портовые операции, таможню и последнюю милю; актуальный слот/расписание подтверждает оператор.'},
+    air:{title:'Авиа через доступный грузовой хаб',label:'АВИА / AIR CARGO',source:'https://cn-cargo.net/en/services/air/',sourceLabel:'CN Cargo · опубликованные авиа-направления',proof:'Коммерческий провайдер описывает авиа-сервис из Шанхая (PVG), Пекина (PEK), Гуанчжоу (CAN) и Шэньчжэня (SZX) в Москву (SVO). Это пример направления из публичного предложения, а не подтверждение рейса/места на текущую дату: расписание, тариф и приём конкретного груза сверяются перед отправкой.'},
     railExample:{title:'Китай — Москва на контейнерном поезде',label:'ОПУБЛИКОВАННЫЙ ПРИМЕР Ж/Д',source:'https://english.www.gov.cn/news/202504/16/content_WS67ffa7d8c6d0868f4e8f1c56.html',sourceLabel:'Правительство КНР · поезд Пекин—Москва',proof:'В апреле 2025 года был описан поезд Пекин—Москва с оценкой около 16 дней. Это исторический пример конкретного поезда, а не обещание срока для новой отправки.'}
   };
 
@@ -62,13 +62,13 @@
     var cnFirst=city(from).region==='cn';
     var pairs=[
       {id:'manzhouli',mode:'rail',title:SOURCE.manzhouli.title,label:SOURCE.manzhouli.label,points:cnFirst?[from,'manzhouli','zabaikalsk','novosibirsk',to]:[from,'novosibirsk','zabaikalsk','manzhouli',to],desc:'Восточный вариант через погранстанцию Маньчжурия—Забайкальск и дальнейшую российскую железнодорожную сеть.',source:SOURCE.manzhouli,fit:'Подходит для проверки контейнерной Ж/Д схемы на центральные и дальние направления России.'},
-      {id:'kazakhstan',mode:'rail',title:SOURCE.kazakhstan.title,label:SOURCE.kazakhstan.label,points:cnFirst?[from,'alashankou','dostyk','novosibirsk',to]:[from,'novosibirsk','dostyk','alashankou',to],desc:'Западная железнодорожная схема через узлы китайско-казахстанской границы и далее через Казахстан/Россию.',source:SOURCE.kazakhstan,fit:'Альтернатива восточному маршруту; станция передачи зависит от направления, типа контейнера и оператора.'},
+      {id:'kazakhstan',mode:'rail',title:SOURCE.kazakhstan.title,label:SOURCE.kazakhstan.label,points:cnFirst?[from,'alashankou','dostyk',to]:[from,'dostyk','alashankou',to],desc:'Западная железнодорожная схема через узлы китайско-казахстанской границы и далее через Казахстан/Россию.',source:SOURCE.kazakhstan,fit:'Альтернатива восточному маршруту; станция передачи зависит от направления, типа контейнера и оператора.'},
       {id:'suifenhe',mode:'rail',title:SOURCE.suifenhe.title, label:SOURCE.suifenhe.label, points:cnFirst?[from,'suifenhe','grodekovo','ussuriysk',to]:[from,'ussuriysk','grodekovo','suifenhe',to],desc:'Региональный дальневосточный сценарий через Суйфэньхэ—Гродеково с дальнейшей доставкой по российской сети.',source:SOURCE.suifenhe,fit:'Особенно уместно для Уссурийска, Владивостока и других точек Дальнего Востока.'},
       {id:'heihe',mode:'multimodal',title:SOURCE.heihe.title,label:SOURCE.heihe.label,points:cnFirst?[from,'heihe','blagoveshchensk','khabarovsk',to]:[from,'khabarovsk','blagoveshchensk','heihe',to],desc:'Региональный сценарий через Хэйхэ—Благовещенск с последующей автодоставкой или передачей на внутреннюю железнодорожную сеть.',source:SOURCE.heihe,fit:'Больше подходит для приграничных и дальневосточных направлений; точный сервис нужно согласовать.'},
       {id:'sea',mode:'sea',title:SOURCE.sea.title,label:SOURCE.sea.label,points:cnFirst?[from,'vladivostok','moscow',to]:[from,'moscow','vladivostok',to],desc:'Морской участок до российского дальневосточного порта, терминальная обработка и контейнерный поезд до Москвы; далее возможна автодоставка.',source:SOURCE.sea,fit:'Проверять вместе с морским фрахтом, портовыми расходами, таможенным плечом и доставкой до двери.'},
-      {id:'air',mode:'air',title:SOURCE.air.title,label:SOURCE.air.label,points:[from,to],desc:'Авиа-груз через доступный грузовой аэропорт/хаб, затем таможенное оформление и доставка до пункта назначения.',source:SOURCE.air,fit:'Для срочного или относительно компактного груза; ограничения по аккумуляторам, опасному грузу и упаковке проверяются отдельно.'},
+      {id:'air',mode:'air',title:SOURCE.air.title,label:SOURCE.air.label,points:[from,to],desc:'Как отправную точку для запроса можно проверить грузовые направления PVG (Шанхай), PEK (Пекин), CAN (Гуанчжоу) или SZX (Шэньчжэнь) → SVO (Москва). Прямой/стыковочный рейс, авиакомпания и аэропорт подтверждаются только под дату отправки.',source:SOURCE.air,fit:'Для срочного или относительно компактного груза; заранее проверить аккумуляторы, опасный груз, упаковку, объёмный вес, cut-off и наличие грузового места.'},
       {id:'road',mode:'road',title:'Автоперевозка через доступный погранпереход',label:'АВТО / CROSS-BORDER ROAD',points:cnFirst?[from,'manzhouli','zabaikalsk',to]:[from,'zabaikalsk','manzhouli',to],desc:'Автомобильная схема через подтверждённый перевозчиком пункт пропуска с дальнейшей доставкой до склада/адреса.',source:SOURCE.manzhouli,fit:'Проверить вид транспорта на каждом плече, доступность КПП, ограничения груза и возможность перецепки/перегруза.'},
-      {id:'road-kazakhstan',mode:'road',title:'Автокоридор через Хоргос — Алтынколь и Казахстан',label:'АВТО / ЗАПАДНЫЙ КОРИДОР',points:cnFirst?[from,'khorgos','altynkol','novosibirsk',to]:[from,'novosibirsk','altynkol','khorgos',to],desc:'Сухопутный вариант через китайско-казахстанский погранузел с последующей доставкой по согласованному маршруту через Казахстан и Россию.',source:SOURCE.kazakhstan,fit:'Сравнивать с восточным коридором по доступности перевозчика, транзитным требованиям, типу кузова и пункту назначения.'}
+      {id:'road-kazakhstan',mode:'road',title:'Автокоридор через Хоргос — Алтынколь и Казахстан',label:'АВТО / ЗАПАДНЫЙ КОРИДОР',points:cnFirst?[from,'khorgos','altynkol',to]:[from,'altynkol','khorgos',to],desc:'Сухопутный вариант через китайско-казахстанский погранузел с последующей доставкой по согласованному маршруту через Казахстан и Россию.',source:SOURCE.kazakhstan,fit:'Сравнивать с восточным коридором по доступности перевозчика, транзитным требованиям, типу кузова и пункту назначения.'}
     ];
     if(!isChRu(from,to)){
       return [{id:'domestic',mode:mode==='multimodal'?'rail':mode,title:'Внутреннее плечо: '+cityName(from)+' → '+cityName(to),label:'НЕТ МЕЖДУНАРОДНОГО ПЕРЕХОДА В ВЫБРАННОЙ ПАРЕ',points:[from,to],desc:'Указанные пункты находятся в одном регионе списка. Международные коридоры ниже не следует автоматически применять к этому маршруту.',source:SOURCE.sea,fit:'Для такой пары нужен расчёт локального автомобильного или железнодорожного плеча; международный участок не включён.'}];
@@ -89,7 +89,7 @@
   }
 
   function updateRoleUI(){
-    var role=$('#siteRoleBadge'),note=$('#siteModeNote'),guest=$('#routeGuestBanner'),notice=$('#servicesAccessNotice');
+    var role=$('#siteRoleBadge'),note=$('#siteModeNote'),guest=$('#routeGuestBanner'),notice=$('#servicesAccessNotice'),homeGuest=$('#homeGuestNote');
     var labels={guest:'ГОСТЬ',client:'КЛИЕНТ',admin:'АДМИНИСТРАТОР'};
     if(role)role.textContent=labels[state.role]||'ГОСТЬ';
     if(note)note.textContent=state.role==='guest'?'Гостевой режим · часть информации скрыта':state.role==='admin'?'Полный административный режим':'Клиентский доступ · личные заявки и инструменты';
@@ -98,6 +98,7 @@
     $$('[data-gated-link="client"]').forEach(function(el){el.classList.toggle('is-locked',state.role==='guest');});
     $$('[data-gated-link="admin"]').forEach(function(el){el.classList.toggle('is-locked',state.role!=='admin');});
     if(guest)guest.hidden=state.role!=='guest';
+    if(homeGuest)homeGuest.hidden=state.role!=='guest';
     if(notice)notice.hidden=state.role!=='guest';
     if(state.role==='admin'){$$('#adminView .admin-security-note').forEach(function(el){el.classList.add('admin-access-confirmed');});}
     var title=$('#servicesAccessTitle'),text=$('#servicesAccessText');
@@ -149,7 +150,14 @@
     if(['/rates','/forwarders','/customs'].includes(p)&&state.role==='guest'){showToast('Вы в гостевом режиме. Войдите или зарегистрируйтесь для доступа к этому разделу.');goAuth('register');return;}
     if(changeUrl)setUrl(p+(u.search||''));
     if(p==='/'){closeCurrentViews();return;}
-    if(p==='/routes'){openCustomLayer('routesView',null);if(u.searchParams.get('mode'))setMode(u.searchParams.get('mode'));renderRouteResults();return;}
+    if(p==='/routes'){
+      openCustomLayer('routesView',null);
+      var fromParam=u.searchParams.get('from'),toParam=u.searchParams.get('to');
+      if(fromParam&&CITIES[fromParam]){state.from=fromParam;var fromSelect=$('#routeFrom');if(fromSelect)fromSelect.value=fromParam;}
+      if(toParam&&CITIES[toParam]){state.to=toParam;var toSelect=$('#routeTo');if(toSelect)toSelect.value=toParam;}
+      if(u.searchParams.get('mode'))setMode(u.searchParams.get('mode'));
+      renderRouteResults();return;
+    }
     if(p==='/article'){openCustomLayer('articleView',null);loadArticlePage();return;}
     if(p==='/services'){openCustomLayer('servicesView',null);return;}
     if(p==='/admin'){openCustomLayer('adminView',null);return;}
@@ -295,6 +303,21 @@
   }
 
   function interceptClick(e){
+    var transportEl=e.target.closest&&e.target.closest('[data-open-route-mode]');
+    if(transportEl){
+      e.preventDefault();
+      var requestedMode=transportEl.dataset.openRouteMode||'multimodal';
+      if(location.pathname.replace(/\/+$/,'')==='/routes'){
+        setMode(requestedMode);
+        var routeSelectors=$('#routeControlsPanel');
+        if(routeSelectors)routeSelectors.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+      } else {
+        var fromValue=$('#routeFrom')&&$('#routeFrom').value||state.from||'shanghai';
+        var toValue=$('#routeTo')&&$('#routeTo').value||state.to||'moscow';
+        window.location.href='/routes?mode='+encodeURIComponent(requestedMode)+'&from='+encodeURIComponent(fromValue)+'&to='+encodeURIComponent(toValue);
+      }
+      return;
+    }
     var modeEl=e.target.closest&&e.target.closest('[data-route-mode]');
     if(modeEl){e.preventDefault();setMode(modeEl.dataset.routeMode);return;}
     var fieldEl=e.target.closest&&e.target.closest('[data-route-field]');
