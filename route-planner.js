@@ -170,7 +170,7 @@
     var svg=$('#routePlannerMap');
     if(!svg)return null;
     var layer=$('#routeMapDynamic');
-    if(!layer){layer=makeSvg('g',{id:'routeMapDynamic','class':'route-map-dynamic'});svg.appendChild(layer);}
+    if(!layer){layer=makeSvg('g',{id:'routeMapDynamic','class':'route-map-dynamic'});var markers=$('#routeMapMarkers');if(markers&&markers.parentNode===svg)svg.insertBefore(layer,markers);else svg.appendChild(layer);}
     return layer;
   }
   function renderMapMarkers(){
@@ -231,7 +231,8 @@
   function setMode(mode){
     if(!MODES[mode])mode='multimodal';
     state.mode=mode;state.selectedOption=null;
-    $$('[data-route-mode]').forEach(function(b){b.classList.toggle('is-active',b.dataset.routeMode===mode);b.setAttribute('aria-pressed',b.dataset.routeMode===mode?'true':'false');});
+    $('[data-route-mode]').forEach(function(b){b.classList.toggle('is-active',b.dataset.routeMode===mode);b.setAttribute('aria-pressed',b.dataset.routeMode===mode?'true':'false');});
+    $('.corridor-line').forEach(function(line){var id=line.dataset.corridor;var show=mode==='multimodal'||id===mode||(mode==='rail'&&['manzhouli','kazakhstan','suifenhe'].includes(id))||(mode==='road'&&['manzhouli','kazakhstan','heihe','suifenhe'].includes(id))||(mode==='sea'&&id==='sea');line.classList.toggle('is-mode-active',show);});
     renderRouteResults();
   }
   function buildStepsMarkup(steps){
@@ -313,7 +314,7 @@
     var link=e.target.closest&&e.target.closest('a[href^="/"]');
     if(link&&!link.target&&link.origin===location.origin){var dest=link.getAttribute('href');if(dest&&/^\/(routes|services|news|rates|forwarders|assistant|customs|account|admin|tarot|request)(\?|$|\/)/.test(dest)){e.preventDefault();routeToPath(dest,true);return;}}
     var openView=e.target.closest&&e.target.closest('[data-open-view]');
-    if(openView){var name=openView.dataset.openView;setTimeout(function(){var p=routeForView(name);if(p!=='/')setUrl(p);},0);}
+    if(openView){var name=openView.dataset.openView;setTimeout(function(){var p=routeForView(name);if(p!=='/'){setUrl(p);var key=p==='/request'?'':p.slice(1);$('[data-page-route]').forEach(function(a){if(a.dataset.pageRoute===key)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});}},0);}
   }
   function onPopState(){routeToPath(location.pathname+location.search,false);}
   function initAdmin(){
