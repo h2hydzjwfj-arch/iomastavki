@@ -3596,3 +3596,15 @@ html:not(.dark) .account-landing-panel h1{color:#143c53}
 html:not(.dark) .account-landing-panel>p,html:not(.dark) .account-guest-note span{color:#5e7789}
 html:not(.dark) .account-guest-note{background:#f3f8fa;border-color:#d9e7ee}
 html:not(.dark) .account-guest-note b{color:#31576d}
+
+/* Direct transport-mode controls inside the interactive route map */
+.route-map-transport-action{cursor:pointer;pointer-events:all;outline:none;filter:drop-shadow(0 0 7px rgba(53,215,232,.35));transition:filter .18s,opacity .18s}
+.route-map-transport-action:hover,.route-map-transport-action:focus-visible{filter:drop-shadow(0 0 12px rgba(53,215,232,.9))}
+.route-map-transport-action .transport-hit-ring{fill:rgba(24,109,144,.25);stroke:rgba(80,220,236,.6);stroke-width:1.4}
+.route-map-transport-action:hover .transport-hit-ring,.route-map-transport-action:focus-visible .transport-hit-ring{fill:rgba(50,199,220,.28);stroke:#c2fbff;stroke-width:2}
+.map-aircraft-shape{fill:#66e6f2;stroke:#b9fbff;stroke-width:.6;stroke-linejoin:round}
+.map-ship-shape{fill:#64b2ff;stroke:#b4d9ff;stroke-width:.7;stroke-linejoin:round}
+.route-map-transport-action.is-sea .transport-hit-ring{stroke:rgba(87,165,255,.65)}
+html:not(.dark) .route-map-transport-action .transport-hit-ring{fill:rgba(42,147,180,.1);stroke:rgba(24,149,175,.55)}
+html:not(.dark) .map-aircraft-shape{fill:#158eab;stroke:#e5ffff}
+html:not(.dark) .map-ship-shape{fill:#2478bd;stroke:#f0f8ff}
