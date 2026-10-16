@@ -1975,16 +1975,22 @@ app.post('/api/customs/check', requireClientOrAdmin, async function(req,res){
 
 
 // ========== РОЛИ + ЗАЩИТА + ЗАЯВКИ ==========
-function authSignature(value){
-  return crypto.createHmac('sha256', SESSION_SECRET).update(String(value)).digest('hex');
+const SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000;
+function authSignature(value, issuedAt){
+  return crypto.createHmac('sha256', SESSION_SECRET).update(String(value) + '.' + String(issuedAt)).digest('hex');
 }
 function getAuth(req){
   const cookies = req && req.cookies;
   const value = cookies && cookies.auth;
-  const signature = cookies && cookies.authSig;
-  if (!value || !signature || typeof signature !== 'string') return null;
-  const expected = authSignature(value);
-  const a = Buffer.from(signature, 'hex');
+  const packed = cookies && cookies.authSig;
+  if (!value || !packed || typeof packed !== 'string') return null;
+  const parts = packed.split('.');
+  if (parts.length !== 2 || !/^\d{10,16}$/.test(parts[0]) || !/^[a-f0-9]{64}$/i.test(parts[1])) return null;
+  const issuedAt = Number(parts[0]);
+  const age = Date.now() - issuedAt;
+  if (!Number.isSafeInteger(issuedAt) || age < -60000 || age > SESSION_MAX_AGE_MS) return null;
+  const expected = authSignature(value, issuedAt);
+  const a = Buffer.from(parts[1], 'hex');
   const b = Buffer.from(expected, 'hex');
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
   return String(value);
@@ -2294,7 +2300,8 @@ app.post('/api/login', function(req,res){
   if (adminEmail && email === adminEmail) {
     if (!verifyPassword(password)) return res.status(401).json({ ok:false, error:'invalid credentials' });
     res.cookie('auth','admin',{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:8*60*60*1000,path:'/'});
-    res.cookie('authSig',authSignature('admin'),{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:8*60*60*1000,path:'/'});
+    const sessionIssuedAt = Date.now();
+    res.cookie('authSig',String(sessionIssuedAt) + '.' + authSignature('admin',sessionIssuedAt),{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:SESSION_MAX_AGE_MS,path:'/'});
     res.cookie('authUser','admin',{httpOnly:false,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:8*60*60*1000,path:'/'});
     return res.json({ ok:true, role:'admin' });
   }
@@ -2305,7 +2312,8 @@ app.post('/api/login', function(req,res){
   if (!c) return res.status(401).json({ ok:false, error:'invalid credentials' });
   const authValue = 'client:' + c.id;
   res.cookie('auth', authValue, { httpOnly:true, sameSite:'lax', secure:process.env.NODE_ENV==='production', maxAge:8*60*60*1000, path:'/' });
-  res.cookie('authSig', authSignature(authValue), { httpOnly:true, sameSite:'lax', secure:process.env.NODE_ENV==='production', maxAge:8*60*60*1000, path:'/' });
+  const sessionIssuedAt = Date.now();
+  res.cookie('authSig', String(sessionIssuedAt) + '.' + authSignature(authValue,sessionIssuedAt), { httpOnly:true, sameSite:'lax', secure:process.env.NODE_ENV==='production', maxAge:SESSION_MAX_AGE_MS, path:'/' });
   res.cookie('authUser', c.name, { httpOnly:false, sameSite:'lax', secure:process.env.NODE_ENV==='production', maxAge:8*60*60*1000, path:'/' });
   res.json({ ok:true, role:'client', name:c.name, email:c.email });
 });
