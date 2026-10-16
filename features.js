@@ -5,7 +5,6 @@
 
   var $ = function(s, root){ return (root || document).querySelector(s); };
   var $$ = function(s, root){ return Array.prototype.slice.call((root || document).querySelectorAll(s)); };
-  var rolePromise = null;
 
   function escapeHtml(value){
     return String(value == null ? '' : value).replace(/[&<>"']/g,function(c){
@@ -26,13 +25,10 @@
     });
   }
   function getRole(){
-    if (!rolePromise){
-      rolePromise = fetchJson('/api/whoami?t=' + Date.now()).then(function(r){
-        if (!r.ok || !r.data || !r.data.ok) return 'guest';
-        return r.data.role || 'guest';
-      }).catch(function(){ return 'guest'; });
-    }
-    return rolePromise;
+    return fetchJson('/api/whoami?t=' + Date.now()).then(function(r){
+      if (!r.ok || !r.data || !r.data.ok) return 'guest';
+      return r.data.role || 'guest';
+    }).catch(function(){ return 'guest'; });
   }
   function openLogin(){
     if (typeof window.iomaOpenAuth === 'function') { window.iomaOpenAuth('login'); return; }
@@ -118,6 +114,7 @@
     if (!input || !host || input.dataset.featureBound === '1') return;
     input.dataset.featureBound = '1';
     input.setAttribute('aria-autocomplete','list');
+    host.hidden = true;
     input.addEventListener('input',function(){
       var query = input.value.trim().toLocaleLowerCase('ru');
       host.replaceChildren();
@@ -215,6 +212,7 @@
   function setSelectButton(buttonId, menuId, options, initial, key){
     var button=$('#'+buttonId),menu=$('#'+menuId);
     if(!button||!menu)return;
+    menu.hidden=true;
     button.dataset.mode=button.dataset.mode||initial;
     function labelFor(value){
       var found=options.find(function(o){return o.value===value;});
@@ -289,6 +287,7 @@
     initDimensionUnits();
     var forwarderBtn=$('#forwarderBtn'),forwarderMenu=$('#forwarderMenu');
     if(forwarderBtn&&forwarderMenu){
+      forwarderMenu.hidden=true;
       forwarderBtn.addEventListener('click',function(e){
         e.preventDefault(); var show=forwarderMenu.hidden;
         $$('.hover-menu').forEach(function(m){m.hidden=true;});
