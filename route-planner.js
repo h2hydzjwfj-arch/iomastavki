@@ -41,9 +41,9 @@
   };
   var SOURCE={
     manzhouli:{title:'Маньчжурия — Забайкальск — Транссиб',label:'ВОСТОЧНЫЙ Ж/Д КОРИДОР',source:'https://english.www.gov.cn/policies/policywatch/202604/11/content_WS69d9a590c6d00ca5f9a0a593.html',sourceLabel:'Правительство КНР · порт Маньчжурия',proof:'Маньчжурия описывается правительством КНР как ключевой железнодорожный порт для торговли Китай—Россия. Конкретный поезд и пересечение границы подтверждает оператор.'},
-    kazakhstan:{title:'Хоргос / Алтынколь или Алашанькоу / Достык',label:'ЗАПАДНЫЙ КОРИДОР ЧЕРЕЗ КАЗАХСТАН',source:'https://www.gov.kz/memleket/entities/transport/press/news/details/1166889?lang=ru',sourceLabel:'Минтранс Казахстана · Хоргос—Алтынколь',proof:'Узел Алтынколь—Хоргос обслуживает международные контейнерные потоки с перегрузкой между китайской колеёй 1435 мм и колеёй 1520 мм. Выбор пары станций зависит от отправки.'},
-    suifenhe:{title:'Суйфэньхэ — Гродеково — Уссурийск',label:'ДАЛЬНЕВОСТОЧНЫЙ Ж/Д КОРИДОР',source:'https://english.www.gov.cn/news/202506/20/content_WS6854c0a8c6d0868f4e8f37bb.html',sourceLabel:'Правительство КНР · международные ЖД-коридоры',proof:'Схема для северо-востока Китая и Дальнего Востока РФ; до Москвы потребуется отдельный дальнейший железнодорожный участок. Конкретный КПП подтверждается перевозчиком.'},
-    heihe:{title:'Хэйхэ — Благовещенск — внутренняя доставка',label:'АМУРСКИЙ / МУЛЬТИМОДАЛЬНЫЙ СЦЕНАРИЙ',source:'https://en.intrusco.ru/bridge',sourceLabel:'Описание мостовой логистики',proof:'Вариант для грузов, которым подходит региональный переход через Амур. Наличие сервиса, допустимость груза и последующая отправка проверяются для конкретной даты.'},
+    kazakhstan:{title:'Хоргос / Алтынколь или Алашанькоу / Достык',label:'ЗАПАДНЫЙ КОРИДОР ЧЕРЕЗ КАЗАХСТАН',source:'https://www.gov.kz/org/maidd/activities/2110',sourceLabel:'Правительство Казахстана · переходы Китай—Казахстан',proof:'Узел Алтынколь—Хоргос обслуживает международные контейнерные потоки с перегрузкой между китайской колеёй 1435 мм и колеёй 1520 мм. Выбор пары станций зависит от отправки.'},
+    suifenhe:{title:'Суйфэньхэ — Гродеково — Уссурийск',label:'ДАЛЬНЕВОСТОЧНЫЙ Ж/Д КОРИДОР',source:'https://english.www.gov.cn/news/202509/28/content_WS68d8864ec6d00ca5f9a06802.html',sourceLabel:'Правительство КНР · ЖД к Суйфэньхэ',proof:'Схема для северо-востока Китая и Дальнего Востока РФ; до Москвы потребуется отдельный дальнейший железнодорожный участок. Конкретный КПП подтверждается перевозчиком.'},
+    heihe:{title:'Хэйхэ — Благовещенск — внутренняя доставка',label:'АМУРСКИЙ / МУЛЬТИМОДАЛЬНЫЙ СЦЕНАРИЙ',source:'https://www.mintrans.gov.ru/press-center/news/10281',sourceLabel:'Минтранс РФ · мост Кани-Курган—Хэйхэ',proof:'Вариант для грузов, которым подходит региональный переход через Амур. Наличие сервиса, допустимость груза и последующая отправка проверяются для конкретной даты.'},
     sea:{title:'Порт Владивосток — поезд до Москвы',label:'МОРЕ + ЖЕЛЕЗНАЯ ДОРОГА',source:'https://www.fesco.com/en/clients/container/trains/fesco-moscow-shuttle/',sourceLabel:'FESCO Moscow Shuttle',proof:'FESCO публикует сервис контейнерного поезда Владивосток—Москва с ориентиром железнодорожного участка 10–14 дней. Это не включает морской участок, портовые операции, таможню и последнюю милю.'},
     air:{title:'Авиа через доступный грузовой хаб',label:'АВИА / AIR CARGO',source:'https://www.fesco.com/en/clients/container/trains/',sourceLabel:'FESCO · сервисы перевозки',proof:'Маршрут строится через доступные грузовые аэропорты и терминалы на дату отправления. Прямой рейс, авиакомпания, ограничения по грузу и сроки требуют отдельного подтверждения.'},
     railExample:{title:'Китай — Москва на контейнерном поезде',label:'ОПУБЛИКОВАННЫЙ ПРИМЕР Ж/Д',source:'https://english.www.gov.cn/news/202504/16/content_WS67ffa7d8c6d0868f4e8f1c56.html',sourceLabel:'Правительство КНР · поезд Пекин—Москва',proof:'В апреле 2025 года был описан поезд Пекин—Москва с оценкой около 16 дней. Это исторический пример конкретного поезда, а не обещание срока для новой отправки.'}
@@ -55,7 +55,8 @@
   function isCrossBorder(from,to){return city(from).region!==city(to).region;}
   function isChRu(from,to){return (city(from).region==='cn'&&city(to).region==='ru')||(city(from).region==='ru'&&city(to).region==='cn');}
   function reverseForDirection(points,from,to){return city(from).region==='ru'&&city(to).region==='cn'?points.slice().reverse():points.slice();}
-  function routeSteps(ids){return ids.map(function(id){var p=city(id);return {id:id,name:p.name,country:p.country};});}
+  function compactIds(ids){return (ids||[]).filter(function(id,i,all){return i===0||id!==all[i-1];});}
+  function routeSteps(ids){return compactIds(ids).map(function(id){var p=city(id);return {id:id,name:p.name,country:p.country};});}
   function reverseSteps(ids,from,to){return routeSteps(reverseForDirection(ids,from,to));}
   function defaultCorridors(from,to,mode){
     var cnFirst=city(from).region==='cn';
@@ -77,7 +78,7 @@
     } else if(city(to).id==='moscow'||city(to).id==='saint-petersburg'||city(to).id==='yekaterinburg'||city(to).id==='novosibirsk'){
       filtered.sort(function(a,b){var score={manzhouli:0,kazakhstan:1,sea:2,air:3,suifenhe:4,heihe:5,road:6};return (score[a.id]??10)-(score[b.id]??10);});
     }
-    return filtered.slice(0,mode==='multimodal'?5:4).map(function(p){
+    return filtered.slice(0,mode==='multimodal'?6:4).map(function(p){
       p.steps=reverseSteps(p.points,from,to);
       p.estimated='';
       if(p.id==='sea'&&city(to).id==='moscow') p.estimated='Опубликованный ориентир FESCO для участка поездом Владивосток—Москва: 10–14 дней; морское плечо и обработки не включены.';
@@ -193,7 +194,7 @@
     var opts=defaultCorridors(state.from,state.to,state.mode);
     var opt=opts.find(function(o){return o.id===state.selectedOption;})||opts[0];
     if(!opt){renderMapMarkers();return;}
-    var pts=(opt.points||[state.from,state.to]).map(function(id){return city(id);});
+    var pts=compactIds(opt.points||[state.from,state.to]).map(function(id){return city(id);});
     if(pts.length<2)return;
     var d='M '+pts[0].x+' '+pts[0].y;
     for(var i=1;i<pts.length;i++){
@@ -204,11 +205,8 @@
     var path=makeSvg('path',{d:d,class:'route-active-line'});
     layer.appendChild(glow);layer.appendChild(path);
     var head=makeSvg('circle',{r:5,class:'route-moving-dot'});
-    var animate=makeSvg('animateMotion',{dur:'5s',repeatCount:'indefinite',rotate:'auto'});
-    var mpath=makeSvg('mpath',{href:'#routeActiveMotion'}); // fallback replaced by direct path id
-    glow.setAttribute('id','routeActiveMotion');
-    mpath.setAttribute('href','#routeActiveMotion');
-    animate.appendChild(mpath);head.appendChild(animate);layer.appendChild(head);
+    var animate=makeSvg('animateMotion',{path:d,dur:'5s',repeatCount:'indefinite',rotate:'auto'});
+    head.appendChild(animate);layer.appendChild(head);
     renderMapMarkers();
   }
   function selectMapCity(id){
@@ -260,7 +258,7 @@
     var opts=defaultCorridors(state.from,state.to,state.mode);
     var title=$('#routeResultsSubtitle'),count=$('#routeCount'),host=$('#routeOptions');
     if(title)title.textContent=cityName(state.from)+' → '+cityName(state.to)+' · '+MODES[state.mode].label;
-    if(count)count.textContent=opts.length+' варианта';
+    if(count)count.textContent=opts.length===1?'1 вариант':opts.length+' вариантов';
     if(host){
       if(city(state.from).id===city(state.to).id)host.innerHTML='<div class="route-empty-state">Выберите разные пункты отправления и назначения, чтобы сравнить коридоры.</div>';
       else host.innerHTML=opts.map(routeCard).join('');
