@@ -745,8 +745,21 @@ app.get('/favicon.ico', function(req,res){
 
 app.get('/', function(req,res){ res.sendFile(path.join(ROOT,'index.html')); });
 // Named page routes share the existing application shell; route-planner.js selects the active section.
-['/routes','/services','/news','/rates','/forwarders','/assistant','/customs','/account','/admin','/tarot','/request'].forEach(function(route){
-  app.get(route, function(req,res){ res.sendFile(path.join(ROOT,'index.html')); });
+const SITE_PAGE_FILES = {
+  '/routes':'routes.html',
+  '/services':'services.html',
+  '/news':'news.html',
+  '/rates':'rates.html',
+  '/forwarders':'forwarders.html',
+  '/assistant':'assistant.html',
+  '/customs':'customs.html',
+  '/account':'account.html',
+  '/admin':'admin.html',
+  '/tarot':'tarot.html',
+  '/request':'request.html'
+};
+Object.keys(SITE_PAGE_FILES).forEach(function(route){
+  app.get(route, function(req,res){ res.sendFile(path.join(ROOT,SITE_PAGE_FILES[route])); });
 });
 app.get('/route-planner.js', function(req,res){ res.sendFile(path.join(ROOT,'route-planner.js')); });
 app.get('/app.js', function(req,res){ res.sendFile(path.join(ROOT,'app.js')); });
