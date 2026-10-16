@@ -586,3 +586,20 @@ html[data-theme="soft"] .login-gate-btn {
 .route-source-proof summary::before { content:"+"; display:inline-block; width:16px; color:var(--ink); font-size:13px; }
 .route-source-proof[open] summary::before { content:"−"; }
 .route-source-proof p { margin:7px 0 0 !important; color:var(--muted) !important; font-size:11px !important; line-height:1.6 !important; }
+
+
+/* Map legend is intentionally limited to the selected endpoints */
+.route-map-legend { display:flex !important; flex-wrap:wrap !important; align-items:center !important; gap:8px 15px !important; margin:10px 0 0 !important; color:var(--muted) !important; font-size:10px !important; }
+.route-map-legend span { display:inline-flex !important; align-items:center !important; gap:6px !important; }
+.route-map-legend .legend-dot { display:inline-block !important; width:9px !important; height:9px !important; border-radius:50% !important; }
+.route-map-legend .legend-dot.route-from { background:#111 !important; border:1px solid #111 !important; }
+.route-map-legend .legend-dot.route-to { background:#fff !important; border:1.5px solid #111 !important; }
+.route-map-legend .route-map-legend-note { flex-basis:100% !important; }
+.ioma-route-popup .leaflet-popup-content-wrapper,.ioma-route-popup .leaflet-popup-tip { background:#fff !important; color:#222 !important; border-radius:3px !important; box-shadow:none !important; }
+.ioma-route-popup .leaflet-popup-content { margin:10px 12px !important; font:12px/1.55 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif !important; max-width:300px !important; }
+.ioma-route-popup small { color:#666 !important; }
+.route-source-links { display:flex !important; flex-wrap:wrap !important; gap:5px 11px !important; min-width:0 !important; }
+.route-source-links a { display:inline-block !important; color:var(--muted) !important; font-size:10px !important; line-height:1.5 !important; }
+.leaflet-overlay-pane .ioma-route-line { animation:ioma-route-entry .22s ease-out both; }
+@keyframes ioma-route-entry { from { opacity:0; } to { opacity:.92; } }
+@media (prefers-reduced-motion:reduce) { .leaflet-overlay-pane .ioma-route-line { animation:none !important; } }
