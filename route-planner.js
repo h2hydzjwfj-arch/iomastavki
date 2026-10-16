@@ -319,7 +319,72 @@
   }
   function onPopState(){routeToPath(location.pathname+location.search,false);}
   function initAdmin(){
-    var rate=$('#adminImportRates');if(rate)rate.addEventListener('click',function(){var b=$('#agentImportButton');if(b&&!b.hidden)b.click();else showToast('Импорт ставок доступен после проверки роли и открытия соответствующего инструмента.');});
+    if(state.role!=='admin')return;
+    function setStatus(id,msg){var el=$('#'+id);if(el)el.textContent=msg;}
+    var fileInput=$('#adminRateFile'),fileButton=$('#adminRateFileButton'),topImport=$('#adminImportRates');
+    if(fileButton&&fileInput)fileButton.addEventListener('click',function(){fileInput.click();});
+    if(topImport&&fileInput)topImport.addEventListener('click',function(){fileInput.click();});
+    if(fileInput)fileInput.addEventListener('change',function(){
+      var file=fileInput.files&&fileInput.files[0];if(!file)return;
+      var form=new FormData();form.append('file',file);
+      setStatus('adminRateFileStatus','Загружаем '+file.name+'…');
+      if(fileButton)fileButton.disabled=true;
+      fetch('/api/rates/import',{method:'POST',credentials:'same-origin',body:form})
+      .then(function(r){return r.json().catch(function(){return {ok:false,error:'Не удалось прочитать ответ'};}).then(function(d){return {ok:r.ok,data:d};});})
+      .then(function(x){if(x.ok&&x.data&&x.data.ok){setStatus('adminRateFileStatus','Готово: добавлено записей — '+(x.data.added||0)+'. Проверьте результаты импорта и корректность ставок.');}
+      else setStatus('adminRateFileStatus',(x.data&&x.data.error)||'Не удалось импортировать файл.');})
+      .catch(function(){setStatus('adminRateFileStatus','Ошибка соединения при импорте файла.');})
+      .finally(function(){if(fileButton)fileButton.disabled=false;fileInput.value='';});
+    });
+
+    var agentsButton=$('#adminAgentsImport');
+    if(agentsButton)agentsButton.addEventListener('click',function(){
+      var text=($('#adminAgentsText')&&$('#adminAgentsText').value||'').trim();
+      if(!text){setStatus('adminAgentsStatus','Сначала вставьте данные компаний и контактов.');return;}
+      agentsButton.disabled=true;setStatus('adminAgentsStatus','Обрабатываем данные…');
+      fetch('/api/agents/import',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text})})
+      .then(function(r){return r.json().catch(function(){return {ok:false,error:'Не удалось прочитать ответ'};}).then(function(d){return {ok:r.ok,data:d};});})
+      .then(function(x){if(x.ok&&x.data&&x.data.ok){setStatus('adminAgentsStatus','Импорт завершён. Проверьте карточки экспедиторов.');}
+        else if(x.ok&&x.data){setStatus('adminAgentsStatus','Ответ сервера получен. Проверьте справочник после импорта.');}
+        else setStatus('adminAgentsStatus',(x.data&&x.data.error)||'Не удалось импортировать контакты.');})
+      .catch(function(){setStatus('adminAgentsStatus','Ошибка соединения при импорте.');})
+      .finally(function(){agentsButton.disabled=false;});
+    });
+
+    var pbForm=$('#adminPlaybookForm');
+    if(pbForm)pbForm.addEventListener('submit',function(e){
+      e.preventDefault();
+      var title=($('#adminPlaybookTitle')&&$('#adminPlaybookTitle').value||'').trim();
+      var answer=($('#adminPlaybookAnswer')&&$('#adminPlaybookAnswer').value||'').trim();
+      var keywords=($('#adminPlaybookKeywords')&&$('#adminPlaybookKeywords').value||'').trim();
+      if(!title||!answer){setStatus('adminPlaybookStatus','Нужны название и текст проверенной инструкции.');return;}
+      var btn=pbForm.querySelector('button[type="submit"]');if(btn)btn.disabled=true;setStatus('adminPlaybookStatus','Сохраняем…');
+      fetch('/api/admin/playbook',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title,answer:answer,keywords:keywords})})
+      .then(function(r){return r.json().catch(function(){return {ok:false,error:'Не удалось прочитать ответ'};}).then(function(d){return {ok:r.ok,data:d};});})
+      .then(function(x){if(x.ok&&x.data&&x.data.ok){setStatus('adminPlaybookStatus','Инструкция добавлена в базу знаний.');pbForm.reset();}
+        else setStatus('adminPlaybookStatus',(x.data&&x.data.error)||'Не удалось сохранить инструкцию.');})
+      .catch(function(){setStatus('adminPlaybookStatus','Ошибка соединения при сохранении.');})
+      .finally(function(){if(btn)btn.disabled=false;});
+    });
+
+    function loadRequests(){
+      var list=$('#adminRequestsList'),button=$('#adminLoadRequests');
+      if(!list)return;
+      list.textContent='Загружаем защищённый список заявок…';if(button)button.disabled=true;
+      fetch('/api/requests?t='+Date.now(),{credentials:'same-origin',cache:'no-store'})
+      .then(function(r){return r.json().catch(function(){return {ok:false,error:'Не удалось прочитать ответ'};}).then(function(d){return {ok:r.ok,status:r.status,data:d};});})
+      .then(function(x){
+        if(!x.ok){list.textContent=x.status===401?'Сервер не подтвердил административный доступ. Войдите под учётной записью администратора.':'Не удалось загрузить заявки.';return;}
+        var rows=(x.data&&x.data.requests)||[];
+        if(!rows.length){list.textContent='Новых заявок в текущем хранилище нет.';return;}
+        list.innerHTML=rows.map(function(r){
+          return '<article class="admin-request-row"><div class="admin-request-meta"><b>#'+esc(r.id||'')+' · '+esc(r.name||'Без имени')+'</b><time>'+esc(r.at||'')+'</time></div><div><b>Контакт:</b> '+esc(r.contact||'—')+'</div><p>'+esc(r.body||'Описание не указано')+'</p></article>';
+        }).join('');
+      }).catch(function(){list.textContent='Ошибка соединения при загрузке заявок.';})
+      .finally(function(){if(button)button.disabled=false;});
+    }
+    var requestsButton=$('#adminLoadRequests');if(requestsButton)requestsButton.addEventListener('click',loadRequests);
+
     var cab=$('#adminOpenCabinet');if(cab)cab.addEventListener('click',function(){if(window.iomaOpenCabinet)window.iomaOpenCabinet();else goAuth('login');});
     var health=$('#adminHealthCheck');if(health)health.addEventListener('click',function(){var out=$('#adminHealthStatus');if(out)out.textContent='Проверяем…';fetch('/api/health?t='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(function(d){if(out)out.textContent=d&&d.ok?'Сервис отвечает':'Сервис вернул неожиданный ответ';}).catch(function(){if(out)out.textContent='Не удалось получить ответ сервера';});});
   }
