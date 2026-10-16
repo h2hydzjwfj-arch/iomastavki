@@ -149,6 +149,7 @@
     if(changeUrl)setUrl(p+(u.search||''));
     if(p==='/'){closeCurrentViews();return;}
     if(p==='/routes'){openCustomLayer('routesView',null);if(u.searchParams.get('mode'))setMode(u.searchParams.get('mode'));renderRouteResults();return;}
+    if(p==='/article'){openCustomLayer('articleView',null);loadArticlePage();return;}
     if(p==='/services'){openCustomLayer('servicesView',null);return;}
     if(p==='/admin'){openCustomLayer('adminView',null);return;}
     var map={'/rates':'calculator','/forwarders':'forwarders','/assistant':'assistant','/news':'news','/customs':'customs','/tarot':'tarot','/account':'account','/request':'request'};
@@ -305,6 +306,18 @@
     if(req){e.preventDefault();startRequestForRoute(req.dataset.requestRoute);return;}
     var auth=e.target.closest&&e.target.closest('[data-open-auth]');
     if(auth){e.preventDefault();goAuth(auth.dataset.openAuth);return;}
+    var newsCard=e.target.closest&&e.target.closest('.news-card');
+    if(newsCard){
+      var newsId=newsCard.getAttribute('data-news-id');
+      if(newsId){
+        e.preventDefault();e.stopImmediatePropagation();
+        var sourceEl=newsCard.querySelector('.news-card-source');
+        var dateEl=newsCard.querySelector('.news-card-date');
+        try{localStorage.setItem('iomaNewsSelected',JSON.stringify({id:newsId,title:newsCard.getAttribute('data-news-title')||'',source:sourceEl?sourceEl.textContent:'',date:dateEl?dateEl.textContent:''}));}catch(ignore){}
+        window.location.href='/article?id='+encodeURIComponent(newsId);
+        return;
+      }
+    }
     var plane=e.target.closest&&e.target.closest('[data-open-route-mode]');
     if(plane){e.preventDefault();var m=plane.dataset.openRouteMode||'multimodal';if((location.pathname.replace(/\/+$/,'')||'/')==='/routes'){setMode(m);var modeBar=$('.route-mode-bar');if(modeBar)modeBar.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'});}else{window.location.href='/routes?mode='+encodeURIComponent(m);}return;}
     var nav=e.target.closest&&e.target.closest('[data-page-route]');
@@ -316,7 +329,7 @@
     var openView=e.target.closest&&e.target.closest('[data-open-view]');
     if(openView){e.preventDefault();var name=openView.dataset.openView;window.location.href=routeForView(name);return;}
     var closeView=e.target.closest&&e.target.closest('[data-close-view]');
-    if(closeView){e.preventDefault();window.location.href='/';return;}
+    if(closeView){e.preventDefault();window.location.href=closeView.dataset.closeView==='article'?'/news':'/';return;}
   }
   function onPopState(){routeToPath(location.pathname+location.search,false);}
   function initAdmin(){
@@ -396,16 +409,48 @@
   }
   function normalizeRoutePath(path){
     var p=(path||'/').replace(/\/+$/,'')||'/';
-    var map={'/':'home','/routes':'routes','/services':'services','/admin':'admin','/rates':'rates','/forwarders':'forwarders','/assistant':'assistant','/news':'news','/customs':'customs','/tarot':'tarot','/account':'account','/request':'request'};
+    var map={'/':'home','/routes':'routes','/services':'services','/admin':'admin','/rates':'rates','/forwarders':'forwarders','/assistant':'assistant','/news':'news','/customs':'customs','/tarot':'tarot','/account':'account','/request':'request','/article':'article'};
     return map[p]||'services';
   }
   function bootPath(){
     var p=normalizeRoutePath(location.pathname);
     if(p==='routes'){routeToPath('/routes'+location.search,false);return;}
+    if(p==='article'){routeToPath('/article'+location.search,false);return;}
     if(p==='services'){routeToPath('/services',false);return;}
     if(p==='admin'){routeToPath('/admin',false);return;}
     if(p==='home'){routeToPath('/',false);return;}
     routeToPath('/'+p,false);
+  }
+
+  function articleMarkdownToHtml(markdown){
+    var text=String(markdown||'').replace(/\r/g,'');
+    return text.split(/\n{2,}/).map(function(block){
+      var lines=block.split('\n');
+      if(lines.every(function(line){return /^\s*[-*]\s+/.test(line);})){
+        return '<ul>'+lines.map(function(line){return '<li>'+esc(line.replace(/^\s*[-*]\s+/,''))+'</li>';}).join('')+'</ul>';
+      }
+      var headings=block.match(/^(#{1,3})\s+([\s\S]*)$/);
+      if(headings){var n=headings[1].length;return '<h'+n+'>'+esc(headings[2])+'</h'+n+'>';}
+      return '<p>'+esc(block).replace(/\n/g,'<br>')+'</p>';
+    }).join('');
+  }
+  function loadArticlePage(){
+    var host=$('#articleContent');if(!host)return;
+    var query=new URLSearchParams(location.search);
+    var id=query.get('id'),saved=null;
+    try{saved=JSON.parse(localStorage.getItem('iomaNewsSelected')||'null');}catch(ignore){}
+    if(!id&&saved)id=saved.id;
+    if(!id){host.innerHTML='<div class="article-reader-empty"><span class="eyebrow">IOMA NEWS</span><h1>Материал ВЭД</h1><p>Откройте материал из ленты новостей, чтобы прочитать подробную версию.</p><a href="/news">← Вернуться к новостям</a></div>';return;}
+    host.innerHTML='<div class="article-reader-loading"><span class="article-reader-spinner"></span><span>Готовим подробный материал из открытого источника…</span><small>Это может занять до минуты.</small></div>';
+    fetch('/api/news/rewrite',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})})
+      .then(function(r){return r.json().catch(function(){return {ok:false,error:'Не удалось прочитать ответ сервера'};}).then(function(d){return {ok:r.ok,data:d};});})
+      .then(function(out){
+        var d=out.data||{};
+        if(!out.ok||!d.ok){host.innerHTML='<div class="article-reader-empty"><h1>Не удалось загрузить материал</h1><p>'+esc(d.error||'Попробуйте открыть материал из ленты ещё раз.')+'</p><a href="/news">← Вернуться к новостям</a></div>';return;}
+        host.innerHTML='<div class="article-reader-meta"><span>Источник: <b>'+esc(d.source||(saved&&saved.source)||'открытый источник')+'</b></span><span>'+esc(d.publishedAt||(saved&&saved.date)||'')+'</span></div><h1 class="article-reader-title">'+esc(d.title||(saved&&saved.title)||'Материал ВЭД')+'</h1><div class="article-reader-content">'+articleMarkdownToHtml(d.markdown||'')+'</div><div class="article-reader-footnote">Материал переработан на основе открытого источника. Перед практическими решениями проверяйте первоисточник и действующие правила.</div>';
+        if(d.image&&/^https:\/\//i.test(d.image)){var im=document.createElement('img');im.className='article-reader-image';im.src=d.image;im.alt=d.title||'Иллюстрация материала';host.insertBefore(im,host.querySelector('.article-reader-meta'));}
+      })
+      .catch(function(){host.innerHTML='<div class="article-reader-empty"><h1>Не удалось подключиться</h1><p>Проверьте соединение и повторите попытку.</p><a href="/news">← Вернуться к новостям</a></div>';});
   }
 
   function initRequestForm(){
