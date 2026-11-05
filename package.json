@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "test": "node --test test/security.test.js test/portal.test.js"
+    "test": "node --test test/security.test.js test/portal.test.js",
+    "e2e": "node test/e2e.js"
   },
   "dependencies": {
     "compression": "^1.7.5",
@@ -12,6 +13,10 @@
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.1.0",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "nodemailer": "^6.9.16"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

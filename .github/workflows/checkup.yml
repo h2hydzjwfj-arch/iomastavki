@@ -1,0 +1,33 @@
+# Полная автоматическая проверка при каждом изменении: тесты, сервер целиком, браузер.
+name: checkup
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checkup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - name: Модульные тесты
+        run: npm test
+      - name: Сервер целиком (гость, клиент, администратор)
+        run: node test/e2e.js
+      - name: Браузер
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.48.2
+          npx playwright install --with-deps chromium
+          node test/ui.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: test-output/
+          retention-days: 14
