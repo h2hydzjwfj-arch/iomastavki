@@ -135,7 +135,24 @@ app.get('/robots.txt', (req,res) => { res.type('text/plain').send(`User-agent: *
 app.get('/sitemap.xml', (req,res) => { res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${SITE_URL}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url></urlset>`); });
 app.get('/api/health', (req,res) => res.json({ ok: true }));
 app.get('/api/version', (req,res) => res.json({ok:true,version:'28',build:'IOMASTAVKA_FILE_28'}));
-app.get('/api/config', (req,res) => res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.OPENAI_API_KEY), ftsConfigured: Boolean(process.env.API_CLOUD_FTS_TOKEN) }));
+// Weather without API key: Open-Meteo (fixed URL, cached 10 min).
+let weatherCache = { at: 0, data: null };
+app.get('/api/weather', async (req,res) => {
+  try {
+    if (weatherCache.data && Date.now() - weatherCache.at < 10*60*1000) return res.json(weatherCache.data);
+    const lat = Number(process.env.WEATHER_LAT || 55.7558), lon = Number(process.env.WEATHER_LON || 37.6173);
+    const city = process.env.WEATHER_CITY || 'Москва';
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,cloud_cover,wind_speed_10m,is_day&daily=sunrise,sunset&timezone=auto&timeformat=unixtime&forecast_days=1`;
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 6000);
+    const r = await fetch(url, { signal: ctrl.signal }); clearTimeout(t);
+    if (!r.ok) throw new Error('weather upstream ' + r.status);
+    const j = await r.json(); const c = j.current || {}; const code = Number(c.weather_code);
+    const main = code === 0 || code === 1 ? 'Clear' : code <= 3 || code === 45 || code === 48 ? 'Clouds' : code >= 51 && code <= 57 ? 'Drizzle' : (code >= 61 && code <= 67) || (code >= 80 && code <= 82) ? 'Rain' : (code >= 71 && code <= 77) || code === 85 || code === 86 ? 'Snow' : code >= 95 ? 'Thunderstorm' : 'Clouds';
+    const data = { city, main, temp: c.temperature_2m, clouds: c.cloud_cover, wind: c.wind_speed_10m, sunrise: j.daily?.sunrise?.[0], sunset: j.daily?.sunset?.[0], updatedAt: new Date().toISOString() };
+    weatherCache = { at: Date.now(), data }; res.json(data);
+  } catch (e) { res.status(502).json({ error: 'weather unavailable' }); }
+});
+app.get('/api/config', (req,res) => res.json({ weatherConfigured: true, aiConfigured: Boolean(process.env.OPENAI_API_KEY), ftsConfigured: Boolean(process.env.API_CLOUD_FTS_TOKEN) }));
 
 app.get('/api/currency', async (req,res) => {
   const parseCbrXml=(xml)=>{
