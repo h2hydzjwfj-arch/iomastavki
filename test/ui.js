@@ -46,6 +46,8 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await p.check('#v3leadForm [name=consent]'); await p.click('#v3leadForm [type=submit]');
       await p.waitForSelector('#v3leadDone:not([hidden])'); await shot(p, '04_lead_done');
     });
+    await step('Гость: база знаний с источниками', async () => { await p.evaluate(() => window.__v3open('kbView')); await p.waitForSelector('#kbBody .kb-now li a'); await shot(p, '05a_kb'); });
+    await step('Гость: английская версия без русских надписей в меню', async () => { await p.evaluate(() => [...document.querySelectorAll('.lang')].find(x => x.dataset.lang === 'en').click()); await p.waitForTimeout(400); const t = await p.textContent('.v3-nav'); if (/[а-яё]/i.test(t)) throw new Error(t); await p.evaluate(() => [...document.querySelectorAll('.lang')].find(x => x.dataset.lang === 'ru').click()); await p.waitForTimeout(300); });
     await step('Гость: новости открываются', async () => { await p.evaluate(() => window.__iomaOpenView('news')); await p.waitForTimeout(1500); await shot(p, '05_news'); });
 
     let clientPw = '';

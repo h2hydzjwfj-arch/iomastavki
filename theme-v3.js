@@ -13,7 +13,7 @@
   var nav=$('.v3-nav'),pill=$('.v3-pill');
   function movePill(){safe(function(){var b=$('.v3-nav button.on');if(!b||!pill)return;pill.style.left=b.offsetLeft+'px';pill.style.width=b.offsetWidth+'px'})}
   function syncNav(){
-    var open=$('.view-layer.open'),map={calculatorView:'calculator',assistantView:'assistant',newsView:'news',forwardersView:'forwarders',customsView:'customsView',loginView:'loginView',leadView:'leadView',cabinetView:'cabinetView',workView:'workView'};
+    var open=$('.view-layer.open'),map={kbView:'kbView',calculatorView:'calculator',assistantView:'assistant',newsView:'news',forwardersView:'forwarders',customsView:'customsView',loginView:'loginView',leadView:'leadView',cabinetView:'cabinetView',workView:'workView'};
     var key=open?map[open.id]:null;
     $$('.v3-nav button').forEach(function(b){b.classList.toggle('on',key?b.getAttribute('data-open-view')===key:b.dataset.nav==='home')});
     movePill();
@@ -47,7 +47,7 @@
     var cs=document.querySelector('.v3c-mapbox svg');var adv2=R.render(cs,{from:from,to:to,mode:m,fromLabel:v('fromCity')||'',toLabel:v('toCity')||''});
     var box=document.getElementById('v3advice');
     if(box&&adv2){var TX={ru:['Рекомендуем','Другие варианты','риск','Сроки ориентировочные, от двери до двери; зависят от загрузки погранпереходов и сезона.'],en:['Recommended','Other options','risk','Door-to-door times are indicative and depend on border congestion and season.'],zh:['推荐','其他方案','风险','门到门时效仅供参考，取决于口岸拥堵和季节。'],tr:['Önerilen','Diğer seçenekler','risk','Kapıdan kapıya süreler yaklaşıktır; sınır yoğunluğuna ve sezona bağlıdır.']}[L]||[];
-      box.innerHTML='<p class="v3a-why">'+adv2.why+'</p>'+adv2.items.map(function(c,i){return '<div class="v3a-item'+(i?'':' best')+(c.risky?' risky':'')+'"><div class="v3a-h"><i style="background:'+R.colors[c.mode]+'"></i><b>'+(c.t[L]||c.t.ru)+'</b><span>'+c.days[0]+'–'+c.days[1]+' '+DAYS+'</span>'+(i?'':'<em>'+TX[0]+'</em>')+(c.risky?'<em class="rk">'+TX[2]+'</em>':'')+'</div><p class="p">+ '+(c.plus[L]||c.plus.ru)+'</p><p class="m">− '+(c.minus[L]||c.minus.ru)+'</p></div>'}).join('')+'<p class="v3a-note">'+TX[3]+'</p>'}
+      box.innerHTML='<p class="v3a-why">'+adv2.why+'</p>'+adv2.items.map(function(c,i){return '<div class="v3a-item'+(i?'':' best')+(c.risky?' risky':'')+'"><div class="v3a-h"><i style="background:'+R.colors[c.mode]+'"></i><b>'+(c.t[L]||c.t.ru)+'</b><span>'+c.days[0]+'–'+c.days[1]+' '+DAYS+'</span>'+(i?'':'<em>'+TX[0]+'</em>')+(c.risky?'<em class="rk">'+TX[2]+'</em>':'')+'</div><p class="p">+ '+(c.plus[L]||c.plus.ru)+'</p><p class="m">− '+(c.minus[L]||c.minus.ru)+'</p></div>'}).join('')+'<p class="v3a-note">'+TX[3]+' <button type="button" class="v3c-link" data-open-view="kbView">'+({ru:'База знаний →',en:'Knowledge base →',zh:'知识库 →',tr:'Bilgi bankası →'}[L]||'База знаний →')+'</button></p>'}
   }
   window.__v3drawMode=function(){drawMode(curMode)};
   function pickTransport(m){ // select the same transport in the real calculator menu

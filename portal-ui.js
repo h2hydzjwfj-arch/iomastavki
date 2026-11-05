@@ -23,14 +23,14 @@
   api('/api/me').then(function(d){setRole(d.role,d.name);if(d.storage==='local'){var h=$('#workView .v3-head');if(h&&!$('.v3p-warn',h)){var w=document.createElement('p');w.className='v3p-warn';w.textContent='⚠ Данные сейчас хранятся временно и сотрутся при перезапуске сервера. Подключите Supabase (SUPABASE_URL и SUPABASE_SERVICE_KEY в Render), прежде чем заводить настоящих клиентов.';h.appendChild(w)}}}).catch(function(){setRole('guest')});
 
   /* ---------- открытие своих окон ---------- */
-  var MY={loginView:1,leadView:1,cabinetView:1,workView:1,accountView:1,resetView:1,quoteView:1};
+  var MY={loginView:1,leadView:1,cabinetView:1,workView:1,accountView:1,resetView:1,quoteView:1,kbView:1};
   function openView(id){
     if(id==='cabinetView'&&role==='guest')id='loginView';
     if(id==='workView'&&role!=='admin')id='loginView';if(id==='accountView'&&role==='guest')id='loginView';
     var t=document.getElementById(id);if(!t)return;
     $$('.view-layer').forEach(function(v){v.classList.remove('open');v.setAttribute('aria-hidden','true')});
     t.classList.add('open');t.setAttribute('aria-hidden','false');document.body.classList.add('view-open');
-    if(id==='leadView')prefillLead();if(id==='cabinetView')loadCabinet();if(id==='workView')loadWork();if(id==='accountView')loadAccount();
+    if(id==='leadView')prefillLead();if(id==='cabinetView')loadCabinet();if(id==='workView')loadWork();if(id==='accountView')loadAccount();if(id==='kbView'&&window.IOMA_KB)window.IOMA_KB.render();
     if(id==='loginView')setTimeout(function(){var i=$('#v3loginForm input[name=login]');i&&i.focus()},120);
   }
   window.__v3open=openView;
@@ -230,6 +230,7 @@
   function route(){var h=location.hash||'';var m;
     if((m=h.match(/^#kp=([a-f0-9]{16})$/)))openQuote(m[1]);
     else if((m=h.match(/^#reset=([\w-]{20,})$/))){resetToken=m[1];history.replaceState(null,'',location.pathname);openView('resetView')}
+    else if(h==='#kb')setTimeout(function(){openView('kbView')},300);
     else if(h==='#cabinet')setTimeout(function(){openView(role==='client'?'cabinetView':'loginView')},300);
   }
   window.addEventListener('hashchange',route);
