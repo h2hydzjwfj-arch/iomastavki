@@ -28,7 +28,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
     await step('Гость: расчёт ставки', async () => {
       await p.click('.v3-nav [data-open-view=calculator]');
       await p.fill('#fromCity', 'Shanghai'); await p.fill('#toCity', 'Москва'); await p.fill('#weight', '1200');
-      await p.keyboard.press('Escape'); await p.click('.v3c-params .v3c-title'); await p.click('.v3c-chips [data-m=rail]'); await p.click('#calculate');
+      await p.click('.v3c-params .v3c-title'); await p.click('.v3c-chips [data-m=rail]'); await p.click('#calculate');
       await p.waitForSelector('#result .result-price:not(.muted)', { timeout: 8000 }); await shot(p, '02_guest_calc');
     });
     await step('Гость: сохранить расчёт → КП по ссылке', async () => {
