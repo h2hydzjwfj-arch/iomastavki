@@ -5,7 +5,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
 const { startServer, ADMIN_PASS } = require('./helpers');
 const OUT = path.join(__dirname, '..', 'test-output'); fs.mkdirSync(OUT, { recursive: true });
 const results = []; let failed = 0;
-async function step(name, fn) { try { await fn(); results.push('✅ ' + name); } catch (e) { failed++; results.push('❌ ' + name + ' — ' + String(e.message).split('\n')[0]); } }
+async function step(name, fn) { try { await fn(); results.push('✅ ' + name); } catch (e) { failed++; results.push('❌ ' + name + ' — ' + String(e.message).split('\n').slice(0, 3).join(' | ')); try { for (const pg of (global.__pages || [])) await pg.screenshot({ path: require('path').join('test-output', 'FAIL_' + (++global.__fc || (global.__fc = 1)) + '.png') }); } catch {} } }
 
 (async () => {
   const srv = await startServer(Number(process.env.UI_PORT || 3998)); const B = srv.base;
@@ -15,7 +15,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
     const c = await browser.newContext({ viewport: { width: 1350, height: 860 }, ...opts });
     const p = await c.newPage(); p.on('pageerror', e => errors.push(e.message));
     await p.goto(B + '/', { waitUntil: 'domcontentloaded' }); await p.waitForFunction(() => /role-/.test(document.body.className));
-    return { c, p };
+    global.__pages = [p]; return { c, p };
   }
   const shot = (p, n) => p.screenshot({ path: path.join(OUT, n + '.png') });
   try {
