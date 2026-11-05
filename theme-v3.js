@@ -47,7 +47,7 @@
     var cs=document.querySelector('.v3c-mapbox svg');var adv2=R.render(cs,{from:from,to:to,mode:m,fromLabel:v('fromCity')||'',toLabel:v('toCity')||''});
     var box=document.getElementById('v3advice');
     if(box&&adv2){var TX={ru:['Рекомендуем','Другие варианты','риск','Сроки ориентировочные, от двери до двери; зависят от загрузки погранпереходов и сезона.'],en:['Recommended','Other options','risk','Door-to-door times are indicative and depend on border congestion and season.'],zh:['推荐','其他方案','风险','门到门时效仅供参考，取决于口岸拥堵和季节。'],tr:['Önerilen','Diğer seçenekler','risk','Kapıdan kapıya süreler yaklaşıktır; sınır yoğunluğuna ve sezona bağlıdır.']}[L]||[];
-      box.innerHTML='<p class="v3a-why">'+adv2.why+'</p>'+adv2.items.map(function(c,i){return '<div class="v3a-item'+(i?'':' best')+(c.risky?' risky':'')+'"><div class="v3a-h"><i style="background:'+R.colors[c.mode]+'"></i><b>'+(c.t[L]||c.t.ru)+'</b><span>'+c.days[0]+'–'+c.days[1]+' '+DAYS+'</span>'+(i?'':'<em>'+TX[0]+'</em>')+(c.risky?'<em class="rk">'+TX[2]+'</em>':'')+'</div><p class="p">+ '+(c.plus[L]||c.plus.ru)+'</p><p class="m">− '+(c.minus[L]||c.minus.ru)+'</p></div>'}).join('')+'<p class="v3a-note">'+TX[3]+' <button type="button" class="v3c-link" data-open-view="kbView">'+({ru:'База знаний →',en:'Knowledge base →',zh:'知识库 →',tr:'Bilgi bankası →'}[L]||'База знаний →')+'</button></p>'}
+      box.innerHTML='<p class="v3a-why">'+adv2.why+'</p>'+adv2.items.map(function(c,i){return '<div class="v3a-item'+(i?'':' best')+(c.risky?' risky':'')+'"><div class="v3a-h"><i style="background:'+R.colors[c.mode]+'"></i><b>'+(c.t[L]||c.t.ru)+'</b><span>'+c.days[0]+'–'+c.days[1]+' '+DAYS+'</span>'+(i?'':'<em>'+TX[0]+'</em>')+(c.risky?'<em class="rk">'+TX[2]+'</em>':'')+'</div><p class="p">+ '+(c.plus[L]||c.plus.ru)+'</p><p class="m">− '+(c.minus[L]||c.minus.ru)+'</p></div>'}).join('')+'<p class="v3a-note">'+TX[3]+' <button type="button" class="v3c-link" data-open-view="kbView">'+({ru:'Гид по доставке →',en:'Shipping guide →',zh:'运输指南 →',tr:'Taşıma rehberi →'}[L]||'Гид по доставке →')+'</button></p>'}
   }
   window.__v3drawMode=function(){drawMode(curMode)};
   function pickTransport(m){ // select the same transport in the real calculator menu
@@ -60,21 +60,22 @@
   safe(function(){$$('.v3-chips .chip,.v3c-chips .chip').forEach(function(c){c.addEventListener('click',function(e){e.stopPropagation();setMode(c.dataset.m,true)})})});
   safe(function(){if(window.IOMA_ROUTES)drawMode(curMode);else window.addEventListener('load',function(){drawMode(curMode)})});
 
-  /* route + cargo labels follow the calculator fields */
+  /* route card on home: editable from / to / weight, synced with the calculator; the map redraws live */
   safe(function(){
-    function val(id){var e=document.getElementById(id);return e?String(e.value||'').trim():''}
-    function upd(){
-      var f=val('fromCity'),t=val('toCity');
-      if(f||t){var rt=(f||'—')+' → '+(t||'—');$('#v3route-text')&&($('#v3route-text').textContent=rt);}
-      [['#v3from','#v3mfrom',f],['#v3to','#v3mto',t]].forEach(function(x){if(x[2]){$(x[0])&&($(x[0]).textContent=x[2].slice(0,14));$(x[1])&&($(x[1]).textContent=x[2].slice(0,14))}});
-      var w=val('weight'),v=(($('#autoVolume')||{}).textContent||'').trim(),c=$('#v3cargo');
-      if(c)c.textContent=w&&Number(w)>0?(Number(w).toLocaleString('ru-RU')+' кг'+(v&&!/^0\s/.test(v)?' · '+v.replace('m³','м³'):'')):'укажите в расчёте';
-    }
-    ['fromCity','toCity','weight','pieces','length','width','height'].forEach(function(i){var e=document.getElementById(i);if(e){e.addEventListener('change',upd);e.addEventListener('input',upd)}});
-    ['fromCity','toCity'].forEach(function(i){var e=document.getElementById(i);e&&e.addEventListener('change',function(){drawMode(curMode)})});
+    var CITIES=['Шанхай','Нинбо','Иу','Гуанчжоу','Шэньчжэнь','Циндао','Тяньцзинь','Пекин','Сиань','Чэнду','Чунцин','Ухань','Харбин','Далянь','Сямэнь','Фошань','Дунгуань','Урумчи','Москва','Санкт-Петербург','Екатеринбург','Новосибирск','Казань','Нижний Новгород','Краснодар','Ростов-на-Дону','Самара','Челябинск','Омск','Красноярск','Иркутск','Хабаровск','Владивосток','Минск','Алматы','Ташкент'];
+    var dl=$('#v3cities');if(dl)dl.innerHTML=CITIES.map(function(c){return '<option value="'+c+'">'}).join('');
+    var pairs=[['v3hFrom','fromCity'],['v3hTo','toCity'],['v3hW','weight']];
+    function el(id){return document.getElementById(id)}
+    var tm;function redraw(){clearTimeout(tm);tm=setTimeout(function(){drawMode(curMode)},220)}
+    pairs.forEach(function(p){var h=el(p[0]),c=el(p[1]);if(!h||!c)return;
+      h.addEventListener('input',function(){c.value=h.value;try{var m=JSON.parse(localStorage.getItem('iomaCalc')||'{}');m[p[1]]=h.value;localStorage.setItem('iomaCalc',JSON.stringify(m))}catch(e){}if(p[1]!=='weight')redraw()});
+      h.addEventListener('change',function(){c.value=h.value;c.dispatchEvent(new Event('change',{bubbles:true}))});
+      h.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();var g=el('v3go');g&&g.click()}});
+      function back(){if(document.activeElement!==h&&h.value!==c.value){h.value=c.value;if(p[1]!=='weight')redraw()}}
+      c.addEventListener('input',back);c.addEventListener('change',back);setInterval(back,1500);
+    });
+    ['fromCity','toCity'].forEach(function(i){var e=el(i);e&&e.addEventListener('change',redraw)});
     document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('.lang'))setTimeout(function(){drawMode(curMode)},60)});
-    document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('.suggestions'))setTimeout(upd,50)});
-    upd();
   });
 
   /* 4. calculate: loader with steps + confetti, then open calculator */
@@ -93,7 +94,28 @@
 
   /* 5. small decorations: wave bars, date, freshness */
   safe(function(){var w=$('.v3-wave');if(w)w.innerHTML=Array.apply(null,{length:12}).map(function(_,i){return '<i style="animation-delay:'+((i*.09)%1)+'s;animation-duration:'+(.7+(i%5)*.15)+'s"></i>'}).join('')});
-  safe(function(){var d=$('#v3date');if(d)d.textContent=new Date().toLocaleDateString('ru-RU')});
+  /* CBR rates on a chosen date: real 30-day sparklines and day-to-day change */
+  safe(function(){
+    var inp=$('#v3curDate'),lbl=$('#v3date'),today=$('#v3curToday');if(!inp)return;
+    function iso(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)}
+    var t=iso(new Date());inp.max=iso(new Date(Date.now()+864e5));inp.min='1993-01-01';
+    function spark(svg,vals){if(!svg)return;var p=svg.querySelector('path');if(!vals||vals.length<2){svg.style.visibility='hidden';return}svg.style.visibility='';var mn=Math.min.apply(0,vals),mx=Math.max.apply(0,vals),r=mx-mn||1;p.setAttribute('d',vals.map(function(v,i){return (i?'L':'M')+(2+i*60/(vals.length-1)).toFixed(1)+' '+(19-(v-mn)/r*16).toFixed(1)}).join(''))}
+    function load(date){
+      lbl.textContent='…';
+      fetch('/api/currency'+(date&&date!==t?'?date='+date:''),{cache:'no-store'}).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||'Нет данных');return d})}).then(function(d){
+        lbl.textContent=d.date||new Date(date||t).toLocaleDateString('ru-RU');
+        [['CNY','homeCny','dCny'],['USD','homeUsd','dUsd'],['EUR','homeEur','dEur']].forEach(function(x){var it=d.items[x[0]];if(!it)return;var b=el(x[1]);b.textContent=it.value.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:4});
+          var dl=el(x[2]);if(dl){if(it.prev){var df=it.value-it.prev;dl.textContent=(df>0?'▲ ':df<0?'▼ ':'')+Math.abs(df).toFixed(2);dl.className='v3-dl '+(df>0?'up':df<0?'dn':'')}else dl.textContent=''}
+          spark(b.parentNode.querySelector('.spk'),d.series&&d.series[x[0]])});
+        today.hidden=!date||date===t;
+      }).catch(function(e){lbl.textContent=e.message;today.hidden=false});
+    }
+    function el(id){return document.getElementById(id)}
+    inp.addEventListener('change',function(){if(inp.value)load(inp.value)});
+    lbl.parentNode.addEventListener('click',function(){try{inp.showPicker()}catch(e){inp.focus()}});
+    today.addEventListener('click',function(){inp.value='';load('')});
+    load('');
+  });
   safe(function(){
     var s=$('#v3fresh'),t0=Date.now();if(!s)return;
     (function tick(){var m=Math.floor((Date.now()-t0)/60000);s.textContent='Обновлено '+(m<1?'только что':m+' мин назад');setTimeout(tick,30000)})();
@@ -110,7 +132,7 @@
   safe(function(){
     fetch('/api/news',{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(d){
       var items=d&&(d.items||d.news||d);if(!Array.isArray(items)||!items.length)return;
-      var it=items.find(function(x){return x.urgent})||items[0];var t=it&&(it.title||it.headline);
+      var it=items.find(function(x){return x.urgent})||items[0];var t=it&&String(it.title||it.headline||'').replace(/\s+[-–—]\s+[^-–—]{2,60}$/,'');
       if(t)$('#v3imp-t').textContent=t.length>140?t.slice(0,137)+'…':t;
     }).catch(function(){});
   });
@@ -133,7 +155,7 @@
   safe(function(){
     var list=$('#newsList'),bar=$('#v3nf');if(!list||!bar)return;var cur='all';
     var KW={customs:/таможен|тамож|фтс|декларац|пошлин|тн вэд/i,logistics:/логист|перевоз|жд|ж\/д|море|контейнер|груз|порт|транспорт/i,law:/закон|прав|суд|регулир|постановлен|приказ|налог/i};
-    function apply(){$$('.news-item',list).forEach(function(n){var ok=cur==='all'||(cur==='urgent'?n.classList.contains('news-urgent'):KW[cur].test(n.textContent));n.classList.toggle('v3off',!ok)})}
+    function apply(){var any=0;$$('.nw',list).forEach(function(n){var ok=cur==='all'||n.dataset.cat===cur;n.classList.toggle('v3off',!ok);if(ok)any++});list.classList.toggle('nw-none',!any&&$$('.nw',list).length>0)}
     $$('.chip',bar).forEach(function(c){c.addEventListener('click',function(){cur=c.dataset.c;$$('.chip',bar).forEach(function(x){x.classList.toggle('on',x===c)});apply()})});
     new MutationObserver(apply).observe(list,{childList:true});
   });

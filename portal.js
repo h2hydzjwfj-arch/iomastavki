@@ -434,7 +434,21 @@ function setup(app, opts) {
     if (!u) { hashPassword('timing-equaliser'); return null; }
     return verifyHash(password, u.hash) ? u : null;
   }
-  return { roleOf, need, admin, findClient, store, adminPasswordOk: pw => adminPasswordOk(pw, envAdminCheck), setEnvAdminCheck: f => { envAdminCheck = f; }, tg, mail };
+
+  // Самостоятельная регистрация клиента (кабинет создаётся сразу, менеджер получает уведомление).
+  async function registerClient(b) {
+    const email = str(b.email, 120).toLowerCase(), name = str(b.name, 80), company = str(b.company, 120), phone = str(b.phone, 40);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: 'Укажите корректную почту', status: 400 };
+    if (!name) return { error: 'Укажите имя', status: 400 };
+    if (!okPw(b.password)) return { error: 'Пароль — от 8 символов', status: 400 };
+    const db = store.load();
+    if (db.users.some(u => u.email === email)) return { error: 'Кабинет с этой почтой уже есть. Войдите или восстановите пароль.', status: 409 };
+    const u = { id: newId(), email, name, company, phone, hash: hashPassword(b.password), active: true, self: true, createdAt: new Date().toISOString() };
+    db.users.push(u); store.save(db);
+    try { await notify(`Новый клиент зарегистрировался на сайте\n${name} · ${email}${company ? '\n' + company : ''}${phone ? '\n' + phone : ''}`); } catch {}
+    return { user: u };
+  }
+  return { roleOf, need, admin, findClient, registerClient, store, adminPasswordOk: pw => adminPasswordOk(pw, envAdminCheck), setEnvAdminCheck: f => { envAdminCheck = f; }, tg, mail };
 }
 
 
