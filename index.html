@@ -8,7 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%232E7D5B%27/%3E%3Ccircle cx=%2746%27 cy=%2718%27 r=%279%27 fill=%27%23E8A33D%27/%3E%3C/svg%3E">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"iomastavka","applicationCategory":"BusinessApplication","description":"Калькулятор логистики и ВЭД Китай — Россия","inLanguage":"ru"}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/styles.css?v=20260916-v28"><link rel="stylesheet" href="/theme-v3.css?v=20261106-v18"><link rel="stylesheet" href="/palettes.css?v=1">
+<link rel="stylesheet" href="/styles.css?v=20260916-v28"><link rel="stylesheet" href="/theme-v3.css?v=20261106-v19"><link rel="stylesheet" href="/palettes.css?v=1">
 </head>
 <body>
 <div id="weatherScene" class="weather-scene" aria-hidden="true"><div class="stars"></div><div class="sun"></div><div class="moon"></div><div class="cloud cloud-a"></div><div class="cloud cloud-b"></div><div class="rain"></div><div class="snow"></div><div class="wave wave-back"></div><div class="wave wave-mid"></div><div class="wave wave-front"></div></div>
@@ -175,6 +175,7 @@
   <div class="v3p-two"><label class="v3p-f"><span>Откуда</span><input name="from" maxlength="120" placeholder="Город в Китае"></label><label class="v3p-f"><span>Куда</span><input name="to" maxlength="120" placeholder="Город в России"></label></div>
   <label class="v3p-f"><span>Что везём</span><input name="cargo" maxlength="200" placeholder="Например: запчасти, 3 паллеты"></label>
   <div class="v3p-two"><label class="v3p-f"><span>Вес, кг</span><input name="weight" type="number" min="0" inputmode="decimal"></label><label class="v3p-f"><span>Объём, м³</span><input name="volume" type="number" min="0" step="0.1" inputmode="decimal"></label></div>
+  <div class="v3p-docs" id="v3leadDocs"><label class="v3-drop v3p-drop"><input type="file" name="files" id="v3leadFiles" multiple accept=".pdf,.xlsx,.xls,.docx,.doc,.csv,.txt,.jpg,.jpeg,.png,.webp" hidden><svg viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8zM14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg><span><b>Прикрепите инвойс и упаковочный лист</b><small>PDF, Excel, Word или фото — до 6 файлов. Сами достанем поставщика, товары, цены, вес, габариты и количество мест.</small></span></label><ul class="v3p-flist" id="v3leadFlist"></ul></div>
   <label class="v3p-f"><span>Комментарий</span><textarea name="comment" rows="3" maxlength="1000" placeholder="Сроки, условия поставки, особенности груза"></textarea></label>
   <input type="hidden" name="estimate"><input type="hidden" name="mode">
   <label class="v3p-hp" aria-hidden="true">Сайт <input name="website" tabindex="-1" autocomplete="off"></label>
@@ -182,7 +183,7 @@
   <p class="v3p-err" id="v3leadErr" role="alert"></p>
   <button type="submit" class="calculate">Отправить заявку</button>
  </form>
- <div class="k v3p-done" id="v3leadDone" hidden><svg viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg><b>Заявка отправлена</b><small>Менеджер свяжется с вами в ближайшее рабочее время.</small><button type="button" class="calculate" data-close-view="leadView">Готово</button></div>
+ <div class="k v3p-done" id="v3leadDone" hidden><svg viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg><b>Заявка отправлена</b><small>Менеджер свяжется с вами в ближайшее рабочее время.</small><div class="v3p-parsed" id="v3leadParsed" hidden><b>Что мы поняли из документов</b><pre></pre><small>Если что-то не так — менеджер уточнит при звонке.</small></div><button type="button" class="calculate" data-close-view="leadView">Готово</button></div>
 </div></section>
 
 <section id="cabinetView" class="view-layer v3-portal" aria-hidden="true"><div class="v3p-wide"><button class="close-button view-close" data-close-view="cabinetView" aria-label="Закрыть" title="Закрыть">×</button>
@@ -193,9 +194,11 @@
 </div></section>
 
 <section id="workView" class="view-layer v3-portal" aria-hidden="true"><div class="v3p-wide"><button class="close-button view-close" data-close-view="workView" aria-label="Закрыть" title="Закрыть">×</button>
- <div class="v3-head"><h1>Работа</h1><p>Заявки с сайта, клиенты и их грузы.</p></div>
- <div class="v3p-tabs" role="tablist"><button type="button" class="chip on" data-tab="leads">Заявки</button><button type="button" class="chip" data-tab="ships">Грузы</button><button type="button" class="chip" data-tab="clients">Клиенты</button><button type="button" class="chip" data-tab="quotes">КП</button></div>
- <div class="v3p-tab" data-pane="leads"><div id="v3leadsList" class="v3p-list"></div></div>
+ <div class="v3-head"><h1>Работа</h1><p>Сделки, клиенты, грузы и КП — всё в одном месте.</p></div>
+ <div class="v3p-tabs" role="tablist"><button type="button" class="chip on" data-tab="deals">Сделки</button><button type="button" class="chip" data-tab="clients">Клиенты</button><button type="button" class="chip" data-tab="ships">Грузы</button><button type="button" class="chip" data-tab="quotes">КП</button><button type="button" class="chip" data-tab="leads">Заявки с сайта</button><button type="button" class="chip" data-tab="tariffs">Тарифы</button></div>
+ <div class="v3p-tab" data-pane="deals"><div class="crm-bar" id="crmBar"></div><div id="crmList" class="crm-list"></div><div id="crmDeal" hidden></div></div>
+ <div class="v3p-tab" data-pane="leads" hidden><div id="v3leadsList" class="v3p-list"></div></div>
+ <div class="v3p-tab" data-pane="tariffs" hidden><div id="crmTariffs"></div></div>
  <div class="v3p-tab" data-pane="ships" hidden>
   <form class="k v3p-form v3p-inline" id="v3shipForm"><b class="v3c-title">Новый груз</b>
    <div class="v3p-grid"><label class="v3p-f"><span>Клиент *</span><select name="clientId" id="v3shipClient" required></select></label><label class="v3p-f"><span>Номер</span><input name="number" placeholder="авто"></label><label class="v3p-f"><span>Откуда</span><input name="from"></label><label class="v3p-f"><span>Куда</span><input name="to"></label>
@@ -206,10 +209,12 @@
   <div id="v3shipsList" class="v3p-list"></div></div>
  <div class="v3p-tab" data-pane="quotes" hidden><div id="v3quotesList" class="v3p-list"></div></div>
  <div class="v3p-tab" data-pane="clients" hidden>
-  <form class="k v3p-form v3p-inline" id="v3clientForm"><b class="v3c-title">Новый клиент</b>
+  <div id="crmClients" class="crm-list"></div>
+  <details class="crm-access"><summary>Доступ в личный кабинет: выдать, сбросить пароль, отключить</summary>
+  <form class="k v3p-form v3p-inline" id="v3clientForm"><b class="v3c-title">Выдать доступ в кабинет</b>
    <div class="v3p-grid"><label class="v3p-f"><span>Почта (логин) *</span><input name="email" type="email" required></label><label class="v3p-f"><span>Имя</span><input name="name"></label><label class="v3p-f"><span>Компания</span><input name="company"></label><label class="v3p-f"><span>Телефон</span><input name="phone"></label></div>
    <p class="v3p-err" id="v3clientErr" role="alert"></p><p class="v3p-ok" id="v3clientOk"></p><button type="submit" class="calculate">Создать доступ</button></form>
-  <div id="v3clientsList" class="v3p-list"></div></div>
+  <div id="v3clientsList" class="v3p-list"></div></details></div>
 </div></section>
 </main>
 <div class="v3-ask" id="v3ask" hidden role="dialog" aria-modal="true" aria-labelledby="v3askT"><div class="v3-askbox k"><b id="v3askT">Сохранить изменения?</b><p id="v3askP"></p><div class="v3-askbtns"><button type="button" class="calculate" data-ask="save">Сохранить</button><button type="button" class="v3-askx" data-ask="leave">Выйти без сохранения</button><button type="button" class="v3c-link" data-ask="stay">Остаться</button></div></div></div>
@@ -218,6 +223,6 @@
 <script src="/kb.js?v=3" defer></script>
 <script src="/i18n-v3.js?v=5" defer></script>
 <script src="/theme-v3.js?v=20261106-v10" defer></script>
-<script src="/portal-ui.js?v=11" defer></script>
+<script src="/crm-ui.js?v=1" defer></script><script src="/portal-ui.js?v=11" defer></script>
 
 </body></html>

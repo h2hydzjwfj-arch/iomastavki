@@ -115,6 +115,25 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       ok((await call('a2', 'POST', '/api/login', { login: 'admin', password: 'admin-new-pass-1' })).ok);
       { const st = (await call('a3', 'POST', '/api/login', { login: 'admin', password: ADMIN_PASS }))._status; ok(st === 401 || st === 429, 'старый пароль админа работает (код ' + st + ')'); }
     });
+    await check('Заявка с документами: файл сохраняется, создаётся сделка', async () => {
+      const fd = new FormData(); for (const [k, v] of Object.entries({ name: 'Инвойс CI', contact: '+79001112233', from: 'Иу', to: 'Москва', consent: 'true' })) fd.append(k, v);
+      fd.append('files', new Blob([require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'invoice.xlsx'))]), 'invoice.xlsx');
+      const j = await call('g2', 'POST', '/api/leads/docs', fd); ok(j.ok, JSON.stringify(j));
+      const ds = await call('a', 'GET', '/api/deals?q=' + encodeURIComponent('Инвойс CI')); const deal = ds.items && ds.items[0]; ok(deal && deal.files === 1, 'нет сделки с файлом: ' + JSON.stringify(ds.items && ds.items[0]));
+      const full = await call('a', 'GET', '/api/deals/' + deal.id); ok(/LED grow light/.test(full.item.activity[0].text), 'содержимое Excel не попало в сделку');
+      const f = await fetch(B + '/api/deals/' + deal.id + '/files/' + full.item.files[0].id, { headers: { Cookie: 'auth=' + jar.a } }); ok(f.status === 200, 'файл не скачивается');
+      ok((await fetch(B + '/api/deals/' + deal.id + '/files/' + full.item.files[0].id)).status === 401, 'гостю доступен файл сделки');
+    });
+    await check('CRM: сделка вручную, заметка, смена этапа, база клиентов, импорт CSV', async () => {
+      const c = await call('a', 'POST', '/api/deals', { title: 'Насос 261105', contactName: 'Пётр', contactPhone: '+7 901 222-33-44', company: 'ООО Насосы', mode: 'rail' }); ok(c.ok);
+      ok((await call('a', 'POST', '/api/deals/' + c.item.id + '/notes', { text: 'Звонок', type: 'call' })).ok);
+      const p = await call('a', 'PATCH', '/api/deals/' + c.item.id, { stage: 'Ставка отправлена' }); ok(p.item.activity.some(a => a.type === 'field' && a.to === 'Ставка отправлена'));
+      const cl = await call('a', 'GET', '/api/crm/clients?sort=added'); ok(cl.items.some(x => x.name === 'Пётр' && x.deals === 1), 'клиента нет в базе');
+      const csv = 'Номер;Название;Контакт;Компания;Этап;Тип перевозки;Создана\n301026-11;Железные диски 261030;Захар;Захар;Ставка отправлена;Авто;30.10.2026\n';
+      const fd = new FormData(); fd.append('file', new Blob([csv]), 'deals.csv'); const im = await call('a', 'POST', '/api/deals/import', fd); ok(im.ok && im.added === 1, JSON.stringify(im));
+      const again = new FormData(); again.append('file', new Blob([csv]), 'deals.csv'); ok((await call('a', 'POST', '/api/deals/import', again)).added === 0, 'дубль импортирован');
+      ok((await call('g', 'GET', '/api/deals'))._status === 401, 'гостю видны сделки');
+    });
     await check('Отключённый клиент теряет доступ', async () => { await call('a', 'PATCH', '/api/clients/' + cl.id, { active: false }); ok((await call('c', 'GET', '/api/my/shipments'))._status === 401); });
     await check('Выход', async () => { await call('a', 'POST', '/api/logout'); });
     await check('Поддельная кука не даёт доступа', async () => { jar.fake = 'eyJyb2xlIjoiYWRtaW4ifQ.fake'; ok((await call('fake', 'GET', '/api/leads'))._status === 401); });

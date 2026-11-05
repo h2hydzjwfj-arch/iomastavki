@@ -57,6 +57,11 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await p.check('#v3leadForm [name=consent]'); await p.click('#v3leadForm [type=submit]');
       await p.waitForSelector('#v3leadDone:not([hidden])'); await shot(p, '04_lead_done');
     });
+    await step('Гость: заявка с инвойсом и упаковочным листом', async () => {
+      await p.evaluate(() => window.__v3open('leadView')); await p.fill('#v3leadForm [name=name]', 'Документы UI'); await p.fill('#v3leadForm [name=contact]', '+7 900 000-00-00');
+      await p.setInputFiles('#v3leadFiles', require('path').join(__dirname, 'fixtures', 'invoice.xlsx')); await p.waitForSelector('#v3leadFlist li');
+      await p.check('#v3leadForm [name=consent]'); await p.click('#v3leadForm [type=submit]'); await p.waitForSelector('#v3leadDone:not([hidden])', { timeout: 20000 }); await shot(p, '04b_lead_docs');
+    });
     await step('Гость: база знаний с источниками', async () => { await p.evaluate(() => window.__v3open('kbView')); await p.waitForSelector('#kbBody .kb-n .kb-src a'); await p.waitForSelector('#kbBody .kb-p.kb-risk'); await shot(p, '05a_kb'); await p.click('#kbBody [data-kbt=choose]'); await p.click('#kbBody [data-kbr="3"]'); await p.waitForSelector('#kbBody .kb-ans'); await p.click('#kbBody [data-kbt=docs]'); await p.check('#kbBody [data-kbd="0"]'); await p.waitForSelector('#kbBody .kb-dh b:has-text("1 /")'); await shot(p, '05b_kb_docs'); });
     await step('Гость: английская версия без русских надписей в меню', async () => { await p.evaluate(() => [...document.querySelectorAll('.lang')].find(x => x.dataset.lang === 'en').click()); await p.waitForTimeout(400); const t = await p.textContent('.v3-nav'); if (/[а-яё]/i.test(t)) throw new Error(t); await p.evaluate(() => [...document.querySelectorAll('.lang')].find(x => x.dataset.lang === 'ru').click()); await p.waitForTimeout(300); });
     await step('Гость: новости открываются', async () => { await p.evaluate(() => window.__iomaOpenView('news')); await p.waitForTimeout(1500); await shot(p, '05_news'); });
@@ -67,11 +72,21 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await A.p.click('.v3-loginbtn'); await A.p.fill('#v3loginForm [name=login]', 'admin'); await A.p.fill('#v3loginForm [name=password]', ADMIN_PASS);
       await A.p.click('#v3loginForm [type=submit]'); await A.p.waitForFunction(() => document.body.classList.contains('role-admin'), null, { timeout: 8000 });
     });
-    await step('Админ: раздел «Работа», заявка гостя видна', async () => {
-      await A.p.click('.v3-nav [data-open-view=workView]'); await A.p.waitForSelector('#v3leadsList .v3p-lead'); await shot(A.p, '06_admin_leads');
+    await step('Админ: раздел «Работа» — заявки гостя стали сделками', async () => {
+      await A.p.click('.v3-nav [data-open-view=workView]'); await A.p.waitForSelector('#crmList [data-deal]'); await shot(A.p, '06_admin_deals');
+    });
+    await step('Админ: карточка сделки — файл из заявки, заметка, этап', async () => {
+      await A.p.fill('#crmQ', 'Документы UI'); await A.p.waitForSelector('#crmList [data-deal] >> text=Документы UI', { timeout: 6000 }).catch(() => {});
+      await A.p.click('#crmList [data-deal]'); await A.p.waitForSelector('#crmDeal .crm-deal'); await shot(A.p, '06b_deal_card');
+      await A.p.click('#crmDeal [data-ct=files]'); await A.p.waitForSelector('#crmDeal .crm-file');
+      await A.p.click('#crmDeal [data-ct=act]'); await A.p.fill('#crmNote textarea', 'Позвонил, клиент ждёт КП'); await A.p.click('#crmNote [type=submit]'); await A.p.waitForSelector('.crm-evt:has-text("клиент ждёт КП")');
+      await A.p.selectOption('#crmDeal .crm-stage', 'Расчёт'); await A.p.click('#crmForm [type=submit]'); await A.p.waitForSelector('.crm-fld:has-text("Расчёт")'); await shot(A.p, '06c_deal_saved');
+    });
+    await step('Админ: база клиентов с сортировкой', async () => {
+      await A.p.click('#workView [data-tab=clients]'); await A.p.waitForSelector('#crmClients [data-cli]'); await A.p.selectOption('#crmCliSort', 'frequency'); await A.p.waitForTimeout(400); await shot(A.p, '06d_clients');
     });
     await step('Админ: создаёт клиента', async () => {
-      await A.p.click('#workView [data-tab=clients]'); await A.p.fill('#v3clientForm [name=email]', 'ui@ci.test'); await A.p.fill('#v3clientForm [name=name]', 'Клиент UI');
+      await A.p.click('#workView [data-tab=clients]'); await A.p.click('.crm-access summary'); await A.p.fill('#v3clientForm [name=email]', 'ui@ci.test'); await A.p.fill('#v3clientForm [name=name]', 'Клиент UI');
       await A.p.click('#v3clientForm [type=submit]'); await A.p.waitForSelector('#v3clientOk code'); clientPw = await A.p.textContent('#v3clientOk code');
     });
     await step('Админ: создаёт груз', async () => {

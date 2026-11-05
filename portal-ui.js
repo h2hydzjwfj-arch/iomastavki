@@ -31,7 +31,7 @@
     $$('.view-layer').forEach(function(v){v.classList.remove('open');v.setAttribute('aria-hidden','true')});
     t.classList.add('open');t.setAttribute('aria-hidden','false');document.body.classList.add('view-open');
     if(id==='leadView')prefillLead();if(id==='cabinetView')loadCabinet();if(id==='workView')loadWork();if(id==='accountView')loadAccount();if(id==='kbView'&&window.IOMA_KB)window.IOMA_KB.render();
-    if(id==='loginView')setTimeout(function(){var i=$('#v3loginForm input[name=login]');i&&i.focus()},120);
+    if(id==='loginView')setTimeout(function(){var f=$('#v3loginForm'),i=f&&$('input[name=login]',f);if(i&&!f.contains(document.activeElement)&&!i.value)i.focus()},120);
   }
   window.__v3open=openView;
   document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-open-view]');if(!t)return;var n=t.getAttribute('data-open-view');if(MY[n]){e.preventDefault();e.stopPropagation();openView(n)}},true);
@@ -57,7 +57,15 @@
     if(!lead.consent.checked){err.textContent='Отметьте согласие на обработку данных';return}
     var b=$('button[type=submit]',lead);b.disabled=true;
     var body={};['name','contact','from','to','cargo','weight','volume','comment','estimate','mode','website'].forEach(function(k){body[k]=lead[k].value});body.consent=true;
-    api('/api/leads',{method:'POST',body:body}).then(function(){lead.reset();lsSet(DK,null);lead.hidden=true;$('#v3leadDone').hidden=false}).catch(function(x){err.textContent=x.message}).then(function(){b.disabled=false})});
+    var files=leadFiles.slice(),req;
+    if(files.length){var fd=new FormData();Object.keys(body).forEach(function(k){fd.append(k,body[k])});files.forEach(function(f){fd.append('files',f,f.name)});b.textContent='Разбираем документы…';req=api('/api/leads/docs',{method:'POST',body:fd})}
+    else req=api('/api/leads',{method:'POST',body:body});
+    req.then(function(d){lead.reset();leadFiles=[];drawFiles();lsSet(DK,null);lead.hidden=true;$('#v3leadDone').hidden=false;var pz=$('#v3leadParsed');if(pz){pz.hidden=!(d&&d.summary);if(d&&d.summary)$('pre',pz).textContent=d.summary}}).catch(function(x){err.textContent=x.message}).then(function(){b.disabled=false;b.textContent='Отправить заявку'})});
+  var leadFiles=[];function drawFiles(){var ul=$('#v3leadFlist');if(!ul)return;ul.innerHTML=leadFiles.map(function(f,i){return '<li><span>📎 '+esc(f.name)+'</span><small>'+Math.max(1,Math.round(f.size/1024))+' КБ</small><button type="button" data-rmf="'+i+'" aria-label="Убрать файл">×</button></li>'}).join('')}
+  var lfi=$('#v3leadFiles');lfi&&lfi.addEventListener('change',function(){Array.prototype.forEach.call(lfi.files,function(f){if(leadFiles.length<6)leadFiles.push(f)});lfi.value='';drawFiles()});
+  document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-rmf]');if(t){leadFiles.splice(+t.dataset.rmf,1);drawFiles()}});
+  var dz=$('#v3leadDocs');dz&&['dragover','drop'].forEach(function(ev){dz.addEventListener(ev,function(e){e.preventDefault();if(ev==='drop'){Array.prototype.forEach.call(e.dataTransfer.files,function(f){if(leadFiles.length<6)leadFiles.push(f)});drawFiles()}})});
+  document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-lead-docs]');if(t)setTimeout(function(){var z=$('#v3leadDocs');if(z){z.scrollIntoView({block:'center'});z.classList.add('pulse');setTimeout(function(){z.classList.remove('pulse')},1600)}},250)},true);
 
   /* ---------- расчёт для гостя и клиента: ориентир + заявка ---------- */
   var res=$('#result');
@@ -95,8 +103,8 @@
   var clients=[];
   function loadLeadCount(){api('/api/leads').then(function(d){var n=d.items.filter(function(l){return l.status==='new'}).length;var c=$('#v3leadCount');if(c)c.textContent=n?'· новых: '+n:''}).catch(function(){})}
   $$('#workView .v3p-tabs .chip').forEach(function(t){t.addEventListener('click',function(){$$('#workView .v3p-tabs .chip').forEach(function(x){x.classList.toggle('on',x===t)});$$('.v3p-tab').forEach(function(p){p.hidden=p.dataset.pane!==t.dataset.tab})})});
-  function loadWork(){loadLeads();loadClients().then(loadShips);loadAllQuotes()}
-  function loadLeads(){var box=$('#v3leadsList');api('/api/leads').then(function(d){
+  function loadWork(){loadLeads();loadClients().then(loadShips);loadAllQuotes();if(window.IOMA_CRM){var on=$('#workView .v3p-tabs .chip.on');var tb=on?on.dataset.tab:'deals';if(tb==='deals')window.IOMA_CRM.loadDeals();if(tb==='clients')window.IOMA_CRM.loadClientsDb()}}
+  function loadLeads(){var box=$('#v3leadsList');if(!box)return loadLeadCount();api('/api/leads').then(function(d){
     box.innerHTML=d.items.length?d.items.map(function(l){var c=String(l.contact||''),href=/^@/.test(c)?'https://t.me/'+encodeURIComponent(c.slice(1)):/^[+\d][\d\s()-]{6,}$/.test(c)?'tel:'+c.replace(/[^\d+]/g,''):'';
       return '<article class="k v3p-lead s-'+esc(l.status)+'"><header><div><b>'+esc(l.name)+'</b> · '+(href?'<a href="'+esc(href)+'" target="_blank" rel="noopener">'+esc(c)+'</a>':esc(c))+'<small>'+dtime(l.createdAt)+'</small></div><select data-lead="'+esc(l.id)+'">'+Object.keys(LS).map(function(k){return '<option value="'+k+'"'+(k===l.status?' selected':'')+'>'+LS[k]+'</option>'}).join('')+'</select></header>'
         +'<p><b>'+esc(l.from||'—')+' → '+esc(l.to||'—')+'</b>'+(l.mode?' · '+(MODE[l.mode]||''):'')+'</p><p>'+esc(l.cargo||'')+(l.weight!=null?' · '+fmt(l.weight)+' кг':'')+(l.volume!=null?' · '+fmt(l.volume)+' м³':'')+(l.estimate?' · оценка: '+esc(l.estimate):'')+'</p>'+(l.comment?'<p class="v3p-muted">'+esc(l.comment)+'</p>':'')
@@ -124,9 +132,9 @@
     if(t.dataset.save){var id=t.dataset.save;var body={status:$('[data-status="'+id+'"]').value,eventNote:$('[data-note="'+id+'"]').value};var eta=$('[data-eta="'+id+'"]').value;if(eta)body.eta=eta;api('/api/shipments/'+encodeURIComponent(id),{method:'PATCH',body:body}).then(loadShips).catch(function(x){alert(x.message)})}
     if(t.dataset.delship&&confirm('Удалить груз? Клиент перестанет его видеть.'))api('/api/shipments/'+encodeURIComponent(t.dataset.delship),{method:'DELETE'}).then(loadShips).catch(function(x){alert(x.message)});
     if(t.dataset.deldoc&&confirm('Удалить документ?'))api('/api/shipments/'+encodeURIComponent(t.dataset.ship)+'/docs/'+encodeURIComponent(t.dataset.deldoc),{method:'DELETE'}).then(loadShips).catch(function(x){alert(x.message)});
-    if(t.dataset.reset)api('/api/clients/'+encodeURIComponent(t.dataset.reset)+'/reset',{method:'POST'}).then(function(d){var c=clients.find(function(x){return x.id===t.dataset.reset});$('#workView [data-tab=clients]').click();showPw(c?c.email:'',d.password)}).catch(function(x){alert(x.message)});
+    if(t.dataset.reset)api('/api/clients/'+encodeURIComponent(t.dataset.reset)+'/reset',{method:'POST'}).then(function(d){var c=clients.find(function(x){return x.id===t.dataset.reset});$('#workView [data-tab=clients]').click();var dd=$('.crm-access');if(dd)dd.open=true;showPw(c?c.email:'',d.password)}).catch(function(x){alert(x.message)});
     if(t.dataset.active)api('/api/clients/'+encodeURIComponent(t.dataset.active),{method:'PATCH',body:{active:t.dataset.val==='1'}}).then(loadClients).catch(function(x){alert(x.message)});
-    if(t.dataset.mkclient){var l=($('#v3leadsList')._items||[]).find(function(x){return x.id===t.dataset.mkclient});$('#workView [data-tab=clients]').click();if(l){cf.name.value=l.name||'';cf.phone.value=/^[+\d]/.test(l.contact)?l.contact:'';if(/@.+\./.test(l.contact))cf.email.value=l.contact;cf.email.focus()}}
+    if(t.dataset.mkclient){var l=($('#v3leadsList')._items||[]).find(function(x){return x.id===t.dataset.mkclient});$('#workView [data-tab=clients]').click();var dd=$('.crm-access');if(dd)dd.open=true;if(l){cf.name.value=l.name||'';cf.phone.value=/^[+\d]/.test(l.contact)?l.contact:'';if(/@.+\./.test(l.contact))cf.email.value=l.contact;cf.email.focus()}}
   });
 
   /* =================== toast =================== */
@@ -201,7 +209,7 @@
   var LSK='iomaQuotes';function lsGet(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
   function calcInput(){var v=function(id){var e=document.getElementById(id);return e?String(e.value||'').trim():''};var vol=((($('#autoVolume')||{}).textContent||'').match(/[\d.,]+/)||[''])[0].replace(',','.');
     var mode='';try{mode=typeof selectedMode!=='undefined'&&selectedMode?selectedMode:''}catch(e){}
-    var est=window.__v3est||{};return {from:v('fromCity'),to:v('toCity'),weight:v('weight'),places:v('pieces'),volume:parseFloat(vol)>0?vol:'',distance:v('distance'),mode:mode,kind:est.kind||'',dangerous:!!est.dangerous,incoterms:((($('#incotermBtn span')||{}).textContent)||'').trim()}}
+    var est=window.__v3est||{};return {from:v('fromCity'),to:v('toCity'),weight:v('weight'),places:v('pieces'),volume:parseFloat(vol)>0?vol:'',distance:v('distance'),mode:mode,kind:est.kind||'',dangerous:!!est.dangerous,dealId:role==='admin'?(window.__crmDeal||''):'',incoterms:((($('#incotermBtn span')||{}).textContent)||'').trim()}}
   function renderSaved(){var box=$('#v3saved');if(!box)return;var list=lsGet(LSK,[]);if(role!=='guest'||!list.length){box.hidden=true;return}
     box.hidden=false;box.innerHTML='<b>Ваши сохранённые расчёты</b>'+list.slice(0,5).map(function(q){return '<button type="button" class="v3c-link" data-kpopen="'+esc(q.id)+'">'+esc(q.number)+' · '+esc(q.from)+' → '+esc(q.to)+'</button>'}).join('')}
   function saveQuote(extra,silent){var body=calcInput();for(var k in extra)body[k]=extra[k];

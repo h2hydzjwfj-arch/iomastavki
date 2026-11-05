@@ -81,7 +81,7 @@ const tgServer = http.createServer((req, res) => {
       await A.p.click('.v3-nav [data-open-view=workView]'); await A.p.waitForSelector('#v3leadsList .v3p-lead:has-text("Сергей Иванов")'); await slow(A.p); await shot(A.p, 'admin_leads');
     });
     await step('Вы создаёте клиенту доступ', async () => {
-      await A.p.click('#workView [data-tab=clients]'); await A.p.fill('#v3clientForm [name=email]', clientEmail); await A.p.fill('#v3clientForm [name=name]', 'Анна Петрова');
+      await A.p.click('#workView [data-tab=clients]'); await A.p.click('.crm-access summary'); await A.p.fill('#v3clientForm [name=email]', clientEmail); await A.p.fill('#v3clientForm [name=name]', 'Анна Петрова');
       await A.p.fill('#v3clientForm [name=company]', 'ООО Вектор'); await A.p.click('#v3clientForm [type=submit]'); await A.p.waitForSelector('#v3clientOk code');
       clientPw = (await A.p.textContent('#v3clientOk code')).trim(); await slow(A.p); await shot(A.p, 'admin_client_created');
     });

@@ -47,7 +47,9 @@ function bestRate({ from, to, mode, distance }) {
     .sort((a, b) => b._score - a._score || new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
   return m[0] || null;
 }
-const portal = require('./portal').setup(app, { verifySession, DATA_DIR, upload, rateLimit, cloud, engine: q => bestRate(q) });
+const portal = require('./portal').setup(app, { verifySession, DATA_DIR, upload, rateLimit, cloud, engine: q => bestRate(q),
+  // ИИ для разбора инвойсов и упаковочных листов (если задан OPENAI_API_KEY)
+  ai: { enabled: () => !!process.env.OPENAI_API_KEY, run: async input => { const out = await responsesRequest({ key: process.env.OPENAI_API_KEY, preferred: process.env.OPENAI_MODEL, input, max_output_tokens: 8000 }); if (out.error) throw new Error(out.error.error || 'AI error'); return responseText(out.d); } } });
 app.use(['/api/agents', '/api/agents/import', '/api/rates/import', '/api/rates/import-text', '/api/rates/import-local',
   '/api/ai', '/api/tts', '/api/transcribe', '/api/realtime/call', '/api/customs/check', '/api/news/article/audio'], portal.admin);
 app.get('/api/rates', portal.admin);
@@ -151,6 +153,7 @@ app.get('/theme-v3.js', (req,res) => { res.set('Cache-Control', 'public, max-age
 app.get('/portal-ui.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'portal-ui.js'), { cacheControl: false }); });
 app.get('/routes-kb.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'routes-kb.js'), { cacheControl: false }); });
 app.get('/i18n-v3.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'i18n-v3.js'), { cacheControl: false }); });
+app.get('/crm-ui.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'crm-ui.js'), { cacheControl: false }); });
 app.get('/kb.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'kb.js'), { cacheControl: false }); });
 app.get('/palettes.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'palettes.css'), { cacheControl: false }); });
 app.get('/theme-v3.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.css'), { cacheControl: false }); });
