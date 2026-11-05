@@ -49,7 +49,16 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
     await check('Гость: заявка принимается', async () => ok((await call('g', 'POST', '/api/leads', { name: 'Тест CI', contact: '@test', from: 'Шанхай', to: 'Москва', consent: true })).ok));
     await check('Новости: /api/news отвечает', async () => { const j = await call('g', 'GET', '/api/news'); ok(j._status === 200, 'код ' + j._status); ok(Array.isArray(j.items), 'нет списка'); });
     await check('Курсы ЦБ: /api/currency', async () => { const j = await call('g', 'GET', '/api/currency'); ok(j._status === 200); }, { soft: true });
-    await check('Погода: /api/weather', async () => { const j = await call('g', 'GET', '/api/weather'); ok(j._status === 200 && j.temp != null, 'код ' + j._status); }, { soft: true });
+    await check('Курсы ЦБ на дату 07.08.2026', async () => { const j = await call('g', 'GET', '/api/currency?date=2026-08-07'); ok(j._status === 200 && j.items && j.items.USD, 'код ' + j._status); }, { soft: true });
+    await check('Курсы ЦБ: неверная дата отклоняется', async () => { ok((await call('g', 'GET', '/api/currency?date=07.08.2026'))._status === 400); ok((await call('g', 'GET', '/api/currency?date=2099-01-01'))._status === 400); });
+    await check('Регистрация: слабый пароль и плохая почта отклоняются', async () => { ok((await call('r0', 'POST', '/api/register', { name: 'Иван', email: 'bad', password: '12345678' }))._status === 400); ok((await call('r0', 'POST', '/api/register', { name: 'Иван', email: 'reg@ci.test', password: '123' }))._status === 400); });
+    await check('Регистрация: клиент сам создаёт кабинет и сразу входит', async () => {
+      const j = await call('r', 'POST', '/api/register', { name: 'Иван Рег', email: 'Reg@CI.test', password: 'reg-pass-123', company: 'ООО Тест' }); ok(j.ok && j.role === 'client', JSON.stringify(j));
+      const me = await call('r', 'GET', '/api/me'); ok(me.role === 'client', 'не вошёл после регистрации');
+      ok((await call('r2', 'POST', '/api/register', { name: 'Дубль', email: 'reg@ci.test', password: 'reg-pass-123' }))._status === 409, 'дубль почты принят');
+      ok((await call('r3', 'POST', '/api/login', { login: 'reg@ci.test', password: 'reg-pass-123' })).ok, 'не входит по паролю');
+    });
+    await check('Регистрация: бот (заполнено скрытое поле) не создаёт кабинет', async () => { const j = await call('rb', 'POST', '/api/register', { name: 'Bot', email: 'bot@ci.test', password: 'bot-pass-123', website: 'http://spam' }); ok(j.role === 'guest'); ok((await call('rb', 'GET', '/api/me')).role === 'guest'); });
 
     // --- администратор
     await check('Админ: неверный пароль не пускает', async () => ok((await call('bad', 'POST', '/api/login', { login: 'admin', password: 'wrong' }))._status === 401));

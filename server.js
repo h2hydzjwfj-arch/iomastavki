@@ -30,7 +30,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }));
 // Перебор пароля администратора: не более 8 попыток за 15 минут с одного IP.
-const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 8, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много попыток входа. Попробуйте позже.' } });
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, skipSuccessfulRequests: true, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много попыток входа. Попробуйте позже.' } });
 // Эндпоинты, которые тратят деньги на OpenAI: ограничиваем частоту.
 const aiLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много запросов. Подождите несколько минут.' } });
 const importLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 15, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много импортов. Попробуйте позже.' } });
@@ -178,36 +178,78 @@ app.get('/api/weather', async (req,res) => {
 });
 app.get('/api/config', (req,res) => res.json({ weatherConfigured: true, aiConfigured: Boolean(process.env.OPENAI_API_KEY), ftsConfigured: Boolean(process.env.API_CLOUD_FTS_TOKEN) }));
 
+// Курсы ЦБ РФ: на сегодня или на выбранную дату (?date=YYYY-MM-DD) + динамика за 30 дней для мини-графиков.
+const CBR_IDS = { USD: 'R01235', EUR: 'R01239', CNY: 'R01375' };
+const curCache = new Map();
+const pad2 = n => String(n).padStart(2, '0');
+const cbrDate = d => `${pad2(d.getUTCDate())}/${pad2(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
+const numRu = v => Number(String(v || '').replace(/\s/g, '').replace(',', '.'));
+function parseCbrDaily(xml) {
+  const items = {};
+  for (const block of xml.match(/<Valute\b[\s\S]*?<\/Valute>/gi) || []) {
+    const code = (block.match(/<CharCode>([^<]+)<\/CharCode>/i) || [])[1];
+    if (!CBR_IDS[code]) continue;
+    const nominal = numRu((block.match(/<Nominal>([^<]+)<\/Nominal>/i) || [])[1]) || 1;
+    const value = numRu((block.match(/<Value>([^<]+)<\/Value>/i) || [])[1]);
+    if (value) items[code] = { nominal: 1, value: +(value / nominal).toFixed(4) };
+  }
+  const date = (xml.match(/<ValCurs[^>]*Date="([^"]+)"/i) || [])[1] || '';
+  return { date, items };
+}
+function parseCbrDynamic(xml) {
+  const out = [];
+  for (const rec of xml.match(/<Record\b[\s\S]*?<\/Record>/gi) || []) {
+    const date = (rec.match(/Date="([^"]+)"/) || [])[1];
+    const nominal = numRu((rec.match(/<Nominal>([^<]+)<\/Nominal>/i) || [])[1]) || 1;
+    const value = numRu((rec.match(/<Value>([^<]+)<\/Value>/i) || [])[1]);
+    if (date && value) out.push({ date, value: +(value / nominal).toFixed(4) });
+  }
+  return out;
+}
+async function fetchText(url) {
+  const r = await fetch(url, { headers: { 'User-Agent': 'iomastavka/2.0' }, signal: AbortSignal.timeout(8000) });
+  if (!r.ok) throw new Error('upstream ' + r.status);
+  return r.text();
+}
 app.get('/api/currency', async (req,res) => {
-  const parseCbrXml=(xml)=>{
-    const items={};
-    const blocks=xml.match(/<Valute\b[\s\S]*?<\/Valute>/gi)||[];
-    for(const block of blocks){
-      const code=(block.match(/<CharCode>([^<]+)<\/CharCode>/i)||[])[1];
-      if(!['USD','EUR','CNY'].includes(code))continue;
-      const nominal=(block.match(/<Nominal>([^<]+)<\/Nominal>/i)||[])[1];
-      const value=(block.match(/<Value>([^<]+)<\/Value>/i)||[])[1];
-      if(value)items[code]={nominal:Number(String(nominal||'1').replace(',','.'))||1,value:Number(String(value).replace(',','.'))};
+  const today = new Date(); today.setUTCHours(0, 0, 0, 0);
+  let day = today;
+  if (req.query.date) {
+    const m = String(req.query.date).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return res.status(400).json({ ok: false, error: 'Дата в формате ГГГГ-ММ-ДД' });
+    day = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    if (isNaN(day) || day < new Date(Date.UTC(1993, 0, 1)) || day > new Date(today.getTime() + 864e5)) return res.status(400).json({ ok: false, error: 'Выберите дату с 1993 года по завтрашний день' });
+  }
+  const key = day.toISOString().slice(0, 10), isToday = key === today.toISOString().slice(0, 10);
+  const hit = curCache.get(key);
+  if (hit && (Date.now() - hit.at < (isToday ? 30 * 60 * 1000 : 7 * 864e5))) return res.json(hit.data);
+  let data = null;
+  try {
+    const parsed = parseCbrDaily(await fetchText('https://www.cbr.ru/scripts/XML_daily.asp' + (req.query.date ? '?date_req=' + cbrDate(day) : '')));
+    if (parsed.items.USD && parsed.items.EUR && parsed.items.CNY) data = { ok: true, source: 'cbr.ru', date: parsed.date, items: parsed.items };
+  } catch {}
+  if (!data) {
+    try {
+      const url = req.query.date ? `https://www.cbr-xml-daily.ru/archive/${day.getUTCFullYear()}/${pad2(day.getUTCMonth() + 1)}/${pad2(day.getUTCDate())}/daily_json.js` : 'https://www.cbr-xml-daily.ru/daily_json.js';
+      const j = JSON.parse(await fetchText(url)), items = {};
+      for (const code of Object.keys(CBR_IDS)) { const x = j.Valute && j.Valute[code]; if (x && x.Value) items[code] = { nominal: 1, value: +(x.Value / (x.Nominal || 1)).toFixed(4), prev: x.Previous ? +(x.Previous / (x.Nominal || 1)).toFixed(4) : undefined }; }
+      if (items.USD && items.EUR && items.CNY) { const d = new Date(j.Date); data = { ok: true, source: 'cbr-xml-daily.ru', date: `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`, items }; }
+    } catch {}
+  }
+  if (!data) return res.status(502).json({ ok: false, error: req.query.date ? 'Нет курса ЦБ на эту дату — попробуйте другую' : 'CBR unavailable' });
+  // Динамика за 30 дней до выбранной даты (для мини-графиков и изменения за день).
+  try {
+    const from = new Date(day.getTime() - 30 * 864e5);
+    const series = await Promise.all(Object.entries(CBR_IDS).map(async ([code, id]) => [code, parseCbrDynamic(await fetchText(`https://www.cbr.ru/scripts/XML_dynamic.asp?date_req1=${cbrDate(from)}&date_req2=${cbrDate(day)}&VAL_NM_RQ=${id}`))]));
+    data.series = {};
+    for (const [code, list] of series) if (list.length > 1) {
+      data.series[code] = list.map(x => x.value);
+      const it = data.items[code]; if (it && it.prev == null) { const i = list.findIndex(x => Math.abs(x.value - it.value) < 1e-4); const p = i > 0 ? list[i - 1] : list[list.length - 2]; if (p) it.prev = p.value; }
     }
-    const date=(xml.match(/<ValCurs[^>]*Date="([^"]+)"/i)||[])[1]||new Date().toISOString();
-    return {date,items};
-  };
-  try{
-    // Primary source: Bank of Russia official daily XML.
-    const official=await fetch('https://www.cbr.ru/scripts/XML_daily.asp',{headers:{'User-Agent':'iomastavka/2.0'},signal:AbortSignal.timeout(8000)});
-    if(official.ok){
-      const parsed=parseCbrXml(await official.text());
-      if(parsed.items.USD&&parsed.items.EUR&&parsed.items.CNY)return res.json({ok:true,source:'cbr.ru',date:parsed.date,items:parsed.items});
-    }
-    // Fallback mirror, still derived from CBR daily data.
-    const mirror=await fetch('https://www.cbr-xml-daily.ru/daily_json.js',{headers:{'User-Agent':'iomastavka/2.0'},signal:AbortSignal.timeout(8000)});
-    if(mirror.ok){
-      const data=await mirror.json(),items={};
-      for(const code of ['USD','EUR','CNY']){const x=data.Valute?.[code];if(x?.Value)items[code]={nominal:x.Nominal||1,value:Number(x.Value)}}
-      if(items.USD&&items.EUR&&items.CNY)return res.json({ok:true,source:'cbr-xml-daily.ru',date:data.Date||new Date().toISOString(),items});
-    }
-    throw new Error('CBR unavailable');
-  }catch(e){res.status(502).json({ok:false,error:'CBR unavailable'});}
+  } catch {}
+  curCache.set(key, { at: Date.now(), data });
+  if (curCache.size > 200) curCache.delete(curCache.keys().next().value);
+  res.json(data);
 });
 
 const CITY_ALIASES = {
@@ -297,7 +339,10 @@ async function fetchNews(){
     ['https://news.google.com/rss/search?q='+encodeURIComponent('логистика Китай Россия таможня')+'&hl=ru&gl=RU&ceid=RU:ru','Логистика · Китай / Россия'],
     ['https://news.google.com/rss/search?q='+encodeURIComponent('таможня ЕАЭС пошлина маркировка')+'&hl=ru&gl=RU&ceid=RU:ru','Таможня · ЕАЭС'],
     ['https://news.google.com/rss/search?q='+encodeURIComponent('электронная транспортная накладная Россия')+'&hl=ru&gl=RU&ceid=RU:ru','Транспортные документы · Россия'],
-    ['https://news.google.com/rss/search?q='+encodeURIComponent('China Russia freight rail sea air logistics')+'&hl=en&gl=US&ceid=US:en','Asia logistics']
+    ['https://news.google.com/rss/search?q='+encodeURIComponent('China Russia freight rail sea air logistics')+'&hl=en&gl=US&ceid=US:en','Asia logistics'],
+    ['https://news.google.com/rss/search?q='+encodeURIComponent('контейнерные перевозки Китай ставки')+'&hl=ru&gl=RU&ceid=RU:ru','Ставки и контейнеры'],
+    ['https://news.google.com/rss/search?q='+encodeURIComponent('Забайкальск OR Владивосток порт контейнеры')+'&hl=ru&gl=RU&ceid=RU:ru','Погранпереходы и порты'],
+    ['https://news.google.com/rss/search?q='+encodeURIComponent('ФТС импорт изменения правил')+'&hl=ru&gl=RU&ceid=RU:ru','Таможня · ФТС']
   ];
   const lists=await Promise.all(queries.map(([u,s])=>fetchRss(u,s)));
   let all=lists.flat();
@@ -305,8 +350,10 @@ async function fetchNews(){
   const seen=new Set();
   all=all.filter(x=>{const k=normalizeText(x.title);if(!k||seen.has(k))return false;seen.add(k);return true});
   all.sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const recent=all.filter(x=>Date.now()-new Date(x.date).getTime()<=14*24*60*60*1000);
-  const selected=(recent.length?recent:all).slice(0,24).map(x=>({...x,urgent:newsIsUrgent(x)}));
+  // Сначала свежие (2 недели), затем добираем до 18 материалов за 2 месяца — лента не бывает пустой.
+  const age=x=>Date.now()-new Date(x.date).getTime();
+  const recent=all.filter(x=>age(x)<=14*864e5), older=all.filter(x=>age(x)>14*864e5&&age(x)<=60*864e5);
+  const selected=recent.concat(recent.length<18?older.slice(0,18-recent.length):[]).slice(0,30).map(x=>({...x,urgent:newsIsUrgent(x)}));
   if(!selected.length){
     const key=process.env.OPENAI_API_KEY;
     if(key){
@@ -418,6 +465,16 @@ app.post('/api/login', loginLimiter, (req,res) => {
   const ttl = req.body?.remember ? (payload.role === 'admin' ? 7 : 30) * 24 * 60 * 60 * 1000 : 8 * 60 * 60 * 1000;
   res.cookie('auth', signSession(payload, Date.now(), ttl), { httpOnly:true, secure:true, sameSite:'lax', maxAge:ttl, path:'/' });
   res.json({ ok:true, role: payload.role, name: payload.name });
+});
+const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много регистраций. Попробуйте позже.' } });
+app.post('/api/register', registerLimiter, async (req,res) => {
+  const b = req.body || {};
+  if (b.website) return res.json({ ok: true, role: 'guest' }); // ловушка для ботов
+  const r = await portal.registerClient(b);
+  if (r.error) return res.status(r.status || 400).json({ ok: false, error: r.error });
+  const ttl = 30 * 24 * 60 * 60 * 1000;
+  res.cookie('auth', signSession({ role: 'client', uid: r.user.id, name: r.user.name }, Date.now(), ttl), { httpOnly:true, secure:true, sameSite:'lax', maxAge:ttl, path:'/' });
+  res.json({ ok: true, role: 'client', name: r.user.name });
 });
 app.post('/api/logout', (req,res) => {
   res.clearCookie('auth', { httpOnly:true, secure:true, sameSite:'lax', path:'/' });

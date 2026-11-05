@@ -39,7 +39,7 @@
   /* ---------- вход ---------- */
   var lf=$('#v3loginForm');
   lf&&lf.addEventListener('submit',function(e){e.preventDefault();var err=$('#v3loginErr');err.textContent='';var b=$('button[type=submit]',lf);b.disabled=true;
-    api('/api/login',{method:'POST',body:{login:lf.login.value,password:lf.password.value,remember:lf.remember.checked}}).then(function(){location.reload()}).catch(function(x){err.textContent=x.message;b.disabled=false})});
+    api('/api/login',{method:'POST',body:{login:lf.login.value,password:lf.password.value,remember:lf.remember.checked}}).then(function(d){goIn(d.role)}).catch(function(x){err.textContent=x.message;b.disabled=false})});
 
   /* ---------- заявка ---------- */
   function prefillLead(){
@@ -57,7 +57,7 @@
     if(!lead.consent.checked){err.textContent='Отметьте согласие на обработку данных';return}
     var b=$('button[type=submit]',lead);b.disabled=true;
     var body={};['name','contact','from','to','cargo','weight','volume','comment','estimate','mode','website'].forEach(function(k){body[k]=lead[k].value});body.consent=true;
-    api('/api/leads',{method:'POST',body:body}).then(function(){lead.reset();lead.hidden=true;$('#v3leadDone').hidden=false}).catch(function(x){err.textContent=x.message}).then(function(){b.disabled=false})});
+    api('/api/leads',{method:'POST',body:body}).then(function(){lead.reset();lsSet(DK,null);lead.hidden=true;$('#v3leadDone').hidden=false}).catch(function(x){err.textContent=x.message}).then(function(){b.disabled=false})});
 
   /* ---------- расчёт для гостя и клиента: ориентир + заявка ---------- */
   var res=$('#result');
@@ -226,12 +226,53 @@
     e.addEventListener('change',function(){var m=lsGet(CK,{});m[id]=e.value;lsSet(CK,m)})});
   setTimeout(function(){var m=lsGet(CK,{});Object.keys(m).forEach(function(id){var e=document.getElementById(id);if(e&&!e.value&&m[id]){e.value=m[id];e.dispatchEvent(new Event('input',{bubbles:true}))}})},400);
 
+  /* ---------- регистрация, показ пароля, вход сразу в кабинет ---------- */
+  function goIn(r){try{history.replaceState(null,'',location.pathname+(r==='admin'?'#work':'#cabinet'))}catch(e){}location.reload()}
+  var rf2=$('#v3regForm');
+  $('#v3regBtn')&&$('#v3regBtn').addEventListener('click',function(){lf.hidden=true;rf2.hidden=false;if(lf.login.value.indexOf('@')>0)rf2.email.value=lf.login.value;rf2.name.focus()});
+  $('#v3regBack')&&$('#v3regBack').addEventListener('click',function(){rf2.hidden=true;lf.hidden=false;if(rf2.email.value)lf.login.value=rf2.email.value;lf.password.focus()});
+  rf2&&rf2.addEventListener('submit',function(e){e.preventDefault();var err=$('#v3regErr');err.textContent='';var b=$('button[type=submit]',rf2);b.disabled=true;
+    var body={};['name','company','email','phone','password','website'].forEach(function(k){body[k]=rf2[k].value});
+    api('/api/register',{method:'POST',body:body}).then(function(d){rf2.dataset.dirty='';if(d.role==='client')goIn('client');else b.disabled=false}).catch(function(x){err.textContent=x.message;b.disabled=false})});
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.v3p-eye');if(!b)return;var i=b.parentNode.querySelector('input');var show=i.type==='password';i.type=show?'text':'password';b.classList.toggle('on',show);b.setAttribute('aria-label',show?'Скрыть пароль':'Показать пароль')});
+  // при открытии окна входа — всегда форма входа
+  var _ov=openView;openView=function(id){if(id==='loginView'&&rf2){rf2.hidden=true;lf.hidden=false;var ff3=$('#v3forgotForm');if(ff3)ff3.hidden=true}_ov(id)};window.__v3open=openView;
+
+  /* ---------- «Сохранить или выйти?» при закрытии окна с несохранёнными данными ---------- */
+  var DK='iomaLeadDraft';
+  function leadFilled(){var f=$('#v3leadForm');if(!f||f.hidden)return false;return ['name','contact','cargo','comment'].some(function(k){return String(f[k].value||'').trim()})}
+  function calcUnsaved(){return !!$('#result .v3p-savebtn:not([disabled])')}
+  function openId(){var v=$('.view-layer.open');return v?v.id:''}
+  function dirtyInfo(){var id=openId();
+    if(id==='calculatorView'&&calcUnsaved())return {p:'Расчёт ещё не сохранён. Сохраните его — получите КП со ссылкой, к нему можно вернуться в любой момент.',save:function(){return saveQuote({},false).then(function(d){var b=$('#result .v3p-savebtn');b&&b.remove();return d})}};
+    if(id==='leadView'&&leadFilled())return {p:'Заявка не отправлена. Сохранить черновик? Он останется в форме, когда вы вернётесь.',saveText:'Сохранить черновик',save:function(){var f=$('#v3leadForm'),d={};['name','contact','from','to','cargo','weight','volume','comment'].forEach(function(k){d[k]=f[k].value});lsSet(DK,d);toast('Черновик заявки сохранён');return Promise.resolve()}};
+    if(id==='accountView'){var pf=$('#v3profForm');if(pf&&pf.dataset.dirty==='1')return {p:'Изменения в профиле не сохранены.',save:function(){return new Promise(function(ok,no){pf.requestSubmit();setTimeout(function(){var er=$('.v3p-err',pf);if(er&&er.textContent)no(new Error(er.textContent));else{pf.dataset.dirty='';ok()}},1400)})}}}
+    if(id==='loginView'&&rf2&&!rf2.hidden&&rf2.dataset.dirty==='1')return {p:'Кабинет ещё не создан — данные формы пропадут.',saveText:'Создать кабинет',save:function(){rf2.requestSubmit();return new Promise(function(){})}};
+    return null}
+  document.addEventListener('input',function(e){var f=e.target.closest&&e.target.closest('#v3profForm,#v3regForm');if(f)f.dataset.dirty='1'},true);
+  var ask=$('#v3ask'),pending=null,bypass=false;
+  function leaving(t){if(!t||!t.closest)return false;if(t.closest('#v3ask'))return false;
+    if(t.closest('[data-close-view],.view-close,[data-nav],#logoutButton'))return true;
+    var o=t.closest('[data-open-view]');if(o){var cur=openId();var map={calculator:'calculatorView',news:'newsView',assistant:'assistantView',forwarders:'forwardersView',customsView:'customsView'};var n=o.getAttribute('data-open-view');return (map[n]||n)!==cur}
+    return t.classList&&t.classList.contains('view-layer')&&t.classList.contains('open')}
+  function showAsk(info,go){pending={info:info,go:go};$('#v3askP').textContent=info.p;$('[data-ask=save]',ask).textContent=info.saveText||'Сохранить';ask.hidden=false;setTimeout(function(){$('[data-ask=save]',ask).focus()},30)}
+  window.addEventListener('click',function(e){if(bypass||!ask)return;if(!leaving(e.target))return;var info=dirtyInfo();if(!info)return;
+    e.preventDefault();e.stopImmediatePropagation();var t=e.target;showAsk(info,function(){bypass=true;try{t.click()}finally{bypass=false}})},true);
+  window.addEventListener('keydown',function(e){if(e.key!=='Escape'||!ask)return;if(!ask.hidden){e.stopImmediatePropagation();ask.hidden=true;pending=null;return}var info=dirtyInfo();if(!info)return;e.stopImmediatePropagation();showAsk(info,function(){window.__iomaCloseViews&&window.__iomaCloseViews()})},true);
+  ask&&ask.addEventListener('click',function(e){var b=e.target.closest('[data-ask]');if(!b&&e.target!==ask)return;var a=b?b.dataset.ask:'stay',p=pending;
+    if(a==='stay'||!p){ask.hidden=true;pending=null;return}
+    if(a==='leave'){ask.hidden=true;pending=null;if(openId()==='leadView')lsSet(DK,null);p.go();return}
+    b.disabled=true;p.info.save().then(function(){ask.hidden=true;pending=null;b.disabled=false;setTimeout(p.go,350)}).catch(function(x){b.disabled=false;$('#v3askP').textContent=x.message||'Не удалось сохранить'})});
+  // черновик заявки возвращается в форму
+  var _pl=prefillLead;prefillLead=function(){_pl();var d=lsGet(DK,null),f=$('#v3leadForm');if(d&&f)Object.keys(d).forEach(function(k){if(f[k]&&!f[k].value&&d[k])f[k].value=d[k]})};
+
   /* =================== ссылки вида /#kp=…, /#reset=…, /#cabinet =================== */
   function route(){var h=location.hash||'';var m;
     if((m=h.match(/^#kp=([a-f0-9]{16})$/)))openQuote(m[1]);
     else if((m=h.match(/^#reset=([\w-]{20,})$/))){resetToken=m[1];history.replaceState(null,'',location.pathname);openView('resetView')}
     else if(h==='#kb')setTimeout(function(){openView('kbView')},300);
     else if(h==='#cabinet')setTimeout(function(){openView(role==='client'?'cabinetView':'loginView')},300);
+    else if(h==='#work')setTimeout(function(){openView(role==='admin'?'workView':'loginView')},300);
   }
   window.addEventListener('hashchange',route);
   var waitRole=setInterval(function(){if(document.body.className.match(/role-/)){clearInterval(waitRole);route();renderSaved()}},100);
