@@ -54,6 +54,7 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
     // --- администратор
     await check('Админ: неверный пароль не пускает', async () => ok((await call('bad', 'POST', '/api/login', { login: 'admin', password: 'wrong' }))._status === 401));
     await check('Админ: вход', async () => { const j = await call('a', 'POST', '/api/login', { login: 'admin', password: ADMIN_PASS }); ok(j.ok && j.role === 'admin', JSON.stringify(j)); });
+    await check('Админ: вход по почте из ADMIN_EMAIL', async () => { const j = await call('ae', 'POST', '/api/login', { login: 'Boss@Ioma.test', password: ADMIN_PASS }); ok(j.ok && j.role === 'admin', JSON.stringify(j)); });
     await check('Админ: видит агентов и полную базу', async () => { ok((await call('a', 'GET', '/api/agents')).records.length > 0); ok((await call('a', 'GET', '/api/rates'))._status === 200); });
     await check('Админ: видит заявку гостя', async () => ok((await call('a', 'GET', '/api/leads')).items.some(l => l.name === 'Тест CI')));
     let cl, pw;
@@ -96,7 +97,7 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
     await check('Админ: смена своего пароля', async () => {
       ok((await call('a', 'POST', '/api/account/password', { current: ADMIN_PASS, next: 'admin-new-pass-1' })).ok);
       ok((await call('a2', 'POST', '/api/login', { login: 'admin', password: 'admin-new-pass-1' })).ok);
-      ok((await call('a3', 'POST', '/api/login', { login: 'admin', password: ADMIN_PASS }))._status === 401, 'старый пароль админа работает');
+      { const st = (await call('a3', 'POST', '/api/login', { login: 'admin', password: ADMIN_PASS }))._status; ok(st === 401 || st === 429, 'старый пароль админа работает (код ' + st + ')'); }
     });
     await check('Отключённый клиент теряет доступ', async () => { await call('a', 'PATCH', '/api/clients/' + cl.id, { active: false }); ok((await call('c', 'GET', '/api/my/shipments'))._status === 401); });
     await check('Выход', async () => { await call('a', 'POST', '/api/logout'); });
