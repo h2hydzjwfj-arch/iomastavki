@@ -5,6 +5,20 @@
   'use strict';
   // RU: [EN, ZH, TR]
   var D = {
+    'Опасный груз': ['Dangerous goods', '危险品', 'Tehlikeli yük'],
+    'аккумуляторы, жидкости, химия': ['batteries, liquids, chemicals', '电池、液体、化学品', 'piller, sıvılar, kimyasallar'],
+    'ГИД ПО ДОСТАВКЕ': ['SHIPPING GUIDE', '运输指南', 'TAŞIMA REHBERİ'],
+    'Какой маршрут выбрать сейчас': ['Which route to choose now', '现在该选哪条路线', 'Şimdi hangi güzergâh seçilmeli'],
+    'Обстановка на погранпереходах, сроки и документы — коротко': ['Border crossings, transit times and documents — in brief', '口岸状况、时效和单证——简要说明', 'Sınır kapıları, süreler ve belgeler — kısaca'],
+    'ЗАЯВКА ПО ДОКУМЕНТАМ': ['REQUEST BY DOCUMENTS', '凭单证询价', 'BELGEYLE TALEP'],
+    'Загрузите инвойс и упаковочный лист': ['Upload the invoice and packing list', '上传发票和装箱单', 'Fatura ve çeki listesini yükleyin'],
+    'Сами разберём документы и посчитаем доставку': ['We will read the documents and quote the delivery', '我们会解析单证并计算运费', 'Belgeleri biz okur, taşımayı hesaplarız'],
+    'Прикрепите инвойс и упаковочный лист': ['Attach the invoice and packing list', '附上发票和装箱单', 'Faturayı ve çeki listesini ekleyin'],
+    'PDF, Excel, Word или фото — до 6 файлов. Сами достанем поставщика, товары, цены, вес, габариты и количество мест.': ['PDF, Excel, Word or photos — up to 6 files. We will extract the supplier, goods, prices, weight, dimensions and number of packages.', 'PDF、Excel、Word 或照片——最多6个文件。我们会提取供应商、商品、价格、重量、尺寸和件数。', 'PDF, Excel, Word veya fotoğraf — en fazla 6 dosya. Tedarikçi, ürünler, fiyatlar, ağırlık, ölçüler ve koli sayısını biz çıkarırız.'],
+    'Что мы поняли из документов': ['What we understood from the documents', '我们从单证中识别到的内容', 'Belgelerden anladıklarımız'],
+    'Если что-то не так — менеджер уточнит при звонке.': ['If anything is off, the manager will clarify on the call.', '如有不符，经理会在电话中确认。', 'Bir hata varsa yöneticimiz görüşmede netleştirir.'],
+    'Почта, с которой вы входите (администратор — admin)': ['Email you sign in with (administrator — admin)', '登录邮箱（管理员填 admin）', 'Giriş e-postanız (yönetici — admin)'],
+    'Разбираем документы…': ['Reading the documents…', '正在解析单证…', 'Belgeler okunuyor…'],
     'Гид по доставке': ['Shipping guide', '运输指南', 'Taşıma rehberi'],
     'Как сейчас везти из Китая в Россию: обстановка на маршрутах, сроки, погранпереходы и документы.': ['How to ship from China to Russia right now: route conditions, transit times, border crossings and documents.', '当前如何从中国运往俄罗斯：路线状况、时效、口岸和单证。', 'Şu anda Çin’den Rusya’ya nasıl taşınır: güzergâh durumu, süreler, sınır kapıları ve belgeler.'],
     'сегодня': ['today', '今天', 'bugün'],

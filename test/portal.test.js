@@ -138,12 +138,13 @@ test('смена логина требует текущий пароль', async
   assert.strictEqual(ok.out.item.email, 'new@test.ru');
 });
 
-test('восстановление пароля: ссылка приходит, одинаковый ответ для чужой почты', async () => {
+test('восстановление пароля: понятный ответ, ссылка приходит на почту', async () => {
   const { app, portal, admin, mailSent } = make();
   const c = await clientWith(app, admin);
   const a = await app.call('POST', '/api/password/forgot', { body: { email: 'nobody@test.ru' } });
+  assert.strictEqual(a.code, 404); assert.match(a.out.error, /не найден/);
   const b = await app.call('POST', '/api/password/forgot', { body: { email: 'q@test.ru' } });
-  assert.strictEqual(a.out.message, b.out.message);
+  assert.match(b.out.message, /отправлена на почту q/);
   const token = mailSent[0][2].match(/#reset=([\w-]+)/)[1];
   assert.strictEqual((await app.call('POST', '/api/password/reset', { body: { token: 'bad', password: 'abcdefgh1' } })).code, 400);
   assert.ok((await app.call('POST', '/api/password/reset', { body: { token, password: 'восстановлен1' } })).out.ok);
@@ -196,4 +197,24 @@ test('почта через Resend: правильный запрос', async ()
     const body = JSON.parse(calls[0][1].body); assert.deepStrictEqual(body.to, ['client@test.ru']); assert.strictEqual(body.from, 'iomastavka <kp@iomastavka.ru>');
     assert.strictEqual(calls[0][1].headers.Authorization, 'Bearer re_test');
   } finally { global.fetch = realFetch; delete process.env.RESEND_API_KEY; delete process.env.RESEND_FROM; }
+});
+
+test('восстановление пароля администратора: ссылка на почту ADMIN_EMAIL, новый пароль работает', async () => {
+  process.env.ADMIN_EMAIL = 'boss@test.ru';
+  try {
+    const { app, portal, mailSent } = make();
+    const r = await app.call('POST', '/api/password/forgot', { body: { email: 'admin' } });
+    assert.ok(r.out.ok, JSON.stringify(r.out)); assert.match(r.out.message, /на почту bo•••@test\.ru/);
+    const m = mailSent.find(x => x[0] === 'boss@test.ru'); assert.ok(m, 'письмо админу не ушло');
+    const token = m[2].match(/#reset=([\w-]+)/)[1];
+    const ok = await app.call('POST', '/api/password/reset', { body: { token, password: 'admin-reset-77' } });
+    assert.strictEqual(ok.out.role, 'admin');
+    assert.ok(portal.adminPasswordOk('admin-reset-77'));
+  } finally { delete process.env.ADMIN_EMAIL; }
+});
+
+test('ADMIN_PASSWORD в окружении — запасной вход администратора', async () => {
+  process.env.ADMIN_PASSWORD = 'zapasnoy-vhod-1';
+  try { const { portal } = make(); assert.ok(portal.adminPasswordOk('zapasnoy-vhod-1')); assert.ok(!portal.adminPasswordOk('drugoy')); }
+  finally { delete process.env.ADMIN_PASSWORD; }
 });

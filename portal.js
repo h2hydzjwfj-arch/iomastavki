@@ -114,6 +114,13 @@ function setup(app, opts) {
 
   app.get('/api/me', (req, res) => { const r = roleOf(req); res.json({ ok: true, role: r.role, name: r.name || '', storage: r.role === 'admin' ? store.kind : undefined }); });
 
+  const crm = require('./crm').setup(app, { store, admin, upload, str, num, newId });
+  const splitContact = c => { c = String(c || '').trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c) ? { contactEmail: c } : { contactPhone: c }; };
+  function dealFromLead(lead, extraText) {
+    const text = ['Новая заявка с сайта', `Имя: ${lead.name}`, `Контакт: ${lead.contact}`, `Маршрут: ${lead.from || '—'} → ${lead.to || '—'}`, lead.cargo ? `Груз: ${lead.cargo}` : '', lead.weight != null ? `Вес: ${lead.weight} кг` : '', lead.volume != null ? `Объём: ${lead.volume} м³` : '', lead.estimate ? `Оценка с сайта: ${lead.estimate}` : '', lead.comment ? `Комментарий: ${lead.comment}` : '', extraText || ''].filter(Boolean).join('\n');
+    return crm.create({ contactName: lead.name, ...splitContact(lead.contact), from: lead.from, to: lead.to, cargo: lead.cargo, weight: lead.weight, volume: lead.volume, mode: lead.mode === 'road' ? 'auto' : lead.mode, leadId: lead.id, source: 'Сайт', funnel: 'Входящие', stage: 'Новая заявка', activityText: text, activityType: 'lead' }, 'Сайт');
+  }
+
   // ---------- заявки ----------
   app.post('/api/leads', leadLimiter, async (req, res) => {
     const b = req.body || {};
@@ -127,9 +134,49 @@ function setup(app, opts) {
     if (!lead.name || !lead.contact) return res.status(400).json({ ok: false, error: 'Укажите имя и телефон или Telegram' });
     if (b.consent !== true) return res.status(400).json({ ok: false, error: 'Нужно согласие на обработку данных' });
     const db = store.load(); db.leads.unshift(lead); db.leads = db.leads.slice(0, 2000); store.save(db);
+    try { const deal = dealFromLead(lead); lead.dealId = deal.id; const d2 = store.load(); const l2 = d2.leads.find(x => x.id === lead.id); if (l2) { l2.dealId = deal.id; store.save(d2); } } catch (e) { console.error('deal from lead:', e.message); }
     try { await notify(`Новая заявка с сайта\n${lead.name} · ${lead.contact}\n${lead.from || '—'} → ${lead.to || '—'}\nГруз: ${lead.cargo || '—'}${lead.weight != null ? ', ' + lead.weight + ' кг' : ''}${lead.volume != null ? ', ' + lead.volume + ' м³' : ''}\n${lead.estimate ? 'Оценка: ' + lead.estimate + '\n' : ''}${lead.comment || ''}`); } catch {}
     res.json({ ok: true });
   });
+  // ---------- заявка с документами: инвойс, упаковочный лист, фото → разбор и заявка менеджеру с файлами
+  const DOC_EXT = /\.(pdf|xlsx|xls|docx|doc|csv|txt|jpe?g|png|webp)$/i;
+  const docParse = require('./docparse');
+  if (upload) app.post('/api/leads/docs', leadLimiter, upload.array('files', 6), async (req, res) => {
+    const b = req.body || {};
+    if (str(b.website)) return res.json({ ok: true });
+    const files = (req.files || []).map(f => ({ name: Buffer.from(f.originalname, 'latin1').toString('utf8').slice(0, 160), mime: f.mimetype, buf: f.buffer }));
+    if (!files.length) return res.status(400).json({ ok: false, error: 'Прикрепите инвойс, упаковочный лист или фото' });
+    const bad = files.find(f => !DOC_EXT.test(f.name)); if (bad) return res.status(400).json({ ok: false, error: `Файл «${bad.name}» не подходит: нужен PDF, Excel, Word или фото` });
+    if (files.reduce((a, f) => a + f.buf.length, 0) > 40 * 1024 * 1024) return res.status(400).json({ ok: false, error: 'Слишком большие файлы: до 40 МБ вместе' });
+    const lead = { id: newId(), createdAt: new Date().toISOString(), status: 'new', name: str(b.name, 80), contact: str(b.contact, 120), from: str(b.from, 120), to: str(b.to, 120), cargo: str(b.cargo, 200), weight: num(b.weight), volume: num(b.volume), mode: '', comment: str(b.comment, 1000), estimate: '' };
+    if (!lead.name || !lead.contact) return res.status(400).json({ ok: false, error: 'Укажите имя и телефон или Telegram' });
+    if (b.consent !== 'true' && b.consent !== true) return res.status(400).json({ ok: false, error: 'Нужно согласие на обработку данных' });
+    const an = await Promise.race([docParse.analyze(files, opts.ai), new Promise(r => setTimeout(() => r({ ok: false, reason: 'timeout', summary: '' }), 60000))]);
+    const t = an.ok && an.data && an.data.totals || {};
+    if (lead.weight == null && +t.grossKg) lead.weight = +t.grossKg;
+    if (lead.volume == null && +t.volumeM3) lead.volume = +t.volumeM3;
+    if (!lead.cargo && an.ok && Array.isArray(an.data.items) && an.data.items.length) lead.cargo = str(an.data.items.map(i => i.name).filter(Boolean).slice(0, 3).join(', '), 200);
+    if (!lead.from && an.ok && an.data.loading) lead.from = str(an.data.loading, 120);
+    lead.docs = files.map(f => ({ name: f.name, size: f.buf.length }));
+    lead.parsed = an.summary || '';
+    const db = store.load(); db.leads.unshift(lead); db.leads = db.leads.slice(0, 2000); store.save(db);
+    const extra = an.summary ? '\nРаспознано из документов:\n' + an.summary : (an.raw ? '\nСодержимое таблиц (без ИИ):\n' + an.raw.slice(0, 3000) : '');
+    let deal = null; try { deal = dealFromLead(lead, extra); for (const f of files) await crm.attach(deal, f); const d2 = store.load(); const x = d2.deals.find(v => v.id === deal.id); if (x) x.files = deal.files; const l2 = d2.leads.find(v => v.id === lead.id); if (l2) l2.dealId = deal.id; store.save(d2); } catch (e) { console.error('docs deal:', e.message); }
+    const head = `Новая заявка с документами\n${lead.name} · ${lead.contact}\n${lead.from || '—'} → ${lead.to || '—'}${lead.comment ? '\n' + lead.comment : ''}`;
+    const body = head + (an.summary ? '\n\n' + an.summary : an.reason === 'ai-off' ? '\n\nАвтоматический разбор выключен (нет OPENAI_API_KEY) — файлы во вложении.' + (an.raw ? '\n\n' + an.raw.slice(0, 2500) : '') : '\n\nФайлы во вложении.');
+    const sent = { telegram: false, email: false };
+    try { sent.telegram = await adminTelegramDocs(body, files); } catch {}
+    const adminEmail = String(process.env.ADMIN_EMAIL || '').trim();
+    if (adminEmail && mail.enabled()) { try { await mail.send(adminEmail, `Заявка с документами: ${lead.name}`, body, files.map(f => ({ filename: f.name, content: f.buf }))); sent.email = true; } catch (e) { console.error('docs mail:', e.message); } }
+    if (!sent.telegram) { try { await notify(body); } catch {} }
+    res.json({ ok: true, summary: an.summary || '', parsed: !!an.ok });
+  });
+  async function adminTelegramDocs(text, files) {
+    const token = process.env.TELEGRAM_BOT_TOKEN, chat = process.env.TELEGRAM_CHAT_ID; if (!token || !chat) return false;
+    const r = await fetch(`${tgBase()}/bot${token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chat, text: text.slice(0, 3900), disable_web_page_preview: true }), signal: AbortSignal.timeout(10000) });
+    for (const f of files) { const fd = new FormData(); fd.append('chat_id', chat); fd.append('document', new Blob([f.buf], { type: f.mime || 'application/octet-stream' }), f.name); try { await fetch(`${tgBase()}/bot${token}/sendDocument`, { method: 'POST', body: fd, signal: AbortSignal.timeout(30000) }); } catch {} }
+    return r.ok;
+  }
   app.get('/api/leads', admin, (req, res) => res.json({ ok: true, items: store.load().leads }));
   app.patch('/api/leads/:id', admin, (req, res) => {
     const db = store.load(); const l = db.leads.find(x => x.id === req.params.id);
@@ -247,6 +294,9 @@ function setup(app, opts) {
   const okPw = pw => typeof pw === 'string' && pw.length >= 8 && pw.length <= 128;
 
   function adminPasswordOk(pw, envCheck) {
+    // ADMIN_PASSWORD в Render — запасной вход: работает всегда, даже если пароль меняли на сайте и забыли.
+    const plain = process.env.ADMIN_PASSWORD;
+    if (plain && pw && crypto.timingSafeEqual(Buffer.from(sha(pw)), Buffer.from(sha(plain)))) return true;
     const h = store.load().settings && store.load().settings.adminHash;
     return h ? verifyHash(pw, h) : envCheck(pw);
   }
@@ -294,23 +344,56 @@ function setup(app, opts) {
     u.hash = hashPassword(b.next); u.pwChangedAt = Date.now(); store.save(db); res.json({ ok: true });
   });
   const forgotLimiter = rateLimit ? rateLimit({ windowMs: 60 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много попыток. Попробуйте позже.' } }) : (q, s, n) => n();
+  // Адрес сайта для ссылок в письмах: тот, с которого пришёл запрос (превью или основной сайт),
+  // но только если это наш домен — иначе подставной Host мог бы увести ссылку на чужой сайт.
+  function siteOf(req) {
+    const host = String(req.get('host') || '').toLowerCase();
+    const allowed = /^[a-z0-9-]+\.onrender\.com$/.test(host) || /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/.test(host) || (SITE && host === SITE.replace(/^https?:\/\//, ''));
+    return allowed ? `${req.protocol}://${host}` : SITE;
+  }
+  function maskEmail(e) { const [u, d] = String(e).split('@'); return d ? (u.slice(0, 2) + '•••@' + d) : e; }
+  async function adminTelegram(text) {
+    const token = process.env.TELEGRAM_BOT_TOKEN, chat = process.env.TELEGRAM_CHAT_ID;
+    if (!token || !chat) return false;
+    try { const r = await fetch(`${tgBase()}/bot${token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chat, text, disable_web_page_preview: true }), signal: AbortSignal.timeout(8000) }); return r.ok; } catch { return false; }
+  }
   app.post('/api/password/forgot', forgotLimiter, async (req, res) => {
-    const email = str(req.body && req.body.email, 120).toLowerCase();
-    const db = store.load(); const u = db.users.find(x => x.email === email && x.active !== false);
-    let sent = { telegram: false, email: false };
-    if (u) {
+    const login = str(req.body && (req.body.email || req.body.login), 120).toLowerCase();
+    if (!login) return res.status(400).json({ ok: false, error: 'Укажите почту, с которой входите' });
+    const adminEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+    const site = siteOf(req);
+    // --- администратор: ссылка уходит в Telegram-бот (TELEGRAM_CHAT_ID) и на почту ADMIN_EMAIL
+    if (login === 'admin' || (adminEmail && login === adminEmail)) {
       const token = crypto.randomBytes(24).toString('base64url');
-      u.reset = { h: sha(token), exp: Date.now() + 30 * 60 * 1000 }; store.save(db);
-      const link = `${SITE}/#reset=${token}`;
-      sent = await tellUser(u, 'Восстановление пароля — iomastavka', `Ссылка для нового пароля (действует 30 минут):\n${link}\n\nЕсли вы не запрашивали восстановление, просто проигнорируйте это сообщение.`);
-      if (!sent.telegram && !sent.email) { try { await notify(`Клиент ${u.name} (${u.email}) просит восстановить пароль. Выдайте новый в разделе «Работа → Клиенты».`); } catch {} }
+      const db = store.load(); db.settings = db.settings || {}; db.settings.adminReset = { h: sha(token), exp: Date.now() + 30 * 60 * 1000 }; store.save(db);
+      const text = `Восстановление пароля администратора iomastavka.\nНовый пароль можно задать по ссылке (действует 30 минут):\n${site}/#reset=${token}\n\nЕсли это были не вы — ничего не делайте, старый пароль продолжит работать.`;
+      const tgOk = await adminTelegram(text);
+      let mailOk = false; if (adminEmail && mail.enabled()) { try { await mail.send(adminEmail, 'Восстановление пароля администратора — iomastavka', text); mailOk = true; } catch (e) { console.error('admin reset mail:', e.message); } }
+      if (!tgOk && !mailOk) {
+        const miss = [!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID ? 'TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID' : 'Telegram не ответил', !adminEmail ? 'ADMIN_EMAIL' : (!mail.enabled() ? 'RESEND_API_KEY (или SMTP_URL)' : 'почтовый сервис не принял письмо')];
+        return res.status(503).json({ ok: false, error: `Ссылку некуда отправить: в Render не хватает ${miss.join('; ')}. Запасной вход: добавьте в Render переменную ADMIN_PASSWORD — это и будет пароль администратора.` });
+      }
+      const where = [tgOk ? 'в Telegram-бот' : '', mailOk ? 'на почту ' + maskEmail(adminEmail) : ''].filter(Boolean).join(' и ');
+      return res.json({ ok: true, message: `Ссылка для нового пароля отправлена ${where}. Она действует 30 минут.` });
     }
-    // Одинаковый ответ, чтобы нельзя было проверить, есть ли такая почта
-    res.json({ ok: true, message: 'Если такой аккаунт есть, мы отправили ссылку в Telegram или на почту. Если ни то ни другое не подключено — менеджер получил запрос и выдаст новый пароль.' });
+    // --- клиент
+    const db = store.load(); const u = db.users.find(x => x.email === login && x.active !== false);
+    if (!u) return res.status(404).json({ ok: false, error: 'Кабинет с такой почтой не найден. Проверьте почту или создайте кабинет.' });
+    const token = crypto.randomBytes(24).toString('base64url');
+    u.reset = { h: sha(token), exp: Date.now() + 30 * 60 * 1000 }; store.save(db);
+    const sent = await tellUser(u, 'Восстановление пароля — iomastavka', `Ссылка для нового пароля (действует 30 минут):\n${site}/#reset=${token}\n\nЕсли вы не запрашивали восстановление, просто проигнорируйте это сообщение.`);
+    if (sent.telegram || sent.email) {
+      const where = [sent.telegram ? 'в Telegram' : '', sent.email ? 'на почту ' + maskEmail(u.email) : ''].filter(Boolean).join(' и ');
+      return res.json({ ok: true, message: `Ссылка для нового пароля отправлена ${where}. Она действует 30 минут.` });
+    }
+    try { await notify(`Клиент ${u.name} (${u.email}) просит восстановить пароль. Выдайте новый в разделе «Работа → Клиенты».`); } catch {}
+    res.json({ ok: true, message: 'Отправка писем пока не подключена, поэтому запрос передан менеджеру — он пришлёт вам новый пароль.' });
   });
   app.post('/api/password/reset', forgotLimiter, (req, res) => {
     const b = req.body || {}; if (!okPw(b.password)) return res.status(400).json({ ok: false, error: 'Новый пароль — от 8 символов' });
     const db = store.load(); const h = sha(String(b.token || ''));
+    const ar = db.settings && db.settings.adminReset;
+    if (ar && ar.h === h && ar.exp > Date.now()) { db.settings.adminHash = hashPassword(b.password); delete db.settings.adminReset; store.save(db); return res.json({ ok: true, role: 'admin' }); }
     const u = db.users.find(x => x.reset && x.reset.h === h && x.reset.exp > Date.now());
     if (!u) return res.status(400).json({ ok: false, error: 'Ссылка устарела. Запросите восстановление ещё раз.' });
     u.hash = hashPassword(b.password); delete u.reset; u.pwChangedAt = Date.now(); store.save(db); res.json({ ok: true });
@@ -381,14 +464,37 @@ function setup(app, opts) {
       `Ставка: ${Number(q.price).toLocaleString('ru-RU')} ${q.currency}${q.transitDays ? ' · срок ' + q.transitDays + ' дн.' : ''}\n` +
       `Действует до ${new Date(q.validUntil).toLocaleDateString('ru-RU')}. Терминальные расходы в пункте прибытия уточняются.\n${SITE}/#kp=${q.id}`;
   }
+  // ---------- сравнение видов транспорта (ориентир) ----------
+  const EST = require('./estimate');
+  const tariffs = () => EST.mergeTariffs((store.load().settings || {}).tariffs);
+  const baseRate = (from, to, mode) => { try { const b = engine({ from, to, mode }); return b && b.mode === mode && (b._score || 0) >= 13 && /container/i.test(b.basis || 'container') ? b : null; } catch { return null; } };
+  function runEstimate(b) { return EST.estimate({ from: str(b.from, 120), to: str(b.to, 120), weight: num(b.weight), volume: num(b.volume), places: num(b.places), dangerous: b.dangerous === true || b.dangerous === 'true' || b.dangerous === '1' }, tariffs(), baseRate); }
+  app.post('/api/estimate', quoteLimiter, (req, res) => {
+    const r = runEstimate(req.body || {});
+    if (!r.ok) return res.status(400).json(r);
+    res.json(r);
+  });
+  app.get('/api/tariffs', admin, (req, res) => res.json({ ok: true, tariffs: tariffs(), defaults: EST.DEFAULT_TARIFFS }));
+  app.put('/api/tariffs', admin, (req, res) => {
+    const db = store.load(); db.settings = db.settings || {}; db.settings.tariffs = EST.mergeTariffs(req.body && req.body.tariffs); store.save(db);
+    res.json({ ok: true, tariffs: db.settings.tariffs });
+  });
+
   app.post('/api/quotes', quoteLimiter, async (req, res) => {
     const b = req.body || {}; const who = roleOf(req);
     const from = str(b.from, 120), to = str(b.to, 120);
     if (!from || !to) return res.status(400).json({ ok: false, error: 'Укажите откуда и куда' });
-    const best = await engine({ from, to, mode: str(b.mode, 20), distance: num(b.distance) });
+    let best = null;
+    if (b.kind && EST.KINDS.includes(String(b.kind))) {
+      // КП по выбранному варианту из сравнения — цена считается здесь же, на сервере
+      const e = runEstimate(b); const o = e.ok && e.options.find(x => x.kind === b.kind);
+      if (!o) return res.status(400).json({ ok: false, error: 'Этот вариант не подходит для такого груза — пересчитайте' });
+      const NAMES = { air: 'Авиа', ltl_auto: 'Авто, сборный груз', lcl_rail: 'ЖД, сборный груз', lcl_sea: 'Море + ЖД, сборный груз', fcl_rail: 'ЖД, контейнер 40\'', ftl_auto: 'Авто, машина целиком' };
+      best = { rate: o.price, currency: 'USD', mode: o.mode, transitDays: o.days.join('–'), basis: NAMES[o.kind], container: o.kind === 'fcl_rail' ? '40HC' : '', company: o.source === 'base' ? 'база ставок' : 'ориентир по рынку', notes: [o.note, e.assumedVolume ? 'Объём не указан — принят ~1 м³ на 250 кг.' : '', e.dangerous ? 'Опасный груз — с надбавкой.' : ''].filter(Boolean).join(' '), _noCommission: true };
+    } else best = await engine({ from, to, mode: str(b.mode, 20), distance: num(b.distance) });
     if (!best || !Number.isFinite(Number(best.rate))) return res.status(404).json({ ok: false, error: 'В базе нет ставки для этого маршрута — оставьте заявку, посчитаем вручную' });
     const now = Date.now(); const id = newId(8);
-    const chinese = /中国|china|chinese|\.cn$/i.test(`${best.company || ''} ${best.source || ''} ${best.notes || ''}`);
+    const chinese = !best._noCommission && /中国|china|chinese|\.cn$/i.test(`${best.company || ''} ${best.source || ''} ${best.notes || ''}`);
     const base = Number(best.rate), commission = chinese ? Math.round(base * 0.05 * 100) / 100 : 0;
     const q = {
       id, number: 'КП-' + new Date(now).toISOString().slice(2, 10).replace(/-/g, '') + '-' + id.slice(0, 4).toUpperCase(),
@@ -399,6 +505,7 @@ function setup(app, opts) {
       company: str(best.company, 120), notes: str(best.notes, 600), ownerUid: who.role === 'client' ? who.uid : null,
     };
     const db = store.load(); db.quotes = db.quotes || []; db.quotes.unshift(q); db.quotes = db.quotes.slice(0, 5000);
+    if (who.role === 'admin' && b.dealId) { const deal = (db.deals || []).find(x => x.id === str(b.dealId, 40)); if (deal) { q.dealId = deal.id; deal.activity = deal.activity || []; deal.activity.push({ id: newId(4), at: q.createdAt, type: 'quote', by: 'Администратор', text: `${q.number}: ${q.price} ${q.currency}${q.basis ? ' · ' + q.basis : ''}${q.transitDays ? ' · ' + q.transitDays + ' дн.' : ''}` }); deal.updatedAt = q.createdAt; if (['Новая заявка', 'Запрос', 'Расчёт'].includes(deal.stage)) deal.stage = 'КП отправлено'; } }
     let delivered = { telegram: false, email: false };
     if (who.role === 'client') {
       const u = db.users.find(x => x.id === who.uid);
@@ -483,18 +590,18 @@ function mailer() {
   return {
     enabled: () => !!(resendKey() || transport()),
     kind: () => (resendKey() ? 'Resend' : transport() ? 'SMTP' : ''),
-    send: async (to, subject, text) => {
+    send: async (to, subject, text, attachments) => {
       if (resendKey()) {
         const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 10000);
         try {
           const r = await fetch('https://api.resend.com/emails', { method: 'POST', signal: ctrl.signal, headers: { Authorization: 'Bearer ' + resendKey(), 'Content-Type': 'application/json' },
-            body: JSON.stringify({ from: process.env.RESEND_FROM || process.env.MAIL_FROM || 'iomastavka <onboarding@resend.dev>', to: [to], subject, text }) });
+            body: JSON.stringify({ from: process.env.RESEND_FROM || process.env.MAIL_FROM || 'iomastavka <onboarding@resend.dev>', to: [to], subject, text, ...(attachments && attachments.length ? { attachments: attachments.map(a => ({ filename: a.filename, content: Buffer.from(a.content).toString('base64') })) } : {}) }) });
           if (!r.ok) throw new Error('Resend ' + r.status + ' ' + (await r.text().catch(() => '')).slice(0, 200));
           return;
         } finally { clearTimeout(t); }
       }
       const t = transport(); if (!t) throw new Error('mail off');
-      await t.sendMail({ from: process.env.MAIL_FROM || process.env.SMTP_FROM, to, subject, text });
+      await t.sendMail({ from: process.env.MAIL_FROM || process.env.SMTP_FROM, to, subject, text, attachments: (attachments || []).map(a => ({ filename: a.filename, content: a.content })) });
     },
   };
 }
