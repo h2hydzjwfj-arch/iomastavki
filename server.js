@@ -129,6 +129,7 @@ app.get('/', (req,res) => { res.set('Cache-Control', 'no-cache'); res.sendFile(p
 app.get('/app.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'app.js'), { cacheControl: false }); });
 app.get('/styles.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'styles.css'), { cacheControl: false }); });
 app.get('/theme-v3.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.js'), { cacheControl: false }); });
+app.get('/palettes.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'palettes.css'), { cacheControl: false }); });
 app.get('/theme-v3.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.css'), { cacheControl: false }); });
 const SITE_URL = process.env.SITE_URL || 'https://iomastavki.onrender.com';
 app.get('/robots.txt', (req,res) => { res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${SITE_URL}/sitemap.xml\n`); });

@@ -1,0 +1,38 @@
+/* IOMASTAVKA — palette presets. Activate with <body class="pal-…">. */
+body[class*="pal-"]{--v-bd:rgba(255,255,255,.08);--v-shadow:0 10px 30px rgba(0,0,0,.35);--v-shadow-h:0 22px 50px rgba(0,0,0,.5)}
+/* 1. Ночной синий + неоновый оранжевый */
+body.pal-neon{--v-bg:#081029;--v-card:#0F1A40;--v-ink:#EEF2FF;--v-mut:#9AA6D1;--v-acc:#3D7BFF;--v-accd:#1A3BB8;--v-mint:#132259;--v-field:#16245E;--v-amber:#FF6A00;--v-amberd:#FF6A00;--v-hero:linear-gradient(135deg,#2556FF,#0E2A8F);--v-glow:rgba(255,106,0,.55);--v-route:#8FB4FF}
+/* 2. Бургунди + неоновый жёлтый */
+body.pal-burgundy{--v-bg:#12060B;--v-card:#1F0A13;--v-ink:#FFF3F5;--v-mut:#C79AA8;--v-acc:#C2185B;--v-accd:#7A1233;--v-mint:#2A0E1A;--v-field:#2E1020;--v-amber:#E6FF2E;--v-amberd:#E6FF2E;--v-hero:linear-gradient(135deg,#8C1538,#3E0A1C);--v-glow:rgba(230,255,46,.45);--v-route:#FFB3C7}
+/* 3. Графит + фиолет + неоновый лайм */
+body.pal-cyber{--v-bg:#0C0D10;--v-card:#16181D;--v-ink:#F2F5F0;--v-mut:#8E949C;--v-acc:#7C5CFF;--v-accd:#4B2FD6;--v-mint:#1C1E27;--v-field:#1F2129;--v-amber:#C8FF2E;--v-amberd:#C8FF2E;--v-hero:linear-gradient(135deg,#7C5CFF,#3A1FB8);--v-glow:rgba(200,255,46,.45);--v-route:#C9B8FF}
+/* 4. Светлая: кобальт + неоновый коралл */
+body.pal-cobalt{--v-bg:#F2F4FB;--v-card:#FFFFFF;--v-ink:#0E1530;--v-mut:#5B6584;--v-bd:rgba(14,21,48,.08);--v-acc:#1E3FFF;--v-accd:#0B23B8;--v-mint:#E7EBFF;--v-field:#EEF1FB;--v-amber:#FF5A1F;--v-amberd:#FF5A1F;--v-hero:linear-gradient(135deg,#1E3FFF,#0B23B8);--v-glow:rgba(255,90,31,.45);--v-route:#9FB2FF;--v-shadow:0 10px 30px rgba(14,21,48,.08);--v-shadow-h:0 22px 46px rgba(14,21,48,.16)}
+
+/* apply: hero surfaces, neon accents, glow */
+html:root body[class*="pal-"] .v3-hero,html:root body[class*="pal-"] .v3c-hero,html:root body[class*="pal-"] .v3c-mapbox,html:root body[class*="pal-"] .v3-drop,html:root body[class*="pal-"] .customs-shell,html:root body[class*="pal-"] .news-item:first-child{background:var(--v-hero)!important}
+html:root body[class*="pal-"] .v3-hero .hi{background:transparent}
+html:root body[class*="pal-"] .v3-cta,html:root body[class*="pal-"] .calculate,html:root body[class*="pal-"] .assistant-save,html:root body[class*="pal-"] .v3-grid .go{background:var(--v-amber)!important;color:#140A02!important;box-shadow:0 0 0 1px var(--v-amber),0 10px 34px var(--v-glow)!important}
+html:root body[class*="pal-"] .v3-cta small,html:root body[class*="pal-"] .v3-cta b,html:root body[class*="pal-"] .v3-cta .plane{color:#140A02!important}
+html:root body[class*="pal-"] .v3-grid .tag.imp,html:root body[class*="pal-"] .news-urgent-badge{background:var(--v-amber)!important;color:#140A02!important;box-shadow:0 0 18px var(--v-glow)}
+html:root body[class*="pal-"] .v3-pill{background:var(--v-acc);box-shadow:0 0 22px color-mix(in srgb,var(--v-acc) 60%,transparent)}
+html:root body[class*="pal-"] .v3routepath{stroke:var(--v-route)}
+html:root body[class*="pal-"] .comet,html:root body[class*="pal-"] .v3-map circle[fill="#E8A33D"],html:root body[class*="pal-"] .v3c-mapbox circle[fill="#E8A33D"]{fill:var(--v-amber)}
+html:root body[class*="pal-"] .comet{filter:drop-shadow(0 0 8px var(--v-amber))}
+html:root body[class*="pal-"] .v3c-ring .rf{stroke:var(--v-amber);filter:drop-shadow(0 0 6px var(--v-glow))}
+html:root body[class*="pal-"] .v3-grid .chip.on,html:root body[class*="pal-"] .v3c-chips .chip.on{background:var(--v-amber);color:#140A02}
+html:root body[class*="pal-"] .v3c-chips .chip.on{box-shadow:0 0 16px var(--v-glow)}
+html:root body[class*="pal-"] .v3-cap .lang.active,html:root body[class*="pal-"] .logout{background-color:var(--v-ink)!important;color:var(--v-bg)!important}
+@media(max-width:700px){html:root body[class*="pal-"] .logout{background-image:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23000%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3M10 17l5-5-5-5M15 12H4%27/%3E%3C/svg%3E")!important}}
+html:root body[class*="pal-"] .v3-wx,html:root body[class*="pal-"] .v3-ai,html:root body[class*="pal-"] .v3-imp,html:root body[class*="pal-"] .v3-tn{background:var(--v-mint)!important}
+html:root body[class*="pal-"] .v3cl{background:color-mix(in srgb,var(--v-ink) 12%,transparent)}
+html:root body[class*="pal-"] .v3-grid .tag{background:color-mix(in srgb,var(--v-ink) 8%,transparent);color:var(--v-ink)}
+html:root body[class*="pal-"] .v3-badges .pop{background:var(--v-card);color:var(--v-amber)}
+html:root body[class*="pal-"] .v3-cur .spk,html:root body[class*="pal-"] .v3-wave i{stroke:var(--v-amber)}
+html:root body[class*="pal-"] .v3-wave i{background:var(--v-amber)}
+html:root body[class*="pal-"] .v3-orbbig,html:root body[class*="pal-"] .v3-orb{background:radial-gradient(circle at 30% 30%,#fff,var(--v-amber) 28%,var(--v-acc) 70%,var(--v-accd))!important;box-shadow:0 0 40px var(--v-glow)!important}
+html:root body[class*="pal-"] .weather-scene .sun{display:none!important}
+html:root body[class*="pal-"] .weather-scene:after{background:radial-gradient(50% 40% at 85% 0%,color-mix(in srgb,var(--v-acc) 22%,transparent),transparent 70%),radial-gradient(40% 35% at 5% 100%,var(--v-glow),transparent 70%)!important;opacity:.6}
+html:root body[class*="pal-"] .v3-ai>.ic,html:root body[class*="pal-"] .v3-imp>.ic{color:var(--v-amber)!important}
+html:root body[class*="pal-"] .v3c-link,html:root body[class*="pal-"] .v3c-more summary{color:var(--v-amber)}
+body.pal-cobalt .v3c-link,body.pal-cobalt .v3c-more summary{color:var(--v-acc)}
