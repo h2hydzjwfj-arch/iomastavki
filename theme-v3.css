@@ -868,3 +868,4 @@ html:root body .view-layer .v3p-kp header small{color:var(--v-mut)!important}
 .v3p-test{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 html:root body .v3p-test input{flex:1;min-width:220px;height:40px!important;min-height:0!important;border-radius:12px!important;padding:0 12px!important;background:var(--v-field)!important;border:0!important;font-size:14px!important;color:var(--v-ink)!important}
 .v3p-testout p{margin:6px 0;font-size:14px;font-weight:600}
+html:root body .view-layer .v3p-testout p.v3p-on{color:var(--v-acc)!important}html:root body .view-layer .v3p-testout p.v3p-off{color:#C8452C!important}
