@@ -610,6 +610,8 @@ app.use((req,res) => res.status(404).type('html').send('<!doctype html><meta cha
       await cloud.ensureBucket();
       await cloud.syncFiles(DATA_DIR, ['rates.json', 'agents.json']);
       console.log('Хранилище: Supabase (' + cloud.bucket + ')');
+      // Бесплатный Supabase ставит проект на паузу после недели тишины — раз в 12 часов обращаемся к нему.
+      setInterval(() => { cloud.get('state/portal.json').catch(() => {}); }, 12 * 60 * 60 * 1000).unref();
     } else console.warn('Хранилище: локальные файлы. На бесплатном Render они стираются при перезапуске — подключите Supabase.');
     await portal.store.init();
   } catch (e) { console.error('Ошибка подключения хранилища:', e.message); }
