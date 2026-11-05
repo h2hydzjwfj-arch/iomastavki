@@ -406,7 +406,9 @@ app.post('/api/news/article/audio', async(req,res)=>{
 app.post('/api/login', loginLimiter, (req,res) => {
   const login = String(req.body?.login || '').trim().toLowerCase(), password = String(req.body?.password || '');
   let payload = null;
-  if (!login || login === 'admin') { if (portal.adminPasswordOk(password)) payload = { role: 'admin', name: 'Администратор' }; }
+  // Администратор входит по логину «admin» или по почте из ADMIN_EMAIL (как в прежней версии сайта).
+  const adminEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  if (!login || login === 'admin' || (adminEmail && login === adminEmail)) { if (portal.adminPasswordOk(password)) payload = { role: 'admin', name: 'Администратор' }; }
   else { const u = portal.findClient(login, password); if (u) payload = { role: 'client', uid: u.id, name: u.name }; }
   if (!payload) return res.status(401).json({ ok:false, error:'Неверный логин или пароль' });
   // «Запомнить меня»: клиент — 30 дней, администратор — 7 дней; иначе 8 часов.
