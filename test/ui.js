@@ -28,7 +28,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
     await step('Гость: расчёт ставки', async () => {
       await p.click('.v3-nav [data-open-view=calculator]');
       await p.fill('#fromCity', 'Shanghai'); await p.fill('#toCity', 'Москва'); await p.fill('#weight', '1200');
-      await p.click('.v3c-params .v3c-title'); await p.click('.v3c-chips [data-m=rail]'); await p.click('#calculate');
+      await p.waitForTimeout(1200); await p.click('.v3c-params .v3c-title'); await p.click('.v3c-chips [data-m=rail]'); await p.click('#calculate');
       await p.waitForSelector('#result .result-price:not(.muted)', { timeout: 8000 }); await shot(p, '02_guest_calc');
     });
     await step('Гость: при закрытии несохранённого расчёта сайт спрашивает «сохранить или выйти»', async () => {
@@ -104,7 +104,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
     await step('Клиент: «Мои грузы»', async () => { await C.p.click('.v3-nav [data-open-view=cabinetView]'); await C.p.waitForSelector('#v3cabList .v3p-ship'); await shot(C.p, '09_client_cabinet'); });
     await step('Клиент: расчёт сохраняется как КП автоматически', async () => {
       await C.p.evaluate(() => window.__iomaOpenView('calculator')); await C.p.fill('#fromCity', 'Shanghai'); await C.p.fill('#toCity', 'Москва'); await C.p.fill('#weight', '300');
-      await C.p.click('.v3c-params .v3c-title'); await C.p.click('#calculate'); await C.p.waitForSelector('.v3p-saved', { timeout: 8000 }); await shot(C.p, '10_client_calc_saved');
+      await C.p.waitForTimeout(1200); await C.p.click('.v3c-params .v3c-title'); await C.p.click('#calculate'); await C.p.waitForSelector('.v3p-saved', { timeout: 8000 }); await shot(C.p, '10_client_calc_saved');
       await C.p.evaluate(() => window.__v3open('cabinetView')); await C.p.click('#v3cabTabs [data-ctab=quotes]'); await C.p.waitForSelector('#v3cabQuotes .v3p-qrow'); await shot(C.p, '11_client_quotes');
     });
     await step('Клиент: смена пароля в аккаунте', async () => {

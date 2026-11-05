@@ -10,7 +10,7 @@
   function dt(v) { return v ? new Date(v).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''; }
   function age(v) { var n = Math.max(0, Math.floor((Date.now() - new Date(v).getTime()) / 864e5)); return n; }
   function fmt(n) { return n == null || n === '' ? '' : Number(n).toLocaleString('ru-RU'); }
-  var META = null, filt = { q: '', funnel: '', stage: '', open: '1' }, cur = null;
+  var META = null, filt = { q: '', funnel: '', stage: '', open: '1' }, cur = null, gen = 0, searchT = null;
   var STC = { 'Новая заявка': 'n', 'Запрос': 'q', 'Расчёт': 'q', 'Ставка отправлена': 'r', 'КП отправлено': 'r', 'Клиент на рассмотрении': 'w', 'В работе': 'g', 'Груз в пути': 'g', 'Успешно': 'ok', 'Закрыта': 'x' };
 
   function meta() { return META ? Promise.resolve(META) : api('/api/deals/meta').then(function (m) { META = m; return m; }); }
@@ -28,7 +28,7 @@
       $('#crmStage').innerHTML += m.stages.map(function (s) { return '<option>' + esc(s) + '</option>'; }).join('');
       $('#crmFunnels').innerHTML = ['<button type="button" class="chip on" data-f="">Все сделки</button>'].concat(m.funnels.map(function (f) { return '<button type="button" class="chip" data-f="' + esc(f) + '">' + esc(f) + '</button>'; })).join('');
     });
-    var t; $('#crmQ').addEventListener('input', function () { clearTimeout(t); t = setTimeout(function () { filt.q = $('#crmQ').value; loadDeals(); }, 250); });
+    $('#crmQ').addEventListener('input', function () { clearTimeout(searchT); searchT = setTimeout(function () { filt.q = $('#crmQ').value; loadDeals(); }, 250); });
     $('#crmStage').addEventListener('change', function () { filt.stage = this.value; loadDeals(); });
     $('#crmOpen').addEventListener('change', function () { filt.open = this.checked ? '1' : ''; loadDeals(); });
     b.addEventListener('click', function (e) { var c = e.target.closest('[data-f]'); if (!c) return; filt.funnel = c.dataset.f; $$('#crmFunnels .chip').forEach(function (x) { x.classList.toggle('on', x === c); }); loadDeals(); });
@@ -37,10 +37,10 @@
       api('/api/deals/import', { method: 'POST', body: fd }).then(function (r) { toast('Импортировано сделок: ' + r.added + (r.skipped ? ', пропущено: ' + r.skipped : '')); META = null; loadDeals(); }).catch(function (x) { toast(x.message); }); });
   }
   function loadDeals() {
-    bar(); var box = $('#crmList'); if (!box) return; $('#crmDeal').hidden = true; box.hidden = false; $('#crmBar').hidden = false;
+    bar(); var box = $('#crmList'); if (!box) return; var my = ++gen; $('#crmDeal').hidden = true; box.hidden = false; $('#crmBar').hidden = false;
     var q = Object.keys(filt).filter(function (k) { return filt[k]; }).map(function (k) { return k + '=' + encodeURIComponent(filt[k]); }).join('&');
     api('/api/deals' + (q ? '?' + q : '')).then(function (r) {
-      var items = r.items;
+      if (my !== gen) return; var items = r.items;
       box.innerHTML = '<div class="crm-h"><b>Сделки (' + items.length + ')</b></div>' + (items.length ? '<div class="crm-table" role="table"><div class="crm-tr crm-th" role="row"><span></span><span>Название</span><span>Источник</span><span>Воронка</span><span>Контакт</span><span>Компания</span><span>Этап</span><span>Перевозка</span><span>Создана</span></div>'
         + items.map(function (x) { var a = age(x.updatedAt || x.createdAt), m = META && META.modes || {};
           return '<button type="button" class="crm-tr" role="row" data-deal="' + esc(x.id) + '"><span class="crm-age a' + (a <= 5 ? 1 : a <= 20 ? 2 : 3) + '">' + a + 'дн</span><span class="crm-t"><b>' + esc(x.title) + '</b><small>№ ' + esc(x.number || '') + (x.files ? ' · 📎 ' + x.files : '') + '</small></span><span>' + (x.source ? '<em class="crm-src">' + esc(x.source) + '</em>' : '') + '</span><span class="crm-mut">' + esc(x.funnel || '') + '</span><span>' + esc(x.contactName || '—') + '</span><span class="crm-mut">' + esc(x.company || x.contactName || '') + '</span><span><em class="crm-st s-' + (STC[x.stage] || 'q') + '">' + esc(x.stage) + '</em></span><span>' + esc(m[x.mode] || '—') + '</span><span class="crm-mut">' + d(x.createdAt) + '</span></button>'; }).join('') + '</div>'
@@ -65,9 +65,10 @@
       return h + '<div class="crm-ev"><div class="crm-evh"><span>' + (ACT[a.type] || '📝') + '</span><b>' + ({ lead: 'Заявка', note: 'Примечание', call: 'Звонок', mail: 'Письмо', rate: 'Ставка', file: 'Файл', quote: 'КП' }[a.type] || 'Запись') + '</b><small>' + dt(a.at).split(', ')[1] + ' · ' + esc(a.by || '') + '</small></div><div class="crm-evt">' + esc(a.text || '') + '</div></div>'; }).join('') || '<p class="v3p-muted">Пока пусто.</p>';
   }
   function openDeal(id) {
+    clearTimeout(searchT); var my = ++gen;
     meta().then(function (m) {
       var p = id ? api('/api/deals/' + encodeURIComponent(id)) : Promise.resolve({ item: { stage: 'Новая заявка', funnel: 'Входящие', source: 'Звонок', activity: [], files: [] }, quotes: [] });
-      return p.then(function (r) { cur = r.item; render(cur, r.quotes || [], m); });
+      return p.then(function (r) { if (my !== gen) return; cur = r.item; render(cur, r.quotes || [], m); });
     }).catch(function (x) { toast(x.message); });
   }
   function render(x, quotes, m) {

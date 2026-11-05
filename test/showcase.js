@@ -47,7 +47,7 @@ const tgServer = http.createServer((req, res) => {
     await step('Гость считает ставку Шанхай → Москва', async () => {
       await G.p.click('.v3-nav [data-open-view=calculator]'); await slow(G.p);
       await G.p.fill('#fromCity', 'Shanghai'); await G.p.fill('#toCity', 'Москва'); await G.p.fill('#weight', '1200');
-      await G.p.click('.v3c-params .v3c-title'); await G.p.click('.v3c-chips [data-m=rail]'); await G.p.click('#calculate');
+      await G.p.waitForTimeout(1200); await G.p.click('.v3c-params .v3c-title'); await G.p.click('.v3c-chips [data-m=rail]'); await G.p.click('#calculate');
       await G.p.waitForSelector('#result .result-price:not(.muted)'); await slow(G.p); await shot(G.p, 'guest_rate');
     });
     let kpLink = '';
@@ -77,8 +77,8 @@ const tgServer = http.createServer((req, res) => {
       await A.p.waitForSelector('#v3testOut .v3p-on'); await slow(A.p); await shot(A.p, 'admin_test_notify');
       await waitMsg(/Проверка iomastavka/, ADMIN_CHAT);
     });
-    await step('Заявка гостя видна в разделе «Работа»', async () => {
-      await A.p.click('.v3-nav [data-open-view=workView]'); await A.p.waitForSelector('#v3leadsList .v3p-lead:has-text("Сергей Иванов")'); await slow(A.p); await shot(A.p, 'admin_leads');
+    await step('Заявка гостя стала сделкой в разделе «Работа»', async () => {
+      await A.p.click('.v3-nav [data-open-view=workView]'); await A.p.waitForSelector('#crmList [data-deal]:has-text("Сергей Иванов")'); await slow(A.p); await shot(A.p, 'admin_leads');
     });
     await step('Вы создаёте клиенту доступ', async () => {
       await A.p.click('#workView [data-tab=clients]'); await A.p.click('.crm-access summary'); await A.p.fill('#v3clientForm [name=email]', clientEmail); await A.p.fill('#v3clientForm [name=name]', 'Анна Петрова');
@@ -113,7 +113,7 @@ const tgServer = http.createServer((req, res) => {
     await step('Клиент видит свой груз', async () => { await C.p.click('.v3-nav [data-open-view=cabinetView]'); await C.p.waitForSelector('#v3cabList .v3p-ship'); await slow(C.p); await shot(C.p, 'client_cabinet'); });
     await step('Клиент считает ставку → КП сохраняется и приходит ему в Telegram', async () => {
       await C.p.click('.v3-nav [data-open-view=calculator]'); await C.p.fill('#fromCity', 'Shanghai'); await C.p.fill('#toCity', 'Москва'); await C.p.fill('#weight', '800');
-      await C.p.click('.v3c-params .v3c-title'); await C.p.click('#calculate'); await C.p.waitForSelector('.v3p-saved:has-text("Telegram")'); await slow(C.p); await shot(C.p, 'client_kp_saved');
+      await C.p.waitForTimeout(1200); await C.p.click('.v3c-params .v3c-title'); await C.p.click('#calculate'); await C.p.waitForSelector('.v3p-saved:has-text("Telegram")'); await slow(C.p); await shot(C.p, 'client_kp_saved');
       await waitMsg(/КП-\d{6}-[A-F0-9]{4}[\s\S]*Ставка/, CLIENT_CHAT); await waitMsg(/посчитал КП/, ADMIN_CHAT);
       await C.p.evaluate(() => window.__v3open('cabinetView')); await C.p.click('#v3cabTabs [data-ctab=quotes]'); await C.p.waitForSelector('#v3cabQuotes .v3p-qrow'); await slow(C.p); await shot(C.p, 'client_my_kp');
     });
