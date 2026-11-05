@@ -294,3 +294,139 @@ html:root body .currency-item b{color:var(--v-accd)!important}html:root body.man
   .v3-ai>span:nth-child(2){max-width:100%}.v3-orbbig{width:90px;height:90px;right:-24px;bottom:-24px;opacity:.9}
   .v3-cur .spk{width:40px}.v3-cur .rt b{font-size:16px}
 }
+
+/* =====================================================================
+   v3 INNER WINDOWS — same bento language as the home
+   ===================================================================== */
+html:root body .view-layer{padding:10px 32px 24px;overflow:auto}
+html:root body .view-layer.open{display:block}
+.v3-head{margin:0 0 14px;padding-left:46px}
+.v3-head h1{margin:2px 0 4px!important;font-size:34px!important;letter-spacing:-.04em;text-align:left!important}
+.v3-head p{margin:0;font-size:14px}
+html:root body .v3-eyebrow{display:inline-block!important;color:var(--v-acc)!important}
+
+/* generic card used inside windows */
+.view-layer .k{position:relative;border-radius:28px;padding:22px;background:var(--v-card);border:1px solid var(--v-bd);box-shadow:var(--v-shadow);color:var(--v-ink)}
+.view-layer .tag{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.08em;padding:6px 11px;border-radius:999px;background:var(--v-bg);color:var(--v-accd);width:max-content}
+body.manual-dark .view-layer .tag{background:rgba(255,255,255,.07);color:#8FD3B0}
+
+/* ---------- CALCULATOR ---------- */
+html:root body .calculator-card.v3-calc{position:relative!important;left:auto!important;top:auto!important;transform:none!important;width:min(1180px,100%)!important;max-height:none!important;margin:0 auto;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;overflow:visible!important}
+.v3-calc .close-button{left:0;top:6px}
+.v3-calc-grid{display:grid;grid-template-columns:1.15fr 1fr;grid-template-areas:"route res" "cargo res" "cur cur";gap:14px;align-items:start}
+.v3c-route{grid-area:route;display:flex;flex-direction:column;gap:14px}
+.v3c-cargo{grid-area:cargo;display:flex;flex-direction:column;gap:12px}
+.v3c-res{grid-area:res;position:sticky;top:0;padding:0!important;background:var(--v-accd)!important;border-color:transparent!important;min-height:520px;overflow:hidden}
+body.manual-dark .v3c-res{background:#1F4D3B!important}
+.v3c-cur{grid-area:cur;padding:14px 22px!important}
+.v3c-resin{display:flex;flex-direction:column;gap:14px;padding:22px;min-height:100%;color:#fff;height:100%}
+.v3c-empty{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:8px;color:#fff;min-height:260px}
+.v3c-empty .ic{width:44px;height:44px;stroke:var(--v-amber);animation:v3fl 4s ease-in-out infinite}
+.v3c-empty b{font-size:20px;color:#fff}.v3c-empty small{color:rgba(255,255,255,.75)!important;max-width:260px}
+html:root body .v3c-res #result:not(.hidden)~.v3c-empty,html:root body .v3c-res #recommendation:not(.hidden)~.v3c-empty{display:none}
+html:root body .v3c-res .result,html:root body .v3c-res .recommendation{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;color:#fff!important;max-height:none;overflow:visible}
+.v3c-res .result-price-window{display:flex;flex-direction:column;gap:12px}
+.v3c-res .result-kicker{display:inline-flex;width:max-content;font-size:11px;font-weight:700;letter-spacing:.08em;padding:6px 11px;border-radius:999px;background:rgba(255,255,255,.16);color:#fff!important}
+html:root body .v3c-res .result-price{font-size:56px!important;font-weight:800;letter-spacing:-.05em;line-height:1;color:#fff!important;font-variant-numeric:tabular-nums}
+html:root body .v3c-res .result-price span{font-size:20px;color:var(--v-amber);margin-left:4px}
+.v3c-res .result-meta{color:rgba(255,255,255,.8)!important;font-size:14px}.v3c-res .result-meta b{color:#fff}
+html:root body .v3c-res .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+html:root body .v3c-res .result-grid span{background:rgba(255,255,255,.13)!important;border:0!important;color:rgba(255,255,255,.8)!important;border-radius:14px;padding:10px 14px;font-size:12px;font-weight:600}
+html:root body .v3c-res .result-grid b{display:block;font-size:16px;color:#fff!important;margin-top:2px}
+.v3c-res .commission-note,.v3c-res .terminal-warning,.v3c-res .result-notes{background:rgba(232,163,61,.18)!important;color:#FFE3B0!important;border:0!important;border-radius:14px;padding:10px 14px;font-size:12.5px;line-height:1.4}
+.v3c-res .result-notes{background:rgba(255,255,255,.1)!important;color:rgba(255,255,255,.85)!important}
+.v3c-res .result-price.muted{color:rgba(255,255,255,.6)!important}
+.v3c-res p{color:rgba(255,255,255,.85)!important}
+.v3c-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:auto}
+html:root body .v3c-attach{width:auto!important;height:auto!important;padding:12px 16px!important;border-radius:14px!important;font-size:13px!important;background:rgba(255,255,255,.14)!important;color:#fff!important}
+html:root body .v3c-attach:hover{background:rgba(255,255,255,.24)!important}
+.v3c-up{font-size:12px;color:rgba(255,255,255,.8)}
+html:root body .v3c-actions .calculate{flex:1 1 100%;margin:0!important;height:54px;font-size:16px}
+/* form pieces inside cards */
+.v3-calc .route{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end;margin:0!important}
+.v3-calc .grid{margin:0!important}.v3-calc .section-title{display:none}
+.v3-calc .grid.four,.v3-calc .grid.centered-three{display:grid;grid-template-columns:1fr;gap:10px}
+.v3-calc .hover-select{width:100%}.v3-calc .fake-select{width:100%}
+.v3-calc .auto-calc-strip{margin:0!important}
+html:root body .v3-calc .dimensions{margin:0!important}
+
+/* ---------- ASSISTANT ---------- */
+html:root body .assistant-shell{width:min(980px,94vw)!important;border-radius:28px!important}
+html:root body .assistant-head h2{font-size:30px!important;letter-spacing:-.04em;text-align:left}
+html:root body .assistant-head .eyebrow{display:inline-block!important}
+html:root body .voice-orb-stage{background:var(--v-mint);border-radius:22px;margin:10px 0}
+.v3-quick{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.v3-quick button,.v3-filters .chip{border:0;border-radius:999px;padding:9px 15px;font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;background:var(--v-mint);color:var(--v-accd);transition:transform .2s,background .3s,color .3s}
+body.manual-dark .v3-quick button,body.manual-dark .v3-filters .chip{color:#8FD3B0}
+.v3-quick button:hover,.v3-filters .chip:hover{transform:translateY(-2px);background:var(--v-acc);color:#fff}
+.v3-filters .chip.on{background:var(--v-acc);color:#fff}
+html:root body .chat-messages>*{border-radius:18px;padding:12px 16px;font-size:14px;line-height:1.45;max-width:80%;animation:vUp .4s var(--v-ease) both}
+html:root body .chat-compose{background:var(--v-field)!important;border-radius:22px!important;border:0!important}
+html:root body .chat-compose textarea{background:transparent!important}
+
+/* ---------- NEWS ---------- */
+html:root body .news-shell{width:min(1180px,94vw)!important;padding:30px!important}
+.v3-filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+html:root body .news-list{display:grid!important;grid-template-columns:repeat(3,1fr);gap:14px;overflow:visible!important;max-height:none!important}
+html:root body .news-item{flex-direction:column!important;align-items:flex-start!important;gap:12px!important;padding:18px!important;border-radius:24px!important;min-height:150px}
+html:root body .news-item .news-thumb{width:100%!important;height:84px!important;border-radius:16px!important}
+html:root body .news-item:first-child{grid-column:span 2;grid-row:span 2;background:var(--v-accd)!important;border-color:transparent!important}
+html:root body .news-item:first-child *{color:#fff!important}
+html:root body .news-item:first-child strong{font-size:26px;line-height:1.2;letter-spacing:-.02em}
+html:root body .news-item:first-child .news-thumb{height:150px!important;background:rgba(255,255,255,.12)!important}
+html:root body .news-item.news-urgent{border:2px solid var(--v-amber)!important}
+html:root body .news-item.v3off{display:none!important}
+
+/* ---------- FORWARDERS ---------- */
+html:root body .directory-panel{width:min(1180px,94vw)!important}
+.v3-drop{display:flex;align-items:center;gap:14px;width:100%;margin:0 0 16px;padding:18px 22px;border:2px dashed rgba(255,255,255,.55);border-radius:24px;background:var(--v-accd);color:#fff;font-family:inherit;text-align:left;cursor:pointer;transition:transform .2s,box-shadow .3s;position:relative}
+body.manual-dark .v3-drop{background:#1F4D3B}
+.v3-drop:hover{transform:translateY(-2px);box-shadow:var(--v-shadow-h)}
+.v3-drop .ic{width:34px;height:34px;fill:none;stroke:var(--v-amber);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;animation:v3bob 2.2s ease-in-out infinite}
+.v3-drop b{font-size:18px;display:block}.v3-drop small{display:block;opacity:.8;font-size:13px;margin-top:2px}
+@keyframes v3bob{50%{transform:translateY(-6px)}}
+html:root body .directory-table{border-collapse:separate;border-spacing:0 6px}
+html:root body .directory-table td{background:var(--v-card)!important;border:0!important;border-top:1px solid var(--v-bd)!important;border-bottom:1px solid var(--v-bd)!important;padding:12px 10px}
+html:root body .directory-table td:first-child{border-left:1px solid var(--v-bd)!important;border-radius:16px 0 0 16px;font-weight:700}
+html:root body .directory-table td:last-child{border-right:1px solid var(--v-bd)!important;border-radius:0 16px 16px 0}
+html:root body .directory-table th{background:transparent!important;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+
+/* ---------- CUSTOMS (TN VED) ---------- */
+html:root body .customs-shell{width:min(980px,94vw)!important;background:var(--v-accd)!important;color:#fff!important;border-color:transparent!important}
+body.manual-dark .customs-shell{background:#1F4D3B!important}
+html:root body .customs-shell h2,html:root body .customs-shell p,html:root body .customs-shell .eyebrow{color:#fff!important}
+html:root body .customs-shell .eyebrow{color:#9CE8CB!important}
+html:root body .customs-shell input{background:rgba(255,255,255,.14)!important;color:#fff!important;font:800 26px Inter,system-ui,sans-serif!important;letter-spacing:.04em;font-variant-numeric:tabular-nums;height:62px}
+html:root body .customs-shell input::placeholder{color:rgba(255,255,255,.55)!important;font-weight:500;font-size:16px}
+html:root body .customs-result,html:root body .customs-result-grid>*{background:rgba(255,255,255,.12)!important;color:#fff!important;border:0!important;border-radius:18px}
+html:root body .customs-shell .customs-info-label{color:rgba(255,255,255,.75)!important}html:root body .customs-shell .customs-info-value{color:#fff!important}
+html:root body .customs-status{color:rgba(255,255,255,.85)!important}
+
+/* article */
+html:root body .article-shell{width:min(860px,94vw)!important}
+
+/* responsive */
+@media(max-width:980px){.v3-calc-grid{grid-template-columns:1fr;grid-template-areas:"route" "cargo" "res" "cur"}.v3c-res{position:relative;min-height:360px}html:root body .news-list{grid-template-columns:1fr 1fr}}
+@media(max-width:650px){html:root body .view-layer{padding:8px 12px 20px}.v3-head{padding-left:44px}.v3-head h1{font-size:26px!important}.v3-calc .route{grid-template-columns:1fr}.v3-calc .route-arrow{display:none}html:root body .news-list{grid-template-columns:1fr}html:root body .news-item:first-child{grid-column:auto;grid-row:auto}html:root body .v3c-res .result-price{font-size:42px!important}.v3-drop{padding:14px}}
+
+/* v3.2 — result is now an in-page card, not a popup; opaque window background */
+html:root body .v3c-res .result{position:static!important;left:auto!important;top:auto!important;transform:none!important;width:auto!important;max-height:none!important;overflow:visible!important;z-index:auto!important;padding:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;filter:none!important}
+html:root body .v3c-res .result::after{display:none!important}
+html:root body .view-layer.open,html:root body.manual-dark .view-layer.open{background:var(--v-bg)!important}
+html:root body .view-layer{background:var(--v-bg)}
+.directory-head,.assistant-head{padding-left:0}
+html:root body .directory-panel .directory-head,html:root body .news-shell .directory-head{padding-left:46px}
+html:root body .assistant-head{padding:0 0 0 46px!important}
+html:root body input:focus-visible,html:root body textarea:focus-visible{outline:none!important}
+html:root body .chat-messages:empty:before{content:"Спросите о ставках, коде ТН ВЭД или новостях — отвечу по вашей базе и официальным источникам.";display:block;margin:auto;max-width:360px;text-align:center;color:var(--v-mut);font-size:14px;line-height:1.5}
+html:root body .chat-messages{display:flex;flex-direction:column;gap:10px}
+
+/* v3.3 contrast fixes */
+html:root body .view-layer .v3c-res p,html:root body .view-layer .v3c-res small,html:root body .view-layer .v3c-empty small{color:rgba(255,255,255,.85)!important}
+html:root body .view-layer .v3-drop small{color:rgba(255,255,255,.85)!important;opacity:1}
+html:root body.manual-dark .customs-shell,html:root body.manual-dark .customs-shell.customs-shell{background:#1F4D3B!important;border-color:transparent!important}
+html:root body.manual-dark .customs-shell input{background:rgba(255,255,255,.14)!important;color:#fff!important;border-color:transparent!important}
+html:root body .directory-filters button{font-size:12px!important;padding:8px 14px!important}
+html:root body .directory-panel .directory-head,html:root body .news-shell .directory-head{padding-left:40px}
+.view-layer .v3c-empty .ic,.v3-drop .ic{fill:none!important}
+html:root body.manual-dark .v3c-attach{color:#fff!important}

@@ -88,4 +88,16 @@
 
   /* 9. a11y: name every icon-only button */
   safe(function(){$$('button:not([aria-label])').forEach(function(b){if(!b.textContent.trim())b.setAttribute('aria-label',b.title||'Кнопка')})});
+  /* 10. assistant quick questions -> fill input and send */
+  safe(function(){
+    $$('#v3quick button').forEach(function(b){b.addEventListener('click',function(){var i=$('#assistantInput'),send=$('#sendAI');if(!i||!send)return;i.value=b.textContent;i.dispatchEvent(new Event('input',{bubbles:true}));send.click()})});
+  });
+  /* 11. news filters (client-side by keywords; "Важные" uses the urgent flag) */
+  safe(function(){
+    var list=$('#newsList'),bar=$('#v3nf');if(!list||!bar)return;var cur='all';
+    var KW={customs:/таможен|тамож|фтс|декларац|пошлин|тн вэд/i,logistics:/логист|перевоз|жд|ж\/д|море|контейнер|груз|порт|транспорт/i,law:/закон|прав|суд|регулир|постановлен|приказ|налог/i};
+    function apply(){$$('.news-item',list).forEach(function(n){var ok=cur==='all'||(cur==='urgent'?n.classList.contains('news-urgent'):KW[cur].test(n.textContent));n.classList.toggle('v3off',!ok)})}
+    $$('.chip',bar).forEach(function(c){c.addEventListener('click',function(){cur=c.dataset.c;$$('.chip',bar).forEach(function(x){x.classList.toggle('on',x===c)});apply()})});
+    new MutationObserver(apply).observe(list,{childList:true});
+  });
 })();
