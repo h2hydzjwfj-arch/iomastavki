@@ -183,3 +183,17 @@ test('Telegram: привязка через /start, проверка секре�
   assert.ok(tgSent.some(([chat, t]) => chat === 55 && /В пути/.test(t) && /Поезд вышел/.test(t)));
   delete process.env.TELEGRAM_WEBHOOK_SECRET;
 });
+
+test('почта через Resend: правильный запрос', async () => {
+  const { mailer } = require('../portal');
+  const calls = []; const realFetch = global.fetch;
+  global.fetch = async (url, o) => { calls.push([url, o]); return { ok: true, text: async () => '' }; };
+  process.env.RESEND_API_KEY = 're_test'; process.env.RESEND_FROM = 'iomastavka <kp@iomastavka.ru>';
+  try {
+    const m = mailer(); assert.ok(m.enabled()); assert.strictEqual(m.kind(), 'Resend');
+    await m.send('client@test.ru', 'КП', 'текст');
+    assert.strictEqual(calls[0][0], 'https://api.resend.com/emails');
+    const body = JSON.parse(calls[0][1].body); assert.deepStrictEqual(body.to, ['client@test.ru']); assert.strictEqual(body.from, 'iomastavka <kp@iomastavka.ru>');
+    assert.strictEqual(calls[0][1].headers.Authorization, 'Bearer re_test');
+  } finally { global.fetch = realFetch; delete process.env.RESEND_API_KEY; delete process.env.RESEND_FROM; }
+});
