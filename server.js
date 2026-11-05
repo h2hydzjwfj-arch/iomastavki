@@ -156,7 +156,8 @@ app.get('/palettes.css', (req,res) => { res.set('Cache-Control', 'public, max-ag
 app.get('/theme-v3.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.css'), { cacheControl: false }); });
 const SITE_URL = process.env.SITE_URL || 'https://iomastavki.onrender.com';
 app.get('/robots.txt', (req,res) => { res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${SITE_URL}/sitemap.xml\n`); });
-app.get('/sitemap.xml', (req,res) => { res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${SITE_URL}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url></urlset>`); });
+app.get('/sitemap.xml', (req,res) => { const urls = ['/'].concat(seoPages ? seoPages.urls() : []); res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${SITE_URL}${u === '/' ? '/' : u}</loc><lastmod>2026-11-06</lastmod><changefreq>${u === '/novosti' || u === '/' ? 'daily' : 'monthly'}</changefreq><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('')}</urlset>`); });
+let seoPages = null;
 app.get('/api/health', (req,res) => res.json({ ok: true, storage: cloud ? 'supabase' : 'local', uptime: Math.round(process.uptime()) }));
 app.get('/api/version', (req,res) => res.json({ok:true,version:'28',build:'IOMASTAVKA_FILE_28'}));
 // Weather without API key: Open-Meteo (fixed URL, cached 10 min).
@@ -367,6 +368,7 @@ async function fetchNews(){
 }
 const newsCache={at:0,items:[]};
 
+seoPages = require('./seo').setup(app, { site: () => SITE_URL, newsItems: async () => (Date.now()-newsCache.at < 6*60*60*1000 && newsCache.items.length) ? newsCache.items : await fetchNews() });
 app.get('/api/news', async (req,res) => {
   try {
     const items = (Date.now()-newsCache.at < 6*60*60*1000 && newsCache.items.length) ? newsCache.items : await fetchNews();

@@ -247,6 +247,9 @@ function setup(app, opts) {
   const okPw = pw => typeof pw === 'string' && pw.length >= 8 && pw.length <= 128;
 
   function adminPasswordOk(pw, envCheck) {
+    // ADMIN_PASSWORD в Render — запасной вход: работает всегда, даже если пароль меняли на сайте и забыли.
+    const plain = process.env.ADMIN_PASSWORD;
+    if (plain && pw && crypto.timingSafeEqual(Buffer.from(sha(pw)), Buffer.from(sha(plain)))) return true;
     const h = store.load().settings && store.load().settings.adminHash;
     return h ? verifyHash(pw, h) : envCheck(pw);
   }
@@ -294,23 +297,56 @@ function setup(app, opts) {
     u.hash = hashPassword(b.next); u.pwChangedAt = Date.now(); store.save(db); res.json({ ok: true });
   });
   const forgotLimiter = rateLimit ? rateLimit({ windowMs: 60 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много попыток. Попробуйте позже.' } }) : (q, s, n) => n();
+  // Адрес сайта для ссылок в письмах: тот, с которого пришёл запрос (превью или основной сайт),
+  // но только если это наш домен — иначе подставной Host мог бы увести ссылку на чужой сайт.
+  function siteOf(req) {
+    const host = String(req.get('host') || '').toLowerCase();
+    const allowed = /^[a-z0-9-]+\.onrender\.com$/.test(host) || /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/.test(host) || (SITE && host === SITE.replace(/^https?:\/\//, ''));
+    return allowed ? `${req.protocol}://${host}` : SITE;
+  }
+  function maskEmail(e) { const [u, d] = String(e).split('@'); return d ? (u.slice(0, 2) + '•••@' + d) : e; }
+  async function adminTelegram(text) {
+    const token = process.env.TELEGRAM_BOT_TOKEN, chat = process.env.TELEGRAM_CHAT_ID;
+    if (!token || !chat) return false;
+    try { const r = await fetch(`${tgBase()}/bot${token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chat, text, disable_web_page_preview: true }), signal: AbortSignal.timeout(8000) }); return r.ok; } catch { return false; }
+  }
   app.post('/api/password/forgot', forgotLimiter, async (req, res) => {
-    const email = str(req.body && req.body.email, 120).toLowerCase();
-    const db = store.load(); const u = db.users.find(x => x.email === email && x.active !== false);
-    let sent = { telegram: false, email: false };
-    if (u) {
+    const login = str(req.body && (req.body.email || req.body.login), 120).toLowerCase();
+    if (!login) return res.status(400).json({ ok: false, error: 'Укажите почту, с которой входите' });
+    const adminEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+    const site = siteOf(req);
+    // --- администратор: ссылка уходит в Telegram-бот (TELEGRAM_CHAT_ID) и на почту ADMIN_EMAIL
+    if (login === 'admin' || (adminEmail && login === adminEmail)) {
       const token = crypto.randomBytes(24).toString('base64url');
-      u.reset = { h: sha(token), exp: Date.now() + 30 * 60 * 1000 }; store.save(db);
-      const link = `${SITE}/#reset=${token}`;
-      sent = await tellUser(u, 'Восстановление пароля — iomastavka', `Ссылка для нового пароля (действует 30 минут):\n${link}\n\nЕсли вы не запрашивали восстановление, просто проигнорируйте это сообщение.`);
-      if (!sent.telegram && !sent.email) { try { await notify(`Клиент ${u.name} (${u.email}) просит восстановить пароль. Выдайте новый в разделе «Работа → Клиенты».`); } catch {} }
+      const db = store.load(); db.settings = db.settings || {}; db.settings.adminReset = { h: sha(token), exp: Date.now() + 30 * 60 * 1000 }; store.save(db);
+      const text = `Восстановление пароля администратора iomastavka.\nНовый пароль можно задать по ссылке (действует 30 минут):\n${site}/#reset=${token}\n\nЕсли это были не вы — ничего не делайте, старый пароль продолжит работать.`;
+      const tgOk = await adminTelegram(text);
+      let mailOk = false; if (adminEmail && mail.enabled()) { try { await mail.send(adminEmail, 'Восстановление пароля администратора — iomastavka', text); mailOk = true; } catch (e) { console.error('admin reset mail:', e.message); } }
+      if (!tgOk && !mailOk) {
+        const miss = [!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID ? 'TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID' : 'Telegram не ответил', !adminEmail ? 'ADMIN_EMAIL' : (!mail.enabled() ? 'RESEND_API_KEY (или SMTP_URL)' : 'почтовый сервис не принял письмо')];
+        return res.status(503).json({ ok: false, error: `Ссылку некуда отправить: в Render не хватает ${miss.join('; ')}. Запасной вход: добавьте в Render переменную ADMIN_PASSWORD — это и будет пароль администратора.` });
+      }
+      const where = [tgOk ? 'в Telegram-бот' : '', mailOk ? 'на почту ' + maskEmail(adminEmail) : ''].filter(Boolean).join(' и ');
+      return res.json({ ok: true, message: `Ссылка для нового пароля отправлена ${where}. Она действует 30 минут.` });
     }
-    // Одинаковый ответ, чтобы нельзя было проверить, есть ли такая почта
-    res.json({ ok: true, message: 'Если такой аккаунт есть, мы отправили ссылку в Telegram или на почту. Если ни то ни другое не подключено — менеджер получил запрос и выдаст новый пароль.' });
+    // --- клиент
+    const db = store.load(); const u = db.users.find(x => x.email === login && x.active !== false);
+    if (!u) return res.status(404).json({ ok: false, error: 'Кабинет с такой почтой не найден. Проверьте почту или создайте кабинет.' });
+    const token = crypto.randomBytes(24).toString('base64url');
+    u.reset = { h: sha(token), exp: Date.now() + 30 * 60 * 1000 }; store.save(db);
+    const sent = await tellUser(u, 'Восстановление пароля — iomastavka', `Ссылка для нового пароля (действует 30 минут):\n${site}/#reset=${token}\n\nЕсли вы не запрашивали восстановление, просто проигнорируйте это сообщение.`);
+    if (sent.telegram || sent.email) {
+      const where = [sent.telegram ? 'в Telegram' : '', sent.email ? 'на почту ' + maskEmail(u.email) : ''].filter(Boolean).join(' и ');
+      return res.json({ ok: true, message: `Ссылка для нового пароля отправлена ${where}. Она действует 30 минут.` });
+    }
+    try { await notify(`Клиент ${u.name} (${u.email}) просит восстановить пароль. Выдайте новый в разделе «Работа → Клиенты».`); } catch {}
+    res.json({ ok: true, message: 'Отправка писем пока не подключена, поэтому запрос передан менеджеру — он пришлёт вам новый пароль.' });
   });
   app.post('/api/password/reset', forgotLimiter, (req, res) => {
     const b = req.body || {}; if (!okPw(b.password)) return res.status(400).json({ ok: false, error: 'Новый пароль — от 8 символов' });
     const db = store.load(); const h = sha(String(b.token || ''));
+    const ar = db.settings && db.settings.adminReset;
+    if (ar && ar.h === h && ar.exp > Date.now()) { db.settings.adminHash = hashPassword(b.password); delete db.settings.adminReset; store.save(db); return res.json({ ok: true, role: 'admin' }); }
     const u = db.users.find(x => x.reset && x.reset.h === h && x.reset.exp > Date.now());
     if (!u) return res.status(400).json({ ok: false, error: 'Ссылка устарела. Запросите восстановление ещё раз.' });
     u.hash = hashPassword(b.password); delete u.reset; u.pwChangedAt = Date.now(); store.save(db); res.json({ ok: true });
@@ -381,14 +417,37 @@ function setup(app, opts) {
       `Ставка: ${Number(q.price).toLocaleString('ru-RU')} ${q.currency}${q.transitDays ? ' · срок ' + q.transitDays + ' дн.' : ''}\n` +
       `Действует до ${new Date(q.validUntil).toLocaleDateString('ru-RU')}. Терминальные расходы в пункте прибытия уточняются.\n${SITE}/#kp=${q.id}`;
   }
+  // ---------- сравнение видов транспорта (ориентир) ----------
+  const EST = require('./estimate');
+  const tariffs = () => EST.mergeTariffs((store.load().settings || {}).tariffs);
+  const baseRate = (from, to, mode) => { try { const b = engine({ from, to, mode }); return b && b.mode === mode && (b._score || 0) >= 13 && /container/i.test(b.basis || 'container') ? b : null; } catch { return null; } };
+  function runEstimate(b) { return EST.estimate({ from: str(b.from, 120), to: str(b.to, 120), weight: num(b.weight), volume: num(b.volume), places: num(b.places), dangerous: b.dangerous === true || b.dangerous === 'true' || b.dangerous === '1' }, tariffs(), baseRate); }
+  app.post('/api/estimate', quoteLimiter, (req, res) => {
+    const r = runEstimate(req.body || {});
+    if (!r.ok) return res.status(400).json(r);
+    res.json(r);
+  });
+  app.get('/api/tariffs', admin, (req, res) => res.json({ ok: true, tariffs: tariffs(), defaults: EST.DEFAULT_TARIFFS }));
+  app.put('/api/tariffs', admin, (req, res) => {
+    const db = store.load(); db.settings = db.settings || {}; db.settings.tariffs = EST.mergeTariffs(req.body && req.body.tariffs); store.save(db);
+    res.json({ ok: true, tariffs: db.settings.tariffs });
+  });
+
   app.post('/api/quotes', quoteLimiter, async (req, res) => {
     const b = req.body || {}; const who = roleOf(req);
     const from = str(b.from, 120), to = str(b.to, 120);
     if (!from || !to) return res.status(400).json({ ok: false, error: 'Укажите откуда и куда' });
-    const best = await engine({ from, to, mode: str(b.mode, 20), distance: num(b.distance) });
+    let best = null;
+    if (b.kind && EST.KINDS.includes(String(b.kind))) {
+      // КП по выбранному варианту из сравнения — цена считается здесь же, на сервере
+      const e = runEstimate(b); const o = e.ok && e.options.find(x => x.kind === b.kind);
+      if (!o) return res.status(400).json({ ok: false, error: 'Этот вариант не подходит для такого груза — пересчитайте' });
+      const NAMES = { air: 'Авиа', ltl_auto: 'Авто, сборный груз', lcl_rail: 'ЖД, сборный груз', lcl_sea: 'Море + ЖД, сборный груз', fcl_rail: 'ЖД, контейнер 40\'', ftl_auto: 'Авто, машина целиком' };
+      best = { rate: o.price, currency: 'USD', mode: o.mode, transitDays: o.days.join('–'), basis: NAMES[o.kind], container: o.kind === 'fcl_rail' ? '40HC' : '', company: o.source === 'base' ? 'база ставок' : 'ориентир по рынку', notes: [o.note, e.assumedVolume ? 'Объём не указан — принят ~1 м³ на 250 кг.' : '', e.dangerous ? 'Опасный груз — с надбавкой.' : ''].filter(Boolean).join(' '), _noCommission: true };
+    } else best = await engine({ from, to, mode: str(b.mode, 20), distance: num(b.distance) });
     if (!best || !Number.isFinite(Number(best.rate))) return res.status(404).json({ ok: false, error: 'В базе нет ставки для этого маршрута — оставьте заявку, посчитаем вручную' });
     const now = Date.now(); const id = newId(8);
-    const chinese = /中国|china|chinese|\.cn$/i.test(`${best.company || ''} ${best.source || ''} ${best.notes || ''}`);
+    const chinese = !best._noCommission && /中国|china|chinese|\.cn$/i.test(`${best.company || ''} ${best.source || ''} ${best.notes || ''}`);
     const base = Number(best.rate), commission = chinese ? Math.round(base * 0.05 * 100) / 100 : 0;
     const q = {
       id, number: 'КП-' + new Date(now).toISOString().slice(2, 10).replace(/-/g, '') + '-' + id.slice(0, 4).toUpperCase(),

@@ -142,7 +142,7 @@
     api('/api/password/forgot',{method:'POST',body:{email:ff.email.value}}).then(function(d){$('#v3forgotOk').textContent=d.message}).catch(function(x){$('#v3forgotErr').textContent=x.message})});
   var rf=$('#v3resetForm'),resetToken='';
   rf&&rf.addEventListener('submit',function(e){e.preventDefault();$('#v3resetErr').textContent='';
-    api('/api/password/reset',{method:'POST',body:{token:resetToken,password:rf.password.value}}).then(function(){rf.reset();$('#v3resetOk').textContent='Пароль сохранён. Теперь войдите с новым паролем.';setTimeout(function(){openView('loginView')},1500)}).catch(function(x){$('#v3resetErr').textContent=x.message})});
+    api('/api/password/reset',{method:'POST',body:{token:resetToken,password:rf.password.value}}).then(function(d){rf.reset();$('#v3resetOk').textContent=d&&d.role==='admin'?'Пароль администратора сохранён. Войдите: логин admin и новый пароль.':'Пароль сохранён. Теперь войдите с новым паролем.';setTimeout(function(){openView('loginView')},1500)}).catch(function(x){$('#v3resetErr').textContent=x.message})});
 
   /* =================== аккаунт =================== */
   function loadAccount(){var box=$('#v3accBody');box.innerHTML='<p class="v3p-muted">Загружаю…</p>';
@@ -201,7 +201,7 @@
   var LSK='iomaQuotes';function lsGet(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
   function calcInput(){var v=function(id){var e=document.getElementById(id);return e?String(e.value||'').trim():''};var vol=((($('#autoVolume')||{}).textContent||'').match(/[\d.,]+/)||[''])[0].replace(',','.');
     var mode='';try{mode=typeof selectedMode!=='undefined'&&selectedMode?selectedMode:''}catch(e){}
-    return {from:v('fromCity'),to:v('toCity'),weight:v('weight'),places:v('pieces'),volume:parseFloat(vol)>0?vol:'',distance:v('distance'),mode:mode,incoterms:((($('#incotermBtn span')||{}).textContent)||'').trim()}}
+    var est=window.__v3est||{};return {from:v('fromCity'),to:v('toCity'),weight:v('weight'),places:v('pieces'),volume:parseFloat(vol)>0?vol:'',distance:v('distance'),mode:mode,kind:est.kind||'',dangerous:!!est.dangerous,incoterms:((($('#incotermBtn span')||{}).textContent)||'').trim()}}
   function renderSaved(){var box=$('#v3saved');if(!box)return;var list=lsGet(LSK,[]);if(role!=='guest'||!list.length){box.hidden=true;return}
     box.hidden=false;box.innerHTML='<b>Ваши сохранённые расчёты</b>'+list.slice(0,5).map(function(q){return '<button type="button" class="v3c-link" data-kpopen="'+esc(q.id)+'">'+esc(q.number)+' · '+esc(q.from)+' → '+esc(q.to)+'</button>'}).join('')}
   function saveQuote(extra,silent){var body=calcInput();for(var k in extra)body[k]=extra[k];
@@ -211,19 +211,24 @@
   function showSavedBanner(q,where){var w=$('#result .result-price-window');if(!w)return;var old=$('.v3p-saved',w);old&&old.remove();
     var link=location.origin+'/#kp='+q.id;var d=document.createElement('div');d.className='v3p-saved';
     d.innerHTML='<span>✓ <b>'+esc(q.number)+'</b> сохранено'+(role==='client'?' в «Мои КП»':'')+(where.length?' · отправлено '+where.join(' и '):'')+'</span><span class="v3p-savedbtns"><button type="button" data-kpopen="'+esc(q.id)+'">Открыть КП</button><button type="button" data-kpcopy="'+esc(link)+'">Ссылка</button></span>';w.appendChild(d)}
-  var lastKey='';
+  var lastKey='',lastSeq=-1;
   res&&new MutationObserver(function(){setTimeout(function(){
     var w=$('.result-price-window',res),pr=w&&$('.result-price',w);if(!w||!pr||pr.classList.contains('muted')||$('.v3p-saved,.v3p-savebtn',w))return;
     var inp=calcInput(),key=JSON.stringify(inp);
-    if(role==='client'){if(key===lastKey)return;lastKey=key;saveQuote({},false).catch(function(x){toast(x.message)})}
+    var sq=(window.__v3est||{}).seq;
+    if(role==='client'&&sq!==lastSeq){if(key===lastKey)return;lastKey=key;lastSeq=sq;saveQuote({},false).catch(function(x){toast(x.message)})}
     else{var b=document.createElement('button');b.type='button';b.className='v3p-savebtn';b.textContent=role==='admin'?'Создать КП (ссылка для клиента)':'Сохранить расчёт — получить ссылку на КП';
       b.addEventListener('click',function(){b.disabled=true;saveQuote({},false).then(function(){b.remove()}).catch(function(x){b.disabled=false;toast(x.message)})});w.appendChild(b)}
   },60)}).observe(res,{childList:true});
 
   /* память калькулятора: ввод не теряется при перезагрузке */
   var CK='iomaCalc';
-  ['fromCity','toCity','weight','pieces','distance','length','width','height'].forEach(function(id){var e=document.getElementById(id);if(!e)return;
-    e.addEventListener('change',function(){var m=lsGet(CK,{});m[id]=e.value;lsSet(CK,m)})});
+  var CF=['fromCity','toCity','weight','pieces','distance','length','width','height'];
+  function saveCalc(){var m={};CF.forEach(function(id){var e=document.getElementById(id);if(e&&e.value)m[id]=e.value});lsSet(CK,m)}
+  CF.forEach(function(id){var e=document.getElementById(id);if(!e)return;e.addEventListener('change',saveCalc);e.addEventListener('input',function(){clearTimeout(saveCalc.t);saveCalc.t=setTimeout(saveCalc,400)})});
+  // выбор города из подсказки меняет поле без события — сохраняем и после клика по подсказке, и перед расчётом
+  document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('.suggestions,.suggestion,[class*=suggest],#calculate,#v3go'))setTimeout(saveCalc,80)},true);
+  window.addEventListener('pagehide',saveCalc);
   setTimeout(function(){var m=lsGet(CK,{});Object.keys(m).forEach(function(id){var e=document.getElementById(id);if(e&&!e.value&&m[id]){e.value=m[id];e.dispatchEvent(new Event('input',{bubbles:true}))}})},400);
 
   /* ---------- регистрация, показ пароля, вход сразу в кабинет ---------- */
@@ -271,6 +276,7 @@
     if((m=h.match(/^#kp=([a-f0-9]{16})$/)))openQuote(m[1]);
     else if((m=h.match(/^#reset=([\w-]{20,})$/))){resetToken=m[1];history.replaceState(null,'',location.pathname);openView('resetView')}
     else if(h==='#kb')setTimeout(function(){openView('kbView')},300);
+    else if(h==='#calc'){try{history.replaceState(null,'',location.pathname)}catch(e){}setTimeout(function(){window.__iomaOpenView&&window.__iomaOpenView('calculator')},300)}
     else if(h==='#cabinet'||h==='#work'){try{history.replaceState(null,'',location.pathname)}catch(e){}if(!$('.view-layer.open'))openView(h==='#work'?(role==='admin'?'workView':'loginView'):(role==='client'?'cabinetView':'loginView'))}
   }
   window.addEventListener('hashchange',route);
