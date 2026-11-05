@@ -6,6 +6,8 @@ const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const multer = require('multer');
+const { signSession, verifySession, safeFetchText } = require('./security');
+let compression = null; try { compression = require('compression'); } catch { /* необязательная зависимость */ }
 const upload = multer({storage: multer.memoryStorage(), limits:{fileSize: 15*1024*1024}});
 
 const app = express();
@@ -15,10 +17,25 @@ const DATA_DIR = path.join(ROOT, 'data');
 const RATES_FILE = process.env.RATES_FILE || path.join(DATA_DIR, 'rates.json');
 const MAX_RATE_RECORDS = 5000;
 
+// За прокси Render без этого все посетители выглядят как один IP, и лимит запросов общий на весь сайт.
+app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false }));
+// CSP пока в режиме «только отчёт»: ничего не ломает, нарушения видны в консоли браузера.
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy-Report-Only', "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'");
+  next();
+});
+if (compression) app.use(compression());
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }));
+// Перебор пароля администратора: не более 8 попыток за 15 минут с одного IP.
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 8, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много попыток входа. Попробуйте позже.' } });
+// Эндпоинты, которые тратят деньги на OpenAI: ограничиваем частоту.
+const aiLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много запросов. Подождите несколько минут.' } });
+const importLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 15, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много импортов. Попробуйте позже.' } });
+app.use(['/api/ai', '/api/tts', '/api/transcribe', '/api/realtime/call', '/api/news/article', '/api/customs/check'], aiLimiter);
+app.use(['/api/rates/import', '/api/rates/import-text', '/api/agents/import'], importLimiter);
 
 const fallbackHash = 'scrypt$16384$8$1$bd186dac2105a3d050c5f769e28d25a2$51e731def6ff02e823b43cb8cfce55adcad745c5c72935ce68d875f583096288';
 
@@ -102,13 +119,20 @@ function verifyPassword(password) {
   } catch { return false; }
 }
 function auth(req, res, next) {
-  if (req.cookies?.auth === '1') return next();
+  // Раньше пропускала любая кука auth=1, которую можно подделать. Теперь нужна подписанная сессия.
+  if (verifySession(req.cookies?.auth)) return next();
   return res.status(401).json({ ok: false, error: 'Unauthorized' });
 }
 
-app.get('/', (req,res) => res.sendFile(path.join(ROOT, 'index.html')));
-app.get('/app.js', (req,res) => res.sendFile(path.join(ROOT, 'app.js')));
-app.get('/styles.css', (req,res) => res.sendFile(path.join(ROOT, 'styles.css')));
+// Страница всегда свежая, скрипты и стили кэшируются на час (в index.html они подключаются с ?v=...).
+app.get('/', (req,res) => { res.set('Cache-Control', 'no-cache'); res.sendFile(path.join(ROOT, 'index.html'), { cacheControl: false }); });
+app.get('/app.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'app.js'), { cacheControl: false }); });
+app.get('/styles.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'styles.css'), { cacheControl: false }); });
+app.get('/theme-v3.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.js'), { cacheControl: false }); });
+app.get('/theme-v3.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.css'), { cacheControl: false }); });
+const SITE_URL = process.env.SITE_URL || 'https://iomastavki.onrender.com';
+app.get('/robots.txt', (req,res) => { res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${SITE_URL}/sitemap.xml\n`); });
+app.get('/sitemap.xml', (req,res) => { res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${SITE_URL}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url></urlset>`); });
 app.get('/api/health', (req,res) => res.json({ ok: true }));
 app.get('/api/version', (req,res) => res.json({ok:true,version:'28',build:'IOMASTAVKA_FILE_28'}));
 app.get('/api/config', (req,res) => res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.OPENAI_API_KEY), ftsConfigured: Boolean(process.env.API_CLOUD_FTS_TOKEN) }));
@@ -317,7 +341,8 @@ app.post('/api/realtime/call', async (req,res)=>{
 
 async function fetchArticleSource(url){
   if(!/^https?:\/\//i.test(url))return '';
-  try{const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0'},signal:AbortSignal.timeout(7000)});if(!r.ok)return '';const html=await r.text();return stripHtml(html).slice(0,18000);}catch{return '';}
+  // Защита от SSRF: адрес приходит от посетителя, поэтому закрытые и внутренние адреса запрещены.
+  try{const html=await safeFetchText(url,{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0'},timeoutMs:7000,maxBytes:1000000});return stripHtml(html).slice(0,18000);}catch{return '';}
 }
 function parseLooseJson(text){try{return JSON.parse(text)}catch{const a=text.indexOf('{'),b=text.lastIndexOf('}');if(a>=0&&b>a)return JSON.parse(text.slice(a,b+1));throw new Error('Invalid article JSON')}}
 app.post('/api/news/article', async(req,res)=>{
@@ -340,9 +365,9 @@ app.post('/api/news/article/audio', async(req,res)=>{
   try{const r=await fetch('https://api.openai.com/v1/audio/speech',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model:'gpt-4o-mini-tts',voice:process.env.OPENAI_TTS_VOICE||'onyx',input,response_format:'mp3',speed:.94,instructions:`Professional male narrator. Warm, confident, cinematic documentary style. Speak clearly in ${langName(language)}, with natural pauses and calm authority.`})});if(!r.ok)return res.status(r.status).json({ok:false,error:await r.text()||'TTS failed'});res.set('Content-Type','audio/mpeg');res.set('Cache-Control','no-store');res.send(Buffer.from(await r.arrayBuffer()));}catch(e){res.status(502).json({ok:false,error:e.message||'TTS unavailable'});}
 });
 
-app.post('/api/login', (req,res) => {
+app.post('/api/login', loginLimiter, (req,res) => {
   if (!verifyPassword(req.body?.password || '')) return res.status(401).json({ ok:false, error:'Неверный пароль' });
-  res.cookie('auth', '1', { httpOnly:true, secure:true, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
+  res.cookie('auth', signSession({ role: 'admin' }), { httpOnly:true, secure:true, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
   res.json({ ok:true });
 });
 app.post('/api/logout', (req,res) => {
@@ -542,4 +567,6 @@ app.post('/api/ai', async (req,res) => {
   }catch(e){res.status(502).json({ok:false,error:e.message||'AI unavailable'});}
 });
 
+app.use('/api', (req,res) => res.status(404).json({ error: 'not found' }));
+app.use((req,res) => res.status(404).type('html').send('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>404 — iomastavka</title><body style="font-family:system-ui;background:#F7F5EF;color:#1B2B26;display:grid;place-items:center;height:100vh;margin:0;text-align:center"><div><h1 style="font-size:64px;margin:0;color:#2E7D5B">404</h1><p>Такой страницы нет.</p><a href="/" style="background:#E8A33D;color:#1B2B26;padding:12px 22px;border-radius:14px;text-decoration:none;font-weight:700">На главную</a></div>'));
 app.listen(PORT, () => console.log(`iomastavka listening on ${PORT}`));
