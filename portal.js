@@ -34,19 +34,40 @@ function tempPassword() {
   return s;
 }
 
-function createStore(dataDir) {
+function createStore(dataDir, cloud) {
   const file = path.join(dataDir, 'portal.json');
+  const docsDir = path.join(dataDir, 'docs');
   const empty = () => ({ users: [], shipments: [], leads: [] });
-  function load() {
-    try { const d = JSON.parse(fs.readFileSync(file, 'utf8')); return { ...empty(), ...d }; } catch { return empty(); }
+  let cache = null, timer = null, dirty = false;
+  function readLocal() { try { const d = JSON.parse(fs.readFileSync(file, 'utf8')); return { ...empty(), ...d }; } catch { return empty(); } }
+  function writeLocal(db) {
+    try { fs.mkdirSync(dataDir, { recursive: true }); const tmp = file + '.' + process.pid + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(db, null, 1)); fs.renameSync(tmp, file); }
+    catch (e) { if (!cloud) throw e; }
   }
-  function save(db) {
-    fs.mkdirSync(dataDir, { recursive: true });
-    const tmp = file + '.' + process.pid + '.tmp';
-    fs.writeFileSync(tmp, JSON.stringify(db, null, 1));
-    fs.renameSync(tmp, file);
+  async function flush() {
+    if (!cloud || !dirty) return; dirty = false;
+    try { await cloud.put('state/portal.json', Buffer.from(JSON.stringify(cache)), 'application/json'); }
+    catch (e) { dirty = true; console.error('portal save', e.message); clearTimeout(timer); timer = setTimeout(flush, 5000); }
   }
-  return { load, save, file, docsDir: path.join(dataDir, 'docs') };
+  async function init() {
+    if (cloud) { const buf = await cloud.get('state/portal.json'); if (buf) { cache = { ...empty(), ...JSON.parse(buf.toString('utf8')) }; writeLocal(cache); return; } }
+    cache = readLocal(); if (cloud && (cache.users.length || cache.shipments.length || cache.leads.length)) { dirty = true; await flush(); }
+  }
+  function load() { if (!cache) cache = readLocal(); return cache; }
+  function save(db) { cache = db; writeLocal(db); if (cloud) { dirty = true; clearTimeout(timer); timer = setTimeout(flush, 300); } }
+  async function putDoc(shipId, id, buf, mime) {
+    if (cloud) return cloud.put(`docs/${shipId}/${id}`, buf, mime || 'application/octet-stream');
+    const dir = path.join(docsDir, shipId); fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(path.join(dir, id), buf);
+  }
+  async function getDoc(shipId, id) {
+    if (cloud) return cloud.get(`docs/${shipId}/${id}`);
+    try { return fs.readFileSync(path.join(docsDir, shipId, id)); } catch { return null; }
+  }
+  async function delDoc(shipId, id) {
+    if (cloud) return cloud.del(`docs/${shipId}/${id}`);
+    try { fs.unlinkSync(path.join(docsDir, shipId, id)); } catch {}
+  }
+  return { init, load, save, flush, putDoc, getDoc, delDoc, file, kind: cloud ? 'supabase' : 'local' };
 }
 
 // Что видит клиент о своём грузе (без внутренних заметок).
@@ -69,7 +90,7 @@ function cleanCosts(list) {
 
 function setup(app, opts) {
   const { verifySession, DATA_DIR, upload, rateLimit } = opts;
-  const store = opts.store || createStore(DATA_DIR);
+  const store = opts.store || createStore(DATA_DIR, opts.cloud || null);
   const notify = opts.notify || telegramNotify;
 
   function session(req) { return verifySession(req.cookies && req.cookies.auth); }
@@ -91,7 +112,7 @@ function setup(app, opts) {
   const admin = need('admin');
   const leadLimiter = rateLimit ? rateLimit({ windowMs: 60 * 60 * 1000, max: 6, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много заявок. Попробуйте позже.' } }) : (q, s, n) => n();
 
-  app.get('/api/me', (req, res) => { const r = roleOf(req); res.json({ ok: true, role: r.role, name: r.name || '' }); });
+  app.get('/api/me', (req, res) => { const r = roleOf(req); res.json({ ok: true, role: r.role, name: r.name || '', storage: r.role === 'admin' ? store.kind : undefined }); });
 
   // ---------- заявки ----------
   app.post('/api/leads', leadLimiter, async (req, res) => {
@@ -184,30 +205,34 @@ function setup(app, opts) {
 
   // ---------- документы ----------
   const ALLOWED = /\.(pdf|jpe?g|png|webp|xlsx?|docx?|csv|txt|zip)$/i;
-  if (upload) app.post('/api/shipments/:id/docs', admin, upload.single('file'), (req, res) => {
+  if (upload) app.post('/api/shipments/:id/docs', admin, upload.single('file'), async (req, res) => {
     const db = store.load(); const s = db.shipments.find(x => x.id === req.params.id);
     if (!s) return res.status(404).json({ ok: false, error: 'Груз не найден' });
     const f = req.file; if (!f) return res.status(400).json({ ok: false, error: 'Файл не получен' });
     const name = str(Buffer.from(f.originalname || 'file', 'latin1').toString('utf8'), 120).replace(/[\\/:*?"<>|]/g, '_') || 'file';
     if (!ALLOWED.test(name)) return res.status(400).json({ ok: false, error: 'Можно загрузить PDF, фото, Excel, Word, CSV, TXT или ZIP' });
-    const id = newId(8); const dir = path.join(store.docsDir, s.id); fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, id), f.buffer);
+    const id = newId(8);
+    try { await store.putDoc(s.id, id, f.buffer, f.mimetype); } catch (e) { return res.status(502).json({ ok: false, error: 'Не удалось сохранить файл, попробуйте ещё раз' }); }
     s.docs = s.docs || []; s.docs.push({ id, name, size: f.size, mime: str(f.mimetype, 80), uploadedAt: new Date().toISOString() });
     s.updatedAt = new Date().toISOString(); store.save(db); res.json({ ok: true, item: s });
   });
-  app.get('/api/shipments/:id/docs/:docId', (req, res) => {
+  app.get('/api/shipments/:id/docs/:docId', async (req, res) => {
     const who = roleOf(req); const db = store.load(); const s = db.shipments.find(x => x.id === req.params.id);
     if (!s || !(who.role === 'admin' || (who.role === 'client' && s.clientId === who.uid))) return res.status(404).json({ ok: false, error: 'Не найдено' });
     const d = (s.docs || []).find(x => x.id === req.params.docId);
     if (!d || !/^[a-f0-9]{16}$/.test(d.id)) return res.status(404).json({ ok: false, error: 'Не найдено' });
+    let buf = null; try { buf = await store.getDoc(s.id, d.id); } catch {}
+    if (!buf) return res.status(404).json({ ok: false, error: 'Файл не найден' });
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.download(path.join(store.docsDir, s.id, d.id), d.name);
+    res.setHeader('Content-Disposition', "attachment; filename*=UTF-8''" + encodeURIComponent(d.name));
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.send(buf);
   });
-  app.delete('/api/shipments/:id/docs/:docId', admin, (req, res) => {
+  app.delete('/api/shipments/:id/docs/:docId', admin, async (req, res) => {
     const db = store.load(); const s = db.shipments.find(x => x.id === req.params.id);
     const i = s ? (s.docs || []).findIndex(x => x.id === req.params.docId) : -1;
     if (i < 0) return res.status(404).json({ ok: false, error: 'Не найдено' });
-    try { fs.unlinkSync(path.join(store.docsDir, s.id, s.docs[i].id)); } catch {}
+    try { await store.delDoc(s.id, s.docs[i].id); } catch {}
     s.docs.splice(i, 1); store.save(db); res.json({ ok: true });
   });
 

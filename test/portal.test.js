@@ -84,3 +84,26 @@ test('смена статуса пишет историю; отключённы�
   const sess = signSession({ role: 'client', uid: c.out.item.id });
   assert.strictEqual((await app.call('GET', '/api/my/shipments', { cookie: sess })).code, 401);
 });
+
+test('Supabase: без ключей не включается, чужой адрес отклоняется', () => {
+  const { createCloud } = require('../cloud');
+  assert.strictEqual(createCloud({}), null);
+  assert.strictEqual(createCloud({ SUPABASE_URL: 'https://evil.example.com', SUPABASE_SERVICE_KEY: 'x' }), null);
+  assert.ok(createCloud({ SUPABASE_URL: 'https://abcd1234.supabase.co', SUPABASE_SERVICE_KEY: 'x' }));
+});
+
+test('облачное хранилище: данные и документы переживают перезапуск', async () => {
+  const { createStore } = require('../portal');
+  const mem = new Map();
+  const cloud = { put: async (k, v) => { mem.set(k, Buffer.from(v)); }, get: async k => mem.get(k) || null, del: async k => { mem.delete(k); } };
+  const dir1 = fs.mkdtempSync(path.join(os.tmpdir(), 'p1-'));
+  const s1 = createStore(dir1, cloud); await s1.init();
+  const db = s1.load(); db.leads.push({ id: 'x', name: 'Тест' }); s1.save(db); await s1.flush();
+  await s1.putDoc('ship1', 'abc', Buffer.from('PDF'), 'application/pdf');
+  // «перезапуск»: новая пустая папка, данные должны прийти из облака
+  const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), 'p2-'));
+  const s2 = createStore(dir2, cloud); await s2.init();
+  assert.strictEqual(s2.load().leads[0].name, 'Тест');
+  assert.strictEqual((await s2.getDoc('ship1', 'abc')).toString(), 'PDF');
+  await s2.delDoc('ship1', 'abc'); assert.strictEqual(await s2.getDoc('ship1', 'abc'), null);
+});

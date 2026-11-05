@@ -38,7 +38,8 @@ app.use(['/api/ai', '/api/tts', '/api/transcribe', '/api/realtime/call', '/api/n
 app.use(['/api/rates/import', '/api/rates/import-text', '/api/agents/import'], importLimiter);
 // Роли: гость / клиент / администратор (portal.js). Всё, что стоит денег или раскрывает
 // контакты и ставки агентов, — только администратору.
-const portal = require('./portal').setup(app, { verifySession, DATA_DIR, upload, rateLimit });
+const cloud = require('./cloud').createCloud();
+const portal = require('./portal').setup(app, { verifySession, DATA_DIR, upload, rateLimit, cloud });
 app.use(['/api/agents', '/api/agents/import', '/api/rates/import', '/api/rates/import-text', '/api/rates/import-local',
   '/api/ai', '/api/tts', '/api/transcribe', '/api/realtime/call', '/api/customs/check', '/api/news/article/audio'], portal.admin);
 app.get('/api/rates', portal.admin);
@@ -143,7 +144,7 @@ app.get('/theme-v3.css', (req,res) => { res.set('Cache-Control', 'public, max-ag
 const SITE_URL = process.env.SITE_URL || 'https://iomastavki.onrender.com';
 app.get('/robots.txt', (req,res) => { res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${SITE_URL}/sitemap.xml\n`); });
 app.get('/sitemap.xml', (req,res) => { res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${SITE_URL}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url></urlset>`); });
-app.get('/api/health', (req,res) => res.json({ ok: true }));
+app.get('/api/health', (req,res) => res.json({ ok: true, storage: cloud ? 'supabase' : 'local', uptime: Math.round(process.uptime()) }));
 app.get('/api/version', (req,res) => res.json({ok:true,version:'28',build:'IOMASTAVKA_FILE_28'}));
 // Weather without API key: Open-Meteo (fixed URL, cached 10 min).
 let weatherCache = { at: 0, data: null };
@@ -602,4 +603,17 @@ app.post('/api/ai', async (req,res) => {
 
 app.use('/api', (req,res) => res.status(404).json({ error: 'not found' }));
 app.use((req,res) => res.status(404).type('html').send('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>404 — iomastavka</title><body style="font-family:system-ui;background:#F7F5EF;color:#1B2B26;display:grid;place-items:center;height:100vh;margin:0;text-align:center"><div><h1 style="font-size:64px;margin:0;color:#2E7D5B">404</h1><p>Такой страницы нет.</p><a href="/" style="background:#E8A33D;color:#1B2B26;padding:12px 22px;border-radius:14px;text-decoration:none;font-weight:700">На главную</a></div>'));
-app.listen(PORT, () => console.log(`iomastavka listening on ${PORT}`));
+(async () => {
+  // Сначала поднимаем данные из Supabase (если подключён), потом принимаем запросы.
+  try {
+    if (cloud) {
+      await cloud.ensureBucket();
+      await cloud.syncFiles(DATA_DIR, ['rates.json', 'agents.json']);
+      console.log('Хранилище: Supabase (' + cloud.bucket + ')');
+    } else console.warn('Хранилище: локальные файлы. На бесплатном Render они стираются при перезапуске — подключите Supabase.');
+    await portal.store.init();
+  } catch (e) { console.error('Ошибка подключения хранилища:', e.message); }
+  app.listen(PORT, () => console.log(`iomastavka listening on ${PORT}`));
+})();
+// Перед остановкой сохраняем несохранённое.
+process.on('SIGTERM', async () => { try { await portal.store.flush(); } catch {} process.exit(0); });
