@@ -128,6 +128,11 @@ function auth(req, res, next) {
 app.get('/', (req,res) => { res.set('Cache-Control', 'no-cache'); res.sendFile(path.join(ROOT, 'index.html'), { cacheControl: false }); });
 app.get('/app.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'app.js'), { cacheControl: false }); });
 app.get('/styles.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'styles.css'), { cacheControl: false }); });
+app.get('/theme-v3.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.js'), { cacheControl: false }); });
+app.get('/theme-v3.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.css'), { cacheControl: false }); });
+const SITE_URL = process.env.SITE_URL || 'https://iomastavki.onrender.com';
+app.get('/robots.txt', (req,res) => { res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${SITE_URL}/sitemap.xml\n`); });
+app.get('/sitemap.xml', (req,res) => { res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${SITE_URL}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url></urlset>`); });
 app.get('/api/health', (req,res) => res.json({ ok: true }));
 app.get('/api/version', (req,res) => res.json({ok:true,version:'28',build:'IOMASTAVKA_FILE_28'}));
 app.get('/api/config', (req,res) => res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.OPENAI_API_KEY), ftsConfigured: Boolean(process.env.API_CLOUD_FTS_TOKEN) }));
@@ -562,4 +567,6 @@ app.post('/api/ai', async (req,res) => {
   }catch(e){res.status(502).json({ok:false,error:e.message||'AI unavailable'});}
 });
 
+app.use('/api', (req,res) => res.status(404).json({ error: 'not found' }));
+app.use((req,res) => res.status(404).type('html').send('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>404 — iomastavka</title><body style="font-family:system-ui;background:#F7F5EF;color:#1B2B26;display:grid;place-items:center;height:100vh;margin:0;text-align:center"><div><h1 style="font-size:64px;margin:0;color:#2E7D5B">404</h1><p>Такой страницы нет.</p><a href="/" style="background:#E8A33D;color:#1B2B26;padding:12px 22px;border-radius:14px;text-decoration:none;font-weight:700">На главную</a></div>'));
 app.listen(PORT, () => console.log(`iomastavka listening on ${PORT}`));

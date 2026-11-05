@@ -1,7 +1,13 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#78a8c3"><title>iomastavka</title><link rel="stylesheet" href="/styles.css?v=20260916-v28">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#F7F5EF"><title>iomastavka — логистика и ВЭД Китай → Россия: расчёт ставок, ТН ВЭД, новости</title>
+<meta name="description" content="Расчёт ставок на перевозку из Китая в Россию (авто, ЖД, море, авиа), проверка кодов ТН ВЭД, база экспедиторов, AI-ассистент и свежие новости ВЭД.">
+<link rel="canonical" href="https://iomastavki.onrender.com/"><meta name="robots" content="index,follow">
+<meta property="og:type" content="website"><meta property="og:title" content="iomastavka — логистика ВЭД Китай → Россия"><meta property="og:description" content="Расчёт ставок, ТН ВЭД, экспедиторы и новости в одном месте."><meta property="og:locale" content="ru_RU">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%232E7D5B%27/%3E%3Ccircle cx=%2746%27 cy=%2718%27 r=%279%27 fill=%27%23E8A33D%27/%3E%3C/svg%3E">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"iomastavka","applicationCategory":"BusinessApplication","description":"Калькулятор логистики и ВЭД Китай — Россия","inLanguage":"ru"}</script>
+<link rel="stylesheet" href="/styles.css?v=20260916-v28"><link rel="stylesheet" href="/theme-v3.css?v=20261105-v1">
 </head>
 <body>
 <div id="weatherScene" class="weather-scene" aria-hidden="true"><div class="stars"></div><div class="sun"></div><div class="moon"></div><div class="cloud cloud-a"></div><div class="cloud cloud-b"></div><div class="rain"></div><div class="snow"></div><div class="wave wave-back"></div><div class="wave wave-mid"></div><div class="wave wave-front"></div></div>
@@ -29,9 +35,9 @@
     </div>
   </div>
   <div class="brand" aria-label="iomastavka"><span>i</span><span>o</span><span>m</span><span>a</span><span>s</span><span>t</span><span>a</span><span>v</span><span>k</span><span>a</span></div>
-  <div class="top-actions"><span class="live-pill"><i></i> LIVE</span><button class="lang active" data-lang="ru">🇷🇺</button><button class="lang" data-lang="en">🇬🇧</button><button class="lang" data-lang="zh">🇨🇳</button><button class="lang" data-lang="tr">🇹🇷</button><button id="logoutButton" class="logout" data-i18n="logout">Выйти</button></div>
+  <div class="top-actions"><span class="live-pill"><i></i> LIVE</span><button class="lang active" data-lang="ru" aria-label="Русский" title="Русский">🇷🇺</button><button class="lang" data-lang="en" aria-label="English" title="English">🇬🇧</button><button class="lang" data-lang="zh" aria-label="中文" title="中文">🇨🇳</button><button class="lang" data-lang="tr" aria-label="Türkçe" title="Türkçe">🇹🇷</button><button id="logoutButton" class="logout" data-i18n="logout">Выйти</button></div>
 </header>
-<main class="app-shell">
+<main class="app-shell" id="main">
 <section id="homeView" class="home-view">
   <div class="hero-copy"><span class="eyebrow" data-i18n="heroEyebrow">ЛОГИСТИКА · КИТАЙ → РОССИЯ</span><h1>iomastavka</h1><p data-i18n="heroText">Точный расчёт. Умный помощник.<br>Всё необходимое для работы с грузом — в одном месте.</p></div>
   <div class="quick-grid">
@@ -44,7 +50,7 @@
 </section>
 
 <section id="calculatorView" class="view-layer" aria-hidden="true"><section class="card calculator-card" id="calculator"><button class="close-button view-close" data-close-view="calculator" data-i18n-aria="close" aria-label="Закрыть" title="Закрыть">×</button>
-<h1 data-i18n="title">Расчёт маршрута</h1>
+<h1 data-i18n="title" role="heading" aria-level="2">Расчёт маршрута</h1>
 <div class="route"><div class="field autocomplete"><label data-i18n="from">Откуда</label><input id="fromCity" autocomplete="off" placeholder="Город в Китае"><div id="fromSuggestions" class="suggestions"></div></div><div class="route-arrow">→</div><div class="field autocomplete"><label data-i18n="to">Куда</label><input id="toCity" autocomplete="off" placeholder="Город в России"><div id="toSuggestions" class="suggestions"></div></div></div>
 <div class="section-title"><span data-i18n="cargo">ГРУЗ</span></div>
 <div class="grid three"><div class="field"><label data-i18n="weight">Вес, кг</label><input id="weight" type="number" min="0" placeholder="0"></div><div class="field"><label data-i18n="pieces">Количество мест</label><input id="pieces" type="number" min="1" placeholder="1"></div><div class="field"><label data-i18n="distance">Расстояние, км</label><input id="distance" type="number" min="0" placeholder="0"></div></div><div class="auto-calc-strip"><div><span data-i18n="autoVolumeLabel">Объём</span><b id="autoVolume">0 m³</b></div><div><span data-i18n="autoVolumetricLabel">Объёмный вес</span><b id="autoVolumetricWeight">0 kg</b></div><div><span data-i18n="factorLabel">Фактор</span><b id="autoFactor">167 kg/m³</b></div></div>
@@ -71,5 +77,6 @@
 <section id="articleView" class="view-layer" aria-hidden="true"><article class="article-shell"><button class="close-button view-close" data-close-view="article" data-i18n-aria="close" aria-label="Закрыть" title="Закрыть">×</button><div id="articleContent"></div></article></section>
 </main>
 <script src="/app.js?v=20260916-v29"></script>
+<script src="/theme-v3.js?v=20261105-v1" defer></script>
 
 </body></html>
