@@ -312,7 +312,7 @@ async function fetchNews(){
       if(!out.error){try{const raw=responseText(out.d);const parsed=parseJsonLoose(raw);if(Array.isArray(parsed))selected.push(...parsed.map(x=>({...x,urgent:Boolean(x.urgent)||newsIsUrgent(x)})).slice(0,24));}catch{}}
     }
   }
-  newsCache={at:Date.now(),items:selected};
+  newsCache.at=Date.now(); newsCache.items=selected;
   return selected;
 }
 const newsCache={at:0,items:[]};

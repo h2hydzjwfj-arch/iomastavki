@@ -47,7 +47,7 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
     });
     await check('Гость: заявка без контактов отклоняется', async () => ok((await call('g', 'POST', '/api/leads', { name: 'Тест' }))._status === 400));
     await check('Гость: заявка принимается', async () => ok((await call('g', 'POST', '/api/leads', { name: 'Тест CI', contact: '@test', from: 'Шанхай', to: 'Москва', consent: true })).ok));
-    await check('Новости: /api/news отвечает', async () => { const j = await call('g', 'GET', '/api/news'); ok(j._status === 200, 'код ' + j._status); }, { soft: true });
+    await check('Новости: /api/news отвечает', async () => { const j = await call('g', 'GET', '/api/news'); ok(j._status === 200, 'код ' + j._status); ok(Array.isArray(j.items), 'нет списка'); });
     await check('Курсы ЦБ: /api/currency', async () => { const j = await call('g', 'GET', '/api/currency'); ok(j._status === 200); }, { soft: true });
     await check('Погода: /api/weather', async () => { const j = await call('g', 'GET', '/api/weather'); ok(j._status === 200 && j.temp != null, 'код ' + j._status); }, { soft: true });
 
