@@ -11,7 +11,7 @@ const LEAD_STATUSES = ['new', 'work', 'done', 'spam'];
 const MODES = ['auto', 'road', 'rail', 'sea', 'air', 'multimodal', ''];
 
 function str(v, max = 200) { return String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, max); }
-function num(v) { const n = Number(String(v ?? '').replace(',', '.')); return Number.isFinite(n) && n >= 0 && n < 1e9 ? n : null; }
+function num(v) { if (v == null || String(v).trim() === '') return null; const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) && n >= 0 && n < 1e9 ? n : null; }
 function newId(n = 6) { return crypto.randomBytes(n).toString('hex'); }
 
 function hashPassword(pw) {
