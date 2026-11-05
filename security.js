@@ -16,8 +16,8 @@ function getSecret() {
 function hmac(body) {
   return crypto.createHmac('sha256', getSecret()).update(body).digest('base64url');
 }
-function signSession(payload = {}, now = Date.now()) {
-  const body = Buffer.from(JSON.stringify({ ...payload, exp: now + SESSION_TTL_MS })).toString('base64url');
+function signSession(payload = {}, now = Date.now(), ttlMs = SESSION_TTL_MS) {
+  const body = Buffer.from(JSON.stringify({ ...payload, exp: now + ttlMs })).toString('base64url');
   return `${body}.${hmac(body)}`;
 }
 function verifySession(token, now = Date.now()) {

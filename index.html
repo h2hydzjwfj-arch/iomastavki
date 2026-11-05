@@ -8,7 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%232E7D5B%27/%3E%3Ccircle cx=%2746%27 cy=%2718%27 r=%279%27 fill=%27%23E8A33D%27/%3E%3C/svg%3E">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"iomastavka","applicationCategory":"BusinessApplication","description":"Калькулятор логистики и ВЭД Китай — Россия","inLanguage":"ru"}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/styles.css?v=20260916-v28"><link rel="stylesheet" href="/theme-v3.css?v=20261105-v6"><link rel="stylesheet" href="/palettes.css?v=1">
+<link rel="stylesheet" href="/styles.css?v=20260916-v28"><link rel="stylesheet" href="/theme-v3.css?v=20261105-v7"><link rel="stylesheet" href="/palettes.css?v=1">
 </head>
 <body>
 <div id="weatherScene" class="weather-scene" aria-hidden="true"><div class="stars"></div><div class="sun"></div><div class="moon"></div><div class="cloud cloud-a"></div><div class="cloud cloud-b"></div><div class="rain"></div><div class="snow"></div><div class="wave wave-back"></div><div class="wave wave-mid"></div><div class="wave wave-front"></div></div>
@@ -37,7 +37,7 @@
   </div>
   <div class="brand" aria-label="iomastavka"><span>i</span><span>o</span><span>m</span><span>a</span><span>s</span><span>t</span><span>a</span><span>v</span><span>k</span><span>a</span></div>
   <nav class="v3-nav" aria-label="Разделы"><span class="v3-pill"></span><button type="button" class="on" data-nav="home">Главная</button><button type="button" data-open-view="cabinetView" data-roles="client">Мои грузы</button><button type="button" data-open-view="calculator">Расчёт ставок</button><button type="button" data-open-view="workView" data-roles="admin">Работа</button><button type="button" data-open-view="assistant" data-roles="admin">AI-ассистент</button><button type="button" data-open-view="news">Новости ВЭД</button><button type="button" data-open-view="forwarders" data-roles="admin">Экспедиторы</button><button type="button" data-open-view="customsView" data-roles="admin">ТН ВЭД</button><button type="button" data-open-view="leadView" data-roles="guest client">Оставить заявку</button></nav>
-  <div class="top-actions"><div class="v3-cap"><button class="lang active" data-lang="ru" aria-label="Русский" title="Русский">RU</button><button class="lang" data-lang="en" aria-label="English" title="English">EN</button><button class="lang" data-lang="zh" aria-label="中文" title="中文">中文</button><button class="lang" data-lang="tr" aria-label="Türkçe" title="Türkçe">TR</button></div><button type="button" class="v3-theme" id="v3theme" aria-label="Сменить тему" title="Сменить тему"><svg class="s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg><svg class="m" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14A8 8 0 0110 4a8 8 0 1010 10z"/></svg></button><button type="button" class="v3-loginbtn" data-open-view="loginView" data-roles="guest">Войти</button><button id="logoutButton" data-roles="client admin" class="logout" data-i18n="logout">Выйти</button></div>
+  <div class="top-actions"><div class="v3-cap"><button class="lang active" data-lang="ru" aria-label="Русский" title="Русский">RU</button><button class="lang" data-lang="en" aria-label="English" title="English">EN</button><button class="lang" data-lang="zh" aria-label="中文" title="中文">中文</button><button class="lang" data-lang="tr" aria-label="Türkçe" title="Türkçe">TR</button></div><button type="button" class="v3-theme" id="v3theme" aria-label="Сменить тему" title="Сменить тему"><svg class="s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg><svg class="m" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14A8 8 0 0110 4a8 8 0 1010 10z"/></svg></button><button type="button" class="v3-loginbtn" data-open-view="loginView" data-roles="guest">Войти</button><button type="button" class="v3-acc" data-open-view="accountView" data-roles="client admin" aria-label="Аккаунт" title="Аккаунт"><span id="v3accInit">•</span></button><button id="logoutButton" data-roles="client admin" class="logout" data-i18n="logout">Выйти</button></div>
 </header>
 <main class="app-shell" id="main">
 <section id="homeView" class="home-view">
@@ -87,6 +87,7 @@
    <div class="auto-calc-strip"><div><span data-i18n="autoVolumeLabel">Объём</span><b id="autoVolume">0 m³</b></div><div><span data-i18n="autoVolumetricLabel">Объёмный вес</span><b id="autoVolumetricWeight">0 kg</b></div><div><span data-i18n="factorLabel">Фактор</span><b id="autoFactor">167 kg/m³</b></div></div><div class="dimensions"><div id="containerWarning" class="container-warning hidden"></div><div class="dimensions-head"><span id="dimensionsTitle" data-i18n="dimensions">ГАБАРИТЫ ОДНОГО МЕСТА, мм</span><div class="unit-switch" aria-label="Единицы измерения"><button type="button" class="unit-choice active" data-unit="mm">мм</button><button type="button" class="unit-choice" data-unit="cm">см</button><button type="button" class="unit-choice" data-unit="m">м</button></div></div><div class="grid three"><div class="field"><label data-i18n="length">Длина <span class="dimension-unit-label">мм</span></label><input id="length" type="number" min="0" placeholder="0"></div><div class="field"><label data-i18n="width">Ширина <span class="dimension-unit-label">мм</span></label><input id="width" type="number" min="0" placeholder="0"></div><div class="field"><label data-i18n="height">Высота <span class="dimension-unit-label">мм</span></label><input id="height" type="number" min="0" placeholder="0"></div></div></div><div class="grid four centered-three"><div class="field hover-select"><label data-i18n="forwarder">Экспедитор</label><button class="fake-select" id="forwarderBtn"><span data-i18n="chooseForwarder">Выберите экспедитора</span><b>⌄</b></button><div class="hover-menu" id="forwarderMenu"></div></div><div class="field hover-select"><label data-i18n="transport">Вид транспорта</label><button class="fake-select" id="transportBtn"><span data-i18n="chooseTransport">Выберите транспорт</span><b>⌄</b></button><div class="hover-menu" id="transportMenu"></div></div><div class="field hover-select"><label data-i18n="incoterms">Условия поставки</label><button class="fake-select" id="incotermBtn"><span>EXW</span><b>⌄</b></button><div class="hover-menu" id="incotermMenu"></div></div></div>
   </details>
   <button id="calculate" class="calculate" data-i18n="calculate">Рассчитать</button>
+  <div class="v3c-saved" id="v3saved" hidden></div>
   <div class="v3c-upl"><input type="file" id="rateFileUpload" accept=".pdf,.xlsx,.xls,.docx,.txt,.csv,.json,.png,.jpg,.jpeg" hidden><button type="button" class="v3c-link" onclick="document.getElementById('rateFileUpload').click()">＋ Загрузить КП / ставку</button><span id="rateUploadStatus" class="v3c-up"></span></div>
  </div>
  <div class="k v3c-hero"><div class="v3c-heroin">
@@ -116,10 +117,33 @@
  <form class="k v3p-form" id="v3loginForm" autocomplete="on">
   <label class="v3p-f"><span>Почта</span><input name="login" type="text" autocomplete="username" inputmode="email" placeholder="you@company.ru" required></label>
   <label class="v3p-f"><span>Пароль</span><input name="password" type="password" autocomplete="current-password" required></label>
+  <label class="v3p-check"><input type="checkbox" name="remember" checked><span>Запомнить меня на этом устройстве</span></label>
   <p class="v3p-err" id="v3loginErr" role="alert"></p>
   <button type="submit" class="calculate">Войти</button>
+  <p class="v3p-hint"><button type="button" class="v3c-link" id="v3forgotBtn">Забыли пароль?</button></p>
   <p class="v3p-hint">Нет доступа? <button type="button" class="v3c-link" data-open-view="leadView">Оставьте заявку</button> — менеджер свяжется с вами.</p>
+ </form>
+ <form class="k v3p-form" id="v3forgotForm" hidden><b class="v3c-title">Восстановление пароля</b>
+  <label class="v3p-f"><span>Почта, с которой вы входите</span><input name="email" type="email" autocomplete="email" required></label>
+  <p class="v3p-ok" id="v3forgotOk"></p><p class="v3p-err" id="v3forgotErr" role="alert"></p>
+  <button type="submit" class="calculate">Прислать ссылку</button>
+  <p class="v3p-hint"><button type="button" class="v3c-link" id="v3backLogin">← Вернуться ко входу</button></p>
  </form></div></section>
+
+<section id="resetView" class="view-layer v3-portal" aria-hidden="true"><div class="v3p-narrow"><button class="close-button view-close" data-close-view="resetView" aria-label="Закрыть" title="Закрыть">×</button>
+ <div class="v3-head"><h1>Новый пароль</h1><p>Придумайте пароль от 8 символов.</p></div>
+ <form class="k v3p-form" id="v3resetForm"><label class="v3p-f"><span>Новый пароль</span><input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
+  <p class="v3p-err" id="v3resetErr" role="alert"></p><p class="v3p-ok" id="v3resetOk"></p><button type="submit" class="calculate">Сохранить пароль</button></form>
+</div></section>
+
+<section id="accountView" class="view-layer v3-portal" aria-hidden="true"><div class="v3p-narrow"><button class="close-button view-close" data-close-view="accountView" aria-label="Закрыть" title="Закрыть">×</button>
+ <div class="v3-head"><h1>Аккаунт</h1><p id="v3accSub">Профиль, пароль и уведомления.</p></div>
+ <div id="v3accBody" class="v3p-list"></div>
+</div></section>
+
+<section id="quoteView" class="view-layer v3-portal" aria-hidden="true"><div class="v3p-narrow v3p-kpwrap"><button class="close-button view-close" data-close-view="quoteView" aria-label="Закрыть" title="Закрыть">×</button>
+ <div id="v3kp"></div>
+</div></section>
 
 <section id="leadView" class="view-layer v3-portal" aria-hidden="true"><div class="v3p-narrow"><button class="close-button view-close" data-close-view="leadView" aria-label="Закрыть" title="Закрыть">×</button>
  <div class="v3-head"><h1>Заявка на перевозку</h1><p>Оставьте контакты и пару слов о грузе — менеджер уточнит детали и пришлёт точную ставку.</p></div>
@@ -140,12 +164,14 @@
 
 <section id="cabinetView" class="view-layer v3-portal" aria-hidden="true"><div class="v3p-wide"><button class="close-button view-close" data-close-view="cabinetView" aria-label="Закрыть" title="Закрыть">×</button>
  <div class="v3-head"><h1>Мои грузы</h1><p id="v3cabHello">Статус, маршрут, расходы и документы — в одном месте.</p></div>
+ <div class="v3p-tabs" role="tablist" id="v3cabTabs"><button type="button" class="chip on" data-ctab="ships">Грузы</button><button type="button" class="chip" data-ctab="quotes">Мои КП</button></div>
  <div id="v3cabList" class="v3p-list"></div>
+ <div id="v3cabQuotes" class="v3p-list" hidden></div>
 </div></section>
 
 <section id="workView" class="view-layer v3-portal" aria-hidden="true"><div class="v3p-wide"><button class="close-button view-close" data-close-view="workView" aria-label="Закрыть" title="Закрыть">×</button>
  <div class="v3-head"><h1>Работа</h1><p>Заявки с сайта, клиенты и их грузы.</p></div>
- <div class="v3p-tabs" role="tablist"><button type="button" class="chip on" data-tab="leads">Заявки</button><button type="button" class="chip" data-tab="ships">Грузы</button><button type="button" class="chip" data-tab="clients">Клиенты</button></div>
+ <div class="v3p-tabs" role="tablist"><button type="button" class="chip on" data-tab="leads">Заявки</button><button type="button" class="chip" data-tab="ships">Грузы</button><button type="button" class="chip" data-tab="clients">Клиенты</button><button type="button" class="chip" data-tab="quotes">КП</button></div>
  <div class="v3p-tab" data-pane="leads"><div id="v3leadsList" class="v3p-list"></div></div>
  <div class="v3p-tab" data-pane="ships" hidden>
   <form class="k v3p-form v3p-inline" id="v3shipForm"><b class="v3c-title">Новый груз</b>
@@ -155,6 +181,7 @@
    <label class="v3p-f"><span>Расходы — по строке: «Фрахт; 2450; USD»</span><textarea name="costs" rows="3" placeholder="Фрахт; 2450; USD&#10;Таможенные платежи; 180000; RUB"></textarea></label>
    <p class="v3p-err" id="v3shipErr" role="alert"></p><button type="submit" class="calculate">Создать груз</button></form>
   <div id="v3shipsList" class="v3p-list"></div></div>
+ <div class="v3p-tab" data-pane="quotes" hidden><div id="v3quotesList" class="v3p-list"></div></div>
  <div class="v3p-tab" data-pane="clients" hidden>
   <form class="k v3p-form v3p-inline" id="v3clientForm"><b class="v3c-title">Новый клиент</b>
    <div class="v3p-grid"><label class="v3p-f"><span>Почта (логин) *</span><input name="email" type="email" required></label><label class="v3p-f"><span>Имя</span><input name="name"></label><label class="v3p-f"><span>Компания</span><input name="company"></label><label class="v3p-f"><span>Телефон</span><input name="phone"></label></div>
@@ -164,6 +191,6 @@
 </main>
 <script src="/app.js?v=20260916-v29"></script>
 <script src="/theme-v3.js?v=20261105-v5" defer></script>
-<script src="/portal-ui.js?v=2" defer></script>
+<script src="/portal-ui.js?v=3" defer></script>
 
 </body></html>

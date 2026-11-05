@@ -10,11 +10,11 @@ function fakeApp() {
   const routes = [];
   const add = m => (p, ...h) => routes.push({ m, p, h });
   const app = { get: add('GET'), post: add('POST'), patch: add('PATCH'), delete: add('DELETE'), put: add('PUT'), use() {} };
-  app.call = async (m, url, { body = {}, cookie, params } = {}) => {
+  app.call = async (m, url, { body = {}, cookie, params, headers = {} } = {}) => {
     const r = routes.find(x => x.m === m && match(x.p, url));
     if (!r) throw new Error('no route ' + m + ' ' + url);
-    const req = { body, cookies: cookie ? { auth: cookie } : {}, params: params || match(r.p, url) };
-    const res = { code: 200, json(o) { this.out = o; return this; }, status(c) { this.code = c; return this; }, setHeader() {}, download(f) { this.file = f; } };
+    const req = { body, cookies: cookie ? { auth: cookie } : {}, params: params || match(r.p, url), headers, get(h) { return this.headers[h.toLowerCase()]; } };
+    const res = { code: 200, json(o) { this.out = o; return this; }, status(c) { this.code = c; return this; }, setHeader() {}, send(b) { this.body = b; return this; }, end() { return this; }, download(f) { this.file = f; } };
     let i = 0; const next = async () => { const h = r.h[i++]; if (h) await h(req, res, next); };
     await next(); return res;
   };
@@ -28,8 +28,13 @@ function make() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'portal-'));
   const sent = [];
   const app = fakeApp();
-  const portal = setup(app, { verifySession, DATA_DIR: dir, upload: null, rateLimit: null, notify: async t => sent.push(t) });
-  return { app, portal, sent, admin: signSession({ role: 'admin' }) };
+  const tgSent = [], mailSent = [];
+  const tg = { ready: () => true, send: async (c, t) => tgSent.push([c, t]), username: async () => 'iomabot', setWebhook: async () => ({ ok: true }) };
+  const mail = { enabled: () => true, send: async (to, sub, t) => mailSent.push([to, sub, t]) };
+  const engine = ({ from, to }) => (/шанхай/i.test(from) && /москв/i.test(to) ? { rate: 9600, currency: 'USD', company: 'Ruscargo', notes: 'внутреннее', mode: 'rail', transitDays: '30-35', basis: 'container' } : null);
+  const portal = setup(app, { verifySession, DATA_DIR: dir, upload: null, rateLimit: null, notify: async t => sent.push(t), tg, mail, engine });
+  portal.setEnvAdminCheck(pw => pw === 'env-admin-pass');
+  return { app, portal, sent, tgSent, mailSent, admin: signSession({ role: 'admin' }) };
 }
 
 test('пароли: хэш проверяется, чужой пароль нет', () => {
@@ -106,4 +111,75 @@ test('облачное хранилище: данные и документы п
   assert.strictEqual(s2.load().leads[0].name, 'Тест');
   assert.strictEqual((await s2.getDoc('ship1', 'abc')).toString(), 'PDF');
   await s2.delDoc('ship1', 'abc'); assert.strictEqual(await s2.getDoc('ship1', 'abc'), null);
+});
+
+async function clientWith(app, admin) {
+  const c = await app.call('POST', '/api/clients', { cookie: admin, body: { email: 'q@test.ru', name: 'Кира' } });
+  return { id: c.out.item.id, pw: c.out.password, sess: signSession({ role: 'client', uid: c.out.item.id }) };
+}
+
+test('смена пароля клиента и администратора', async () => {
+  const { app, portal, admin } = make();
+  const c = await clientWith(app, admin);
+  assert.strictEqual((await app.call('POST', '/api/account/password', { cookie: c.sess, body: { current: 'wrong', next: 'новыйпароль1' } })).code, 403);
+  assert.strictEqual((await app.call('POST', '/api/account/password', { cookie: c.sess, body: { current: c.pw, next: 'short' } })).code, 400);
+  assert.ok((await app.call('POST', '/api/account/password', { cookie: c.sess, body: { current: c.pw, next: 'новыйпароль1' } })).out.ok);
+  assert.ok(portal.findClient('q@test.ru', 'новыйпароль1')); assert.ok(!portal.findClient('q@test.ru', c.pw));
+  assert.ok(portal.adminPasswordOk('env-admin-pass'));
+  assert.ok((await app.call('POST', '/api/account/password', { cookie: admin, body: { current: 'env-admin-pass', next: 'admin-new-pass' } })).out.ok);
+  assert.ok(portal.adminPasswordOk('admin-new-pass')); assert.ok(!portal.adminPasswordOk('env-admin-pass'));
+});
+
+test('смена логина требует текущий пароль', async () => {
+  const { app, admin } = make();
+  const c = await clientWith(app, admin);
+  assert.strictEqual((await app.call('PATCH', '/api/account', { cookie: c.sess, body: { email: 'new@test.ru' } })).code, 403);
+  const ok = await app.call('PATCH', '/api/account', { cookie: c.sess, body: { email: 'new@test.ru', currentPassword: c.pw } });
+  assert.strictEqual(ok.out.item.email, 'new@test.ru');
+});
+
+test('восстановление пароля: ссылка приходит, одинаковый ответ для чужой почты', async () => {
+  const { app, portal, admin, mailSent } = make();
+  const c = await clientWith(app, admin);
+  const a = await app.call('POST', '/api/password/forgot', { body: { email: 'nobody@test.ru' } });
+  const b = await app.call('POST', '/api/password/forgot', { body: { email: 'q@test.ru' } });
+  assert.strictEqual(a.out.message, b.out.message);
+  const token = mailSent[0][2].match(/#reset=([\w-]+)/)[1];
+  assert.strictEqual((await app.call('POST', '/api/password/reset', { body: { token: 'bad', password: 'abcdefgh1' } })).code, 400);
+  assert.ok((await app.call('POST', '/api/password/reset', { body: { token, password: 'восстановлен1' } })).out.ok);
+  assert.ok(portal.findClient('q@test.ru', 'восстановлен1'));
+  assert.strictEqual((await app.call('POST', '/api/password/reset', { body: { token, password: 'ещё-раз-123' } })).code, 400);
+});
+
+test('КП: считается на сервере, сохраняется, без названия агента, уходит клиенту', async () => {
+  const { app, admin, tgSent, mailSent } = make();
+  const c = await clientWith(app, admin);
+  assert.strictEqual((await app.call('POST', '/api/quotes', { body: { from: 'Урюпинск', to: 'Москва' } })).code, 404);
+  const q = await app.call('POST', '/api/quotes', { cookie: c.sess, body: { from: 'Шанхай', to: 'Москва', weight: 1200, price: 1 } });
+  assert.strictEqual(q.out.quote.price, 9600); assert.strictEqual(q.out.quote.company, undefined); assert.strictEqual(q.out.quote.notes, undefined);
+  assert.match(q.out.quote.number, /^КП-\d{6}-[A-F0-9]{4}$/);
+  assert.ok(q.out.delivered.email); assert.match(mailSent[0][2], /9[\s\u00a0]?600 USD/);
+  const pub = await app.call('GET', '/api/quotes/' + q.out.quote.id);
+  assert.strictEqual(pub.out.quote.company, undefined);
+  assert.strictEqual((await app.call('GET', '/api/quotes/' + q.out.quote.id, { cookie: admin })).out.quote.company, 'Ruscargo');
+  const mine = await app.call('GET', '/api/my/quotes', { cookie: c.sess });
+  assert.strictEqual(mine.out.items.length, 1);
+  assert.strictEqual((await app.call('GET', '/api/quotes/zzz')).code, 404);
+});
+
+test('Telegram: привязка через /start, проверка секрета, уведомление о статусе', async () => {
+  process.env.TELEGRAM_WEBHOOK_SECRET = 'whsec';
+  const { app, admin, tgSent } = make();
+  const c = await clientWith(app, admin);
+  const link = await app.call('POST', '/api/account/telegram', { cookie: c.sess });
+  const code = link.out.url.match(/start=([a-f0-9]+)/)[1];
+  assert.strictEqual((await app.call('POST', '/api/telegram/webhook', { body: { message: { chat: { id: 55 }, text: '/start ' + code } } })).code, 401);
+  await app.call('POST', '/api/telegram/webhook', { body: { message: { chat: { id: 55 }, text: '/start ' + code } }, headers: { 'x-telegram-bot-api-secret-token': 'whsec' } });
+  await new Promise(r => setTimeout(r, 20));
+  assert.ok((await app.call('GET', '/api/account', { cookie: c.sess })).out.telegramLinked);
+  const s = await app.call('POST', '/api/shipments', { cookie: admin, body: { clientId: c.id, from: 'Шанхай', to: 'Москва' } });
+  await app.call('PATCH', '/api/shipments/' + s.out.item.id, { cookie: admin, body: { status: 'transit', eventNote: 'Поезд вышел' } });
+  await new Promise(r => setTimeout(r, 20));
+  assert.ok(tgSent.some(([chat, t]) => chat === 55 && /В пути/.test(t) && /Поезд вышел/.test(t)));
+  delete process.env.TELEGRAM_WEBHOOK_SECRET;
 });

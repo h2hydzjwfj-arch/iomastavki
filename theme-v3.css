@@ -811,3 +811,52 @@ html:root body .v3p-admin input[data-eta]{flex:none;width:170px}
 html:root body .v3p-admin select{flex:none;width:200px}
 .v3p-lead .v3c-link{align-self:flex-start;padding:4px 0}
 .v3p-warn{margin:12px 0 0!important;padding:12px 16px;border-radius:14px;background:color-mix(in srgb,var(--v-amber) 22%,transparent);color:var(--v-ink)!important;font-size:14px!important;font-weight:600}
+
+/* =====================================================================
+   v6 — аккаунт, КП, уведомления
+   ===================================================================== */
+.v3-acc{width:44px;height:44px;border-radius:50%;border:1px solid var(--v-bd);background:var(--v-mint);color:var(--v-accd);font-weight:800;font-size:16px;cursor:pointer;flex:none}
+body.manual-dark .v3-acc,body[class*="pal-"] .v3-acc{color:var(--v-ink)}
+#v3toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,30px);opacity:0;pointer-events:none;z-index:9999;background:var(--v-ink);color:var(--v-bg);padding:13px 20px;border-radius:14px;font-size:14.5px;font-weight:600;box-shadow:0 14px 40px rgba(0,0,0,.25);transition:opacity .3s,transform .4s var(--v-ease);max-width:min(560px,92vw);text-align:center}
+#v3toast.on{opacity:1;transform:translate(-50%,0)}
+.v3p-notif{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--v-bd);font-size:14.5px}
+.v3p-notif:last-child{border-bottom:0}.v3p-notif>span:first-child{min-width:170px;font-weight:600}
+.v3p-on{color:var(--v-acc)}.v3p-off{color:#C8452C}
+html:root body .v3p-form .calculate.v3p-sm{width:auto!important;height:40px!important;padding:0 18px!important;margin:0!important;font-size:14px!important}
+.v3p-saved{margin-top:6px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:rgba(255,255,255,.12);border-radius:14px;padding:10px 14px;color:#fff;font-size:14px}
+.v3p-savedbtns{display:flex;gap:8px}
+.v3p-savedbtns button,.v3p-savebtn{border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;border-radius:12px;padding:9px 14px;font-weight:600;font-size:13.5px;cursor:pointer}
+.v3p-savedbtns button:hover,.v3p-savebtn:hover{background:rgba(255,255,255,.14)}
+.v3p-savebtn{align-self:flex-start;margin-top:4px}
+.v3c-saved{display:flex;flex-direction:column;gap:4px;background:var(--v-field);border-radius:14px;padding:10px 14px;font-size:13px}
+.v3c-saved .v3c-link{text-align:left;font-size:13px}
+.v3p-qrow{display:flex;align-items:center;gap:14px;padding:14px 18px!important;flex-wrap:wrap}
+.v3p-qrow>div{flex:1;min-width:220px}.v3p-qrow small{display:block;color:var(--v-mut);font-size:12.5px;margin-top:2px}
+.v3p-qp{font-size:18px;font-variant-numeric:tabular-nums}
+/* КП — как документ */
+.v3p-kpwrap{width:min(760px,100%)}
+.v3p-kp{padding:34px!important;display:flex;flex-direction:column;gap:14px}
+.v3p-kp header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-bottom:16px;border-bottom:2px solid var(--v-ink)}
+.v3p-kplogo{display:block;font-size:24px;font-weight:800;letter-spacing:-.04em}
+.v3p-kp header small{display:block;color:var(--v-mut);font-size:12.5px}
+.v3p-kpno{text-align:right}.v3p-kpno b{font-size:16px}
+.v3p-kp h2{margin:6px 0 0;font-size:30px;letter-spacing:-.03em}
+.v3p-kproute{margin:0;font-size:20px;font-weight:700;color:var(--v-acc)}
+.v3p-kpprice{background:var(--v-accd);color:#fff;border-radius:20px;padding:20px 24px;display:flex;flex-direction:column;gap:4px}
+body.manual-dark .v3p-kpprice{background:#1F4D3B}
+.v3p-kpprice span{font-size:13px;opacity:.8}.v3p-kpprice b{font-size:44px;letter-spacing:-.04em;line-height:1.05;font-variant-numeric:tabular-nums}.v3p-kpprice small{opacity:.8;font-size:13.5px}
+.v3p-kpvalid{margin:0;font-weight:700;color:var(--v-acc)}.v3p-kpvalid.exp{color:#C8452C}
+.v3p-kpnote{font-size:12.5px!important}
+.v3p-kpbtns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+html:root body .v3p-kpbtns .calculate{width:auto!important;height:48px!important;padding:0 22px!important;margin:0!important}
+.v3p-kpbtns .v3p-cta{margin:0;background:var(--v-mint);color:var(--v-accd);box-shadow:none}
+@media print{
+  @page{margin:14mm}
+  body *{visibility:hidden!important}
+  #quoteView,#quoteView *{visibility:visible!important}
+  #quoteView{position:absolute!important;inset:0!important;background:#fff!important;padding:0!important;overflow:visible!important}
+  #quoteView .close-button,.v3p-kpbtns{display:none!important}
+  .v3p-kp{box-shadow:none!important;border:0!important;color:#000!important;background:#fff!important}
+  .v3p-kpprice{background:#fff!important;color:#000!important;border:2px solid #000}
+}
+@media(max-width:700px){.v3-acc{width:34px;height:34px;font-size:14px}.v3p-kp{padding:18px!important}.v3p-kp h2{font-size:22px}.v3p-kpprice b{font-size:32px}.v3p-notif>span:first-child{min-width:0;width:100%}}

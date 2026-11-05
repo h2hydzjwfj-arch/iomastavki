@@ -39,7 +39,15 @@ app.use(['/api/rates/import', '/api/rates/import-text', '/api/agents/import'], i
 // Роли: гость / клиент / администратор (portal.js). Всё, что стоит денег или раскрывает
 // контакты и ставки агентов, — только администратору.
 const cloud = require('./cloud').createCloud();
-const portal = require('./portal').setup(app, { verifySession, DATA_DIR, upload, rateLimit, cloud });
+// Лучшая ставка из базы для КП (тот же подбор, что и в /api/rates/recommend).
+function bestRate({ from, to, mode, distance }) {
+  const db = ensureRateDb();
+  const m = db.records.map(r => ({ ...r, _score: routeScore(r, from, to, mode, Number.isFinite(distance) ? distance : null) }))
+    .filter(r => r._score > 0 && Number.isFinite(Number(r.rate)))
+    .sort((a, b) => b._score - a._score || new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+  return m[0] || null;
+}
+const portal = require('./portal').setup(app, { verifySession, DATA_DIR, upload, rateLimit, cloud, engine: q => bestRate(q) });
 app.use(['/api/agents', '/api/agents/import', '/api/rates/import', '/api/rates/import-text', '/api/rates/import-local',
   '/api/ai', '/api/tts', '/api/transcribe', '/api/realtime/call', '/api/customs/check', '/api/news/article/audio'], portal.admin);
 app.get('/api/rates', portal.admin);
@@ -48,7 +56,9 @@ app.put('/api/rates', portal.admin);
 const fallbackHash = 'scrypt$16384$8$1$bd186dac2105a3d050c5f769e28d25a2$51e731def6ff02e823b43cb8cfce55adcad745c5c72935ce68d875f583096288';
 
 function safeReadRates() {
-  try { return JSON.parse(fs.readFileSync(RATES_FILE, 'utf8')); } catch { return {}; }
+  // Сначала рабочая база (DATA_DIR, туда пишет импорт), иначе — стартовая база из репозитория.
+  try { return JSON.parse(fs.readFileSync(RATES_FILE, 'utf8')); } catch {}
+  try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'rates.json'), 'utf8')); } catch { return {}; }
 }
 
 function ensureRateDb() {
@@ -396,10 +406,12 @@ app.post('/api/news/article/audio', async(req,res)=>{
 app.post('/api/login', loginLimiter, (req,res) => {
   const login = String(req.body?.login || '').trim().toLowerCase(), password = String(req.body?.password || '');
   let payload = null;
-  if (!login || login === 'admin') { if (verifyPassword(password)) payload = { role: 'admin', name: 'Администратор' }; }
+  if (!login || login === 'admin') { if (portal.adminPasswordOk(password)) payload = { role: 'admin', name: 'Администратор' }; }
   else { const u = portal.findClient(login, password); if (u) payload = { role: 'client', uid: u.id, name: u.name }; }
   if (!payload) return res.status(401).json({ ok:false, error:'Неверный логин или пароль' });
-  res.cookie('auth', signSession(payload), { httpOnly:true, secure:true, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
+  // «Запомнить меня»: клиент — 30 дней, администратор — 7 дней; иначе 8 часов.
+  const ttl = req.body?.remember ? (payload.role === 'admin' ? 7 : 30) * 24 * 60 * 60 * 1000 : 8 * 60 * 60 * 1000;
+  res.cookie('auth', signSession(payload, Date.now(), ttl), { httpOnly:true, secure:true, sameSite:'lax', maxAge:ttl, path:'/' });
   res.json({ ok:true, role: payload.role, name: payload.name });
 });
 app.post('/api/logout', (req,res) => {
@@ -614,6 +626,14 @@ app.use((req,res) => res.status(404).type('html').send('<!doctype html><meta cha
       setInterval(() => { cloud.get('state/portal.json').catch(() => {}); }, 12 * 60 * 60 * 1000).unref();
     } else console.warn('Хранилище: локальные файлы. На бесплатном Render они стираются при перезапуске — подключите Supabase.');
     await portal.store.init();
+    portal.setEnvAdminCheck(verifyPassword);
+    // Telegram-бот: принимаем сообщения клиентов (привязка /start) через webhook.
+    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_WEBHOOK_SECRET) {
+      const site = String(process.env.SITE_URL || 'https://iomastavki.onrender.com').replace(/\/+$/, '');
+      portal.tg.setWebhook(site + '/api/telegram/webhook', process.env.TELEGRAM_WEBHOOK_SECRET)
+        .then(r => console.log('Telegram webhook:', r && r.ok ? 'ok' : (r && r.description)))
+        .catch(e => console.error('Telegram webhook:', e.message));
+    }
   } catch (e) { console.error('Ошибка подключения хранилища:', e.message); }
   app.listen(PORT, () => console.log(`iomastavka listening on ${PORT}`));
 })();
