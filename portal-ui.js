@@ -271,8 +271,7 @@
     if((m=h.match(/^#kp=([a-f0-9]{16})$/)))openQuote(m[1]);
     else if((m=h.match(/^#reset=([\w-]{20,})$/))){resetToken=m[1];history.replaceState(null,'',location.pathname);openView('resetView')}
     else if(h==='#kb')setTimeout(function(){openView('kbView')},300);
-    else if(h==='#cabinet')setTimeout(function(){openView(role==='client'?'cabinetView':'loginView')},300);
-    else if(h==='#work')setTimeout(function(){openView(role==='admin'?'workView':'loginView')},300);
+    else if(h==='#cabinet'||h==='#work'){try{history.replaceState(null,'',location.pathname)}catch(e){}if(!$('.view-layer.open'))openView(h==='#work'?(role==='admin'?'workView':'loginView'):(role==='client'?'cabinetView':'loginView'))}
   }
   window.addEventListener('hashchange',route);
   var waitRole=setInterval(function(){if(document.body.className.match(/role-/)){clearInterval(waitRole);route();renderSaved()}},100);
