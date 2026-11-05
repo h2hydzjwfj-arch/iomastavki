@@ -869,3 +869,16 @@ html:root body .view-layer .v3p-kp header small{color:var(--v-mut)!important}
 html:root body .v3p-test input{flex:1;min-width:220px;height:40px!important;min-height:0!important;border-radius:12px!important;padding:0 12px!important;background:var(--v-field)!important;border:0!important;font-size:14px!important;color:var(--v-ink)!important}
 .v3p-testout p{margin:6px 0;font-size:14px;font-weight:600}
 html:root body .view-layer .v3p-testout p.v3p-on{color:var(--v-acc)!important}html:root body .view-layer .v3p-testout p.v3p-off{color:#C8452C!important}
+/* погода убрана: курсы занимают всю колонку */
+.v3-cur{grid-row:span 2}
+.v3-cur>div{display:flex;flex-direction:column;gap:14px}
+.v3-cur .rt{font-size:15px}.v3-cur .rt b{font-size:24px}
+.v3-cur .spk{width:90px;height:30px}
+@media(max-width:980px){.v3-cur{grid-row:auto}.v3-cur .rt b{font-size:19px}}
+@media(max-width:700px){.v3-cur .rt b{font-size:15px}}
+body .weather-scene{display:none!important}
+html:root body,html:root body.manual-light{background:var(--v-bg)!important}
+.v3-cur{justify-content:flex-start!important;gap:18px}
+.v3-cur>.dim:before{content:"Курсы ЦБ РФ · ";font-weight:700;color:var(--v-ink)}
+.v3-cur>div{margin-top:auto;margin-bottom:auto}
+@media(max-width:700px){.v3-newscard{grid-column:1 / -1;min-height:0!important}}

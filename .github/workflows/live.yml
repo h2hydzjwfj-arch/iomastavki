@@ -4,6 +4,10 @@ on:
   schedule:
     - cron: '17 6 * * *'
   workflow_dispatch:
+    inputs:
+      url:
+        description: 'Адрес сайта для проверки'
+        required: false
 permissions:
   contents: read
 jobs:
@@ -11,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      SITE_URL: ${{ vars.SITE_URL || 'https://iomastavki.onrender.com' }}
+      SITE_URL: ${{ inputs.url || vars.SITE_URL || 'https://iomastavki.onrender.com' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
