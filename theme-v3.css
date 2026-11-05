@@ -860,3 +860,8 @@ html:root body .v3p-kpbtns .calculate{width:auto!important;height:48px!important
   .v3p-kpprice{background:#fff!important;color:#000!important;border:2px solid #000}
 }
 @media(max-width:700px){.v3-acc{width:34px;height:34px;font-size:14px}.v3p-kp{padding:18px!important}.v3p-kp h2{font-size:22px}.v3p-kpprice b{font-size:32px}.v3p-notif>span:first-child{min-width:0;width:100%}}
+.v3c-saved[hidden]{display:none!important}
+html:root body .view-layer .v3p-kpprice small,html:root body .view-layer .v3p-kpprice span{color:rgba(255,255,255,.85)!important}
+html:root body .view-layer .v3p-kproute{color:var(--v-acc)!important}
+html:root body .view-layer .v3p-kpvalid{color:var(--v-acc)!important}html:root body .view-layer .v3p-kpvalid.exp{color:#C8452C!important}
+html:root body .view-layer .v3p-kp header small{color:var(--v-mut)!important}
