@@ -934,3 +934,32 @@ body.manual-dark .view-layer .kb-r p.p{color:#8FD3B0!important}
 .kb-sources{font-size:12.5px;color:var(--v-mut);line-height:1.8;padding:0 4px}
 @media(max-width:900px){.kb-two{grid-template-columns:1fr}.kb-routes{grid-template-columns:1fr}}
 @media(max-width:700px){.kb-sec{padding:16px!important}.kb-sec h2{font-size:18px}.kb-now li,.kb-list{font-size:13.5px}}
+
+/* v7 — расчёт: широкие блоки, карта на всю ширину */
+html:root body .v3-calc-grid{grid-template-columns:minmax(340px,1fr) 1.55fr;grid-template-areas:"params hero" "more more" "map map" "break cur"!important;align-items:stretch}
+html:root body .v3c-params{align-self:stretch}
+.v3c-morecard{grid-area:more;display:grid;grid-template-columns:minmax(220px,1fr) 2fr;gap:14px 16px;padding:24px 26px!important;align-items:stretch}
+.v3c-morecard>.v3c-title{grid-column:1 / -1;margin:0}
+.v3c-dist{grid-column:1}
+html:root body .v3c-morecard .auto-calc-strip{grid-column:2;margin:0!important;display:grid!important;grid-template-columns:repeat(3,1fr);gap:10px}
+html:root body .v3c-morecard .auto-calc-strip>div{display:flex;flex-direction:column;justify-content:center;padding:10px 14px!important;border-radius:16px}
+html:root body .v3c-morecard .dimensions{grid-column:1 / -1}
+html:root body .v3c-morecard .dimensions .grid.three{grid-template-columns:repeat(3,1fr)!important;gap:12px}
+html:root body .v3c-morecard .grid.four,html:root body .v3c-morecard .centered-three{grid-column:1 / -1;grid-template-columns:repeat(3,1fr)!important;gap:12px!important}
+/* карта крупно, разбор вариантов рядом */
+html:root body .v3c-map{display:grid!important;grid-template-columns:1.35fr 1fr;grid-template-rows:auto 1fr;gap:12px 20px;align-items:start}
+html:root body .v3c-map>.v3c-title{grid-column:1 / -1}
+html:root body .v3c-mapbox{grid-column:1;min-height:330px}
+html:root body .v3c-advice{grid-column:2;margin:0;max-height:430px;overflow:auto;padding-right:4px}
+html:root body .v3c-cur{grid-area:cur;align-self:center}
+html:root body .v3c-break{grid-area:break}
+/* без стрелочек в числовых полях */
+html:root body .v3-calc input[type=number]::-webkit-inner-spin-button,html:root body .v3-calc input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+html:root body .v3-calc input[type=number]{-moz-appearance:textfield;appearance:textfield}
+@media(max-width:1100px){html:root body .v3-calc-grid{grid-template-columns:1fr 1fr;grid-template-areas:"hero hero" "params params" "more more" "map map" "break break" "cur cur"!important}}
+@media(max-width:860px){html:root body .v3c-map{grid-template-columns:1fr}html:root body .v3c-mapbox,html:root body .v3c-advice{grid-column:1}html:root body .v3c-advice{max-height:none}html:root body .v3c-mapbox{min-height:0}
+  .v3c-morecard{grid-template-columns:1fr}.v3c-dist,html:root body .v3c-morecard .auto-calc-strip{grid-column:1}html:root body .v3c-morecard .grid.four,html:root body .v3c-morecard .centered-three{grid-template-columns:1fr!important}}
+@media(max-width:700px){html:root body .v3-calc-grid{grid-template-columns:1fr;grid-template-areas:"params" "hero" "more" "map" "break" "cur"!important}
+  .v3c-morecard{padding:16px!important}html:root body .v3c-morecard .auto-calc-strip{grid-template-columns:repeat(3,1fr)}html:root body .v3c-morecard .dimensions .grid.three{grid-template-columns:repeat(3,1fr)!important;gap:6px}}
+html:root body .v3c-morecard .grid.four,html:root body .v3c-morecard .centered-three{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))!important}
+@media(max-width:860px){html:root body .v3c-morecard .grid.four,html:root body .v3c-morecard .centered-three{grid-template-columns:1fr!important}}
