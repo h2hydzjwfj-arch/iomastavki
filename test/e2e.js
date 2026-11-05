@@ -45,6 +45,13 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       ok(j.ok && j.quote && j.quote.price > 0, JSON.stringify(j)); ok(!j.quote.company, 'в КП видно агента'); gq = j.quote;
       const p = await call('x', 'GET', '/api/quotes/' + gq.id); ok(p.quote && p.quote.number === gq.number, 'ссылка на КП не открывается');
     });
+    await check('Сравнение транспорта: 400 кг — авиа и сборные, без целого контейнера', async () => {
+      const j = await call('g', 'POST', '/api/estimate', { from: 'Иу', to: 'Москва', weight: 400 }); ok(j.ok, JSON.stringify(j));
+      const k = j.options.map(o => o.kind); ok(k.includes('air') && k.includes('ltl_auto'), k.join(',')); ok(!k.includes('fcl_rail') && !k.includes('ftl_auto'), 'предложен целый контейнер: ' + k.join(','));
+      const q = await call('g', 'POST', '/api/quotes', { from: 'Иу', to: 'Москва', weight: 400, kind: 'ltl_auto' }); ok(q.ok && q.quote.price === j.options.find(o => o.kind === 'ltl_auto').price, 'цена КП не совпала с расчётом');
+      const big = await call('g', 'POST', '/api/estimate', { from: 'Shanghai', to: 'Москва', weight: 20000, volume: 60 }); ok(big.options.some(o => o.kind === 'fcl_rail'), 'нет контейнера для 20 т');
+    });
+    await check('Статьи для поисковиков и sitemap', async () => { const r = await fetch(B + '/stati/sbornyj-gruz-iz-kitaya'); ok(r.status === 200); ok((await r.text()).includes('<h1>')); const sm = await (await fetch(B + '/sitemap.xml')).text(); ok(sm.includes('/stati/dostavka-cherez-zabaikalsk') && sm.includes('/novosti'), 'нет статей в sitemap'); });
     await check('Гость: заявка без контактов отклоняется', async () => ok((await call('g', 'POST', '/api/leads', { name: 'Тест' }))._status === 400));
     await check('Гость: заявка принимается', async () => ok((await call('g', 'POST', '/api/leads', { name: 'Тест CI', contact: '@test', from: 'Шанхай', to: 'Москва', consent: true })).ok));
     await check('Новости: /api/news отвечает', async () => { const j = await call('g', 'GET', '/api/news'); ok(j._status === 200, 'код ' + j._status); ok(Array.isArray(j.items), 'нет списка'); });
@@ -102,11 +109,30 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       ok((await call('c', 'PATCH', '/api/account', { email: 'renamed@ci.test', currentPassword: 'new-password-1' })).item.email === 'renamed@ci.test');
       ok((await call('c3', 'POST', '/api/login', { login: 'renamed@ci.test', password: 'new-password-1' })).ok);
     });
-    await check('Восстановление пароля отвечает одинаково', async () => { const a = await call('g', 'POST', '/api/password/forgot', { email: 'renamed@ci.test' }); const b = await call('g', 'POST', '/api/password/forgot', { email: 'nobody@ci.test' }); ok(a.ok && a.message === b.message); });
+    await check('Восстановление пароля: понятные ответы', async () => { const a = await call('g', 'POST', '/api/password/forgot', { email: 'renamed@ci.test' }); ok(a.ok && /менеджеру|отправлена/.test(a.message), JSON.stringify(a)); const b = await call('g', 'POST', '/api/password/forgot', { email: 'nobody@ci.test' }); ok(b._status === 404); });
     await check('Админ: смена своего пароля', async () => {
       ok((await call('a', 'POST', '/api/account/password', { current: ADMIN_PASS, next: 'admin-new-pass-1' })).ok);
       ok((await call('a2', 'POST', '/api/login', { login: 'admin', password: 'admin-new-pass-1' })).ok);
       { const st = (await call('a3', 'POST', '/api/login', { login: 'admin', password: ADMIN_PASS }))._status; ok(st === 401 || st === 429, 'старый пароль админа работает (код ' + st + ')'); }
+    });
+    await check('Заявка с документами: файл сохраняется, создаётся сделка', async () => {
+      const fd = new FormData(); for (const [k, v] of Object.entries({ name: 'Инвойс CI', contact: '+79001112233', from: 'Иу', to: 'Москва', consent: 'true' })) fd.append(k, v);
+      fd.append('files', new Blob([require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'invoice.xlsx'))]), 'invoice.xlsx');
+      const j = await call('g2', 'POST', '/api/leads/docs', fd); ok(j.ok, JSON.stringify(j));
+      const ds = await call('a', 'GET', '/api/deals?q=' + encodeURIComponent('Инвойс CI')); const deal = ds.items && ds.items[0]; ok(deal && deal.files === 1, 'нет сделки с файлом: ' + JSON.stringify(ds.items && ds.items[0]));
+      const full = await call('a', 'GET', '/api/deals/' + deal.id); ok(/LED grow light/.test(full.item.activity[0].text), 'содержимое Excel не попало в сделку');
+      const f = await fetch(B + '/api/deals/' + deal.id + '/files/' + full.item.files[0].id, { headers: { Cookie: 'auth=' + jar.a } }); ok(f.status === 200, 'файл не скачивается');
+      ok((await fetch(B + '/api/deals/' + deal.id + '/files/' + full.item.files[0].id)).status === 401, 'гостю доступен файл сделки');
+    });
+    await check('CRM: сделка вручную, заметка, смена этапа, база клиентов, импорт CSV', async () => {
+      const c = await call('a', 'POST', '/api/deals', { title: 'Насос 261105', contactName: 'Пётр', contactPhone: '+7 901 222-33-44', company: 'ООО Насосы', mode: 'rail' }); ok(c.ok);
+      ok((await call('a', 'POST', '/api/deals/' + c.item.id + '/notes', { text: 'Звонок', type: 'call' })).ok);
+      const p = await call('a', 'PATCH', '/api/deals/' + c.item.id, { stage: 'Ставка отправлена' }); ok(p.item.activity.some(a => a.type === 'field' && a.to === 'Ставка отправлена'));
+      const cl = await call('a', 'GET', '/api/crm/clients?sort=added'); ok(cl.items.some(x => x.name === 'Пётр' && x.deals === 1), 'клиента нет в базе');
+      const csv = 'Номер;Название;Контакт;Компания;Этап;Тип перевозки;Создана\n301026-11;Железные диски 261030;Захар;Захар;Ставка отправлена;Авто;30.10.2026\n';
+      const fd = new FormData(); fd.append('file', new Blob([csv]), 'deals.csv'); const im = await call('a', 'POST', '/api/deals/import', fd); ok(im.ok && im.added === 1, JSON.stringify(im));
+      const again = new FormData(); again.append('file', new Blob([csv]), 'deals.csv'); ok((await call('a', 'POST', '/api/deals/import', again)).added === 0, 'дубль импортирован');
+      ok((await call('g', 'GET', '/api/deals'))._status === 401, 'гостю видны сделки');
     });
     await check('Отключённый клиент теряет доступ', async () => { await call('a', 'PATCH', '/api/clients/' + cl.id, { active: false }); ok((await call('c', 'GET', '/api/my/shipments'))._status === 401); });
     await check('Выход', async () => { await call('a', 'POST', '/api/logout'); });
