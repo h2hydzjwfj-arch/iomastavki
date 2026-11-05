@@ -36,8 +36,20 @@
   var NAMES={auto:['Авто','Road','公路','Kara'],rail:['ЖД','Rail','铁路','Demiryolu'],sea:['Море','Sea','海运','Deniz'],air:['Авиа','Air','空运','Hava']};
   var curMode='rail';
   function drawMode(m){
-    $$('svg').forEach(function(svg){var p=$('.v3routepath',svg);if(!p)return;var key=(svg.getAttribute('viewBox')||'').split(' ')[3]==='190'?'c':'h';var d=MODES[key][m];if(!d)return;p.setAttribute('d',d);$$('.v3am',svg).forEach(function(a){a.setAttribute('path',d);a.setAttribute('dur',DUR[m]+'s');try{a.beginElement&&a.beginElement()}catch(e){}})});
+    var R=window.IOMA_ROUTES;if(!R)return;
+    var v=function(id){var e=document.getElementById(id);return e?String(e.value||'').trim():''};
+    var from=v('fromCity')||'Шанхай',to=v('toCity')||'Москва';
+    var hs=document.querySelector('#v3Hero .v3-map svg');
+    var adv=R.render(hs,{from:from,to:to,mode:m,fromLabel:v('fromCity')||'',toLabel:v('toCity')||''});
+    var cap=document.getElementById('v3hcap'),L=(function(){try{return localStorage.getItem('iomastavka_lang')||'ru'}catch(e){return 'ru'}})();
+    var DAYS={ru:'дн.',en:'days',zh:'天',tr:'gün'}[L]||'дн.';
+    if(cap&&adv&&adv.items[0]){var c=adv.items[0];cap.textContent=(c.t[L]||c.t.ru)+' · '+c.days[0]+'–'+c.days[1]+' '+DAYS}
+    var cs=document.querySelector('.v3c-mapbox svg');var adv2=R.render(cs,{from:from,to:to,mode:m,fromLabel:v('fromCity')||'',toLabel:v('toCity')||''});
+    var box=document.getElementById('v3advice');
+    if(box&&adv2){var TX={ru:['Рекомендуем','Другие варианты','риск','Сроки ориентировочные, от двери до двери; зависят от загрузки погранпереходов и сезона.'],en:['Recommended','Other options','risk','Door-to-door times are indicative and depend on border congestion and season.'],zh:['推荐','其他方案','风险','门到门时效仅供参考，取决于口岸拥堵和季节。'],tr:['Önerilen','Diğer seçenekler','risk','Kapıdan kapıya süreler yaklaşıktır; sınır yoğunluğuna ve sezona bağlıdır.']}[L]||[];
+      box.innerHTML='<p class="v3a-why">'+adv2.why+'</p>'+adv2.items.map(function(c,i){return '<div class="v3a-item'+(i?'':' best')+(c.risky?' risky':'')+'"><div class="v3a-h"><i style="background:'+R.colors[c.mode]+'"></i><b>'+(c.t[L]||c.t.ru)+'</b><span>'+c.days[0]+'–'+c.days[1]+' '+DAYS+'</span>'+(i?'':'<em>'+TX[0]+'</em>')+(c.risky?'<em class="rk">'+TX[2]+'</em>':'')+'</div><p class="p">+ '+(c.plus[L]||c.plus.ru)+'</p><p class="m">− '+(c.minus[L]||c.minus.ru)+'</p></div>'}).join('')+'<p class="v3a-note">'+TX[3]+'</p>'}
   }
+  window.__v3drawMode=function(){drawMode(curMode)};
   function pickTransport(m){ // select the same transport in the real calculator menu
     var menu=document.getElementById('transportMenu');if(!menu)return;
     var item=$$('.hover-item',menu).find(function(b){return NAMES[m].indexOf(b.textContent.trim())>=0});
@@ -46,7 +58,7 @@
   function setMode(m,fromUser){curMode=m;$$('.v3-chips .chip,.v3c-chips .chip').forEach(function(c){c.classList.toggle('on',c.dataset.m===m)});drawMode(m);if(fromUser)pickTransport(m)}
   window.__v3setMode=setMode;
   safe(function(){$$('.v3-chips .chip,.v3c-chips .chip').forEach(function(c){c.addEventListener('click',function(e){e.stopPropagation();setMode(c.dataset.m,true)})})});
-  safe(function(){drawMode(curMode)});
+  safe(function(){if(window.IOMA_ROUTES)drawMode(curMode);else window.addEventListener('load',function(){drawMode(curMode)})});
 
   /* route + cargo labels follow the calculator fields */
   safe(function(){
@@ -59,6 +71,8 @@
       if(c)c.textContent=w&&Number(w)>0?(Number(w).toLocaleString('ru-RU')+' кг'+(v&&!/^0\s/.test(v)?' · '+v.replace('m³','м³'):'')):'укажите в расчёте';
     }
     ['fromCity','toCity','weight','pieces','length','width','height'].forEach(function(i){var e=document.getElementById(i);if(e){e.addEventListener('change',upd);e.addEventListener('input',upd)}});
+    ['fromCity','toCity'].forEach(function(i){var e=document.getElementById(i);e&&e.addEventListener('change',function(){drawMode(curMode)})});
+    document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('.lang'))setTimeout(function(){drawMode(curMode)},60)});
     document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('.suggestions'))setTimeout(upd,50)});
     upd();
   });

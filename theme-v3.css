@@ -879,6 +879,29 @@ html:root body .view-layer .v3p-testout p.v3p-on{color:var(--v-acc)!important}ht
 body .weather-scene{display:none!important}
 html:root body,html:root body.manual-light{background:var(--v-bg)!important}
 .v3-cur{justify-content:flex-start!important;gap:18px}
-.v3-cur>.dim:before{content:"Курсы ЦБ РФ · ";font-weight:700;color:var(--v-ink)}
+.v3-curt{color:var(--v-ink);font-weight:700}
 .v3-cur>div{margin-top:auto;margin-bottom:auto}
 @media(max-width:700px){.v3-newscard{grid-column:1 / -1;min-height:0!important}}
+
+/* карта маршрутов */
+.v3-map svg{height:150px!important;width:100%}
+.v3-map svg .ct{font-size:19px}.v3-map svg .cl{font-size:14px}.v3-map svg .cn{font-size:16px}
+.v3-hcap{font-size:13px;color:rgba(255,255,255,.85);font-weight:600;margin:-4px 0 6px}
+.v3c-mapbox{padding:6px!important}.v3c-mapbox svg{max-height:none!important;height:auto}
+.v3c-advice{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.v3a-why{margin:4px 0 2px!important;font-size:14px!important;font-weight:600;color:var(--v-ink)!important;line-height:1.45}
+.v3a-item{background:var(--v-field);border-radius:14px;padding:10px 14px;border-left:4px solid transparent}
+.v3a-item.best{border-left-color:var(--v-acc)}.v3a-item.risky{border-left-color:#E06A4E}
+.v3a-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.v3a-h i{width:10px;height:10px;border-radius:50%;flex:none}
+.v3a-h b{font-size:14px}.v3a-h span{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums;font-size:13.5px}
+.v3a-h em{font-style:normal;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--v-acc);color:#fff}
+.v3a-h em.rk{background:#E06A4E}
+html:root body .view-layer .v3a-item p{margin:4px 0 0!important;font-size:12.5px!important;line-height:1.4}
+html:root body .view-layer .v3a-item p.p{color:var(--v-accd)!important}html:root body .view-layer .v3a-item p.m{color:var(--v-mut)!important}
+body.manual-dark .view-layer .v3a-item p.p{color:#8FD3B0!important}
+html:root body .view-layer .v3a-note{font-size:11.5px!important;color:var(--v-mut)!important;margin:2px 0 0!important}
+/* карта крупнее: карточка маршрута на всю ширину под ценой */
+html:root body .v3-calc-grid{grid-template-areas:"params hero hero" "params map map" "params break break" "cur cur cur"}
+@media(max-width:980px){html:root body .v3-calc-grid{grid-template-areas:"hero hero" "params params" "map map" "break break" "cur cur"}}
+@media(max-width:700px){html:root body .v3-calc-grid{grid-template-areas:"params" "hero" "map" "break" "cur"}.v3-map svg{height:110px!important}.v3-hcap{font-size:12px}}
