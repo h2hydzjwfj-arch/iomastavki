@@ -6,6 +6,8 @@
   // RU: [EN, ZH, TR]
   var D = {
     'Главная': ['Home', '首页', 'Ana sayfa'],
+    'База знаний': ['Knowledge base', '知识库', 'Bilgi bankası'],
+    'Маршруты Китай → Россия: что происходит сейчас, сроки, погранпереходы и документы.': ['China → Russia routes: the current situation, transit times, border crossings and documents.', '中国→俄罗斯路线：当前形势、时效、口岸和单证。', 'Çin → Rusya güzergâhları: güncel durum, süreler, sınır kapıları ve belgeler.'],
     'Мои грузы': ['My shipments', '我的货物', 'Gönderilerim'],
     'Расчёт ставок': ['Freight rates', '运价计算', 'Navlun hesabı'],
     'Расчёт ставки': ['Freight quote', '运价计算', 'Navlun hesabı'],
@@ -149,7 +151,7 @@
     [/^нет (.+)$/, ['missing $1', '缺少 $1', '$1 eksik']],
   ];
   var IDX = { en: 0, zh: 1, tr: 2 };
-  var SKIP = '#chatMessages,#newsList,#directoryGrid,#v3leadsList .v3p-lead p,#v3clientsList small,svg,script,style,.tarot-shell,#articleContent,.result-notes,input,textarea';
+  var SKIP = '#kbBody,#chatMessages,#newsList,#directoryGrid,#v3leadsList .v3p-lead p,#v3clientsList small,svg,script,style,.tarot-shell,#articleContent,.result-notes,input,textarea';
   var orig = new WeakMap();
   function lang() { try { return localStorage.getItem('iomastavka_lang') || 'ru'; } catch (e) { return 'ru'; } }
   function tr(ru, l, attr) {
