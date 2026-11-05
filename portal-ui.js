@@ -86,7 +86,7 @@
       +(ev.length?'<details class="v3p-hist"><summary>История ('+ev.length+')</summary><ul>'+ev.map(function(x){return '<li><time>'+dtime(x.date)+'</time><b>'+(ST[x.status]||esc(x.status))+'</b>'+(x.note?' — '+esc(x.note):'')+'</li>'}).join('')+'</ul></details>':'')
       +(admin?'<div class="v3p-admin"><select data-status="'+esc(s.id)+'">'+STK.map(function(k){return '<option value="'+k+'"'+(k===s.status?' selected':'')+'>'+ST[k]+'</option>'}).join('')+'</select><input data-note="'+esc(s.id)+'" placeholder="Комментарий к статусу (видит клиент)" maxlength="300"><input data-eta="'+esc(s.id)+'" type="date" value="'+esc(/^\d{4}-\d\d-\d\d$/.test(s.eta||'')?s.eta:'')+'" title="Прибытие"><button type="button" class="calculate" data-save="'+esc(s.id)+'">Обновить</button><button type="button" class="v3p-del" data-delship="'+esc(s.id)+'">Удалить</button></div>':'')
       +'</article>'}
-  function loadCabinet(){var box=$('#v3cabList');if(!box)return;box.innerHTML='<p class="v3p-muted">Загружаю…</p>';
+  function loadCabinet(){var box=$('#v3cabList');if(!box)return;$$('#v3cabTabs .chip').forEach(function(x){x.classList.toggle('on',x.dataset.ctab==='ships')});box.hidden=false;$('#v3cabQuotes').hidden=true;box.innerHTML='<p class="v3p-muted">Загружаю…</p>';
     if(me.name)$('#v3cabHello').textContent=me.name+', здесь ваши грузы: статус, маршрут, расходы и документы.';
     api('/api/my/shipments').then(function(d){box.innerHTML=d.items.length?d.items.map(function(s){return shipCard(s,false)}).join(''):'<div class="k v3p-empty"><b>Пока нет грузов</b><small>Как только менеджер оформит перевозку, она появится здесь.</small><button type="button" class="calculate" data-open-view="leadView">Оставить заявку</button></div>'})
       .catch(function(x){box.innerHTML='<p class="v3p-err">'+esc(x.message)+'</p>'})}
@@ -160,7 +160,7 @@
           +'<div class="v3p-notif"><span>💾 Хранилище</span>'+(a.storage==='supabase'?'<b class="v3p-on">Supabase — данные сохраняются</b>':'<b class="v3p-off">временное — подключите Supabase</b>')+'</div>'
           +'<div class="v3p-notif"><span>✈️ Заявки в Telegram</span>'+(a.telegram?'<b class="v3p-on">включено</b>':'<b class="v3p-off">нет TELEGRAM_CHAT_ID</b>')+'</div>'
           +'<div class="v3p-notif"><span>🤖 Бот для клиентов</span>'+(a.botReady?'<b class="v3p-on">готов</b>':'<b class="v3p-off">нет TELEGRAM_BOT_TOKEN</b>')+'</div>'
-          +'<div class="v3p-notif"><span>✉️ Письма</span>'+(a.mail?'<b class="v3p-on">включены</b>':'<b class="v3p-off">нет SMTP_URL</b>')+'</div></div>';
+          +'<div class="v3p-notif"><span>✉️ Письма</span>'+(a.mail?'<b class="v3p-on">включены</b>':'<b class="v3p-off">нет SMTP_URL</b>')+'</div>'+'<div class="v3p-test"><input id="v3testMail" type="email" placeholder="Почта для тестового письма (необязательно)"><button type="button" class="calculate v3p-sm" id="v3testBtn">Проверить уведомления</button></div><div id="v3testOut" class="v3p-testout"></div></div>';
       }
       h+='<form class="k v3p-form" id="v3pwForm"><b class="v3c-title">Сменить пароль</b><div class="v3p-two"><label class="v3p-f"><span>Текущий пароль</span><input name="current" type="password" autocomplete="current-password" required></label><label class="v3p-f"><span>Новый пароль (от 8 символов)</span><input name="next" type="password" autocomplete="new-password" minlength="8" required></label></div><p class="v3p-err" role="alert"></p><p class="v3p-ok"></p><button type="submit" class="calculate">Сменить пароль</button></form>';
       box.innerHTML=h;
@@ -170,6 +170,8 @@
           api('/api/account',{method:'PATCH',body:body}).then(function(d){toast('Сохранено');orig=d.item.email;$('.v3p-cur',pf).hidden=true;pf.currentPassword.value='';me.name=d.item.name}).catch(function(x){er.textContent=x.message})})}
       var pw=$('#v3pwForm');pw.addEventListener('submit',function(e){e.preventDefault();var er=$('.v3p-err',pw),ok=$('.v3p-ok',pw);er.textContent='';ok.textContent='';
         api('/api/account/password',{method:'POST',body:{current:pw.current.value,next:pw.next.value}}).then(function(){pw.reset();ok.textContent='Пароль изменён'}).catch(function(x){er.textContent=x.message})});
+      var tb=$('#v3testBtn');tb&&tb.addEventListener('click',function(){tb.disabled=true;var o=$('#v3testOut');o.innerHTML='<p class="v3p-muted">Отправляю…</p>';
+        api('/api/account/test-notify',{method:'POST',body:{email:($('#v3testMail')||{}).value||''}}).then(function(r){o.innerHTML=[['Заявки в Telegram',r.telegram],['Бот для клиентов',r.bot],['Письма',r.email]].map(function(x){return '<p class="'+(x[1].ok?'v3p-on':'v3p-off')+'">'+(x[1].ok?'✅ ':'❌ ')+x[0]+': '+esc(x[1].info)+'</p>'}).join('')}).catch(function(x){o.innerHTML='<p class="v3p-err">'+esc(x.message)+'</p>'}).then(function(){tb.disabled=false})});
       var on=$('#v3tgOn');on&&on.addEventListener('click',function(){api('/api/account/telegram',{method:'POST'}).then(function(d){window.open(d.url,'_blank','noopener');toast('В Telegram нажмите «Запустить», затем вернитесь сюда',6000);setTimeout(loadAccount,15000)}).catch(function(x){toast(x.message)})});
       var off=$('#v3tgOff');off&&off.addEventListener('click',function(){api('/api/account/telegram',{method:'DELETE'}).then(loadAccount)});
     }).catch(function(x){box.innerHTML='<p class="v3p-err">'+esc(x.message)+'</p>'})}
