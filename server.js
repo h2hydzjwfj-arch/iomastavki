@@ -149,6 +149,8 @@ app.get('/app.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600
 app.get('/styles.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'styles.css'), { cacheControl: false }); });
 app.get('/theme-v3.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.js'), { cacheControl: false }); });
 app.get('/portal-ui.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'portal-ui.js'), { cacheControl: false }); });
+app.get('/routes-kb.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'routes-kb.js'), { cacheControl: false }); });
+app.get('/i18n-v3.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'i18n-v3.js'), { cacheControl: false }); });
 app.get('/palettes.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'palettes.css'), { cacheControl: false }); });
 app.get('/theme-v3.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.css'), { cacheControl: false }); });
 const SITE_URL = process.env.SITE_URL || 'https://iomastavki.onrender.com';
@@ -406,7 +408,9 @@ app.post('/api/news/article/audio', async(req,res)=>{
 app.post('/api/login', loginLimiter, (req,res) => {
   const login = String(req.body?.login || '').trim().toLowerCase(), password = String(req.body?.password || '');
   let payload = null;
-  if (!login || login === 'admin') { if (portal.adminPasswordOk(password)) payload = { role: 'admin', name: 'Администратор' }; }
+  // Администратор входит по логину «admin» или по почте из ADMIN_EMAIL (как в прежней версии сайта).
+  const adminEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  if (!login || login === 'admin' || (adminEmail && login === adminEmail)) { if (portal.adminPasswordOk(password)) payload = { role: 'admin', name: 'Администратор' }; }
   else { const u = portal.findClient(login, password); if (u) payload = { role: 'client', uid: u.id, name: u.name }; }
   if (!payload) return res.status(401).json({ ok:false, error:'Неверный логин или пароль' });
   // «Запомнить меня»: клиент — 30 дней, администратор — 7 дней; иначе 8 часов.
