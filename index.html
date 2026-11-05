@@ -8,7 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%232E7D5B%27/%3E%3Ccircle cx=%2746%27 cy=%2718%27 r=%279%27 fill=%27%23E8A33D%27/%3E%3C/svg%3E">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"iomastavka","applicationCategory":"BusinessApplication","description":"Калькулятор логистики и ВЭД Китай — Россия","inLanguage":"ru"}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/styles.css?v=20260916-v28"><link rel="stylesheet" href="/theme-v3.css?v=20261105-v12"><link rel="stylesheet" href="/palettes.css?v=1">
+<link rel="stylesheet" href="/styles.css?v=20260916-v28"><link rel="stylesheet" href="/theme-v3.css?v=20261105-v13"><link rel="stylesheet" href="/palettes.css?v=1">
 </head>
 <body>
 <div id="weatherScene" class="weather-scene" aria-hidden="true"><div class="stars"></div><div class="sun"></div><div class="moon"></div><div class="cloud cloud-a"></div><div class="cloud cloud-b"></div><div class="rain"></div><div class="snow"></div><div class="wave wave-back"></div><div class="wave wave-mid"></div><div class="wave wave-front"></div></div>
@@ -36,7 +36,7 @@
     </div>
   </div>
   <div class="brand" aria-label="iomastavka"><span>i</span><span>o</span><span>m</span><span>a</span><span>s</span><span>t</span><span>a</span><span>v</span><span>k</span><span>a</span></div>
-  <nav class="v3-nav" aria-label="Разделы"><span class="v3-pill"></span><button type="button" class="on" data-nav="home">Главная</button><button type="button" data-open-view="cabinetView" data-roles="client">Мои грузы</button><button type="button" data-open-view="calculator">Расчёт ставок</button><button type="button" data-open-view="workView" data-roles="admin">Работа</button><button type="button" data-open-view="assistant" data-roles="admin">AI-ассистент</button><button type="button" data-open-view="news">Новости ВЭД</button><button type="button" data-open-view="forwarders" data-roles="admin">Экспедиторы</button><button type="button" data-open-view="customsView" data-roles="admin">ТН ВЭД</button><button type="button" data-open-view="leadView" data-roles="guest client">Оставить заявку</button></nav>
+  <nav class="v3-nav" aria-label="Разделы"><span class="v3-pill"></span><button type="button" class="on" data-nav="home">Главная</button><button type="button" data-open-view="cabinetView" data-roles="client">Мои грузы</button><button type="button" data-open-view="calculator">Расчёт ставок</button><button type="button" data-open-view="workView" data-roles="admin">Работа</button><button type="button" data-open-view="assistant" data-roles="admin">AI-ассистент</button><button type="button" data-open-view="news">Новости ВЭД</button><button type="button" data-open-view="kbView">База знаний</button><button type="button" data-open-view="forwarders" data-roles="admin">Экспедиторы</button><button type="button" data-open-view="customsView" data-roles="admin">ТН ВЭД</button><button type="button" data-open-view="leadView" data-roles="guest client">Оставить заявку</button></nav>
   <div class="top-actions"><div class="v3-cap"><button class="lang active" data-lang="ru" aria-label="Русский" title="Русский">RU</button><button class="lang" data-lang="en" aria-label="English" title="English">EN</button><button class="lang" data-lang="zh" aria-label="中文" title="中文">中文</button><button class="lang" data-lang="tr" aria-label="Türkçe" title="Türkçe">TR</button></div><button type="button" class="v3-theme" id="v3theme" aria-label="Сменить тему" title="Сменить тему"><svg class="s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg><svg class="m" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14A8 8 0 0110 4a8 8 0 1010 10z"/></svg></button><button type="button" class="v3-loginbtn" data-open-view="loginView" data-roles="guest">Войти</button><button type="button" class="v3-acc" data-open-view="accountView" data-roles="client admin" aria-label="Аккаунт" title="Аккаунт"><span id="v3accInit">•</span></button><button id="logoutButton" data-roles="client admin" class="logout" data-i18n="logout">Выйти</button></div>
 </header>
 <main class="app-shell" id="main">
@@ -146,6 +146,11 @@
  <div id="v3kp"></div>
 </div></section>
 
+<section id="kbView" class="view-layer v3-portal" aria-hidden="true"><div class="v3p-wide"><button class="close-button view-close" data-close-view="kbView" aria-label="Закрыть" title="Закрыть">×</button>
+ <div class="v3-head"><h1>База знаний</h1><p>Маршруты Китай → Россия: что происходит сейчас, сроки, погранпереходы и документы.</p></div>
+ <div id="kbBody" class="kb"></div>
+</div></section>
+
 <section id="leadView" class="view-layer v3-portal" aria-hidden="true"><div class="v3p-narrow"><button class="close-button view-close" data-close-view="leadView" aria-label="Закрыть" title="Закрыть">×</button>
  <div class="v3-head"><h1>Заявка на перевозку</h1><p>Оставьте контакты и пару слов о грузе — менеджер уточнит детали и пришлёт точную ставку.</p></div>
  <form class="k v3p-form" id="v3leadForm" novalidate>
@@ -191,9 +196,10 @@
 </div></section>
 </main>
 <script src="/app.js?v=20260916-v29"></script>
-<script src="/routes-kb.js?v=2" defer></script>
-<script src="/i18n-v3.js?v=2" defer></script>
-<script src="/theme-v3.js?v=20261105-v7" defer></script>
-<script src="/portal-ui.js?v=7" defer></script>
+<script src="/routes-kb.js?v=3" defer></script>
+<script src="/kb.js?v=1" defer></script>
+<script src="/i18n-v3.js?v=3" defer></script>
+<script src="/theme-v3.js?v=20261105-v8" defer></script>
+<script src="/portal-ui.js?v=8" defer></script>
 
 </body></html>

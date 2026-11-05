@@ -25,7 +25,7 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
   try {
     // --- страницы и файлы
     await check('Главная открывается', async () => { const r = await fetch(B + '/'); ok(r.status === 200); ok((await r.text()).includes('iomastavka')); });
-    for (const f of ['/app.js', '/styles.css', '/theme-v3.css', '/theme-v3.js', '/portal-ui.js', '/palettes.css'])
+    for (const f of ['/app.js', '/styles.css', '/theme-v3.css', '/theme-v3.js', '/portal-ui.js', '/palettes.css', '/routes-kb.js', '/i18n-v3.js', '/kb.js'])
       await check('Файл ' + f, async () => { const r = await fetch(B + f); ok(r.status === 200, 'код ' + r.status); });
     await check('robots.txt и sitemap.xml', async () => { ok((await fetch(B + '/robots.txt')).status === 200); ok((await (await fetch(B + '/sitemap.xml')).text()).includes('<urlset')); });
     await check('Несуществующая страница → 404', async () => { ok((await fetch(B + '/net-takoy')).status === 404); });

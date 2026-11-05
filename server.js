@@ -151,6 +151,7 @@ app.get('/theme-v3.js', (req,res) => { res.set('Cache-Control', 'public, max-age
 app.get('/portal-ui.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'portal-ui.js'), { cacheControl: false }); });
 app.get('/routes-kb.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'routes-kb.js'), { cacheControl: false }); });
 app.get('/i18n-v3.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'i18n-v3.js'), { cacheControl: false }); });
+app.get('/kb.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'kb.js'), { cacheControl: false }); });
 app.get('/palettes.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'palettes.css'), { cacheControl: false }); });
 app.get('/theme-v3.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.css'), { cacheControl: false }); });
 const SITE_URL = process.env.SITE_URL || 'https://iomastavki.onrender.com';
