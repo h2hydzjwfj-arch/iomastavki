@@ -350,6 +350,22 @@ function setup(app, opts) {
     } catch (e) { console.error('telegram webhook', e.message); }
   });
 
+  // Кнопка «Проверить уведомления» для администратора: шлёт тестовое сообщение и показывает результат.
+  app.post('/api/account/test-notify', admin, async (req, res) => {
+    const out = { telegram: { ok: false, info: '' }, bot: { ok: tg.ready(), info: '' }, email: { ok: false, info: '' } };
+    const chat = process.env.TELEGRAM_CHAT_ID;
+    if (!process.env.TELEGRAM_BOT_TOKEN) out.telegram.info = 'Нет TELEGRAM_BOT_TOKEN в Render';
+    else if (!chat) out.telegram.info = 'Нет TELEGRAM_CHAT_ID в Render';
+    else { try { await tg.send(chat, '✅ Проверка iomastavka: уведомления о заявках работают. ' + new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })); out.telegram = { ok: true, info: 'Сообщение отправлено — проверьте Telegram' }; } catch (e) { out.telegram.info = 'Telegram ответил ошибкой: ' + e.message; } }
+    if (tg.ready()) { try { out.bot.info = '@' + (await tg.username()); out.bot.ok = !!out.bot.info.slice(1); } catch (e) { out.bot = { ok: false, info: e.message }; } } else out.bot.info = 'Нет TELEGRAM_BOT_TOKEN';
+    if (!process.env.TELEGRAM_WEBHOOK_SECRET) { out.bot.ok = false; out.bot.info += ' · нет TELEGRAM_WEBHOOK_SECRET — клиенты не смогут подключить бота'; }
+    const to = str(req.body && req.body.email, 120) || process.env.ADMIN_EMAIL || '';
+    if (!mail.enabled()) out.email.info = 'Нет SMTP_URL в Render';
+    else if (!to) out.email.info = 'Укажите почту для проверки';
+    else { try { await mail.send(to, 'Проверка iomastavka', 'Письма с сайта работают.'); out.email = { ok: true, info: 'Письмо отправлено на ' + to }; } catch (e) { out.email.info = 'Ошибка почты: ' + e.message; } }
+    res.json({ ok: true, ...out });
+  });
+
   // =====================================================================
   //  Коммерческие предложения (КП): считаются на сервере, хранятся, по ссылке
   // =====================================================================
@@ -422,11 +438,16 @@ function setup(app, opts) {
 }
 
 
+// Адрес Telegram API. Подменяется только в автопроверке (тестовый Telegram на localhost).
+function tgBase() {
+  const b = String(process.env.TELEGRAM_API_BASE || '').replace(/\/+$/, '');
+  return /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(b) ? b : 'https://api.telegram.org';
+}
 function telegram() {
   const token = process.env.TELEGRAM_BOT_TOKEN; let name = process.env.TELEGRAM_BOT_USERNAME || '';
   async function call(method, body) {
     const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 8000);
-    try { const r = await fetch(`https://api.telegram.org/bot${token}/${method}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), signal: ctrl.signal }); return r.json(); }
+    try { const r = await fetch(`${tgBase()}/bot${token}/${method}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), signal: ctrl.signal }); return r.json(); }
     finally { clearTimeout(t); }
   }
   return {
@@ -456,7 +477,7 @@ async function telegramNotify(text) {
   if (!token || !chat) return;
   const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 5000);
   try {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chat, text: text.slice(0, 3900), disable_web_page_preview: true }), signal: ctrl.signal });
+    await fetch(`${tgBase()}/bot${token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chat, text: text.slice(0, 3900), disable_web_page_preview: true }), signal: ctrl.signal });
   } finally { clearTimeout(t); }
 }
 
