@@ -360,9 +360,9 @@ function setup(app, opts) {
     if (tg.ready()) { try { out.bot.info = '@' + (await tg.username()); out.bot.ok = !!out.bot.info.slice(1); } catch (e) { out.bot = { ok: false, info: e.message }; } } else out.bot.info = 'Нет TELEGRAM_BOT_TOKEN';
     if (!process.env.TELEGRAM_WEBHOOK_SECRET) { out.bot.ok = false; out.bot.info += ' · нет TELEGRAM_WEBHOOK_SECRET — клиенты не смогут подключить бота'; }
     const to = str(req.body && req.body.email, 120) || process.env.ADMIN_EMAIL || '';
-    if (!mail.enabled()) out.email.info = 'Нет SMTP_URL в Render';
+    if (!mail.enabled()) out.email.info = 'Нет RESEND_API_KEY (или SMTP_URL) в Render';
     else if (!to) out.email.info = 'Укажите почту для проверки';
-    else { try { await mail.send(to, 'Проверка iomastavka', 'Письма с сайта работают.'); out.email = { ok: true, info: 'Письмо отправлено на ' + to }; } catch (e) { out.email.info = 'Ошибка почты: ' + e.message; } }
+    else { try { await mail.send(to, 'Проверка iomastavka', 'Письма с сайта работают.'); out.email = { ok: true, info: 'Письмо отправлено на ' + to + (mail.kind ? ' через ' + mail.kind() : '') }; } catch (e) { out.email.info = 'Ошибка почты: ' + e.message; } }
     res.json({ ok: true, ...out });
   });
 
@@ -458,17 +458,30 @@ function telegram() {
   };
 }
 function mailer() {
-  // Почта через любой SMTP (Яндекс, Mail.ru, Gmail с паролем приложения):
-  // SMTP_URL=smtps://логин:пароль@smtp.yandex.ru:465  и  MAIL_FROM="iomastavka <логин@yandex.ru>"
+  // Письма: Resend (RESEND_API_KEY + RESEND_FROM) или любой SMTP (SMTP_URL + MAIL_FROM).
   let tr = null;
+  const resendKey = () => process.env.RESEND_API_KEY;
   function transport() {
     if (tr || !process.env.SMTP_URL) return tr;
     try { tr = require('nodemailer').createTransport(process.env.SMTP_URL); } catch (e) { console.error('nodemailer:', e.message); }
     return tr;
   }
   return {
-    enabled: () => !!transport(),
-    send: async (to, subject, text) => { const t = transport(); if (!t) throw new Error('mail off'); await t.sendMail({ from: process.env.MAIL_FROM || process.env.SMTP_FROM, to, subject, text }); },
+    enabled: () => !!(resendKey() || transport()),
+    kind: () => (resendKey() ? 'Resend' : transport() ? 'SMTP' : ''),
+    send: async (to, subject, text) => {
+      if (resendKey()) {
+        const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 10000);
+        try {
+          const r = await fetch('https://api.resend.com/emails', { method: 'POST', signal: ctrl.signal, headers: { Authorization: 'Bearer ' + resendKey(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from: process.env.RESEND_FROM || process.env.MAIL_FROM || 'iomastavka <onboarding@resend.dev>', to: [to], subject, text }) });
+          if (!r.ok) throw new Error('Resend ' + r.status + ' ' + (await r.text().catch(() => '')).slice(0, 200));
+          return;
+        } finally { clearTimeout(t); }
+      }
+      const t = transport(); if (!t) throw new Error('mail off');
+      await t.sendMail({ from: process.env.MAIL_FROM || process.env.SMTP_FROM, to, subject, text });
+    },
   };
 }
 
