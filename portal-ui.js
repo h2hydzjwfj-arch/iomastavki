@@ -93,7 +93,7 @@
 
   /* ---------- раздел «Работа» (администратор) ---------- */
   var clients=[];
-  function loadLeadCount(){api('/api/leads').then(function(d){var n=d.items.filter(function(l){return l.status==='new'}).length;var c=$('#v3leadCount');if(c)c.textContent=n?'· '+n+' новых':''}).catch(function(){})}
+  function loadLeadCount(){api('/api/leads').then(function(d){var n=d.items.filter(function(l){return l.status==='new'}).length;var c=$('#v3leadCount');if(c)c.textContent=n?'· новых: '+n:''}).catch(function(){})}
   $$('#workView .v3p-tabs .chip').forEach(function(t){t.addEventListener('click',function(){$$('#workView .v3p-tabs .chip').forEach(function(x){x.classList.toggle('on',x===t)});$$('.v3p-tab').forEach(function(p){p.hidden=p.dataset.pane!==t.dataset.tab})})});
   function loadWork(){loadLeads();loadClients().then(loadShips);loadAllQuotes()}
   function loadLeads(){var box=$('#v3leadsList');api('/api/leads').then(function(d){

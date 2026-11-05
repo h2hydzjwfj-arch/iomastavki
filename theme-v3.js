@@ -126,16 +126,6 @@
   /* 12. theme button in the header -> the existing theme toggle */
   safe(function(){var b=$('#v3theme');b&&b.addEventListener('click',function(){var t=document.getElementById('themeToggleButton');t&&t.click()})});
 
-  /* 13. weather card: city, big temperature, description */
-  safe(function(){
-    var RU={Clear:'Ясно',Clouds:'Облачно',Rain:'Дождь',Drizzle:'Морось',Snow:'Снег',Thunderstorm:'Гроза'};
-    function paint(d){if(!d||d.temp==null)return;var t=Math.round(d.temp);$('#v3temp').textContent=(t>0?'+':'')+t+'°';$('#v3desc').textContent=RU[d.main]||d.main||'';if(d.city)$('#v3city').textContent=d.city;var card=$('.v3-wx');card&&card.setAttribute('data-sky',d.main||'')}
-    function load(){fetch('/api/weather',{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(paint).catch(function(){})}
-    load();setInterval(load,10*60*1000);
-    var src=document.getElementById('homeWeatherText');
-    if(src)new MutationObserver(function(){if($('#v3temp').textContent!=='—')return;var m=src.textContent.match(/^(.*?)\s*·\s*(-?\d+)°/);if(m){$('#v3desc').textContent=m[1];var t=+m[2];$('#v3temp').textContent=(t>0?'+':'')+t+'°'}}).observe(src,{childList:true,characterData:true,subtree:true});
-  });
-
   /* 14. calculator result -> big price, ruble estimate, delivery ring, breakdown */
   safe(function(){
     var res=$('#result');if(!res)return;
