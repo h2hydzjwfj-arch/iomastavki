@@ -5,7 +5,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
 const { startServer, ADMIN_PASS } = require('./helpers');
 const OUT = path.join(__dirname, '..', 'test-output'); fs.mkdirSync(OUT, { recursive: true });
 const results = []; let failed = 0;
-async function step(name, fn) { try { await fn(); results.push('✅ ' + name); } catch (e) { failed++; results.push('❌ ' + name + ' — ' + String(e.message).split('\n')[0]); } }
+async function step(name, fn) { try { await fn(); results.push('✅ ' + name); } catch (e) { failed++; results.push('❌ ' + name + ' — ' + String(e.message).split('\n').slice(0, 3).join(' | ')); try { for (const pg of (global.__pages || [])) await pg.screenshot({ path: require('path').join('test-output', 'FAIL_' + (++global.__fc || (global.__fc = 1)) + '.png') }); } catch {} } }
 
 (async () => {
   const srv = await startServer(Number(process.env.UI_PORT || 3998)); const B = srv.base;
@@ -15,7 +15,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
     const c = await browser.newContext({ viewport: { width: 1350, height: 860 }, ...opts });
     const p = await c.newPage(); p.on('pageerror', e => errors.push(e.message));
     await p.goto(B + '/', { waitUntil: 'domcontentloaded' }); await p.waitForFunction(() => /role-/.test(document.body.className));
-    return { c, p };
+    global.__pages = [p]; return { c, p };
   }
   const shot = (p, n) => p.screenshot({ path: path.join(OUT, n + '.png') });
   try {
@@ -31,6 +31,11 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await p.click('.v3c-params .v3c-title'); await p.click('.v3c-chips [data-m=rail]'); await p.click('#calculate');
       await p.waitForSelector('#result .result-price:not(.muted)', { timeout: 8000 }); await shot(p, '02_guest_calc');
     });
+    await step('Гость: при закрытии несохранённого расчёта сайт спрашивает «сохранить или выйти»', async () => {
+      await p.click('#calculatorView .view-close'); await p.waitForSelector('#v3ask:not([hidden])'); await shot(p, '02b_ask');
+      await p.click('#v3ask [data-ask=stay]'); await p.waitForSelector('#v3ask', { state: 'hidden' });
+      if (!(await p.isVisible('#calculatorView.open'))) throw new Error('окно расчёта закрылось');
+    });
     await step('Гость: сохранить расчёт → КП по ссылке', async () => {
       await p.click('.v3p-savebtn'); await p.waitForSelector('.v3p-saved'); await p.click('.v3p-saved [data-kpopen]');
       await p.waitForSelector('#quoteView.open .v3p-kp'); await shot(p, '03_quote');
@@ -40,13 +45,19 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
     await step('Гость: ввод калькулятора не теряется после перезагрузки', async () => {
       await p.reload(); await p.waitForFunction(() => document.getElementById('fromCity').value === 'Shanghai', null, { timeout: 5000 });
     });
+    await step('Гость: карточка расчёта на главной редактируется, карта меняется', async () => {
+      await p.evaluate(() => window.__iomaCloseViews()); await p.fill('#v3hFrom', 'Циндао'); await p.fill('#v3hTo', 'Новосибирск'); await p.fill('#v3hW', '800');
+      await p.waitForFunction(() => document.getElementById('fromCity').value === 'Циндао' && document.getElementById('toCity').value === 'Новосибирск' && document.getElementById('weight').value === '800');
+      await p.waitForFunction(() => /Циндао/.test(document.querySelector('#v3Hero .v3-map svg').textContent), null, { timeout: 4000 }); await shot(p, '03b_home_card');
+    });
+    await step('Гость: курс ЦБ на выбранную дату', async () => { await p.evaluate(() => { const i = document.getElementById('v3curDate'); i.value = '2026-08-07'; i.dispatchEvent(new Event('change')); }); await p.waitForFunction(() => /07\.08\.2026|Нет курса|CBR/.test(document.getElementById('v3date').textContent), null, { timeout: 12000 }); });
     await step('Гость: заявка отправляется', async () => {
       await p.evaluate(() => window.__v3open('leadView'));
       await p.fill('#v3leadForm [name=name]', 'Тест UI'); await p.fill('#v3leadForm [name=contact]', '@ui_test');
       await p.check('#v3leadForm [name=consent]'); await p.click('#v3leadForm [type=submit]');
       await p.waitForSelector('#v3leadDone:not([hidden])'); await shot(p, '04_lead_done');
     });
-    await step('Гость: база знаний с источниками', async () => { await p.evaluate(() => window.__v3open('kbView')); await p.waitForSelector('#kbBody .kb-now li a'); await shot(p, '05a_kb'); });
+    await step('Гость: база знаний с источниками', async () => { await p.evaluate(() => window.__v3open('kbView')); await p.waitForSelector('#kbBody .kb-n .kb-src a'); await p.waitForSelector('#kbBody .kb-p.kb-risk'); await shot(p, '05a_kb'); await p.click('#kbBody [data-kbt=choose]'); await p.click('#kbBody [data-kbr="3"]'); await p.waitForSelector('#kbBody .kb-ans'); await p.click('#kbBody [data-kbt=docs]'); await p.check('#kbBody [data-kbd="0"]'); await p.waitForSelector('#kbBody .kb-dh b:has-text("1 /")'); await shot(p, '05b_kb_docs'); });
     await step('Гость: английская версия без русских надписей в меню', async () => { await p.evaluate(() => [...document.querySelectorAll('.lang')].find(x => x.dataset.lang === 'en').click()); await p.waitForTimeout(400); const t = await p.textContent('.v3-nav'); if (/[а-яё]/i.test(t)) throw new Error(t); await p.evaluate(() => [...document.querySelectorAll('.lang')].find(x => x.dataset.lang === 'ru').click()); await p.waitForTimeout(300); });
     await step('Гость: новости открываются', async () => { await p.evaluate(() => window.__iomaOpenView('news')); await p.waitForTimeout(1500); await shot(p, '05_news'); });
 
@@ -85,8 +96,16 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await C.p.click('.v3-acc'); await C.p.fill('#v3pwForm [name=current]', clientPw); await C.p.fill('#v3pwForm [name=next]', 'ui-new-pass-1');
       await C.p.click('#v3pwForm [type=submit]'); await C.p.waitForSelector('#v3pwForm .v3p-ok:has-text("Пароль изменён")'); await shot(C.p, '12_client_account');
     });
+    const Rg = await ctx();
+    await step('Новый клиент сам создаёт кабинет и попадает в «Мои грузы»', async () => {
+      await Rg.p.click('.v3-loginbtn'); await Rg.p.click('#v3regBtn'); await Rg.p.fill('#v3regForm [name=name]', 'Анна Новая'); await Rg.p.fill('#v3regForm [name=email]', 'new-ui@ci.test');
+      await Rg.p.fill('#v3regForm [name=password]', 'new-ui-pass-1'); await Rg.p.click('#v3regForm .v3p-eye'); await shot(Rg.p, '12b_register');
+      await Rg.p.click('#v3regForm [type=submit]'); await Rg.p.waitForFunction(() => document.body.classList.contains('role-client'), null, { timeout: 8000 });
+      await Rg.p.waitForSelector('#cabinetView.open', { timeout: 6000 }); await shot(Rg.p, '12c_new_cabinet');
+    });
     const M = await ctx({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
     await step('Телефон: главная', async () => { await M.p.waitForSelector('.v3-hero'); await shot(M.p, '13_mobile_home'); });
+    await step('Телефон: новости и гид', async () => { await M.p.evaluate(() => window.__iomaOpenView('news')); await M.p.waitForTimeout(1200); await shot(M.p, '14_mobile_news'); await M.p.evaluate(() => window.__v3open('kbView')); await M.p.waitForSelector('#kbBody .kb-pulse'); await shot(M.p, '15_mobile_kb'); });
     await step('Нет ошибок JavaScript на страницах', async () => { if (errors.length) throw new Error(errors.slice(0, 3).join(' | ')); });
   } finally {
     await browser.close(); srv.proc.kill();
