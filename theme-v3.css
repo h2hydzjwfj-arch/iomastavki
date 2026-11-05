@@ -1225,3 +1225,9 @@ body.manual-dark .crm-th{background:rgba(255,255,255,.04)}
 @media(max-width:1000px){.crm-deal{grid-template-columns:1fr}.crm-tr{grid-template-columns:48px 1fr auto;grid-template-areas:"age t st" "age c c"}.crm-tr>span:nth-child(n+3):not(:nth-child(7)){display:none}.crm-th{display:none!important}
   .crm-clients .crm-tr{grid-template-columns:1fr auto}.crm-clients .crm-tr>span{display:block!important}.crm-clients .crm-tr>span:nth-child(n+3):not(:last-child){display:none!important}}
 @media(max-width:650px){.crm-f{grid-template-columns:1fr;gap:4px}.crm-bar select{flex:1}}
+html:root body .crm-evt{white-space:pre-wrap!important}
+html:root body .crm-head .crm-title{background:transparent!important;border:0!important;border-bottom:1px dashed rgba(255,255,255,.35)!important;border-radius:0!important;padding:0 0 4px!important;color:#fff!important;font-size:21px!important;font-weight:800!important;box-shadow:none!important;height:auto!important;min-height:0!important}
+html:root body .crm-head .crm-stage{background:#fff!important;color:#1B2B26!important;border:0!important;margin-top:4px}
+html:root body .crm-bar .calculate,html:root body .crm-note .calculate{width:auto!important;flex:0 0 auto;padding:0 22px!important;min-height:42px!important}
+html:root body .crm-bar .calculate{order:3}
+html:root body .crm-f input,html:root body .crm-f select{min-height:0!important;height:auto!important;font-size:14px!important}
