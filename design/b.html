@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Вариант Б — Билеты</title>
+<style>
+@font-face{font-family:PTSerif;src:url(fonts/PT_Serif-Web-Bold.ttf);font-weight:700}
+@font-face{font-family:PTSerif;src:url(fonts/PT_Serif-Web-Regular.ttf);font-weight:400}
+@font-face{font-family:Golos;src:url(fonts/Golos.ttf);font-weight:400 900}
+:root{--forest:#0E3B2E;--forest2:#175A45;--mint:#E3F0E8;--amber:#F5A524;--ink:#16211D;--gray:#56635D;--line:#DCE5E0;--bg:#F5F8F6}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font:400 18px/1.6 Golos,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.wrap{max-width:1200px;margin:0 auto;padding:0 32px}
+h1,h2,h3{font-family:PTSerif,Georgia,serif;font-weight:700;line-height:1.15}
+.nav{display:flex;align-items:center;height:88px;gap:36px}
+.logo{font:700 24px PTSerif;text-decoration:none;color:var(--forest)}
+.menu{display:flex;gap:30px;font-weight:500;font-size:17px;white-space:nowrap}.menu a{text-decoration:none;color:var(--gray)}.menu a.on{color:var(--ink)}
+.act{margin-left:auto;display:flex;gap:12px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:54px;padding:0 26px;border-radius:14px;font:600 18px Golos;text-decoration:none;border:0;white-space:nowrap}
+.btn.line{border:2px solid var(--line);color:var(--ink)}
+.btn.dark{background:var(--forest);color:#fff}
+.btn.amber{background:var(--amber);color:#1E1A10}
+.hero{background:var(--forest);color:#fff;border-radius:32px;margin:0 20px;padding:70px 0 44px}
+.hero h1{font-size:60px;line-height:1.08;letter-spacing:-.01em;margin:0 0 18px;max-width:820px}
+.hero p{font-size:21px;color:#CFE3D8;max-width:660px;margin:0 0 40px}
+.search{display:grid;grid-template-columns:1.2fr 1.2fr .8fr .8fr auto;background:#fff;color:var(--ink);border-radius:20px;padding:8px;gap:0;box-shadow:0 20px 50px rgba(0,0,0,.18)}
+.f{padding:12px 20px;border-right:1px solid var(--line)}
+.f:nth-child(4){border-right:0}
+.f label{display:block;font-size:15px;color:var(--gray)}.f div{font-size:21px;font-weight:600}
+.search .btn{height:auto;min-height:72px;border-radius:14px;font-size:19px;padding:0 30px}
+.hint{display:flex;gap:26px;margin-top:20px;font-size:16px;color:#CFE3D8}
+.hint label{display:flex;align-items:center;gap:10px}.hint i{width:22px;height:22px;border-radius:6px;border:2px solid #9CC4B1;display:inline-block}
+/* билеты */
+.tickets{padding-top:56px}
+.tickets h2{font-size:34px;margin:0 0 6px}.tickets .meta{color:var(--gray);margin:0 0 26px}
+.tk{display:grid;grid-template-columns:1fr 290px;background:#fff;border:2px solid var(--line);border-radius:22px;margin-bottom:16px;position:relative}
+.tk.best{border-color:var(--forest2);box-shadow:0 14px 34px rgba(14,59,46,.12)}
+.tk::before,.tk::after{content:'';position:absolute;right:279px;width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid var(--line)}
+.tk::before{top:-13px;border-top-color:transparent;border-left-color:transparent;transform:rotate(45deg)}
+.tk::after{bottom:-13px;border-bottom-color:transparent;border-right-color:transparent;transform:rotate(45deg)}
+.tk.best::before,.tk.best::after{border-color:var(--forest2);border-top-color:transparent;border-left-color:transparent}
+.tk.best::after{border-color:var(--forest2);border-bottom-color:transparent;border-right-color:transparent}
+.tk-main{padding:26px 30px;display:grid;grid-template-columns:auto 1fr;gap:6px 22px;align-items:center}
+.tk-ic{grid-row:span 2;width:62px;height:62px;border-radius:18px;background:var(--mint);display:grid;place-items:center}
+.tk-ic svg{width:32px;height:32px;fill:none;stroke:var(--forest);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tk-main b{font-size:23px;font-weight:600}
+.tk-path{display:flex;align-items:center;gap:14px;color:var(--gray);font-size:17px}
+.tk-path span.l em{display:none}.tk-path span.l{flex:0 0 120px;height:2px;background:repeating-linear-gradient(90deg,var(--gray) 0 6px,transparent 6px 11px)}
+.tk-stub{border-left:2px dashed var(--line);padding:22px 28px;display:flex;flex-direction:column;justify-content:center;gap:4px}
+.tk-stub .p{font:700 34px PTSerif;line-height:1}.tk-stub small{color:var(--gray);font-size:16px}
+.tk-stub .btn{margin-top:10px;height:48px;font-size:17px}
+.badge{display:inline-block;font:600 15px Golos;padding:4px 12px;border-radius:999px;margin-left:12px;vertical-align:3px}
+.badge.b{background:var(--forest2);color:#fff}.badge.c{background:#FCEBC6;color:#7A5200}.badge.f{background:var(--mint);color:var(--forest)}
+.small{font-size:16px;color:var(--gray);margin:10px 0 0}
+section{padding:96px 0 0}
+h2.big{font-size:44px;line-height:1.12;margin:0 0 16px;letter-spacing:-.01em}
+.lead2{font-size:20px;color:var(--gray);max-width:640px;margin:0 0 40px}
+.incl{display:grid;grid-template-columns:1fr 1fr;gap:0 60px;border-top:2px solid var(--ink)}
+.incl div{display:grid;grid-template-columns:40px 1fr;gap:16px;padding:24px 0;border-bottom:1px solid var(--line)}
+.incl svg{width:30px;height:30px;fill:none;stroke:var(--forest2);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;margin-top:2px}
+.incl b{display:block;font-size:20px}.incl p{margin:4px 0 0;color:var(--gray);font-size:17px}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.faq{background:var(--bg);border-radius:28px;padding:40px}
+.q{padding:20px 0;border-bottom:1px solid var(--line)}.q:last-child{border-bottom:0;padding-bottom:0}.q:first-child{padding-top:0}
+.q b{display:flex;justify-content:space-between;gap:20px;font-size:20px}.q b::after{content:'+';font:400 28px Golos;color:var(--forest2);line-height:1}
+.q.open b::after{content:'−'}.q p{margin:10px 0 0;color:var(--gray);font-size:17px}
+.docs{background:var(--forest);color:#fff;border-radius:28px;padding:40px;display:flex;flex-direction:column;gap:18px}
+.docs h3{font-size:32px;line-height:1.15;margin:0}.docs p{margin:0;color:#CFE3D8;font-size:18px}
+.drop{border:2px dashed #5E8F7A;border-radius:18px;padding:26px;display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.drop svg{width:44px;height:44px;fill:none;stroke:var(--amber);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.drop b{font-size:19px}.drop span{display:block;color:#CFE3D8;font-size:16px}
+.contact{display:flex;gap:12px;flex-wrap:wrap}
+.btn.wl{border:2px solid rgba(255,255,255,.35);color:#fff}
+footer{margin-top:100px;border-top:1px solid var(--line);padding:36px 0 50px;color:var(--gray);font-size:16px}
+footer .wrap{display:flex;justify-content:space-between;gap:20px}
+footer nav{display:flex;gap:26px}
+@media(max-width:700px){
+ body{font-size:17px}.wrap{padding:0 18px}
+ .nav{height:68px}.menu,.act .btn.line{display:none}.act .btn{height:46px;padding:0 18px;font-size:16px}.logo{font-size:22px}
+ .hero{margin:0 10px;border-radius:24px;padding:34px 0 26px}.hero h1{font-size:34px}.hero p{font-size:18px;margin-bottom:24px}
+ .search{grid-template-columns:1fr 1fr;padding:6px}.f{border-right:0;border-bottom:1px solid var(--line);padding:10px 14px}.f:nth-child(odd){border-right:1px solid var(--line)}.f div{font-size:18px}
+ .f:nth-child(3),.f:nth-child(4){border-bottom:0}.search .btn{grid-column:1 / -1;min-height:58px;margin-top:6px}
+ .hint{flex-direction:column;gap:10px}
+ .tickets{padding-top:36px}.tickets h2{font-size:26px}
+ .tk{grid-template-columns:minmax(0,1fr)}.tk-main{grid-template-columns:auto minmax(0,1fr)!important}.tk-path{flex-wrap:wrap;gap:6px 10px;font-size:15px}.tk-path span.l{flex:0 0 auto!important;height:auto!important;background:none!important}.tk-path span.l em{display:inline;font-style:normal}.tk::before,.tk::after{display:none}.tk-main{padding:18px;gap:4px 14px}.tk-ic{width:48px;height:48px;border-radius:14px}.tk-ic svg{width:26px;height:26px}.tk-main b{font-size:19px}
+ .badge{display:block;width:max-content;margin:6px 0 0}.tk-path span.l{flex-basis:40px}
+ .tk-stub{border-left:0;border-top:2px dashed var(--line);flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:14px 18px}.tk-stub .p{font-size:28px}.tk-stub .btn{margin:0;width:100%}
+ section{padding-top:64px}h2.big{font-size:30px}.lead2{font-size:17px;margin-bottom:24px}
+ .incl{grid-template-columns:1fr}.split{grid-template-columns:1fr}.faq,.docs{padding:24px;border-radius:22px}.docs h3{font-size:26px}
+ footer .wrap{flex-direction:column}footer nav{flex-wrap:wrap;gap:14px 20px}
+}
+</style></head><body>
+<div class="wrap nav">
+ <a class="logo" href="#">iomastavka</a>
+ <nav class="menu"><a class="on" href="#">Расчёт</a><a href="#">Что входит</a><a href="#">Вопросы</a><a href="#">Где мой груз</a></nav>
+ <div class="act"><a class="btn line" href="#">Telegram</a><a class="btn dark" href="#">Войти</a></div>
+</div>
+
+<header class="hero"><div class="wrap">
+ <h1>Доставка из Китая, понятная с первого расчёта</h1>
+ <p>Укажите маршрут, вес и объём — покажем все подходящие способы доставки с ценой и сроком.</p>
+ <div class="search">
+  <div class="f"><label>Откуда</label><div>Гуанчжоу</div></div>
+  <div class="f"><label>Куда</label><div>Екатеринбург</div></div>
+  <div class="f"><label>Вес</label><div>1 400 кг</div></div>
+  <div class="f"><label>Объём</label><div>6 м³</div></div>
+  <a class="btn amber" href="#">Показать варианты</a>
+ </div>
+ <div class="hint"><label><i></i>Опасный груз — аккумуляторы, жидкости, химия</label><label><i></i>Нужна помощь с таможней</label></div>
+</div></header>
+
+<div class="wrap tickets">
+ <h2>4 способа доставки для вашего груза</h2>
+ <p class="meta">Гуанчжоу — Екатеринбург, 1 400 кг, 6 м³. Цена — ориентир без таможенных платежей.</p>
+ <div class="tk best">
+  <div class="tk-main"><span class="tk-ic"><svg viewBox="0 0 24 24"><path d="M6 3h12a2 2 0 012 2v9a3 3 0 01-3 3H7a3 3 0 01-3-3V5a2 2 0 012-2zM4 10h16M8 21l2-4M16 21l-2-4"/></svg></span><b>ЖД, сборный груз<span class="badge b">Лучший баланс цены и срока</span></b><div class="tk-path">Гуанчжоу <span class="l"><em>→</em></span> Забайкальск <span class="l"><em>→</em></span> Екатеринбург</div></div>
+  <div class="tk-stub"><span class="p">1 200 $</span><small>≈ 96 500 ₽, 25–35 дней</small><a class="btn amber" href="#">Выбрать</a></div>
+ </div>
+ <div class="tk">
+  <div class="tk-main"><span class="tk-ic"><svg viewBox="0 0 24 24"><path d="M3 17c2 1.5 4 1.5 6 0s4-1.5 6 0 4 1.5 6 0M5 14l1-5h12l1 5M9 9V5h6v4"/></svg></span><b>Море + ЖД<span class="badge c">Дешевле всего</span></b><div class="tk-path">Гуанчжоу <span class="l"><em>→</em></span> Владивосток <span class="l"><em>→</em></span> Екатеринбург</div></div>
+  <div class="tk-stub"><span class="p">780 $</span><small>≈ 62 700 ₽, 40–60 дней</small><a class="btn line" href="#">Выбрать</a></div>
+ </div>
+ <div class="tk">
+  <div class="tk-main"><span class="tk-ic"><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a2 2 0 100-4 2 2 0 000 4zM17 19a2 2 0 100-4 2 2 0 000 4z"/></svg></span><b>Авто, сборный груз</b><div class="tk-path">Гуанчжоу <span class="l"><em>→</em></span> Казахстан <span class="l"><em>→</em></span> Екатеринбург</div></div>
+  <div class="tk-stub"><span class="p">1 960 $</span><small>≈ 157 700 ₽, 18–28 дней</small><a class="btn line" href="#">Выбрать</a></div>
+ </div>
+ <div class="tk">
+  <div class="tk-main"><span class="tk-ic"><svg viewBox="0 0 24 24"><path d="M2 16l20-6-20-6 4 6-4 6zM6 10h8"/></svg></span><b>Авиа<span class="badge f">Быстрее всего</span></b><div class="tk-path">Гуанчжоу <span class="l"><em>→</em></span> Москва <span class="l"><em>→</em></span> Екатеринбург</div></div>
+  <div class="tk-stub"><span class="p">7 280 $</span><small>≈ 585 700 ₽, 5–10 дней</small><a class="btn line" href="#">Выбрать</a></div>
+ </div>
+ <p class="small">Выберите вариант — получите коммерческое предложение со ссылкой, к нему можно вернуться в любой момент.</p>
+</div>
+
+<section><div class="wrap">
+ <h2 class="big">Что входит в доставку</h2><p class="lead2">Вы не ищете перевозчика, брокера и склад отдельно — всё делает один менеджер.</p>
+ <div class="incl">
+  <div><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span><b>Забор груза у поставщика</b><p>Приедем на фабрику или склад в Китае, проверим количество мест.</p></span></div>
+  <div><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span><b>Проверка документов и код ТН ВЭД</b><p>Подберём код по описанию и фото товара — от него зависит пошлина.</p></span></div>
+  <div><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span><b>Таможенное оформление</b><p>Декларация, сертификаты и маркировка, если она нужна.</p></span></div>
+  <div><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span><b>Доставка до вашего склада</b><p>Привезём по адресу в любом городе России.</p></span></div>
+  <div><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span><b>Статусы в Telegram</b><p>Каждый этап — сообщение в бот. Документы и расходы — в личном кабинете.</p></span></div>
+  <div><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span><b>Понятная цена</b><p>В предложении расписано, за что вы платите, без мелкого шрифта.</p></span></div>
+ </div>
+</div></section>
+
+<section><div class="wrap split">
+ <div class="faq">
+  <div class="q open"><b>У меня небольшой груз — придётся платить за целый контейнер?</b><p>Нет. Небольшие партии едут сборным грузом: вы платите только за свой вес или объём.</p></div>
+  <div class="q open"><b>Я не знаю код ТН ВЭД. Это проблема?</b><p>Нет. Пришлите инвойс или описание с фото — код подберём сами.</p></div>
+  <div class="q"><b>Сколько стоит, если груз опасный?</b></div>
+  <div class="q"><b>Как узнать, где сейчас мой груз?</b></div>
+ </div>
+ <div class="docs">
+  <h3>Пришлите документы — посчитаем сами</h3>
+  <p>Инвойс и упаковочный лист от поставщика — этого достаточно для точного расчёта.</p>
+  <div class="drop"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8zM14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg><span><b>Перетащите файлы сюда</b><span>PDF, Excel, Word или фото</span></span></div>
+  <div class="contact"><a class="btn amber" href="#">Выбрать файлы</a><a class="btn wl" href="#">Написать в Telegram</a></div>
+ </div>
+</div></section>
+
+<footer><div class="wrap"><span>iomastavka — доставка грузов из Китая в Россию</span><nav><a href="#">Telegram</a><a href="#">Почта</a><a href="#">Маршруты</a><a href="#">Статьи</a></nav></div></footer>
+</body></html>
