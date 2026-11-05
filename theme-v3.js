@@ -13,7 +13,7 @@
   var nav=$('.v3-nav'),pill=$('.v3-pill');
   function movePill(){safe(function(){var b=$('.v3-nav button.on');if(!b||!pill)return;pill.style.left=b.offsetLeft+'px';pill.style.width=b.offsetWidth+'px'})}
   function syncNav(){
-    var open=$('.view-layer.open'),map={calculatorView:'calculator',assistantView:'assistant',newsView:'news',forwardersView:'forwarders',customsView:'customsView'};
+    var open=$('.view-layer.open'),map={calculatorView:'calculator',assistantView:'assistant',newsView:'news',forwardersView:'forwarders',customsView:'customsView',loginView:'loginView',leadView:'leadView',cabinetView:'cabinetView',workView:'workView'};
     var key=open?map[open.id]:null;
     $$('.v3-nav button').forEach(function(b){b.classList.toggle('on',key?b.getAttribute('data-open-view')===key:b.dataset.nav==='home')});
     movePill();

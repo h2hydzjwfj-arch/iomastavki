@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "test": "node --test test/security.test.js"
+    "test": "node --test test/security.test.js test/portal.test.js"
   },
   "dependencies": {
     "compression": "^1.7.5",

@@ -689,3 +689,124 @@ html:root body .v3-calc .route .field{width:100%!important;max-width:none!import
 .v3c-params{align-self:start}
 html:root body .v3c-params .calculate{margin-top:6px!important}
 body.manual-dark .v3-grid .tag.imp{background:var(--v-amber);color:#2B1A05}
+
+/* =====================================================================
+   v5 — роли и кабинеты
+   ===================================================================== */
+/* видимость по роли (пока роль не пришла — как у гостя) */
+body:not(.role-client):not(.role-admin) [data-roles]:not([data-roles~="guest"]){display:none!important}
+body.role-client [data-roles]:not([data-roles~="client"]){display:none!important}
+body.role-admin [data-roles]:not([data-roles~="admin"]){display:none!important}
+body:not(.role-admin) .control-dock,body:not(.role-admin) .v3c-upl,body:not(.role-admin) #recommendation,body:not(.role-admin) .field:has(#forwarderBtn){display:none!important}
+.v3-loginbtn{height:44px;padding:0 22px;border-radius:999px;border:0;background:var(--v-ink);color:var(--v-bg);font-weight:700;font-size:14px;cursor:pointer;flex:none}
+.v3-loginbtn:hover{transform:translateY(-1px)}
+/* "где мой груз" карточка */
+.v3-track .v3-track-steps{display:flex;gap:6px;margin-top:4px}
+.v3-track .v3-track-steps i{flex:1;height:6px;border-radius:6px;background:color-mix(in srgb,var(--v-acc) 22%,transparent)}
+.v3-track .v3-track-steps i.on{background:var(--v-acc)}
+.v3-track>span:nth-child(2){max-width:100%!important}
+.v3-newscard b{font-size:19px}
+/* общие формы порталa */
+.v3-portal .v3p-narrow{width:min(640px,100%);margin:0 auto;position:relative}
+.v3-portal .v3p-wide{width:min(1180px,100%);margin:0 auto;position:relative}
+.v3-portal .close-button{left:auto!important;right:0!important;top:10px!important}
+.v3-portal .v3-head{padding:0 50px 0 0;margin:0 0 18px}
+.v3-portal .v3-head h1{font-size:44px!important;letter-spacing:-.045em;font-weight:800;margin:0 0 6px!important}
+.v3-portal .v3-head p{font-size:15px;color:var(--v-mut);margin:0}
+.v3p-form{display:flex;flex-direction:column;gap:12px;padding:24px!important}
+.v3p-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.v3p-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.v3p-f{display:block;background:var(--v-field);border-radius:14px;padding:9px 14px;transition:box-shadow .2s}
+.v3p-f:focus-within{box-shadow:0 0 0 2px var(--v-acc)}
+.v3p-f>span{display:block;font-size:12.5px;font-weight:500;color:var(--v-mut);margin-bottom:2px}
+html:root body .v3p-f input,html:root body .v3p-f select,html:root body .v3p-f textarea{width:100%;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;min-height:0!important;height:auto!important;font-size:16px!important;font-weight:600;color:var(--v-ink)!important;outline:none;border-radius:0;resize:vertical}
+html:root body .v3p-f textarea{font-weight:500}
+.v3p-hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.v3p-check{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--v-mut);cursor:pointer}
+.v3p-check input{width:18px;height:18px;margin-top:1px;accent-color:var(--v-acc);flex:none}
+.v3p-err{color:#C8452C;font-size:13.5px;margin:0;min-height:0}.v3p-err:empty{display:none}
+body.manual-dark .v3p-err,body[class*="pal-"] .v3p-err{color:#FF8A70}
+.v3p-ok{font-size:14px;margin:0;background:var(--v-mint);border-radius:12px;padding:10px 14px}.v3p-ok:empty{display:none}
+.v3p-ok code{font-size:15px;font-weight:800;background:var(--v-card);padding:2px 8px;border-radius:6px;user-select:all}
+.v3p-hint{font-size:13px;color:var(--v-mut);margin:0}
+html:root body .v3p-form .calculate{height:52px!important;width:100%;margin:4px 0 0!important}
+.v3p-done{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:28px!important}
+.v3p-done .ic{width:44px;height:44px;fill:none;stroke:var(--v-acc);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;background:var(--v-mint);border-radius:50%;padding:9px}
+.v3p-done b{font-size:22px}.v3p-done small{color:var(--v-mut);font-size:14px}
+.v3p-done .calculate{width:auto!important;padding:0 28px!important;margin-top:8px!important;height:48px!important}
+.v3p-cta{margin-top:6px;align-self:flex-start;border:0;border-radius:14px;padding:13px 18px;background:var(--v-amber);color:#1B1206;font-weight:700;font-size:15px;cursor:pointer;box-shadow:0 8px 24px color-mix(in srgb,var(--v-amber) 40%,transparent);transition:transform .2s}
+.v3p-cta:hover{transform:translateY(-2px)}
+/* списки, кабинет */
+.v3p-list{display:flex;flex-direction:column;gap:14px;margin-top:14px}
+.v3p-muted{color:var(--v-mut);font-size:13.5px;margin:4px 0}
+.v3p-empty{display:flex;flex-direction:column;gap:6px;align-items:flex-start;padding:26px!important}
+.v3p-empty b{font-size:19px}.v3p-empty small{color:var(--v-mut)}
+.v3p-empty .calculate{width:auto!important;padding:0 24px!important;height:46px!important;margin-top:8px!important}
+.v3p-ship{padding:22px!important;display:flex;flex-direction:column;gap:16px}
+.v3p-ship header,.v3p-lead header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.v3p-ship h3{margin:8px 0 2px;font-size:24px;letter-spacing:-.02em}
+.v3p-ship header small,.v3p-lead header small{display:block;color:var(--v-mut);font-size:13px}
+.v3p-status{flex:none;padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:700;background:var(--v-mint);color:var(--v-accd)}
+body.manual-dark .v3p-status,body[class*="pal-"] .v3p-status{color:var(--v-ink)}
+.v3p-status.s-transit,.v3p-status.s-border,.v3p-status.s-customs,.v3p-status.s-delivery{background:var(--v-amber);color:#1B1206}
+.v3p-status.s-done{background:var(--v-acc);color:#fff}
+.v3p-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.v3p-steps li{display:flex;flex-direction:column;gap:6px;font-size:11.5px;color:var(--v-mut);line-height:1.25}
+.v3p-steps i{height:6px;border-radius:6px;background:var(--v-field)}
+.v3p-steps li.done i{background:var(--v-acc)}
+.v3p-steps li.cur i{background:var(--v-amber);box-shadow:0 0 12px color-mix(in srgb,var(--v-amber) 60%,transparent);animation:v3pulse 1.6s ease-in-out infinite}
+.v3p-steps li.cur span{color:var(--v-ink);font-weight:700}
+@keyframes v3pulse{50%{opacity:.55}}
+.v3p-cols{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:14px}
+.v3p-cols>section{background:var(--v-field);border-radius:16px;padding:14px 16px}
+.v3p-h{display:block;font-size:15px;margin-bottom:6px}
+.v3p-rows{list-style:none;margin:0;padding:0}
+.v3p-rows li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--v-bd);font-size:13.5px}
+.v3p-rows li:last-child{border-bottom:0}.v3p-rows span{color:var(--v-mut)}.v3p-rows b{text-align:right;font-variant-numeric:tabular-nums}
+.v3p-total{margin-top:8px;padding-top:8px;border-top:2px solid var(--v-ink);font-size:14px;display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
+.v3p-total b{font-size:17px}
+.v3p-docs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.v3p-docs li{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.v3p-docs a{color:var(--v-acc);font-weight:600;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.v3p-docs a:hover{text-decoration:underline}.v3p-docs small{color:var(--v-mut)}
+.v3p-x{border:0;background:none;color:var(--v-mut);font-size:18px;cursor:pointer}
+.v3p-upl{display:inline-block;margin-top:10px;color:var(--v-acc);font-weight:600;font-size:13.5px;cursor:pointer}
+.v3p-hist summary{cursor:pointer;color:var(--v-acc);font-weight:600;font-size:14px}
+.v3p-hist ul{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.v3p-hist time{color:var(--v-mut);margin-right:8px;font-variant-numeric:tabular-nums}
+.v3p-admin{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:12px;border-top:1px dashed var(--v-bd)}
+html:root body .v3p-admin select,html:root body .v3p-admin input,html:root body .v3p-lead select{height:42px!important;min-height:0!important;border-radius:12px!important;padding:0 12px!important;font-size:14px!important;background:var(--v-field)!important;border:0!important;color:var(--v-ink)!important}
+.v3p-admin input[data-note]{flex:1;min-width:200px}
+html:root body .v3p-admin .calculate{width:auto!important;height:42px!important;padding:0 18px!important;margin:0!important;font-size:14px!important}
+.v3p-del{border:0;background:none;color:#C8452C;font-weight:600;cursor:pointer}
+.v3p-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.v3p-tabs .chip{border:0;border-radius:999px;padding:10px 18px;background:var(--v-card);border:1px solid var(--v-bd);color:var(--v-mut);font-weight:600;font-size:14px;cursor:pointer}
+.v3p-tabs .chip.on{background:var(--v-acc);color:#fff;border-color:transparent}
+.v3p-inline{margin-top:14px}
+.v3p-lead{padding:18px 20px!important;display:flex;flex-direction:column;gap:6px}
+.v3p-lead p{margin:0;font-size:14px}
+.v3p-lead a{color:var(--v-acc);font-weight:600}
+.v3p-lead.s-new{border-left:4px solid var(--v-amber)!important}
+.v3p-lead.s-done,.v3p-lead.s-spam{opacity:.6}
+.v3p-client{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 20px!important;flex-wrap:wrap}
+.v3p-client small{display:block;color:var(--v-mut);font-size:13px}
+.v3p-client.off{opacity:.55}
+.v3p-actions{display:flex;gap:14px}
+@media(max-width:900px){.v3p-cols{grid-template-columns:1fr}.v3p-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){
+  .v3-loginbtn{height:34px;padding:0 14px;font-size:13px}
+  .v3-portal .v3-head h1{font-size:30px!important}
+  .v3p-two{grid-template-columns:1fr}
+  .v3p-form{padding:16px!important;border-radius:20px}
+  .v3p-ship{padding:16px!important}.v3p-ship h3{font-size:19px}
+  .v3p-ship header{flex-direction:column}
+  .v3p-steps{grid-template-columns:repeat(7,1fr);gap:3px}.v3p-steps span{display:none}.v3p-steps li.cur span{display:block;position:absolute;margin-top:12px}
+  .v3p-steps{position:relative;padding-bottom:18px}
+  .v3-newscard b{font-size:15px}
+}
+.v3-portal [hidden]{display:none!important}
+html:root body .v3-cap .lang{white-space:nowrap}
+@media(max-width:1440px){body.role-admin .v3-nav button{padding:10px 11px;font-size:13px}html:root body.role-admin .topbar{gap:12px;padding:0 22px}}
+html:root body .v3p-admin input[data-eta]{flex:none;width:170px}
+html:root body .v3p-admin select{flex:none;width:200px}
+.v3p-lead .v3c-link{align-self:flex-start;padding:4px 0}
