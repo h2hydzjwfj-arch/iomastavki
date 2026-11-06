@@ -197,7 +197,7 @@
     var rows = (items || []).map(function (x) {
       var cur = String(x.currency || 'RUB').toUpperCase(), foreign = cur !== 'RUB';
       var amount = foreign ? r2(n(x.amount_orig) * n(x.rate)) : r2(n(x.amount));
-      return { id: x.id, kind: x.kind === 'income' ? 'income' : 'expense', label: String(x.label || ''), currency: cur, amount_orig: foreign ? n(x.amount_orig) : null, rate: foreign ? n(x.rate) : null, amount: amount };
+      return { id: x.id, kind: x.kind === 'income' ? 'income' : 'expense', label: String(x.label || ''), currency: cur, amount_orig: foreign ? n(x.amount_orig) : null, rate: foreign ? n(x.rate) : null, rateDate: foreign ? (x.rateDate || '') : '', amount: amount };
     });
     var inc = rows.filter(function (x) { return x.kind === 'income'; }).reduce(function (s, x) { return s + x.amount; }, 0);
     var exp = rows.filter(function (x) { return x.kind === 'expense'; }).reduce(function (s, x) { return s + x.amount; }, 0);
