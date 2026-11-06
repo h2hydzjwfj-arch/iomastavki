@@ -28,7 +28,8 @@ app.use((req, res, next) => {
 if (compression) app.use(compression());
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }));
+// Общий лимит — только на API: статика (скрипты, стили, картинки) не считается, а работа в CRM делает много коротких запросов.
+app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, max: 1500, standardHeaders: true, legacyHeaders: false }));
 // Перебор пароля администратора: не более 8 попыток за 15 минут с одного IP.
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, skipSuccessfulRequests: true, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много попыток входа. Попробуйте позже.' } });
 // Эндпоинты, которые тратят деньги на OpenAI: ограничиваем частоту.
