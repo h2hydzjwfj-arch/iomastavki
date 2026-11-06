@@ -11,7 +11,7 @@ jobs:
           python3 - <<'PY'
           import urllib.request, re, html as H
           UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36'
-          for code in ['6201400000', '6110200000', '8703231981', '2204210600', '6402999800', '9999999999']:
+          for code in ['6403190000', '6201400000', '0401101000', '8471300000', '6403999300']:
               url = 'https://www.alta.ru/tnved/code/%s/' % code
               try:
                   r = urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': UA, 'Accept-Language': 'ru'}), timeout=30)
@@ -21,6 +21,6 @@ jobs:
               b = re.sub(r'<script[\s\S]*?</script>|<style[\s\S]*?</style>|<svg[\s\S]*?</svg>', '', b)
               b = re.sub(r'\s+', ' ', b)
               print('=====', code, 'len', len(b))
-              h1 = b.find('<h1'); print('--- H1 region ---'); print(b[max(0, h1 - 300):h1 + 7000])
-              i = b.find('Базовая ставка'); print('--- RATES region ---'); print(b[max(0, i - 2500):i + 4000])
+              a = b.find('<div class="pTnved_body'); e = b.find('<p class="t-left">', b.find('<legend>Экспорт</legend>'))
+              print('FIXTURE-BEGIN'); print(b[a:e] + '</fieldset></div>'); print('FIXTURE-END')
           PY
