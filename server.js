@@ -169,12 +169,13 @@ let seoPages = null;
 let cloudError = '';
 function storageIssue() {
   if (cloud) return cloudError ? 'Supabase не отвечает: ' + cloudError.slice(0, 160) : '';
-  const u = String(process.env.SUPABASE_URL || '').trim().replace(/\/+$/, ''), k = String(process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-  if (!u && !k) return 'в Environment этого сервиса нет SUPABASE_URL и SUPABASE_SERVICE_KEY';
-  if (!u) return 'в Environment нет SUPABASE_URL';
-  if (!k) return 'в Environment нет SUPABASE_SERVICE_KEY';
-  if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(u)) return 'SUPABASE_URL в неверном виде — нужно https://<проект>.supabase.co, без /rest/v1 и других хвостов';
-  return 'ключи заданы, но подключение не создано';
+  const C = require('./cloud'), u = C.supabaseUrl(), k = C.supabaseKey(), seen = C.supabaseVarNames();
+  const hint = seen.length ? ' (сайт видит переменные: ' + seen.join(', ') + ')' : ' (переменных со словом SUPABASE сайт не видит — проверьте, что они добавлены в Environment именно этого сервиса и сделан Deploy)';
+  if (!u && !k) return 'нет адреса и ключа Supabase' + hint;
+  if (!u) return 'нет адреса Supabase — добавьте SUPABASE_URL' + hint;
+  if (!k) return 'нет ключа Supabase — добавьте SUPABASE_SERVICE_KEY (секретный service_role)' + hint;
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(u)) return 'адрес Supabase в неверном виде — нужно https://<проект>.supabase.co' + hint;
+  return 'ключи заданы, но подключение не создано' + hint;
 }
 app.get('/api/health', (req,res) => res.json({ ok: true, storage: cloud && !cloudError ? 'supabase' : 'local', storageIssue: storageIssue() || undefined, uptime: Math.round(process.uptime()) }));
 app.get('/api/version', (req,res) => res.json({ok:true,version:'28',build:'IOMASTAVKA_FILE_28'}));
