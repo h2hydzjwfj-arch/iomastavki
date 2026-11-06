@@ -157,6 +157,8 @@ app.get('/crm-ui.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3
 app.get('/kb.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'kb.js'), { cacheControl: false }); });
 app.get('/palettes.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'palettes.css'), { cacheControl: false }); });
 app.get('/theme-v3.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.css'), { cacheControl: false }); });
+// Новые модули главной и кабинета: карта-калькулятор, трекинг груза, динамика курса, экскурсия, журнал
+for (const f of ['journal-ui.js', 'geo-asia.js', 'map-calc.js', 'track.js', 'rates-dyn.js', 'tour.js', 'v4.css']) app.get('/' + f, (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, f), { cacheControl: false }); });
 const SITE_URL = process.env.SITE_URL || 'https://iomastavki.onrender.com';
 app.get('/robots.txt', (req,res) => { res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${SITE_URL}/sitemap.xml\n`); });
 app.get('/sitemap.xml', (req,res) => { const urls = ['/'].concat(seoPages ? seoPages.urls() : []); res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${SITE_URL}${u === '/' ? '/' : u}</loc><lastmod>2026-11-06</lastmod><changefreq>${u === '/novosti' || u === '/' ? 'daily' : 'monthly'}</changefreq><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('')}</urlset>`); });
@@ -253,6 +255,35 @@ app.get('/api/currency', async (req,res) => {
   } catch {}
   curCache.set(key, { at: Date.now(), data });
   if (curCache.size > 200) curCache.delete(curCache.keys().next().value);
+  res.json(data);
+});
+
+// Динамика курса за период: /api/currency/dynamics?code=CNY&from=2026-01-01&to=2026-11-06
+// (ЦБ РФ, XML_dynamic). KZT и KRW показываем за 100 тенге и 1000 вон — как в официальной таблице ЦБ.
+const DYN_IDS = { ...CBR_IDS, KZT: 'R01335', KRW: 'R01815' };
+const DYN_NOMINAL = { KZT: 100, KRW: 1000 };
+const dynCache = new Map();
+app.get('/api/currency/dynamics', async (req, res) => {
+  const code = String(req.query.code || 'CNY').toUpperCase();
+  if (!DYN_IDS[code]) return res.status(400).json({ ok: false, error: 'Валюта: ' + Object.keys(DYN_IDS).join(', ') });
+  const parse = v => { const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null; };
+  const today = new Date(); today.setUTCHours(0, 0, 0, 0);
+  const to = parse(req.query.to) || today, from = parse(req.query.from) || new Date(to.getTime() - 30 * 864e5);
+  if (isNaN(from) || isNaN(to) || from >= to) return res.status(400).json({ ok: false, error: 'Начало периода должно быть раньше конца' });
+  if (from < new Date(Date.UTC(1993, 0, 1)) || to > new Date(today.getTime() + 864e5)) return res.status(400).json({ ok: false, error: 'Выберите даты с 1993 года по завтрашний день' });
+  if (to - from > 30 * 366 * 864e5) return res.status(400).json({ ok: false, error: 'Слишком длинный период: не больше 30 лет' });
+  const key = code + from.toISOString().slice(0, 10) + to.toISOString().slice(0, 10);
+  const fresh = to >= today ? 30 * 60 * 1000 : 7 * 864e5, hit = dynCache.get(key);
+  if (hit && Date.now() - hit.at < fresh) return res.json(hit.data);
+  let list;
+  try { list = parseCbrDynamic(await fetchText(`https://www.cbr.ru/scripts/XML_dynamic.asp?date_req1=${cbrDate(from)}&date_req2=${cbrDate(to)}&VAL_NM_RQ=${DYN_IDS[code]}`)); }
+  catch { return res.status(502).json({ ok: false, error: 'ЦБ сейчас не отвечает — попробуйте через минуту' }); }
+  if (!list.length) return res.status(404).json({ ok: false, error: 'За этот период у ЦБ нет курса ' + code });
+  const nom = DYN_NOMINAL[code] || 1;
+  const points = list.map(x => { const [d, m, y] = x.date.split('.'); return { d: `${y}-${m}-${d}`, v: +(x.value * nom).toFixed(4) }; });
+  const vals = points.map(p => p.v), first = vals[0], last = vals[vals.length - 1];
+  const data = { ok: true, code, nominal: nom, from: points[0].d, to: points[points.length - 1].d, points, min: Math.min(...vals), max: Math.max(...vals), first, last, change: +(last - first).toFixed(4), changePct: +((last - first) / first * 100).toFixed(2) };
+  dynCache.set(key, { at: Date.now(), data }); if (dynCache.size > 300) dynCache.delete(dynCache.keys().next().value);
   res.json(data);
 });
 
@@ -465,7 +496,9 @@ app.post('/api/login', loginLimiter, (req,res) => {
   const adminEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
   if (!login || login === 'admin' || (adminEmail && login === adminEmail)) { if (portal.adminPasswordOk(password)) payload = { role: 'admin', name: 'Администратор' }; }
   else { const u = portal.findClient(login, password); if (u) payload = { role: 'client', uid: u.id, name: u.name }; }
-  if (!payload) return res.status(401).json({ ok:false, error:'Неверный логин или пароль' });
+  if (!payload) { portal.log(req, 'login_fail', { contact: login.slice(0, 120) }); return res.status(401).json({ ok:false, error:'Неверный логин или пароль' }); }
+  { const u = payload.role === 'client' ? portal.store.load().users.find(x => x.id === payload.uid) : null;
+    portal.log(req, 'login', { role: payload.role, uid: payload.uid, name: payload.name, email: u ? u.email : '', phone: u ? u.phone : '', company: u ? u.company : '', result: req.body?.remember ? 'с «Запомнить меня»' : '' }); }
   // «Запомнить меня»: клиент — 30 дней, администратор — 7 дней; иначе 8 часов.
   const ttl = req.body?.remember ? (payload.role === 'admin' ? 7 : 30) * 24 * 60 * 60 * 1000 : 8 * 60 * 60 * 1000;
   res.cookie('auth', signSession(payload, Date.now(), ttl), { httpOnly:true, secure:true, sameSite:'lax', maxAge:ttl, path:'/' });
@@ -477,6 +510,7 @@ app.post('/api/register', registerLimiter, async (req,res) => {
   if (b.website) return res.json({ ok: true, role: 'guest' }); // ловушка для ботов
   const r = await portal.registerClient(b);
   if (r.error) return res.status(r.status || 400).json({ ok: false, error: r.error });
+  portal.log(req, 'register', { role: 'client', uid: r.user.id, name: r.user.name, email: r.user.email, phone: r.user.phone, company: r.user.company });
   const ttl = 30 * 24 * 60 * 60 * 1000;
   res.cookie('auth', signSession({ role: 'client', uid: r.user.id, name: r.user.name }, Date.now(), ttl), { httpOnly:true, secure:true, sameSite:'lax', maxAge:ttl, path:'/' });
   res.json({ ok: true, role: 'client', name: r.user.name });
@@ -705,4 +739,4 @@ app.use((req,res) => res.status(404).type('html').send('<!doctype html><meta cha
   app.listen(PORT, () => console.log(`iomastavka listening on ${PORT}`));
 })();
 // Перед остановкой сохраняем несохранённое.
-process.on('SIGTERM', async () => { try { await portal.store.flush(); } catch {} process.exit(0); });
+process.on('SIGTERM', async () => { try { await portal.store.flush(); } catch {} try { await portal.journal.flush(); } catch {} process.exit(0); });

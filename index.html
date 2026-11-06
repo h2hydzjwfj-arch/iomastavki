@@ -8,7 +8,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%232E7D5B%27/%3E%3Ccircle cx=%2746%27 cy=%2718%27 r=%279%27 fill=%27%23E8A33D%27/%3E%3C/svg%3E">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"iomastavka","applicationCategory":"BusinessApplication","description":"Калькулятор логистики и ВЭД Китай — Россия","inLanguage":"ru"}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/styles.css?v=20260916-v28"><link rel="stylesheet" href="/theme-v3.css?v=20261106-v20"><link rel="stylesheet" href="/palettes.css?v=1">
+<link rel="stylesheet" href="/styles.css?v=20260916-v28"><link rel="stylesheet" href="/theme-v3.css?v=20261106-v21">
+<link rel="stylesheet" href="/v4.css?v=2"><link rel="stylesheet" href="/palettes.css?v=1">
 </head>
 <body>
 <div id="weatherScene" class="weather-scene" aria-hidden="true"><div class="stars"></div><div class="sun"></div><div class="moon"></div><div class="cloud cloud-a"></div><div class="cloud cloud-b"></div><div class="rain"></div><div class="snow"></div><div class="wave wave-back"></div><div class="wave wave-mid"></div><div class="wave wave-front"></div></div>
@@ -43,14 +44,23 @@
 <section id="homeView" class="home-view">
   <div class="hero-copy"><span class="eyebrow" data-i18n="heroEyebrow">ЛОГИСТИКА · КИТАЙ → РОССИЯ</span><h1 id="v3h1">iomastavka</h1><p data-i18n="heroText">Точный расчёт. Умный помощник.<br>Всё необходимое для работы с грузом — в одном месте.</p></div>
   <div class="v3-grid">
-    <div class="k v3-hero" id="v3Hero"><div class="hi">
-      <div><span class="tag">КИТАЙ → РОССИЯ</span><h2>Расчёт ставок</h2></div>
-      <div class="v3-map" aria-hidden="true"><svg viewBox="0 0 520 150" width="100%" fill="none"><path id="v3route" class="route v3routepath" d="M40 110Q260 -10 480 70" stroke="#9CE8CB" stroke-width="2.5" stroke-linecap="round"/><circle cx="40" cy="110" r="7" fill="#fff" class="pulse"/><circle cx="480" cy="70" r="7" fill="#E8A33D" class="pulse"/><circle r="3" fill="#fff" opacity=".3"><animateMotion class="v3am" dur="7s" begin="-.5s" repeatCount="indefinite" path="M40 110Q260 -10 480 70"/></circle><circle r="4.5" fill="#fff" opacity=".6"><animateMotion class="v3am" dur="7s" begin="-.25s" repeatCount="indefinite" path="M40 110Q260 -10 480 70"/></circle><circle r="7" fill="#E8A33D" class="comet"><animateMotion class="v3am" dur="7s" repeatCount="indefinite" path="M40 110Q260 -10 480 70"/></circle><text x="22" y="140" font-size="13" fill="#CFE9DF" id="v3from">Шанхай</text><text x="436" y="100" font-size="13" fill="#CFE9DF" id="v3to">Москва</text></svg></div>
-      <div class="v3-hcap" id="v3hcap" aria-live="polite"></div>
-      <div><div class="v3-chips" role="group" aria-label="Вид транспорта"><button type="button" class="chip" data-m="auto">Авто</button><button type="button" class="chip on" data-m="rail">ЖД</button><button type="button" class="chip" data-m="sea">Море</button><button type="button" class="chip" data-m="air">Авиа</button></div>
-      <div class="v3-row v3-hrow"><label class="fld"><i>Откуда</i><input id="v3hFrom" list="v3cities" autocomplete="off" maxlength="60" placeholder="Шанхай"></label><label class="fld"><i>Куда</i><input id="v3hTo" list="v3cities" autocomplete="off" maxlength="60" placeholder="Москва"></label><label class="fld fw"><i>Вес, кг</i><input id="v3hW" type="number" min="0" step="any" inputmode="decimal" placeholder="1000"></label><button type="button" class="go" id="v3go">Рассчитать</button></div><datalist id="v3cities"></datalist></div>
+    <div class="k v3-hero mc" id="v3Hero">
+      <div class="mc-stage" id="mcStage" aria-label="Карта: города отправки в Китае и Корее, города доставки в России и Казахстане"><svg class="mc-svg" id="mcSvg" aria-hidden="true" focusable="false"></svg><div class="mc-layer" id="mcLayer"></div><div class="mc-cap" id="mcCap" hidden></div><div class="mc-zoom" role="group" aria-label="Масштаб карты"><button type="button" data-z="in" aria-label="Приблизить" title="Приблизить">+</button><button type="button" data-z="out" aria-label="Отдалить" title="Отдалить">−</button><button type="button" data-z="reset" aria-label="Вся карта" title="Вся карта"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div><div class="mc-tip" id="mcTip" hidden role="status"></div></div>
+      <div class="mc-head"><span class="tag">КИТАЙ → РОССИЯ</span><h2>Расчёт ставок на карте</h2></div>
+      <div class="mc-panel" id="mcPanel">
+        <p class="mc-hint" id="mcHint">Нажмите на карте город отправки — в Китае или Корее</p>
+        <div class="mc-sum" id="mcSum" hidden></div>
+        <div class="mc-row">
+          <button type="button" class="mc-f mc-from" id="mcFrom" aria-haspopup="listbox"><i>1</i><span><small>Откуда</small><b>Шанхай</b></span></button>
+          <button type="button" class="mc-f mc-to" id="mcTo" aria-haspopup="listbox"><i>2</i><span><small>Куда</small><b>Москва</b></span></button>
+          <label class="mc-f mc-w"><i>3</i><span><small>Вес, кг</small><input id="mcW" type="number" min="0" step="any" inputmode="decimal" placeholder="напр. 400"></span></label>
+          <label class="mc-f mc-v"><span><small>Объём, м³</small><input id="mcV" type="number" min="0" step="any" inputmode="decimal" placeholder="если знаете"></span></label>
+          <button type="button" class="go" id="mcGo">Рассчитать</button>
+        </div>
+      </div>
+      <div class="mc-res" id="mcRes" hidden aria-live="polite"></div>
+      <div class="mc-pick" id="mcPick" hidden role="dialog" aria-label="Выбор города"><input id="mcPickQ" autocomplete="off" aria-label="Город"><div class="mc-pick-list" id="mcPickList" role="listbox"></div></div>
     </div>
-    <div class="v3-ld" id="v3ld" aria-hidden="true"><div class="v3-orb"></div><b id="v3ldt">Запрашиваем ставки…</b><div class="v3-bar"><i></i></div></div></div>
 
     <button type="button" class="k mint v3-ai" data-open-view="assistant" data-roles="admin"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg><span><b data-i18n="tileAI">AI-ассистент</b><small data-i18n="tileAISub">Текстом или голосом</small><span class="v3-wave" aria-hidden="true"></span></span><span class="v3-orbbig" aria-hidden="true"></span></button>
 
@@ -73,7 +83,7 @@
 
     <button type="button" class="k cta v3-cta" data-open-view="leadView" data-roles="guest client"><svg class="ic plane" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8z"/></svg><span></span><span><b>Оставить заявку</b><small>Рассчитаем доставку</small></span></button>
   </div>
-  <div class="v3-foot"><span id="v3fresh"></span><span class="dim">Курсы ЦБ РФ на выбранную дату · cbr.ru</span></div>
+  <div class="v3-foot"><span></span><span class="dim">Курсы ЦБ РФ на выбранную дату · cbr.ru</span></div>
 </section>
 
 <section id="calculatorView" class="view-layer" aria-hidden="true"><section class="card calculator-card v3-calc" id="calculator"><button class="close-button view-close" data-close-view="calculator" data-i18n-aria="close" aria-label="Закрыть" title="Закрыть">×</button>
@@ -195,15 +205,16 @@
 
 <section id="workView" class="view-layer v3-portal" aria-hidden="true"><div class="v3p-wide"><button class="close-button view-close" data-close-view="workView" aria-label="Закрыть" title="Закрыть">×</button>
  <div class="v3-head"><h1>Работа</h1><p>Сделки, клиенты, грузы и КП — всё в одном месте.</p></div>
- <div class="v3p-tabs" role="tablist"><button type="button" class="chip on" data-tab="deals">Сделки</button><button type="button" class="chip" data-tab="clients">Клиенты</button><button type="button" class="chip" data-tab="ships">Грузы</button><button type="button" class="chip" data-tab="quotes">КП</button><button type="button" class="chip" data-tab="leads">Заявки с сайта</button><button type="button" class="chip" data-tab="tariffs">Тарифы</button></div>
+ <div class="v3p-tabs" role="tablist"><button type="button" class="chip on" data-tab="deals">Сделки</button><button type="button" class="chip" data-tab="clients">Клиенты</button><button type="button" class="chip" data-tab="ships">Грузы</button><button type="button" class="chip" data-tab="quotes">КП</button><button type="button" class="chip" data-tab="leads">Заявки с сайта</button><button type="button" class="chip" data-tab="tariffs">Тарифы</button><button type="button" class="chip" data-tab="journal">Журнал</button></div>
  <div class="v3p-tab" data-pane="deals"><div class="crm-bar" id="crmBar"></div><div id="crmList" class="crm-list"></div><div id="crmDeal" hidden></div></div>
  <div class="v3p-tab" data-pane="leads" hidden><div id="v3leadsList" class="v3p-list"></div></div>
  <div class="v3p-tab" data-pane="tariffs" hidden><div id="crmTariffs"></div></div>
+ <div class="v3p-tab" data-pane="journal" hidden><p class="v3p-muted jrn-intro">Всё, что вводят на сайте: каждый расчёт, заявка, КП, регистрация и вход — отдельной строкой, каждое поле в своей колонке.</p><div id="jrnBox"></div></div>
  <div class="v3p-tab" data-pane="ships" hidden>
   <form class="k v3p-form v3p-inline" id="v3shipForm"><b class="v3c-title">Новый груз</b>
    <div class="v3p-grid"><label class="v3p-f"><span>Клиент *</span><select name="clientId" id="v3shipClient" required></select></label><label class="v3p-f"><span>Номер</span><input name="number" placeholder="авто"></label><label class="v3p-f"><span>Откуда</span><input name="from"></label><label class="v3p-f"><span>Куда</span><input name="to"></label>
    <label class="v3p-f"><span>Транспорт</span><select name="mode"><option value="">—</option><option value="auto">Авто</option><option value="rail">ЖД</option><option value="sea">Море</option><option value="air">Авиа</option><option value="multimodal">Море + ЖД</option></select></label><label class="v3p-f"><span>Груз</span><input name="cargo"></label><label class="v3p-f"><span>Вес, кг</span><input name="weight" type="number" min="0"></label><label class="v3p-f"><span>Объём, м³</span><input name="volume" type="number" min="0" step="0.1"></label>
-   <label class="v3p-f"><span>Мест</span><input name="places" type="number" min="0"></label><label class="v3p-f"><span>Габариты</span><input name="dims" placeholder="120×80×100 см"></label><label class="v3p-f"><span>Прибытие (ETA)</span><input name="eta" type="date"></label></div>
+   <label class="v3p-f"><span>Мест</span><input name="places" type="number" min="0"></label><label class="v3p-f"><span>Габариты</span><input name="dims" placeholder="120×80×100 см"></label><label class="v3p-f"><span>Прибытие (ETA)</span><input name="eta" type="date"></label><label class="v3p-f"><span>Адрес доставки клиенту</span><input name="address" placeholder="город, улица, склад"></label></div>
    <label class="v3p-f"><span>Расходы — по строке: «Фрахт; 2450; USD»</span><textarea name="costs" rows="3" placeholder="Фрахт; 2450; USD&#10;Таможенные платежи; 180000; RUB"></textarea></label>
    <p class="v3p-err" id="v3shipErr" role="alert"></p><button type="submit" class="calculate">Создать груз</button></form>
   <div id="v3shipsList" class="v3p-list"></div></div>
@@ -218,11 +229,13 @@
 </div></section>
 </main>
 <div class="v3-ask" id="v3ask" hidden role="dialog" aria-modal="true" aria-labelledby="v3askT"><div class="v3-askbox k"><b id="v3askT">Сохранить изменения?</b><p id="v3askP"></p><div class="v3-askbtns"><button type="button" class="calculate" data-ask="save">Сохранить</button><button type="button" class="v3-askx" data-ask="leave">Выйти без сохранения</button><button type="button" class="v3c-link" data-ask="stay">Остаться</button></div></div></div>
-<script src="/app.js?v=20261106-v30"></script>
-<script src="/routes-kb.js?v=3" defer></script>
+<script src="/app.js?v=20261106-v31"></script>
+<script src="/geo-asia.js?v=1" defer></script>
+<script src="/routes-kb.js?v=4" defer></script>
+<script src="/map-calc.js?v=2" defer></script>
 <script src="/kb.js?v=3" defer></script>
-<script src="/i18n-v3.js?v=6" defer></script>
-<script src="/theme-v3.js?v=20261106-v10" defer></script>
-<script src="/crm-ui.js?v=2" defer></script><script src="/portal-ui.js?v=11" defer></script>
+<script src="/i18n-v3.js?v=7" defer></script>
+<script src="/theme-v3.js?v=20261106-v11" defer></script>
+<script src="/track.js?v=1" defer></script><script src="/rates-dyn.js?v=1" defer></script><script src="/tour.js?v=1" defer></script><script src="/crm-ui.js?v=2" defer></script><script src="/journal-ui.js?v=1" defer></script><script src="/portal-ui.js?v=13" defer></script>
 
 </body></html>

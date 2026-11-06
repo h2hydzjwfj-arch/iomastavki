@@ -7,6 +7,19 @@ const path = require('path');
 const crypto = require('crypto');
 
 const STATUSES = ['new', 'pickup', 'transit', 'border', 'customs', 'delivery', 'done'];
+// Этапы перевозки для трекинга (полоса «Где мой груз»). Набор зависит от транспорта;
+// таможня — либо на границе / в порту прибытия (тогда отдельного этапа нет), либо в России.
+const TRACK = {
+  land: ['wh', 'cn', 'border', 'ru', 'customs', 'delivery'],
+  sea: ['wh', 'port_cn', 'sea', 'port_ru', 'ru', 'customs', 'delivery'],
+  air: ['wh', 'airport_cn', 'flight', 'airport_ru', 'customs', 'delivery'],
+};
+const STAGE_RU = { wh: 'На складе в Китае', cn: 'В пути по Китаю', port_cn: 'В порту отправки', sea: 'В море', airport_cn: 'В аэропорту вылета', flight: 'В полёте',
+  border: 'На границе', port_ru: 'В порту прибытия', airport_ru: 'В аэропорту прибытия', ru: 'В пути по России', customs: 'На таможне', delivery: 'Доставка до вас', done: 'Доставлен' };
+const STAGE_STATUS = { wh: 'pickup', cn: 'transit', port_cn: 'transit', sea: 'transit', airport_cn: 'transit', flight: 'transit', border: 'border', port_ru: 'border', airport_ru: 'border', ru: 'delivery', customs: 'customs', delivery: 'delivery', done: 'done' };
+const STATUS_STAGE = { pickup: 'wh', transit: 'cn', border: 'border', customs: 'customs', delivery: 'ru', done: 'done' };
+function trackKind(mode) { return mode === 'sea' || mode === 'multimodal' ? 'sea' : mode === 'air' ? 'air' : 'land'; }
+function trackStages(s) { const list = TRACK[trackKind(s.mode)]; return s.customsAt === 'border' ? list.filter(k => k !== 'customs') : list.slice(); }
 const LEAD_STATUSES = ['new', 'work', 'done', 'spam'];
 const MODES = ['auto', 'road', 'rail', 'sea', 'air', 'multimodal', ''];
 
@@ -74,6 +87,8 @@ function createStore(dataDir, cloud) {
 function publicShipment(s) {
   return {
     id: s.id, number: s.number, status: s.status, from: s.from, to: s.to, mode: s.mode,
+    stage: s.stage || (s.status && STATUS_STAGE[s.status]) || '', customsAt: s.customsAt || 'inland', crossing: s.crossing || '', whCity: s.whCity || '',
+    nowCity: s.nowCity || '', customsPlace: s.customsPlace || '', address: s.address || '', stageAt: s.stageAt || {},
     cargo: s.cargo, weight: s.weight, volume: s.volume, places: s.places, dims: s.dims,
     eta: s.eta, costs: s.costs || [], events: s.events || [],
     docs: (s.docs || []).map(d => ({ id: d.id, name: d.name, size: d.size, uploadedAt: d.uploadedAt })),
@@ -110,6 +125,32 @@ function setup(app, opts) {
     return res.status(r.role === 'guest' ? 401 : 403).json({ ok: false, error: 'Нет доступа' });
   };
   const admin = need('admin');
+
+  // ---------- журнал для администратора: всё, что вводят на сайте ----------
+  const journal = opts.journal || require('./journal').createJournal(DATA_DIR, opts.cloud || null);
+  function log(req, type, fields) {
+    try {
+      const r = roleOf(req), f = { role: r.role };
+      if (r.role === 'client') { const u = store.load().users.find(x => x.id === r.uid); if (u) Object.assign(f, { uid: u.id, name: u.name, email: u.email, phone: u.phone, company: u.company }); }
+      if (r.role === 'admin') f.name = r.name || 'Администратор';
+      const vis = String(req.get('x-ioma-visitor') || ''); if (/^[a-z0-9]{8,32}$/.test(vis)) f.visitor = vis;
+      const lang = String(req.get('x-ioma-lang') || ''); if (/^(ru|en|zh|tr)$/.test(lang)) f.lang = lang;
+      return journal.add(type, Object.assign(f, fields || {}));
+    } catch (e) { console.error('journal', e.message); return null; }
+  }
+  app.get('/api/journal', admin, async (req, res) => {
+    const m = /^\d{4}-\d{2}$/.test(String(req.query.month || '')) ? String(req.query.month) : new Date().toISOString().slice(0, 7);
+    const items = (await journal.list(m)).map(journal.view);
+    res.json({ ok: true, month: m, months: await journal.monthsList(), columns: journal.COLUMNS, types: journal.TYPES, items });
+  });
+  app.get('/api/journal/export', admin, async (req, res) => {
+    const m = /^\d{4}-\d{2}$/.test(String(req.query.month || '')) ? String(req.query.month) : new Date().toISOString().slice(0, 7);
+    let items = await journal.list(m); const t = String(req.query.type || '');
+    if (t) { const set = t.split(',').filter(x => journal.TYPES[x]); if (set.length) items = items.filter(x => set.includes(x.type)); }
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="iomastavka-journal-${m}.csv"`);
+    res.send(journal.csv(items));
+  });
   const leadLimiter = rateLimit ? rateLimit({ windowMs: 60 * 60 * 1000, max: 6, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много заявок. Попробуйте позже.' } }) : (q, s, n) => n();
 
   app.get('/api/me', (req, res) => { const r = roleOf(req); res.json({ ok: true, role: r.role, name: r.name || '', storage: r.role === 'admin' ? store.kind : undefined }); });
@@ -135,6 +176,7 @@ function setup(app, opts) {
     if (b.consent !== true) return res.status(400).json({ ok: false, error: 'Нужно согласие на обработку данных' });
     const db = store.load(); db.leads.unshift(lead); db.leads = db.leads.slice(0, 2000); store.save(db);
     try { const deal = dealFromLead(lead); lead.dealId = deal.id; const d2 = store.load(); const l2 = d2.leads.find(x => x.id === lead.id); if (l2) { l2.dealId = deal.id; store.save(d2); } } catch (e) { console.error('deal from lead:', e.message); }
+    log(req, 'lead', { name: lead.name, contact: lead.contact, from: lead.from, to: lead.to, cargo: lead.cargo, weight: lead.weight, volume: lead.volume, mode: lead.mode, comment: lead.comment, result: lead.estimate ? 'Оценка с сайта: ' + lead.estimate : '', number: lead.id });
     try { await notify(`Новая заявка с сайта\n${lead.name} · ${lead.contact}\n${lead.from || '—'} → ${lead.to || '—'}\nГруз: ${lead.cargo || '—'}${lead.weight != null ? ', ' + lead.weight + ' кг' : ''}${lead.volume != null ? ', ' + lead.volume + ' м³' : ''}\n${lead.estimate ? 'Оценка: ' + lead.estimate + '\n' : ''}${lead.comment || ''}`); } catch {}
     res.json({ ok: true });
   });
@@ -160,6 +202,7 @@ function setup(app, opts) {
     lead.docs = files.map(f => ({ name: f.name, size: f.buf.length }));
     lead.parsed = an.summary || '';
     const db = store.load(); db.leads.unshift(lead); db.leads = db.leads.slice(0, 2000); store.save(db);
+    log(req, 'lead_docs', { name: lead.name, contact: lead.contact, from: lead.from, to: lead.to, cargo: lead.cargo, weight: lead.weight, volume: lead.volume, comment: lead.comment, files: lead.docs.map(f => f.name).join(', '), result: lead.parsed || (an.reason === 'ai-off' ? 'Автоматический разбор выключен' : ''), number: lead.id });
     const extra = an.summary ? '\nРаспознано из документов:\n' + an.summary : (an.raw ? '\nСодержимое таблиц (без ИИ):\n' + an.raw.slice(0, 3000) : '');
     let deal = null; try { deal = dealFromLead(lead, extra); for (const f of files) await crm.attach(deal, f); const d2 = store.load(); const x = d2.deals.find(v => v.id === deal.id); if (x) x.files = deal.files; const l2 = d2.leads.find(v => v.id === lead.id); if (l2) l2.dealId = deal.id; store.save(d2); } catch (e) { console.error('docs deal:', e.message); }
     const head = `Новая заявка с документами\n${lead.name} · ${lead.contact}\n${lead.from || '—'} → ${lead.to || '—'}${lead.comment ? '\n' + lead.comment : ''}`;
@@ -216,7 +259,8 @@ function setup(app, opts) {
   // ---------- грузы ----------
   function readShipment(b, s) {
     const out = s || {};
-    for (const [k, m] of [['number', 40], ['from', 120], ['to', 120], ['cargo', 200], ['dims', 120], ['eta', 40], ['note', 1000]]) if (b[k] != null) out[k] = str(b[k], m);
+    for (const [k, m] of [['number', 40], ['from', 120], ['to', 120], ['cargo', 200], ['dims', 120], ['eta', 40], ['note', 1000], ['crossing', 80], ['whCity', 80], ['nowCity', 80], ['customsPlace', 120], ['address', 300]]) if (b[k] != null) out[k] = str(b[k], m);
+    if (b.customsAt === 'border' || b.customsAt === 'inland') out.customsAt = b.customsAt;
     for (const k of ['weight', 'volume', 'places']) if (b[k] != null) out[k] = num(b[k]);
     if (b.mode != null && MODES.includes(b.mode)) out.mode = b.mode;
     if (b.costs != null) out.costs = cleanCosts(b.costs);
@@ -227,15 +271,34 @@ function setup(app, opts) {
     const b = req.body || {}; const db = store.load();
     if (!db.users.some(u => u.id === b.clientId)) return res.status(400).json({ ok: false, error: 'Выберите клиента' });
     const now = new Date().toISOString();
-    const s = readShipment(b, { id: newId(), clientId: b.clientId, status: 'new', docs: [], events: [{ status: 'new', note: 'Груз оформлен', date: now }], createdAt: now, updatedAt: now });
+    const s = readShipment(b, { id: newId(), clientId: b.clientId, status: 'new', stage: '', stageAt: {}, docs: [], events: [{ status: 'new', note: 'Груз оформлен', date: now }], createdAt: now, updatedAt: now });
+    if (b.stage && (trackStages(s).includes(b.stage) || b.stage === 'done')) { s.stage = b.stage; s.status = STAGE_STATUS[b.stage]; s.stageAt[b.stage] = now; s.events.push({ stage: b.stage, status: s.status, note: '', date: now }); }
     if (!s.number) s.number = 'IO-' + now.slice(2, 10).replace(/-/g, '') + '-' + s.id.slice(0, 4).toUpperCase();
-    db.shipments.unshift(s); store.save(db); res.json({ ok: true, item: s });
+    db.shipments.unshift(s); store.save(db);
+    const cu = db.users.find(u => u.id === s.clientId);
+    log(req, 'ship', { number: s.number, from: s.from, to: s.to, mode: s.mode, cargo: s.cargo, weight: s.weight, volume: s.volume, places: s.places, comment: cu ? 'Клиент: ' + cu.name + ' (' + cu.email + ')' : '' });
+    res.json({ ok: true, item: s });
   });
   app.patch('/api/shipments/:id', admin, (req, res) => {
     const db = store.load(); const s = db.shipments.find(x => x.id === req.params.id);
     if (!s) return res.status(404).json({ ok: false, error: 'Груз не найден' });
-    const b = req.body || {}; readShipment(b, s);
-    if (STATUSES.includes(b.status) && b.status !== s.status) {
+    const b = req.body || {}; const before = { stage: s.stage || STATUS_STAGE[s.status] || '', nowCity: s.nowCity || '' }; readShipment(b, s);
+    const now = new Date().toISOString(); s.stageAt = s.stageAt || {}; s.events = s.events || [];
+    const valid = trackStages(s).concat(['done']);
+    if (b.stage != null && b.stage !== '' && !valid.includes(b.stage)) return res.status(400).json({ ok: false, error: 'Такого этапа нет для этого вида транспорта' });
+    const cityNote = st => st === 'ru' && s.nowCity ? `сейчас — ${s.nowCity}` : st === 'border' && s.crossing ? s.crossing : st === 'customs' && s.customsPlace ? s.customsPlace : st === 'delivery' && s.address ? s.address : '';
+    if (b.stage && b.stage !== before.stage) {
+      s.stage = b.stage; s.status = STAGE_STATUS[b.stage] || s.status; s.stageAt[b.stage] = now;
+      const note = [cityNote(b.stage), str(b.eventNote, 300)].filter(Boolean).join('. ');
+      s.events.push({ stage: b.stage, status: s.status, note, date: now });
+      shipmentNotice(s, `${STAGE_RU[b.stage]}${note ? ': ' + note : ''}`);
+      log(req, 'ship_update', { number: s.number, from: s.from, to: s.to, mode: s.mode, result: STAGE_RU[b.stage] + (note ? ': ' + note : '') });
+    } else if ((s.stage || before.stage) === 'ru' && s.nowCity && s.nowCity !== before.nowCity) {
+      const note = [`сейчас — ${s.nowCity}`, str(b.eventNote, 300)].filter(Boolean).join('. ');
+      s.events.push({ stage: 'ru', status: s.status, note, date: now }); shipmentNotice(s, `В пути по России: ${note}`);
+      log(req, 'ship_update', { number: s.number, from: s.from, to: s.to, mode: s.mode, result: 'В пути по России: ' + note });
+    } else if (STATUSES.includes(b.status) && b.status !== s.status) {
+      s.stage = STATUS_STAGE[b.status] || '';
       s.status = b.status; s.events = s.events || [];
       s.events.push({ status: b.status, note: str(b.eventNote, 300), date: new Date().toISOString() });
       shipmentNotice(s, `Новый статус: ${ST_RU[s.status] || s.status}${b.eventNote ? ' — ' + str(b.eventNote, 300) : ''}`);
@@ -247,7 +310,9 @@ function setup(app, opts) {
     if (i < 0) return res.status(404).json({ ok: false, error: 'Груз не найден' });
     db.shipments.splice(i, 1); store.save(db); res.json({ ok: true });
   });
+  const cabSeen = new Map();
   app.get('/api/my/shipments', need('client'), (req, res) => {
+    const last = cabSeen.get(req.who.uid) || 0; if (Date.now() - last > 30 * 60 * 1000) { cabSeen.set(req.who.uid, Date.now()); log(req, 'cabinet', {}); }
     const db = store.load(); res.json({ ok: true, items: db.shipments.filter(s => s.clientId === req.who.uid).map(publicShipment) });
   });
 
@@ -326,7 +391,8 @@ function setup(app, opts) {
       if (db.users.some(x => x.email === email)) return res.status(409).json({ ok: false, error: 'Эта почта уже занята' });
       u.email = email;
     }
-    store.save(db); res.json({ ok: true, item: publicUser(u) });
+    store.save(db); log(req, 'profile', { name: u.name, email: u.email, phone: u.phone });
+    res.json({ ok: true, item: publicUser(u) });
   });
   // envAdminCheck подставляет server.js (пароль из ADMIN_PASSWORD_HASH)
   let envAdminCheck = () => false;
@@ -360,6 +426,7 @@ function setup(app, opts) {
   app.post('/api/password/forgot', forgotLimiter, async (req, res) => {
     const login = str(req.body && (req.body.email || req.body.login), 120).toLowerCase();
     if (!login) return res.status(400).json({ ok: false, error: 'Укажите почту, с которой входите' });
+    log(req, 'forgot', { contact: login });
     const adminEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
     const site = siteOf(req);
     // --- администратор: ссылка уходит в Telegram-бот (TELEGRAM_CHAT_ID) и на почту ADMIN_EMAIL
@@ -469,9 +536,15 @@ function setup(app, opts) {
   const tariffs = () => EST.mergeTariffs((store.load().settings || {}).tariffs);
   const baseRate = (from, to, mode) => { try { const b = engine({ from, to, mode }); return b && b.mode === mode && (b._score || 0) >= 13 && /container/i.test(b.basis || 'container') ? b : null; } catch { return null; } };
   function runEstimate(b) { return EST.estimate({ from: str(b.from, 120), to: str(b.to, 120), weight: num(b.weight), volume: num(b.volume), places: num(b.places), dangerous: b.dangerous === true || b.dangerous === 'true' || b.dangerous === '1' }, tariffs(), baseRate); }
+  const KIND_RU = { air: 'Авиа', ltl_auto: 'Авто, сборный', lcl_rail: 'ЖД, сборный', lcl_sea: 'Море + ЖД, сборный', fcl_rail: "ЖД, контейнер 40'", ftl_auto: 'Авто, машина целиком' };
   app.post('/api/estimate', quoteLimiter, (req, res) => {
-    const r = runEstimate(req.body || {});
-    if (!r.ok) return res.status(400).json(r);
+    const b = req.body || {}; const r = runEstimate(b);
+    const src = { map: 'Карта на главной', calc: 'Калькулятор', home: 'Главная' }[String(b.source || '')] || 'Калькулятор';
+    if (!r.ok) { log(req, 'calc', { from: str(b.from, 120), to: str(b.to, 120), weight: num(b.weight), volume: num(b.volume), places: num(b.places), result: 'Не посчитано: ' + (r.error || ''), source: src }); return res.status(400).json(r); }
+    const best = r.options.find(o => o.kind === r.recommended) || r.options[0];
+    log(req, 'calc', { from: str(b.from, 120), to: str(b.to, 120), weight: r.weight, volume: r.volume, places: num(b.places), dangerous: !!r.dangerous,
+      mode: best && best.mode, option: best && KIND_RU[best.kind], price: best && best.price, currency: 'USD', days: best && best.days.join('–'),
+      result: r.options.map(o => `${KIND_RU[o.kind] || o.kind}: ${o.price} $ (${o.days.join('–')} дн.)`).join('; '), source: src });
     res.json(r);
   });
   app.get('/api/tariffs', admin, (req, res) => res.json({ ok: true, tariffs: tariffs(), defaults: EST.DEFAULT_TARIFFS }));
@@ -516,6 +589,7 @@ function setup(app, opts) {
       try { await mail.send(q.guestEmail, `${q.number} — расчёт доставки iomastavka`, quoteText(q)); delivered.email = true; } catch {}
     }
     store.save(db);
+    log(req, 'quote', { number: q.number, from: q.from, to: q.to, mode: q.mode, weight: q.weight, volume: q.volume, places: q.places, option: q.basis, price: q.price, currency: q.currency, days: q.transitDays, email: q.guestEmail || undefined, result: [delivered.telegram ? 'отправлено в Telegram' : '', delivered.email ? 'отправлено на почту' : ''].filter(Boolean).join(', ') });
     res.json({ ok: true, quote: publicQuote(q), delivered });
   });
   app.get('/api/quotes/:id', (req, res) => {
@@ -555,7 +629,7 @@ function setup(app, opts) {
     try { await notify(`Новый клиент зарегистрировался на сайте\n${name} · ${email}${company ? '\n' + company : ''}${phone ? '\n' + phone : ''}`); } catch {}
     return { user: u };
   }
-  return { roleOf, need, admin, findClient, registerClient, store, adminPasswordOk: pw => adminPasswordOk(pw, envAdminCheck), setEnvAdminCheck: f => { envAdminCheck = f; }, tg, mail };
+  return { roleOf, need, admin, findClient, registerClient, store, journal, log, adminPasswordOk: pw => adminPasswordOk(pw, envAdminCheck), setEnvAdminCheck: f => { envAdminCheck = f; }, tg, mail };
 }
 
 

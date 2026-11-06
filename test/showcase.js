@@ -120,8 +120,10 @@ const tgServer = http.createServer((req, res) => {
     await step('Вы меняете статус груза → клиенту приходит уведомление', async () => {
       await A.p.bringToFront(); await A.p.evaluate(() => window.__v3open('workView')); await A.p.click('#workView [data-tab=ships]');
       const id = await A.p.getAttribute('#v3shipsList .v3p-ship', 'data-id');
-      await A.p.selectOption(`[data-status="${id}"]`, 'transit'); await A.p.fill(`[data-note="${id}"]`, 'Отправлен поездом со станции Сиань'); await A.p.click(`[data-save="${id}"]`);
-      await waitMsg(/Новый статус: В пути[\s\S]*Сиань/, CLIENT_CHAT); await slow(A.p); await shot(A.p, 'admin_status_changed');
+      const F = `.trk-form[data-ship="${id}"]`;
+      await A.p.selectOption(F + ' [data-f=stage]', 'ru'); await A.p.fill(F + ' [data-f=nowCity]', 'Новосибирск'); await A.p.fill(F + ' [data-f=address]', 'Москва, ул. Складская, 3');
+      await A.p.fill(F + ' [data-f=eventNote]', 'Отправлен поездом со станции Сиань'); await A.p.click(`[data-trksave="${id}"]`);
+      await waitMsg(/В пути по России[\s\S]*Новосибирск[\s\S]*Сиань/, CLIENT_CHAT); await A.p.waitForSelector('#v3shipsList .trk-stops li.cur'); await slow(A.p); await shot(A.p, 'admin_status_changed');
     });
     await step('Вы загружаете документ → клиенту приходит уведомление', async () => {
       const f = path.join(OUT, 'Инвойс_IO-A1F3.pdf'); fs.writeFileSync(f, '%PDF-1.4 test invoice');
@@ -129,6 +131,7 @@ const tgServer = http.createServer((req, res) => {
     });
     await step('Клиент видит новый статус и документ', async () => {
       await C.p.bringToFront(); await C.p.evaluate(() => window.__v3open('cabinetView')); await C.p.waitForSelector('#v3cabList .v3p-status:has-text("В пути")');
+      await C.p.waitForSelector('#v3cabList .trk-stops li.cur:has-text("Новосибирск")');
       await C.p.waitForSelector('#v3cabList .v3p-docs a'); await slow(C.p); await shot(C.p, 'client_status_doc');
     });
     await step('Клиент забыл пароль → ссылка приходит в Telegram → новый пароль работает', async () => {

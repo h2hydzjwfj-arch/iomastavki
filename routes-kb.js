@@ -194,5 +194,5 @@
     svg.innerHTML = '<style>.g{stroke:rgba(255,255,255,.07);stroke-width:1}.cn{fill:rgba(255,255,255,.22);font:700 11px Inter,sans-serif;letter-spacing:.2em}.r{fill:none;stroke-width:1.6;opacity:.35;stroke-dasharray:3 5;stroke-linecap:round;stroke-linejoin:round}.r.main{opacity:1;stroke-width:2.6;stroke-dasharray:2 7;animation:v3mv 1s linear infinite}.r.risky{stroke:#FF8A70}.comet{fill:#E8A33D;filter:drop-shadow(0 0 6px #FFB86B)}.chk{fill:#E8A33D}.cl{fill:#FFE3B0;font:600 9.5px Inter,sans-serif}.o,.d{fill:#fff;stroke:#E8A33D;stroke-width:2}.ct{fill:#fff;font:700 11.5px Inter,sans-serif}</style>' + h;
     return adv;
   }
-  window.IOMA_ROUTES = { advise: advise, render: render, corridors: C, name: name, colors: COLORS };
+  window.IOMA_ROUTES = { advise: advise, render: render, corridors: C, name: name, colors: COLORS, nodes: N };
 })();

@@ -86,17 +86,32 @@
   function docs(s,admin){if(!s.docs||!s.docs.length)return '<p class="v3p-muted">Документов пока нет</p>';
     return '<ul class="v3p-docs">'+s.docs.map(function(d){return '<li><a href="/api/shipments/'+encodeURIComponent(s.id)+'/docs/'+encodeURIComponent(d.id)+'" download>📄 '+esc(d.name)+'</a><small>'+date(d.uploadedAt)+'</small>'+(admin?'<button type="button" class="v3p-x" data-deldoc="'+esc(d.id)+'" data-ship="'+esc(s.id)+'" aria-label="Удалить документ">×</button>':'')+'</li>'}).join('')+'</ul>'}
   function cargo(s){return '<ul class="v3p-rows">'+[['Груз',esc(s.cargo||'—')],['Вес',s.weight!=null?fmt(s.weight)+' кг':'—'],['Объём',s.volume!=null?fmt(s.volume)+' м³':'—'],['Мест',s.places!=null?fmt(s.places):'—'],['Габариты',esc(s.dims||'—')]].map(function(r){return '<li><span>'+r[0]+'</span><b>'+r[1]+'</b></li>'}).join('')+'</ul>'}
+  var TR=function(){return window.IOMA_TRACK};
+  function trackForm(s){var T=TR(),l=T?T.list(s):[],cur=s.stage||'';
+    var f=function(k,label,ph,type){return '<label class="v3p-f"><span>'+label+'</span><input data-f="'+k+'"'+(type?' type="'+type+'"':'')+' value="'+esc(type==='date'?(/^\d{4}-\d\d-\d\d$/.test(s[k]||'')?s[k]:''):(s[k]||''))+'" placeholder="'+esc(ph||'')+'" maxlength="300"></label>'};
+    return '<div class="v3p-admin trk-form" data-ship="'+esc(s.id)+'"><b class="v3p-h">Где груз сейчас — видит клиент</b>'
+      +'<div class="trk-fgrid"><label class="v3p-f"><span>Этап</span><select data-f="stage"><option value="">Оформлен, ещё не забран</option>'+l.map(function(k){return '<option value="'+k+'"'+(k===cur?' selected':'')+'>'+esc(T.TITLE[k]+(s.customsAt==='border'&&/^(border|port_ru|airport_ru)$/.test(k)?' и таможня':''))+'</option>'}).join('')+'<option value="done"'+(cur==='done'?' selected':'')+'>Доставлен</option></select></label>'
+      +'<label class="v3p-f"><span>Транспорт</span><select data-f="mode">'+[['','—'],['auto','Авто'],['rail','ЖД'],['sea','Море'],['multimodal','Море + ЖД'],['air','Авиа']].map(function(m){return '<option value="'+m[0]+'"'+(m[0]===(s.mode||'')?' selected':'')+'>'+m[1]+'</option>'}).join('')+'</select></label>'
+      +'<label class="v3p-f"><span>Таможня</span><select data-f="customsAt"><option value="inland"'+(s.customsAt!=='border'?' selected':'')+'>в России, отдельным этапом</option><option value="border"'+(s.customsAt==='border'?' selected':'')+'>на границе / в порту прибытия</option></select></label>'
+      +f('whCity','Склад в Китае (город)','Иу')+f('crossing','Граница / порт прибытия','Забайкальск')+f('nowCity','Где сейчас (город в России)','Новосибирск')
+      +f('customsPlace','Где таможня','Москва, Бутовский т/п')+f('address','Адрес доставки клиенту','Москва, ул. Складская, 3')+f('eta','Прибытие (ETA)','','date')+'</div>'
+      +'<label class="v3p-f"><span>Комментарий к обновлению (видит клиент)</span><input data-f="eventNote" maxlength="300" placeholder="Например: прошли досмотр, выезд завтра"></label>'
+      +'<div class="trk-fbtns"><button type="button" class="calculate" data-trksave="'+esc(s.id)+'">Сохранить и уведомить клиента</button><button type="button" class="v3p-del" data-delship="'+esc(s.id)+'">Удалить груз</button></div></div>'}
   function shipCard(s,admin,clientName){
-    var ev=(s.events||[]).slice().reverse();
-    return '<article class="k v3p-ship" data-id="'+esc(s.id)+'"><header><div><span class="tag">№ '+esc(s.number)+'</span><h3>'+esc(s.from||'—')+' → '+esc(s.to||'—')+'</h3><small>'+(MODE[s.mode]||'Транспорт уточняется')+' · прибытие: '+(s.eta?date(s.eta):'уточняется')+(clientName?' · '+esc(clientName):'')+'</small></div><span class="v3p-status s-'+esc(s.status)+'">'+(ST[s.status]||esc(s.status))+'</span></header>'
-      +steps(s.status)
+    var ev=(s.events||[]).slice().reverse(),T=TR();
+    var now=T?T.nowText(s):(ST[s.status]||s.status);
+    return '<article class="k v3p-ship" data-id="'+esc(s.id)+'"><header><div><span class="tag">№ '+esc(s.number)+'</span><h3>'+esc(s.from||'—')+' → '+esc(s.to||'—')+'</h3><small>'+(MODE[s.mode]||'Транспорт уточняется')+' · прибытие: '+(s.eta?date(s.eta):'уточняется')+(clientName?' · '+esc(clientName):'')+'</small></div><span class="v3p-status s-'+esc(s.status)+'">'+esc(now)+'</span></header>'
+      +(T?'<div class="trk-wrap"><div class="trk-main">'+T.rail(s,{admin:admin}):steps(s.status))
       +'<div class="v3p-cols"><section><b class="v3p-h">Груз</b>'+cargo(s)+'</section><section><b class="v3p-h">Сколько и за что</b>'+costs(s.costs)+'</section><section><b class="v3p-h">Документы</b>'+docs(s,admin)+(admin?'<label class="v3p-upl">＋ Загрузить документ<input type="file" data-upl="'+esc(s.id)+'" hidden></label>':'')+'</section></div>'
-      +(ev.length?'<details class="v3p-hist"><summary>История ('+ev.length+')</summary><ul>'+ev.map(function(x){return '<li><time>'+dtime(x.date)+'</time><b>'+(ST[x.status]||esc(x.status))+'</b>'+(x.note?' — '+esc(x.note):'')+'</li>'}).join('')+'</ul></details>':'')
-      +(admin?'<div class="v3p-admin"><select data-status="'+esc(s.id)+'">'+STK.map(function(k){return '<option value="'+k+'"'+(k===s.status?' selected':'')+'>'+ST[k]+'</option>'}).join('')+'</select><input data-note="'+esc(s.id)+'" placeholder="Комментарий к статусу (видит клиент)" maxlength="300"><input data-eta="'+esc(s.id)+'" type="date" value="'+esc(/^\d{4}-\d\d-\d\d$/.test(s.eta||'')?s.eta:'')+'" title="Прибытие"><button type="button" class="calculate" data-save="'+esc(s.id)+'">Обновить</button><button type="button" class="v3p-del" data-delship="'+esc(s.id)+'">Удалить</button></div>':'')
+      +(T?'</div><aside class="trk-bot"><div class="trk-bh"><i></i><b>Сообщения по грузу</b></div>'+T.history(s,4)+'</aside></div>':'')
+      +(ev.length>4?'<details class="v3p-hist"><summary>История ('+ev.length+')</summary><ul>'+ev.map(function(x){return '<li><time>'+dtime(x.date)+'</time><b>'+esc(x.stage&&T?T.TITLE[x.stage]:(ST[x.status]||x.status))+'</b>'+(x.note?' — '+esc(x.note):'')+'</li>'}).join('')+'</ul></details>':'')
+      +(admin?trackForm(s):'')
       +'</article>'}
+  function ratesStrip(){var g=function(id){var e=document.getElementById(id);return e?e.textContent:''},dt=(document.getElementById('v3date')||{}).textContent||'';
+    return '<div class="trk-rates"><span>Курс ЦБ'+(dt&&dt!=='…'?' на '+esc(dt):'')+'</span><b><small>CNY</small> '+esc(g('homeCny'))+'</b><b><small>USD</small> '+esc(g('homeUsd'))+'</b><b><small>EUR</small> '+esc(g('homeEur'))+'</b><button type="button" class="v3c-link" data-rates-dyn="CNY">Динамика курса →</button></div>'}
   function loadCabinet(){var box=$('#v3cabList');if(!box)return;$$('#v3cabTabs .chip').forEach(function(x){x.classList.toggle('on',x.dataset.ctab==='ships')});box.hidden=false;$('#v3cabQuotes').hidden=true;box.innerHTML='<p class="v3p-muted">Загружаю…</p>';
     if(me.name)$('#v3cabHello').textContent=me.name+', здесь ваши грузы: статус, маршрут, расходы и документы.';
-    api('/api/my/shipments').then(function(d){box.innerHTML=d.items.length?d.items.map(function(s){return shipCard(s,false)}).join(''):'<div class="k v3p-empty"><b>Пока нет грузов</b><small>Как только менеджер оформит перевозку, она появится здесь.</small><button type="button" class="calculate" data-open-view="leadView">Оставить заявку</button></div>'})
+    api('/api/my/shipments').then(function(d){box.innerHTML=d.items.length?ratesStrip()+d.items.map(function(s){return shipCard(s,false)}).join(''):'<div class="k v3p-empty"><b>Пока нет грузов</b><small>Как только менеджер оформит перевозку, она появится здесь.</small><button type="button" class="calculate" data-open-view="leadView">Оставить заявку</button></div>'})
       .catch(function(x){box.innerHTML='<p class="v3p-err">'+esc(x.message)+'</p>'})}
 
   /* ---------- раздел «Работа» (администратор) ---------- */
@@ -121,15 +136,19 @@
     api('/api/clients',{method:'POST',body:{email:cf.email.value,name:cf.name.value,company:cf.company.value,phone:cf.phone.value}}).then(function(d){showPw(d.item.email,d.password);cf.reset();loadClients()}).catch(function(x){err.textContent=x.message})});
   var sf=$('#v3shipForm');
   sf&&sf.addEventListener('submit',function(e){e.preventDefault();var err=$('#v3shipErr');err.textContent='';var body={};
-    ['clientId','number','from','to','mode','cargo','weight','volume','places','dims','eta'].forEach(function(k){if(sf[k].value!=='')body[k]=sf[k].value});
+    ['clientId','number','from','to','mode','cargo','weight','volume','places','dims','eta','address'].forEach(function(k){if(sf[k]&&sf[k].value!=='')body[k]=sf[k].value});
     body.costs=sf.costs.value.split('\n').map(function(l){var p=l.split(';');return {label:(p[0]||'').trim(),amount:(p[1]||'').trim().replace(/\s/g,''),currency:(p[2]||'USD').trim()}}).filter(function(c){return c.label&&c.amount});
     api('/api/shipments',{method:'POST',body:body}).then(function(){sf.reset();loadShips()}).catch(function(x){err.textContent=x.message})});
   document.addEventListener('change',function(e){var t=e.target;
+    if((t.dataset.f==='mode'||t.dataset.f==='customsAt')&&t.closest('.trk-form')&&window.IOMA_TRACK){var fm=t.closest('.trk-form'),sl=$('[data-f=stage]',fm),cur=sl.value,T=window.IOMA_TRACK,l=T.list({mode:$('[data-f=mode]',fm).value,customsAt:$('[data-f=customsAt]',fm).value}),ca=$('[data-f=customsAt]',fm).value;
+      sl.innerHTML='<option value="">Оформлен, ещё не забран</option>'+l.map(function(k){return '<option value="'+k+'">'+esc(T.TITLE[k]+(ca==='border'&&/^(border|port_ru|airport_ru)$/.test(k)?' и таможня':''))+'</option>'}).join('')+'<option value="done">Доставлен</option>';sl.value=l.indexOf(cur)>=0||cur==='done'?cur:''}
     if(t.dataset.lead)api('/api/leads/'+encodeURIComponent(t.dataset.lead),{method:'PATCH',body:{status:t.value}}).then(loadLeads).catch(function(x){alert(x.message)});
     if(t.dataset.upl&&t.files&&t.files[0]){var fd=new FormData();fd.append('file',t.files[0]);api('/api/shipments/'+encodeURIComponent(t.dataset.upl)+'/docs',{method:'POST',body:fd}).then(loadShips).catch(function(x){alert(x.message)})}
   });
   document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('button');if(!t||!t.closest('#workView'))return;
-    if(t.dataset.save){var id=t.dataset.save;var body={status:$('[data-status="'+id+'"]').value,eventNote:$('[data-note="'+id+'"]').value};var eta=$('[data-eta="'+id+'"]').value;if(eta)body.eta=eta;api('/api/shipments/'+encodeURIComponent(id),{method:'PATCH',body:body}).then(loadShips).catch(function(x){alert(x.message)})}
+    if(t.dataset.setstage){var fm=$('.trk-form[data-ship="'+t.dataset.ship+'"]');if(fm){var sl=$('[data-f=stage]',fm);sl.value=t.dataset.setstage;var art=t.closest('.v3p-ship');$$('.trk-stops li',art).forEach(function(li){li.classList.toggle('pick',li.contains(t))});sl.classList.add('flash');setTimeout(function(){sl.classList.remove('flash')},900);var nc=$('[data-f=nowCity]',fm);if(t.dataset.setstage==='ru'&&nc)nc.focus()}}
+    if(t.dataset.trksave){var id=t.dataset.trksave,fm2=$('.trk-form[data-ship="'+id+'"]'),body={};$$('[data-f]',fm2).forEach(function(i){body[i.dataset.f]=i.value});if(!body.stage)delete body.stage;if(!body.eventNote)delete body.eventNote;if(!body.eta)delete body.eta;t.disabled=true;
+      api('/api/shipments/'+encodeURIComponent(id),{method:'PATCH',body:body}).then(function(){toast('Сохранено — клиент получит уведомление, если оно подключено');loadShips()}).catch(function(x){alert(x.message);t.disabled=false})}
     if(t.dataset.delship&&confirm('Удалить груз? Клиент перестанет его видеть.'))api('/api/shipments/'+encodeURIComponent(t.dataset.delship),{method:'DELETE'}).then(loadShips).catch(function(x){alert(x.message)});
     if(t.dataset.deldoc&&confirm('Удалить документ?'))api('/api/shipments/'+encodeURIComponent(t.dataset.ship)+'/docs/'+encodeURIComponent(t.dataset.deldoc),{method:'DELETE'}).then(loadShips).catch(function(x){alert(x.message)});
     if(t.dataset.reset)api('/api/clients/'+encodeURIComponent(t.dataset.reset)+'/reset',{method:'POST'}).then(function(d){var c=clients.find(function(x){return x.id===t.dataset.reset});$('#workView [data-tab=clients]').click();var dd=$('.crm-access');if(dd)dd.open=true;showPw(c?c.email:'',d.password)}).catch(function(x){alert(x.message)});
@@ -267,12 +286,12 @@
   function leaving(t){if(!t||!t.closest)return false;if(t.closest('#v3ask'))return false;
     if(t.closest('[data-close-view],.view-close,[data-nav],#logoutButton'))return true;
     var o=t.closest('[data-open-view]');if(o){var cur=openId();var map={calculator:'calculatorView',news:'newsView',assistant:'assistantView',forwarders:'forwardersView',customsView:'customsView'};var n=o.getAttribute('data-open-view');return (map[n]||n)!==cur}
-    return t.classList&&t.classList.contains('view-layer')&&t.classList.contains('open')}
+    return t.classList&&t.classList.contains('view-layer')&&t.classList.contains('open')&&window.__iomaDownOn===t}
   function showAsk(info,go){pending={info:info,go:go};$('#v3askP').textContent=info.p;$('[data-ask=save]',ask).textContent=info.saveText||'Сохранить';ask.hidden=false;setTimeout(function(){$('[data-ask=save]',ask).focus()},30)}
   window.addEventListener('click',function(e){if(bypass||!ask)return;if(!leaving(e.target))return;var info=dirtyInfo();if(!info)return;
     e.preventDefault();e.stopImmediatePropagation();var t=e.target;showAsk(info,function(){bypass=true;try{t.click()}finally{bypass=false}})},true);
   window.addEventListener('keydown',function(e){if(e.key!=='Escape'||!ask)return;if(!ask.hidden){e.stopImmediatePropagation();ask.hidden=true;pending=null;return}var info=dirtyInfo();if(!info)return;e.stopImmediatePropagation();showAsk(info,function(){window.__iomaCloseViews&&window.__iomaCloseViews()})},true);
-  ask&&ask.addEventListener('click',function(e){var b=e.target.closest('[data-ask]');if(!b&&e.target!==ask)return;var a=b?b.dataset.ask:'stay',p=pending;
+  ask&&ask.addEventListener('click',function(e){var b=e.target.closest('[data-ask]');if(!b&&(e.target!==ask||window.__iomaDownOn!==ask))return;var a=b?b.dataset.ask:'stay',p=pending;
     if(a==='stay'||!p){ask.hidden=true;pending=null;return}
     if(a==='leave'){ask.hidden=true;pending=null;if(openId()==='leadView')lsSet(DK,null);p.go();return}
     b.disabled=true;p.info.save().then(function(){ask.hidden=true;pending=null;b.disabled=false;setTimeout(p.go,350)}).catch(function(x){b.disabled=false;$('#v3askP').textContent=x.message||'Не удалось сохранить'})});
