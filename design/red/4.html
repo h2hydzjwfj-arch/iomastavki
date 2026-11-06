@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>4 — Томат и ультрамарин</title>
+<style>
+@font-face{font-family:Unbounded;src:url(../fonts/Unbounded.ttf);font-weight:200 900}
+@font-face{font-family:Golos;src:url(../fonts/Golos.ttf);font-weight:400 900}
+:root{--tom:#FF4A2B;--tom-d:#D9341A;--ult:#2E2BD6;--ult-d:#1F1C9E;--pink:#FFD9CF;--ink:#12122B;--mut:#55566F;--line:#E3E3EE}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font:400 18px/1.55 Golos,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit}
+.wrap{max-width:1240px;margin:0 auto;padding:0 32px}
+h1,h2,h3,.un{font-family:Unbounded,sans-serif;letter-spacing:-.03em}
+.nav{display:flex;align-items:center;gap:34px;height:86px}
+.logo{font:800 24px Unbounded;letter-spacing:-.04em;text-decoration:none;display:flex;align-items:center;gap:10px}
+.logo i{width:22px;height:22px;border-radius:50%;background:var(--tom);position:relative}.logo i::after{content:'';position:absolute;left:12px;top:-4px;width:14px;height:14px;background:var(--ult)}
+.menu{display:flex;gap:28px;font-size:17px;font-weight:500;color:var(--mut);white-space:nowrap}.menu a{text-decoration:none}.menu a.on{color:var(--ink);box-shadow:0 3px 0 var(--tom)}
+.right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.lng{font-size:15px;font-weight:700;display:flex;gap:12px;color:var(--mut)}.lng b{color:var(--ult)}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:54px;padding:0 26px;font:600 18px Golos;text-decoration:none;white-space:nowrap;border-radius:4px}
+.btn.t{background:var(--tom);color:#fff}.btn.u{background:var(--ult);color:#fff}.btn.k{background:var(--ink);color:#fff}.btn.o{border:2.5px solid var(--ink);color:var(--ink)}
+/* герой-плакат */
+.hero{position:relative;padding:40px 0 0;overflow:hidden}
+.band{position:absolute;left:-10%;right:-10%;top:470px;height:150px;background:var(--ult);transform:rotate(-7deg);display:flex;align-items:center;justify-content:flex-start;padding-left:12%;gap:40px;color:#fff;font:800 92px Unbounded;letter-spacing:-.04em;white-space:nowrap}
+.band span:nth-child(even){color:var(--tom)}
+.sun{position:absolute;right:6%;top:10px;width:290px;height:290px;border-radius:50%;background:var(--tom);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.sun em{font-style:normal}.sun b{font:800 58px Unbounded;letter-spacing:-.04em;line-height:1}.sun span{font-size:18px;max-width:180px;margin-top:6px}
+.hero .wrap{position:relative}
+.hero h1{font-size:60px;line-height:1.04;max-width:700px;margin:24px 0 18px}
+.hero p{font-size:21px;color:var(--mut);max-width:540px;margin:0}
+.spacer{height:400px}
+/* расчёт */
+.calc{position:relative;background:#fff;border:4px solid var(--ink);margin-top:-60px;box-shadow:16px 16px 0 var(--tom)}
+.calc .in{display:grid;grid-template-columns:1.2fr 1.2fr .8fr .8fr auto;border-bottom:4px solid var(--ink)}
+.f{padding:16px 22px;border-right:2px solid var(--line)}.f label{display:block;font-size:15px;color:var(--mut)}.f div{font:700 23px Golos}
+.calc .in .btn{height:auto;border-radius:0;font-size:19px;padding:0 36px}
+.res{display:grid;grid-template-columns:repeat(3,1fr)}
+.r{padding:26px 28px;border-right:2px solid var(--line);position:relative}.r:last-child{border-right:0}
+.r.best{background:var(--pink)}
+.r .m{display:flex;align-items:center;gap:12px;font-size:19px;font-weight:600}
+.shape{width:28px;height:28px;flex:0 0 28px}
+.r .p{font:800 50px Unbounded;letter-spacing:-.05em;line-height:1;margin:18px 0 6px}.r .p small{font-size:22px;letter-spacing:0}
+.r .d{font-size:17px;color:var(--mut)}
+.r .tg{position:absolute;right:20px;top:24px;font-size:14px;font-weight:700;padding:4px 10px;background:var(--ink);color:#fff}
+.r.best .tg{background:var(--tom)}
+.under{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:16px 28px;border-top:2px solid var(--line);font-size:15px;color:var(--mut)}
+.chk{display:flex;align-items:center;gap:10px;color:var(--ink);font-size:16px}.chk i{width:22px;height:22px;border:2.5px solid var(--ink)}
+/* документы */
+.docs{margin-top:90px;background:var(--tom);color:#fff;position:relative;overflow:hidden}
+.docs::after{content:'';position:absolute;right:-80px;top:-80px;width:340px;height:340px;border-radius:50%;border:40px solid rgba(255,255,255,.18)}
+.docs .wrap{display:grid;grid-template-columns:1.3fr 1fr;gap:40px;align-items:center;padding-top:50px;padding-bottom:50px;position:relative;z-index:1}
+.docs h2{font-size:40px;line-height:1.08;margin:0 0 12px}.docs p{margin:0;font-size:19px;color:#FFE7E1}
+.docs .act{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.docs .act span{font-size:16px;color:#FFE7E1}
+section{padding:90px 0 0}
+h2.big{font-size:46px;line-height:1.06;margin:0 0 12px}
+.sub{font-size:19px;color:var(--mut);max-width:620px;margin:0 0 36px}
+/* маршруты */
+.rts{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:4px solid var(--ink)}
+.rt{padding:26px 24px 26px 0}.rt+.rt{padding-left:24px;border-left:2px solid var(--line)}
+.rt .h{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px}
+.rt b{display:block;font:700 21px Golos;margin:14px 0 6px;line-height:1.25}.rt .d{font:800 34px Unbounded;letter-spacing:-.04em}.rt p{margin:8px 0 0;color:var(--mut);font-size:16px}
+.key{display:flex;gap:26px;margin-top:20px;font-size:15px;color:var(--mut)}.key span{display:flex;align-items:center;gap:8px}.key .shape{width:18px;height:18px;flex-basis:18px}
+/* груз */
+.trk{display:grid;grid-template-columns:1fr 420px;gap:34px}
+.tl{border:4px solid var(--ink);padding:30px 32px}
+.tl h3{font-size:30px;margin:0 0 4px}.tl .m{color:var(--mut);margin:0 0 34px}
+.line{position:relative;display:grid;grid-template-columns:repeat(5,1fr)}
+.line::before{content:'';position:absolute;left:14px;right:14px;top:13px;height:4px;background:var(--line)}
+.line::after{content:'';position:absolute;left:14px;width:50%;top:13px;height:4px;background:var(--ult)}
+.line div{position:relative;z-index:1;font-size:15px;color:var(--mut)}
+.line i{display:block;width:30px;height:30px;border-radius:50%;background:#fff;border:4px solid var(--line);margin-bottom:12px}
+.line .d i{background:var(--ult);border-color:var(--ult)}.line .n i{background:var(--tom);border-color:var(--tom);box-shadow:0 0 0 6px var(--pink)}
+.line b{display:block;color:var(--ink);font-size:17px}
+.rates{display:flex;gap:30px;align-items:baseline;margin-top:34px;padding-top:20px;border-top:2px solid var(--line);font-size:15px;color:var(--mut)}.rates b{font:800 26px Unbounded;letter-spacing:-.04em;color:var(--ink);margin-left:6px}
+.bot{background:var(--ult);color:#fff;padding:26px;display:flex;flex-direction:column;gap:12px}
+.bot .bh{font-weight:600;display:flex;gap:10px;align-items:center}.bot .bh i{width:36px;height:36px;border-radius:50%;background:var(--tom);display:inline-block}
+.msg{background:#fff;color:var(--ink);padding:14px 16px;font-size:17px;border-radius:2px 18px 18px 18px}.msg small{display:block;text-align:right;color:var(--mut);font-size:13px}
+footer{margin-top:90px;background:var(--ink);color:#B9B9D3;padding:40px 0}
+footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:20px;font-size:16px}footer nav{display:flex;gap:24px}footer b{font:800 22px Unbounded;color:#fff;letter-spacing:-.04em}
+@media(max-width:700px){
+ body{font-size:17px}.wrap{padding:0 18px}
+ .nav{height:66px}.menu,.lng,.btn.o.hide{display:none}.right .btn{height:46px;padding:0 18px;font-size:16px}.logo{font-size:21px}
+ .hero{padding-top:10px}.hero h1{font-size:34px;margin-top:10px;max-width:none}.hero p{font-size:18px}
+ .sun{width:132px;height:132px;right:16px;top:auto;bottom:174px;z-index:2}.sun b{font-size:28px}.sun span{font-size:12.5px;max-width:96px;line-height:1.3}.sun em{display:none}
+ .band{top:auto;bottom:62px;height:76px;font-size:30px;gap:12px;padding-left:12%}.spacer{height:330px}
+ .calc{margin-top:-20px;box-shadow:8px 8px 0 var(--tom)}.calc .in{grid-template-columns:1fr 1fr}.f{padding:12px 14px;border-bottom:2px solid var(--line)}.f div{font-size:19px}.calc .in .btn{grid-column:1 / -1;height:58px}
+ .res{grid-template-columns:1fr}.r{border-right:0;border-bottom:2px solid var(--line);padding:20px 18px}.r .p{font-size:38px;margin:12px 0 4px}
+ .under{flex-direction:column;align-items:flex-start;padding:14px 18px}
+ .docs{margin-top:60px}.docs .wrap{grid-template-columns:1fr;padding-top:34px;padding-bottom:34px}.docs h2{font-size:28px}.docs .btn{width:100%}
+ section{padding-top:64px}h2.big{font-size:32px}.sub{font-size:17px}
+ .rts{grid-template-columns:1fr}.rt,.rt+.rt{padding:20px 0;border-left:0;border-bottom:2px solid var(--line)}.key{flex-wrap:wrap;gap:10px 18px}
+ .trk{grid-template-columns:1fr}.tl{padding:22px 18px}.line{grid-template-columns:1fr;gap:16px}.line::before,.line::after{display:none}.line div{display:grid;grid-template-columns:42px 1fr;align-items:center}.line i{margin:0}.line b{font-size:16px}
+ .rates{flex-wrap:wrap;gap:10px 20px}
+ footer .wrap{flex-direction:column;align-items:flex-start}footer nav{flex-wrap:wrap;gap:12px 20px}
+}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+ <symbol id="ok" viewBox="0 0 28 28"><circle cx="14" cy="14" r="13" fill="#2E2BD6"/></symbol>
+ <symbol id="w" viewBox="0 0 28 28"><circle cx="14" cy="14" r="11.5" fill="none" stroke="#2E2BD6" stroke-width="3"/><path d="M14 2.5a11.5 11.5 0 010 23z" fill="#2E2BD6"/></symbol>
+ <symbol id="r" viewBox="0 0 28 28"><path d="M14 2l13 24H1z" fill="#FF4A2B"/></symbol>
+ <symbol id="air" viewBox="0 0 28 28"><rect width="28" height="28" fill="#FF4A2B"/></symbol>
+ <symbol id="auto" viewBox="0 0 28 28"><circle cx="14" cy="14" r="14" fill="#2E2BD6"/></symbol>
+ <symbol id="rail" viewBox="0 0 28 28"><path d="M14 0l14 28H0z" fill="#12122B"/></symbol>
+</defs></svg>
+<div class="wrap nav">
+ <a class="logo" href="#"><i></i>iomastavka</a>
+ <nav class="menu"><a class="on" href="#">Расчёт</a><a href="#">Как работаем</a><a href="#">Маршруты</a><a href="#">Где мой груз</a></nav>
+ <div class="right"><span class="lng"><b>RU</b><span>EN</span><span>中文</span><span>TR</span></span><a class="btn o hide" href="#">Telegram</a><a class="btn t" href="#">Войти</a></div>
+</div>
+
+<header class="hero">
+ <div class="band"><span>КИТАЙ</span><span>—</span><span>РОССИЯ</span><span>—</span><span>КИТАЙ</span></div>
+ <div class="sun"><b>18–35</b><span>дней ЖД до Москвы<em> через Забайкальск</em></span></div>
+ <div class="wrap">
+  <h1>Доставим из Китая. Посчитаем за секунды</h1>
+  <p>Авиа, авто, ЖД или море — сравним для вашего груза и возьмём на себя документы, таможню и доставку до склада.</p>
+  <div class="spacer"></div>
+ </div>
+</header>
+
+<div class="wrap"><div class="calc">
+ <div class="in"><div class="f"><label>Откуда</label><div>Иу</div></div><div class="f"><label>Куда</label><div>Москва</div></div><div class="f"><label>Вес, кг</label><div>400</div></div><div class="f"><label>Объём, м³</label><div>2</div></div><a class="btn t" href="#">Рассчитать</a></div>
+ <div class="res">
+  <div class="r best"><span class="tg">Оптимально</span><div class="m"><svg class="shape"><use href="#auto"/></svg>Авто, сборный</div><div class="p">560<small> $</small></div><div class="d">18–28 дней, ≈ 45 000 ₽</div></div>
+  <div class="r"><span class="tg">Дешевле</span><div class="m"><svg class="shape"><use href="#rail"/></svg>ЖД, сборный</div><div class="p">400<small> $</small></div><div class="d">25–35 дней, ≈ 32 200 ₽</div></div>
+  <div class="r"><span class="tg">Быстрее</span><div class="m"><svg class="shape"><use href="#air"/></svg>Авиа</div><div class="p">2 080<small> $</small></div><div class="d">5–10 дней, ≈ 167 300 ₽</div></div>
+ </div>
+ <div class="under"><span class="chk"><i></i>Опасный груз: аккумуляторы, жидкости, химия</span><span>Ориентир до Москвы без таможенных платежей. Точную ставку пришлёт менеджер.</span></div>
+</div></div>
+
+<div class="docs"><div class="wrap">
+ <div><h2>Пришлите инвойс и упаковочный лист — посчитаем под ключ</h2><p>Сами достанем товары, вес, габариты и количество мест. Код ТН ВЭД подберёт менеджер.</p></div>
+ <div class="act"><a class="btn k" href="#">Загрузить документы</a><span>PDF, Excel, Word или фото</span></div>
+</div></div>
+
+<section><div class="wrap">
+ <h2 class="big">Обстановка на маршрутах</h2><p class="sub">Сроки и риски по основным путям — чтобы выбирать без сюрпризов.</p>
+ <div class="rts">
+  <div class="rt"><span class="h"><svg class="shape" style="width:20px;height:20px"><use href="#ok"/></svg>Оптимально</span><b>ЖД через Забайкальск</b><span class="d">18–35</span><p>Главный коридор, в пиковые месяцы бывают очереди.</p></div>
+  <div class="rt"><span class="h"><svg class="shape" style="width:20px;height:20px"><use href="#w"/></svg>Есть задержки</span><b>Авто через Казахстан</b><span class="d">15–30</span><p>Строгие досмотры, нужны СНТ и электронные пломбы.</p></div>
+  <div class="rt"><span class="h"><svg class="shape" style="width:20px;height:20px"><use href="#w"/></svg>Есть задержки</span><b>Море + ЖД через Владивосток</b><span class="d">40–60</span><p>Вывоз из порта занимает до двух недель.</p></div>
+  <div class="rt"><span class="h"><svg class="shape" style="width:20px;height:20px"><use href="#r"/></svg>Не советуем</span><b>Море через Новороссийск</b><span class="d">45–60</span><p>Надбавка за военный риск около 1000 $ за контейнер.</p></div>
+ </div>
+ <div class="key"><span>Сроки — в днях до Москвы</span></div>
+</div></section>
+
+<section><div class="wrap trk">
+ <div class="tl"><h3>Где мой груз</h3><p class="m">IO-261105, запчасти, 6 мест, 1 200 кг</p>
+  <div class="line"><div class="d"><i></i><span><b>Забран</b>28 окт</span></div><div class="d"><i></i><span><b>В пути</b>30 окт</span></div><div class="n"><i></i><span><b>Граница</b>Забайкальск</span></div><div><i></i><span><b>Таможня</b>около 12 ноя</span></div><div><i></i><span><b>Склад</b>около 18 ноя</span></div></div>
+  <div class="rates">Курс ЦБ на 06.11.2026<span>CNY<b>11,28</b></span><span>USD<b>80,45</b></span><span>EUR<b>92,77</b></span></div>
+ </div>
+ <div class="bot"><div class="bh"><i></i>Бот iomastavka в Telegram</div>
+  <div class="msg">Груз IO-261105 забран у поставщика в Иу. 6 мест, 1 200 кг.<small>28 окт, 10:14</small></div>
+  <div class="msg">Добавлен инвойс по грузу IO-261105.<small>29 окт, 16:02</small></div>
+  <div class="msg">Груз прибыл в Забайкальск. Ожидаемая дата на складе — 18 ноября.<small>3 ноя, 08:47</small></div>
+ </div>
+</div></section>
+
+<footer><div class="wrap"><span><b>iomastavka</b><br>Доставка грузов из Китая в Россию</span><nav><a href="#">Telegram</a><a href="#">Почта</a><a href="#">Маршруты</a><a href="#">Статьи</a></nav></div></footer>
+</body></html>

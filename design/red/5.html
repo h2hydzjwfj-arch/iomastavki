@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>5 — Малина и закат</title>
+<style>
+@font-face{font-family:Manrope;src:url(../fonts/Manrope.ttf);font-weight:200 800}
+:root{--plum:#26081E;--plum2:#3A1030;--plum3:#4C1A40;--rasp:#E5195F;--apr:#FF8B3D;--peach:#FFD3B8;--soft:#E9C9D6;--line:rgba(255,211,184,.16)}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(760px 480px at 82% 120px,rgba(229,25,95,.30),transparent 62%) no-repeat,radial-gradient(620px 380px at 100% 560px,rgba(255,139,61,.20),transparent 60%) no-repeat,var(--plum);color:#fff;font:400 18px/1.6 Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.wrap{max-width:1220px;margin:0 auto;padding:0 32px}
+h1,h2,h3{font-weight:800;letter-spacing:-.035em;line-height:1.06}
+.nav{display:flex;align-items:center;gap:34px;height:88px}
+.logo{font:800 25px Manrope;letter-spacing:-.04em;text-decoration:none;display:flex;align-items:center;gap:10px}
+.logo i{width:26px;height:26px;border-radius:50%;background:conic-gradient(from 200deg,var(--rasp),var(--apr),var(--rasp))}
+.menu{display:flex;gap:28px;font-size:17px;font-weight:600;color:var(--soft);white-space:nowrap}.menu a{text-decoration:none}.menu a.on{color:#fff}
+.right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.lng{display:flex;gap:4px;font-size:15px;font-weight:700}.lng span{padding:6px 10px;border-radius:10px;color:var(--soft)}.lng span.on{background:var(--plum3);color:#fff}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:54px;padding:0 26px;border-radius:16px;font:700 18px Manrope;text-decoration:none;white-space:nowrap}
+.btn.r{background:var(--rasp);color:#fff}.btn.a{background:var(--apr);color:var(--plum)}.btn.g{background:var(--plum3);color:#fff}.btn.p{background:var(--plum);color:#fff}
+/* герой с дугой */
+.hero{position:relative;padding:30px 0 0}
+.hero h1{font-size:68px;max-width:760px;margin:24px 0 18px}
+.hero p{font-size:21px;color:var(--soft);max-width:560px;margin:0}
+.arc{position:relative;padding-bottom:72px;margin-top:6px}.stage{position:relative;height:270px}
+.arc svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.node{position:absolute;transform:translate(-50%,-10px);display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.node i{width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 0 0 6px rgba(255,139,61,.25),0 0 24px rgba(255,139,61,.9)}
+.node b{font-size:19px;line-height:1.2}.node span{font-size:14px;line-height:1.2;color:var(--soft);white-space:nowrap}
+.node.m i{background:var(--rasp);box-shadow:0 0 0 6px rgba(229,25,95,.25),0 0 24px rgba(229,25,95,.9)}
+/* расчёт */
+.calc{background:var(--plum2);border:1px solid var(--line);border-radius:30px;padding:28px;position:relative;box-shadow:0 30px 80px -30px rgba(229,25,95,.45)}
+.in{display:grid;grid-template-columns:1.2fr 1.2fr .8fr .8fr auto;gap:10px}
+.f{background:var(--plum);border:1px solid var(--line);border-radius:18px;padding:12px 18px}.f label{display:block;font-size:14px;color:var(--soft)}.f div{font-size:21px;font-weight:700}
+.in .btn{height:auto;border-radius:18px;padding:0 32px}
+.dg{display:flex;align-items:center;gap:12px;margin:14px 2px 22px;font-size:16px;color:var(--soft)}
+.sw{width:46px;height:28px;border-radius:999px;background:var(--plum3);position:relative}.sw::after{content:'';position:absolute;left:4px;top:4px;width:20px;height:20px;border-radius:50%;background:var(--soft)}
+.opts{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:12px}
+.o{border-radius:22px;padding:22px 24px;background:var(--plum);border:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.o.best{background:linear-gradient(135deg,var(--rasp),var(--apr));border:0;color:#fff}
+.o .t{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:19px}
+.o em{font-style:normal;font-size:13.5px;font-weight:800;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.18)}
+.o:not(.best) em{background:var(--plum3);color:var(--peach)}
+.o .p{font-size:46px;font-weight:800;letter-spacing:-.04em;line-height:1.05;margin-top:8px}.o .p small{font-size:20px;letter-spacing:0;font-weight:700}
+.o .d{font-size:16px;color:var(--soft)}.o.best .d{color:#FFF0E6}
+.hero .calc .cap{font-size:15px;color:var(--soft);margin:16px 2px 0;max-width:none}
+/* документы */
+.docs{margin-top:90px;background:var(--peach);color:var(--plum);border-radius:34px;padding:44px 50px;display:grid;grid-template-columns:1fr auto;gap:40px;align-items:center}
+.docs h2{font-size:40px;margin:0 0 10px}.docs p{margin:0;font-size:19px;color:#5A2A3E}
+section{padding:90px 0 0}
+h2.big{font-size:48px;margin:0 0 12px}
+.sub{font-size:19px;color:var(--soft);max-width:620px;margin:0 0 34px}
+/* маршруты */
+.rts{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.rt{display:grid;grid-template-columns:28px 1.3fr 140px 1.8fr 180px;gap:22px;align-items:center;padding:22px 4px;border-bottom:1px solid var(--line)}
+.rt .dot{width:14px;height:14px;border-radius:50%}
+.ok .dot{background:#5BE0A0;box-shadow:0 0 16px #5BE0A0}.w .dot{background:var(--apr);box-shadow:0 0 16px var(--apr)}.r .dot{background:var(--rasp);box-shadow:0 0 16px var(--rasp)}
+.rt b{font-size:21px}.rt .d{font-size:24px;font-weight:800;letter-spacing:-.03em}.rt p{margin:0;color:var(--soft);font-size:16px}
+.rt .s{justify-self:end;font-weight:700;font-size:15px;padding:6px 14px;border-radius:999px;background:var(--plum2)}
+.ok .s{color:#5BE0A0}.w .s{color:var(--apr)}.r .s{color:#FF6A97}
+/* груз */
+.trk{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.card{background:var(--plum2);border:1px solid var(--line);border-radius:30px;padding:32px}
+.card h3{font-size:32px;margin:0 0 4px}.card .m{color:var(--soft);margin:0 0 24px}
+.bar{height:12px;border-radius:999px;background:var(--plum3);overflow:hidden}.bar i{display:block;height:100%;width:56%;background:linear-gradient(90deg,var(--rasp),var(--apr));border-radius:999px}
+.stp{display:grid;grid-template-columns:repeat(5,1fr);margin-top:14px;font-size:14px;color:var(--soft)}.stp b{display:block;color:#fff;font-size:16px}.stp .n b{color:var(--apr)}
+.rates{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:26px}.rates div{background:var(--plum);border-radius:18px;padding:14px 16px}.rates small{color:var(--soft);font-size:14px}.rates b{display:block;font-size:26px;font-weight:800;letter-spacing:-.03em}
+.rh{margin:26px 0 0;font-size:15px;color:var(--soft)}
+.bot{display:flex;flex-direction:column;gap:12px}
+.bot .bh{display:flex;align-items:center;gap:12px;font-weight:700;margin-bottom:4px}.bot .bh i{width:42px;height:42px;border-radius:50%;background:conic-gradient(from 200deg,var(--rasp),var(--apr),var(--rasp))}
+.msg{background:var(--plum2);border:1px solid var(--line);border-radius:22px 22px 22px 6px;padding:14px 18px;font-size:17px}.msg small{display:block;text-align:right;color:var(--soft);font-size:13px}
+.msg .tg{display:inline-block;font-size:13px;font-weight:800;color:var(--apr);margin-bottom:2px}
+footer{margin-top:90px;border-top:1px solid var(--line);padding:40px 0 50px;color:var(--soft)}
+footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:20px;font-size:16px}footer nav{display:flex;gap:24px}
+@media(max-width:700px){
+ body{font-size:17px}.wrap{padding:0 18px}
+ .nav{height:66px}.menu,.lng,.btn.g.hide{display:none}.right .btn{height:46px;padding:0 20px;font-size:16px}.logo{font-size:22px}
+ .hero h1{font-size:40px;margin-top:12px}.hero p{font-size:18px}
+ .stage{height:180px}.arc{padding-bottom:64px;margin-top:0}.node b{font-size:16px}.node span{font-size:12.5px}
+ .calc{padding:16px;border-radius:24px}.in{grid-template-columns:1fr 1fr}.f{padding:10px 14px}.f div{font-size:18px}.in .btn{grid-column:1 / -1;height:56px}
+ .opts{grid-template-columns:1fr}.o .p{font-size:38px}
+ .docs{grid-template-columns:1fr;padding:26px 22px;border-radius:26px;gap:18px;margin-top:64px}.docs h2{font-size:29px}.docs p{font-size:17px}.docs .btn{width:100%}
+ section{padding-top:64px}h2.big{font-size:34px}.sub{font-size:17px}
+ .rt{grid-template-columns:20px 1fr auto;gap:6px 12px;padding:18px 0}.rt p{grid-column:2 / -1}.rt .s{grid-column:2 / -1;justify-self:start}.rt .d{font-size:19px}.rt b{font-size:18px}
+ .trk{grid-template-columns:1fr}.card{padding:22px;border-radius:24px}.stp{grid-template-columns:repeat(3,1fr);row-gap:10px}.rates b{font-size:20px}
+ footer .wrap{flex-direction:column;align-items:flex-start}footer nav{flex-wrap:wrap;gap:12px 20px}
+}
+</style></head><body>
+<div class="wrap nav">
+ <a class="logo" href="#"><i></i>iomastavka</a>
+ <nav class="menu"><a class="on" href="#">Расчёт</a><a href="#">Как работаем</a><a href="#">Маршруты</a><a href="#">Где мой груз</a></nav>
+ <div class="right"><div class="lng"><span class="on">RU</span><span>EN</span><span>中文</span><span>TR</span></div><a class="btn g hide" href="#">Telegram</a><a class="btn r" href="#">Войти</a></div>
+</div>
+
+<header class="hero"><div class="wrap">
+ <h1>От фабрики в Китае до вашего склада</h1>
+ <p>Посчитаем авиа, авто, ЖД и море для вашего груза, возьмём на себя документы и таможню. Каждый этап — сообщением в Telegram.</p>
+ <div class="arc">
+  <div class="stage"><svg viewBox="0 0 1000 280" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="sun" x1="1" x2="0" y1="0" y2="0"><stop offset="0" stop-color="#FF8B3D"/><stop offset="1" stop-color="#E5195F"/></linearGradient><filter id="gl" x="-10%" y="-50%" width="120%" height="200%"><feGaussianBlur stdDeviation="6"/></filter></defs>
+   <path d="M110 230 C 330 20, 670 20, 890 230" fill="none" stroke="url(#sun)" stroke-width="10" opacity=".55" filter="url(#gl)"/>
+   <path d="M110 230 C 330 20, 670 20, 890 230" fill="none" stroke="url(#sun)" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+  <div class="node m" style="left:11%;top:82.1%"><i></i><b>Москва</b><span>ваш склад</span></div>
+  <div class="node" style="left:50%;top:25.9%"><i></i><b>Забайкальск</b><span>граница и таможня</span></div>
+  <div class="node" style="left:89%;top:82.1%"><i></i><b>Иу</b><span>забираем груз</span></div>
+ </div></div>
+ <div class="calc">
+  <div class="in"><div class="f"><label>Откуда</label><div>Иу</div></div><div class="f"><label>Куда</label><div>Москва</div></div><div class="f"><label>Вес, кг</label><div>400</div></div><div class="f"><label>Объём, м³</label><div>2</div></div><a class="btn a" href="#">Рассчитать</a></div>
+  <div class="dg"><span class="sw"></span>Опасный груз: аккумуляторы, жидкости, химия</div>
+  <div class="opts">
+   <div class="o best"><div class="t">Авто, сборный<em>Оптимально</em></div><div class="p">560 <small>$</small></div><div class="d">18–28 дней, ≈ 45 000 ₽</div></div>
+   <div class="o"><div class="t">ЖД, сборный<em>Дешевле</em></div><div class="p">400 <small>$</small></div><div class="d">25–35 дней, ≈ 32 200 ₽</div></div>
+   <div class="o"><div class="t">Авиа<em>Быстрее</em></div><div class="p">2 080 <small>$</small></div><div class="d">5–10 дней, ≈ 167 300 ₽</div></div>
+  </div>
+  <p class="cap">Ориентир до Москвы без таможенных платежей. Точную ставку менеджер пришлёт в Telegram или на почту.</p>
+ </div>
+</div></header>
+
+<div class="wrap"><div class="docs">
+ <div><h2>Пришлите инвойс — посчитаем под&nbsp;ключ</h2><p>Достанем из инвойса и упаковочного листа товары, вес, габариты и места. Код ТН&nbsp;ВЭД подберёт менеджер.</p></div>
+ <a class="btn p" href="#">Загрузить документы</a>
+</div></div>
+
+<section><div class="wrap">
+ <h2 class="big">Обстановка на маршрутах</h2><p class="sub">Сроки и риски по основным путям из Китая — чтобы выбирать без сюрпризов.</p>
+ <div class="rts">
+  <div class="rt ok"><span class="dot"></span><b>ЖД через Забайкальск</b><span class="d">18–35 дн.</span><p>Главный коридор, в пиковые месяцы бывают очереди.</p><span class="s">Оптимально</span></div>
+  <div class="rt w"><span class="dot"></span><b>Авто через Казахстан</b><span class="d">15–30 дн.</span><p>Строгие досмотры, нужны СНТ и электронные пломбы.</p><span class="s">Есть задержки</span></div>
+  <div class="rt w"><span class="dot"></span><b>Море + ЖД, Владивосток</b><span class="d">40–60 дн.</span><p>Вывоз из порта занимает до двух недель.</p><span class="s">Есть задержки</span></div>
+  <div class="rt r"><span class="dot"></span><b>Море, Новороссийск</b><span class="d">45–60 дн.</span><p>Надбавка за военный риск около 1000 $ за контейнер.</p><span class="s">Не советуем</span></div>
+ </div>
+</div></section>
+
+<section><div class="wrap trk">
+ <div class="card"><h3>Где мой груз</h3><p class="m">IO-261105, запчасти, 6 мест, 1 200 кг</p>
+  <div class="bar"><i></i></div>
+  <div class="stp"><div><b>Забран</b>28 окт</div><div><b>В пути</b>30 окт</div><div class="n"><b>Граница</b>сейчас</div><div><b>Таможня</b>≈ 12 ноя</div><div><b>Склад</b>≈ 18 ноя</div></div>
+  <p class="rh">Курс ЦБ на 06.11.2026</p>
+  <div class="rates" style="margin-top:10px"><div><small>CNY</small><b>11,28</b></div><div><small>USD</small><b>80,45</b></div><div><small>EUR</small><b>92,77</b></div></div>
+ </div>
+ <div class="bot"><div class="bh"><i></i>Бот iomastavka в Telegram</div>
+  <div class="msg"><span class="tg">Забран</span><br>Груз IO-261105 забран у поставщика в Иу. 6 мест, 1 200 кг.<small>28 окт, 10:14</small></div>
+  <div class="msg"><span class="tg">Документ</span><br>Добавлен инвойс по грузу IO-261105.<small>29 окт, 16:02</small></div>
+  <div class="msg"><span class="tg">Граница</span><br>Груз прибыл в Забайкальск. Ожидаемая дата на складе — 18 ноября.<small>3 ноя, 08:47</small></div>
+ </div>
+</div></section>
+
+<footer><div class="wrap"><span><b style="color:#fff;font-size:22px">iomastavka</b><br>Доставка грузов из Китая в Россию</span><nav><a href="#">Telegram</a><a href="#">Почта</a><a href="#">Маршруты</a><a href="#">Статьи</a></nav></div></footer>
+</body></html>
