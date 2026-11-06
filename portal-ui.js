@@ -20,7 +20,7 @@
     setTimeout(function(){window.dispatchEvent(new Event('resize'))},30);
     if(role==='admin')loadLeadCount();
   }
-  api('/api/me').then(function(d){setRole(d.role,d.name);if(d.storage==='local'){var h=$('#workView .v3-head');if(h&&!$('.v3p-warn',h)){var w=document.createElement('p');w.className='v3p-warn';w.textContent='⚠ Данные сейчас хранятся временно и сотрутся при перезапуске сервера. Подключите Supabase (SUPABASE_URL и SUPABASE_SERVICE_KEY в Render), прежде чем заводить настоящих клиентов.';h.appendChild(w)}}}).catch(function(){setRole('guest')});
+  api('/api/me').then(function(d){setRole(d.role,d.name);if(d.storage==='local'){var h=$('#workView .v3-head');if(h&&!$('.v3p-warn',h)){var w=document.createElement('p');w.className='v3p-warn';w.textContent='⚠ Хранилище временное — данные сотрутся при перезапуске. Подключите Supabase в Render.';h.appendChild(w);fetch('/api/health').then(function(r){return r.json()}).then(function(j){if(j&&j.storageIssue)w.textContent='⚠ Хранилище временное — данные сотрутся при перезапуске. Причина: '+j.storageIssue+'.'}).catch(function(){})}}}).catch(function(){setRole('guest')});
 
   /* ---------- открытие своих окон ---------- */
   var MY={loginView:1,leadView:1,cabinetView:1,workView:1,accountView:1,resetView:1,quoteView:1,kbView:1};
