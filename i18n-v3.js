@@ -5,6 +5,39 @@
   'use strict';
   // RU: [EN, ZH, TR]
   var D = {
+
+    // --- v4: карта-калькулятор, трекинг, динамика курса, экскурсия
+    'Расчёт ставок на карте': ['Rates on the map', '在地图上计算运价', 'Haritada fiyat hesabı'],
+    'КИТАЙ → РОССИЯ': ['CHINA → RUSSIA', '中国 → 俄罗斯', 'ÇİN → RUSYA'],
+    'Объём, м³': ['Volume, m³', '体积，立方米', 'Hacim, m³'],
+    'Нажмите на карте город отправки — в Китае или Корее': ['Tap a city of origin on the map — in China or Korea', '在地图上点选起运城市——中国或韩国', 'Haritada çıkış şehrine dokunun — Çin veya Kore'],
+    'Теперь — город доставки в России или Казахстане': ['Now a destination in Russia or Kazakhstan', '再选俄罗斯或哈萨克斯坦的目的城市', 'Şimdi Rusya veya Kazakistan’da varış şehri'],
+    'Укажите вес груза и нажмите «Рассчитать»': ['Enter the weight and press “Calculate”', '输入重量并点“计算”', 'Ağırlığı girip “Hesapla”ya basın'],
+    'Нажмите на вариант — покажем его путь на карте': ['Tap an option to see its route on the map', '点选方案——在地图上显示路线', 'Güzergâhı görmek için bir seçeneğe dokunun'],
+    'Всё готово — нажмите «Рассчитать»': ['All set — press “Calculate”', '准备就绪——点“计算”', 'Hazır — “Hesapla”ya basın'],
+    'Склад в Китае': ['China warehouse', '中国仓库', 'Çin deposu'], 'По Китаю': ['Across China', '中国境内', 'Çin içinde'], 'Порт отправки': ['Port of loading', '起运港', 'Yükleme limanı'],
+    'Море': ['Sea', '海运', 'Deniz'], 'Аэропорт вылета': ['Departure airport', '起飞机场', 'Kalkış havalimanı'], 'Перелёт': ['Flight', '航班', 'Uçuş'],
+    'Граница': ['Border', '边境', 'Sınır'], 'Порт прибытия': ['Port of arrival', '到达港', 'Varış limanı'], 'Аэропорт прилёта': ['Arrival airport', '到达机场', 'Varış havalimanı'],
+    'По России': ['Across Russia', '俄罗斯境内', 'Rusya içinde'], 'Таможня': ['Customs', '清关', 'Gümrük'], 'Доставка': ['Delivery', '派送', 'Teslimat'], 'Доставлен': ['Delivered', '已送达', 'Teslim edildi'],
+    'Граница и таможня': ['Border and customs', '边境及清关', 'Sınır ve gümrük'], 'Порт прибытия и таможня': ['Port of arrival and customs', '到达港及清关', 'Varış limanı ve gümrük'], 'Аэропорт прилёта и таможня': ['Arrival airport and customs', '到达机场及清关', 'Varış havalimanı ve gümrük'],
+    'На складе в Китае': ['At the China warehouse', '在中国仓库', 'Çin deposunda'], 'В пути по Китаю': ['In transit across China', '中国境内运输中', 'Çin içinde yolda'], 'В порту отправки': ['At the port of loading', '在起运港', 'Yükleme limanında'],
+    'В море': ['At sea', '海上运输中', 'Denizde'], 'В аэропорту вылета': ['At the departure airport', '在起飞机场', 'Kalkış havalimanında'], 'В полёте': ['In flight', '飞行中', 'Uçuşta'],
+    'На границе': ['At the border', '在边境', 'Sınırda'], 'В порту прибытия': ['At the port of arrival', '在到达港', 'Varış limanında'], 'В аэропорту прилёта': ['At the arrival airport', '在到达机场', 'Varış havalimanında'],
+    'В пути по России': ['In transit across Russia', '俄罗斯境内运输中', 'Rusya içinde yolda'], 'На таможне': ['At customs', '清关中', 'Gümrükte'], 'Везём к вам': ['On the way to you', '正在派送给您', 'Size getiriyoruz'],
+    'Оформлен, ждём забора у поставщика': ['Booked, awaiting pickup from the supplier', '已下单，等待从供应商提货', 'Kayıtlı, tedarikçiden alım bekleniyor'],
+    'Сообщения по грузу': ['Shipment updates', '货物动态', 'Gönderi güncellemeleri'], 'Сообщений пока нет': ['No updates yet', '暂无动态', 'Henüz güncelleme yok'],
+    'Все грузы →': ['All shipments →', '全部货物 →', 'Tüm yükler →'], 'Курс ЦБ': ['Central Bank rate', '央行汇率', 'Merkez Bankası kuru'],
+    'Динамика курса →': ['Rate history →', '汇率走势 →', 'Kur geçmişi →'], 'Динамика курса': ['Rate history', '汇率走势', 'Kur geçmişi'],
+    'Динамика курса ЦБ РФ': ['Bank of Russia rate history', '俄罗斯央行汇率走势', 'Rusya Merkez Bankası kur geçmişi'],
+    'Официальный курс Банка России по дням — выберите валюту и период.': ['Official Bank of Russia rate by day — choose a currency and period.', '俄罗斯央行每日官方汇率——请选择货币和期间。', 'Rusya Merkez Bankası’nın günlük resmi kuru — para birimi ve dönem seçin.'],
+    'Юань': ['Yuan', '人民币', 'Yuan'], 'Доллар': ['Dollar', '美元', 'Dolar'], 'Евро': ['Euro', '欧元', 'Euro'], 'Тенге': ['Tenge', '坚戈', 'Tenge'], 'Вона': ['Won', '韩元', 'Won'],
+    'Неделя': ['Week', '一周', 'Hafta'], 'Месяц': ['Month', '一个月', 'Ay'], '3 месяца': ['3 months', '3个月', '3 ay'], 'Полгода': ['6 months', '半年', '6 ay'], 'Год': ['Year', '一年', 'Yıl'], '5 лет': ['5 years', '5年', '5 yıl'], 'Свои даты': ['Custom dates', '自定义日期', 'Özel tarihler'],
+    'Изменение': ['Change', '变化', 'Değişim'], 'Минимум': ['Low', '最低', 'En düşük'], 'Максимум': ['High', '最高', 'En yüksek'], 'Загружаю курс…': ['Loading rates…', '正在加载汇率…', 'Kurlar yükleniyor…'],
+    'Как пользоваться сайтом': ['How to use the site', '使用说明', 'Site nasıl kullanılır'],
+    'Варианты для вашего груза': ['Options for your cargo', '适合您货物的方案', 'Yükünüz için seçenekler'],
+    '@напр. 400': ['e.g. 400', '例如 400', 'örn. 400'], '@если знаете': ['if known', '如已知', 'biliyorsanız'], '@Масштаб карты': ['Map zoom', '地图缩放', 'Harita yakınlaştırma'],
+    '@Приблизить': ['Zoom in', '放大', 'Yakınlaştır'], '@Отдалить': ['Zoom out', '缩小', 'Uzaklaştır'], '@Вся карта': ['Whole map', '全图', 'Tüm harita'], '@Выбор города': ['Choose a city', '选择城市', 'Şehir seçin'], '@Город': ['City', '城市', 'Şehir'],
+    '@Показать динамику': ['Show history', '查看走势', 'Geçmişi göster'],
     'Опасный груз': ['Dangerous goods', '危险品', 'Tehlikeli yük'],
     'аккумуляторы, жидкости, химия': ['batteries, liquids, chemicals', '电池、液体、化学品', 'piller, sıvılar, kimyasallar'],
     'ГИД ПО ДОСТАВКЕ': ['SHIPPING GUIDE', '运输指南', 'TAŞIMA REHBERİ'],
@@ -177,6 +210,9 @@
   };
   // Фразы с переменной частью
   var P = [
+    [/^(На складе в Китае|В пути по Китаю|На границе|В порту прибытия|В аэропорту прилёта|В пути по России|На таможне): (.+)$/, ['$1: $2', '$1：$2', '$1: $2']],
+    [/^сейчас: (.+)$/, ['now: $1', '当前：$1', 'şu an: $1']],
+    [/^Курс ЦБ на (.+)$/, ['Central Bank rate on $1', '$1 央行汇率', '$1 Merkez Bankası kuru']],
     [/^(.+), здесь ваши грузы: статус, маршрут, расходы и документы\.$/, ['$1, here are your shipments: status, route, costs and documents.', '$1，这里是您的货物：状态、路线、费用和单证。', '$1, gönderileriniz burada: durum, güzergâh, maliyetler ve belgeler.']],
     [/^(.+) · прибытие: (.+)$/, ['$1 · arrival: $2', '$1 · 到达：$2', '$1 · varış: $2']],
     [/^Транспорт уточняется · прибытие: (.+)$/, ['Transport TBC · arrival: $1', '运输方式待定 · 到达：$1', 'Taşıma teyit edilecek · varış: $1']],
