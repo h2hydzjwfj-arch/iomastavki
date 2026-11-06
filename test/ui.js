@@ -46,7 +46,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await p.reload(); await p.waitForFunction(() => document.getElementById('fromCity').value === 'Shanghai', null, { timeout: 5000 });
     });
     await step('Гость: карта-калькулятор — города кликом, цена прямо в карточке', async () => {
-      await p.evaluate(() => window.__iomaCloseViews()); await p.waitForSelector('#mcStage .mc-pin');
+      await p.evaluate(() => window.__iomaCloseViews()); await p.waitForSelector('#mcStage .mc-pin', { state: 'attached' }); await p.waitForFunction(() => window.IOMA_MAP && document.querySelector('#v3Hero.mc-on'));
       await p.evaluate(() => { window.IOMA_MAP.pick('from', 'qd'); window.IOMA_MAP.pick('to', 'nsk'); });
       await p.fill('#mcW', '800'); await p.click('#mcGo'); await p.waitForSelector('#mcRes .mc-o', { timeout: 8000 });
       await p.waitForFunction(() => document.getElementById('fromCity').value === 'Циндао' && document.getElementById('toCity').value === 'Новосибирск' && document.getElementById('weight').value === '800');

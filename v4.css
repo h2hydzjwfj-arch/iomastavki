@@ -390,3 +390,5 @@ html:root body .jrn-bar .jrn-csv{width:auto!important;flex:none;display:inline-f
 .trk-main .v3p-cols{margin:0!important}
 .trk-wrap>.trk-bot{position:sticky;top:12px}
 @media (max-width:860px){.trk-wrap>.trk-bot{position:static}}
+.v3-track .trk-tile{width:100%;align-self:stretch}
+.trk-mini-l{gap:10px}
