@@ -9,7 +9,7 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"iomastavka","applicationCategory":"BusinessApplication","description":"Калькулятор логистики и ВЭД Китай — Россия","inLanguage":"ru"}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/styles.css?v=20260916-v28"><link rel="stylesheet" href="/theme-v3.css?v=20261106-v21">
-<link rel="stylesheet" href="/v4.css?v=2"><link rel="stylesheet" href="/palettes.css?v=1">
+<link rel="stylesheet" href="/v4.css?v=2"><link rel="stylesheet" href="/crm.css?v=1"><link rel="stylesheet" href="/palettes.css?v=1">
 </head>
 <body>
 <div id="weatherScene" class="weather-scene" aria-hidden="true"><div class="stars"></div><div class="sun"></div><div class="moon"></div><div class="cloud cloud-a"></div><div class="cloud cloud-b"></div><div class="rain"></div><div class="snow"></div><div class="wave wave-back"></div><div class="wave wave-mid"></div><div class="wave wave-front"></div></div>
@@ -203,14 +203,22 @@
  <div id="v3cabQuotes" class="v3p-list" hidden></div>
 </div></section>
 
-<section id="workView" class="view-layer v3-portal" aria-hidden="true"><div class="v3p-wide"><button class="close-button view-close" data-close-view="workView" aria-label="Закрыть" title="Закрыть">×</button>
- <div class="v3-head"><h1>Работа</h1><p>Сделки, клиенты, грузы и КП — всё в одном месте.</p></div>
- <div class="v3p-tabs" role="tablist"><button type="button" class="chip on" data-tab="deals">Сделки</button><button type="button" class="chip" data-tab="clients">Клиенты</button><button type="button" class="chip" data-tab="ships">Грузы</button><button type="button" class="chip" data-tab="quotes">КП</button><button type="button" class="chip" data-tab="leads">Заявки с сайта</button><button type="button" class="chip" data-tab="tariffs">Тарифы</button><button type="button" class="chip" data-tab="journal">Журнал</button></div>
- <div class="v3p-tab" data-pane="deals"><div class="crm-bar" id="crmBar"></div><div id="crmList" class="crm-list"></div><div id="crmDeal" hidden></div></div>
- <div class="v3p-tab" data-pane="leads" hidden><div id="v3leadsList" class="v3p-list"></div></div>
- <div class="v3p-tab" data-pane="tariffs" hidden><div id="crmTariffs"></div></div>
- <div class="v3p-tab" data-pane="journal" hidden><p class="v3p-muted jrn-intro">Всё, что вводят на сайте: каждый расчёт, заявка, КП, регистрация и вход — отдельной строкой, каждое поле в своей колонке.</p><div id="jrnBox"></div></div>
- <div class="v3p-tab" data-pane="ships" hidden>
+<section id="workView" class="view-layer v3-portal cx-work" aria-hidden="true"><div class="v3p-wide cx-wide"><button class="close-button view-close" data-close-view="workView" aria-label="Закрыть" title="Закрыть">×</button>
+ <div class="v3-head cx-head"><h1>Работа</h1><p>Заявки, сделки, задачи, клиенты и расчёты — всё в одном месте.</p><p class="cx-off" id="cxOffToday" hidden></p></div>
+ <div class="cx-shell"><nav class="cx-nav v3p-tabs" aria-label="Разделы работы" role="tablist"><div class="cx-grp"><b>Работа</b><button type="button" class="chip on" data-tab="inbox" role="tab"><svg viewBox="0 0 24 24"><path d="M3 13l3-8h12l3 8v6H3zM3 13h5l1 2h6l1-2h5"/></svg><span>Входящие</span><em class="cx-badge" hidden></em></button><button type="button" class="chip" data-tab="deals" role="tab"><svg viewBox="0 0 24 24"><path d="M4 5h4v14H4zM10 5h4v9h-4zM16 5h4v6h-4z"/></svg><span>Сделки</span></button><button type="button" class="chip" data-tab="tasks" role="tab"><svg viewBox="0 0 24 24"><path d="M4 6l2 2 3-3M4 13l2 2 3-3M12 7h8M12 14h8M5 20h15"/></svg><span>Задачи</span><em class="cx-badge" hidden></em></button><button type="button" class="chip" data-tab="clients" role="tab"><svg viewBox="0 0 24 24"><path d="M9 11a4 4 0 100-8 4 4 0 000 8zM2 21c0-4 3-6 7-6s7 2 7 6M16 11a3 3 0 100-6M18 15c2 .5 4 2 4 5"/></svg><span>Клиенты</span></button><button type="button" class="chip" data-tab="ships" role="tab"><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a2 2 0 100-4 2 2 0 000 4zM17 19a2 2 0 100-4 2 2 0 000 4z"/></svg><span>Грузы</span></button><button type="button" class="chip" data-tab="quotes" role="tab"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5"/></svg><span>КП</span></button><button type="button" class="chip" data-tab="timeoff" role="tab"><svg viewBox="0 0 24 24"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M9 15l2 2 4-4"/></svg><span>Отгулы</span></button></div><div class="cx-grp"><b>Утилиты</b><button type="button" class="chip" data-tab="ved" role="tab"><svg viewBox="0 0 24 24"><path d="M6 3h12v18H6zM9 7h6M9 11h2M13 11h2M9 15h2M13 15h2M9 18h6"/></svg><span>Калькулятор ВЭД</span></button><button type="button" class="chip" data-tab="tnved" role="tab"><svg viewBox="0 0 24 24"><path d="M4 4h12l4 4v12H4zM8 10h8M8 14h8M8 18h5M11 4v4"/></svg><span>Коды ТН ВЭД</span></button><button type="button" class="chip" data-tab="tariffs" role="tab"><svg viewBox="0 0 24 24"><path d="M4 7l8-4 8 4-8 4zM4 12l8 4 8-4M4 17l8 4 8-4"/></svg><span>Тарифы</span></button></div><div class="cx-grp"><b>Статистика</b><button type="button" class="chip" data-tab="analytics" role="tab"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Аналитика</span></button><button type="button" class="chip" data-tab="journal" role="tab"><svg viewBox="0 0 24 24"><path d="M5 3h12a2 2 0 012 2v16H7a2 2 0 01-2-2zM5 17h14M9 7h6M9 11h6"/></svg><span>Журнал</span></button></div><div class="cx-grp"><b>Система</b><button type="button" class="chip" data-tab="holidays" role="tab"><svg viewBox="0 0 24 24"><path d="M12 3l2.5 5 5.5.8-4 3.9 1 5.5L12 15.6 7 18.2l1-5.5-4-3.9 5.5-.8z"/></svg><span>Праздники</span></button><button type="button" class="chip" data-tab="mail" role="tab"><svg viewBox="0 0 24 24"><path d="M3 5h18v14H3zM3 6l9 7 9-7"/></svg><span>Почта</span></button><button type="button" class="chip" data-tab="bot" role="tab"><svg viewBox="0 0 24 24"><path d="M5 8h14v11H5zM12 4v4M9 13h.01M15 13h.01M9 16h6M2 12v3M22 12v3"/></svg><span>ИИ-бот</span></button><button type="button" class="chip" data-tab="security" role="tab"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4"/></svg><span>Безопасность</span></button><button type="button" class="chip" data-tab="company" role="tab"><svg viewBox="0 0 24 24"><path d="M4 21V5l8-2v18M12 9h8v12M7 9h2M7 13h2M7 17h2M15 13h2M15 17h2M2 21h20"/></svg><span>Компания</span></button></div></nav>
+  <div class="cx-main">
+  <div class="v3p-tab" data-pane="inbox"><div id="crmInbox" class="cx-list"></div></div>
+  <div class="v3p-tab" data-pane="deals" hidden><div id="crmList" class="cx-list"></div></div>
+  <div class="v3p-tab cx-page" id="crmDeal" hidden></div>
+  <div class="v3p-tab" data-pane="tasks" hidden><div id="cxTasks"></div></div>
+  <div class="v3p-tab" data-pane="clients" hidden>
+   <div id="crmClients" class="cx-list"></div>
+   <details class="crm-access"><summary>Доступ в личный кабинет: выдать, сбросить пароль, отключить</summary>
+  <form class="k v3p-form v3p-inline" id="v3clientForm"><b class="v3c-title">Выдать доступ в кабинет</b>
+   <div class="v3p-grid"><label class="v3p-f"><span>Почта (логин) *</span><input name="email" type="email" required></label><label class="v3p-f"><span>Имя</span><input name="name"></label><label class="v3p-f"><span>Компания</span><input name="company"></label><label class="v3p-f"><span>Телефон</span><input name="phone"></label></div>
+   <p class="v3p-err" id="v3clientErr" role="alert"></p><p class="v3p-ok" id="v3clientOk"></p><button type="submit" class="calculate">Создать доступ</button></form>
+  <div id="v3clientsList" class="v3p-list"></div></details></div>
+  <div class="v3p-tab" data-pane="ships" hidden>
   <form class="k v3p-form v3p-inline" id="v3shipForm"><b class="v3c-title">Новый груз</b>
    <div class="v3p-grid"><label class="v3p-f"><span>Клиент *</span><select name="clientId" id="v3shipClient" required></select></label><label class="v3p-f"><span>Номер</span><input name="number" placeholder="авто"></label><label class="v3p-f"><span>Откуда</span><input name="from"></label><label class="v3p-f"><span>Куда</span><input name="to"></label>
    <label class="v3p-f"><span>Транспорт</span><select name="mode"><option value="">—</option><option value="auto">Авто</option><option value="rail">ЖД</option><option value="sea">Море</option><option value="air">Авиа</option><option value="multimodal">Море + ЖД</option></select></label><label class="v3p-f"><span>Груз</span><input name="cargo"></label><label class="v3p-f"><span>Вес, кг</span><input name="weight" type="number" min="0"></label><label class="v3p-f"><span>Объём, м³</span><input name="volume" type="number" min="0" step="0.1"></label>
@@ -218,14 +226,21 @@
    <label class="v3p-f"><span>Расходы — по строке: «Фрахт; 2450; USD»</span><textarea name="costs" rows="3" placeholder="Фрахт; 2450; USD&#10;Таможенные платежи; 180000; RUB"></textarea></label>
    <p class="v3p-err" id="v3shipErr" role="alert"></p><button type="submit" class="calculate">Создать груз</button></form>
   <div id="v3shipsList" class="v3p-list"></div></div>
- <div class="v3p-tab" data-pane="quotes" hidden><div id="v3quotesList" class="v3p-list"></div></div>
- <div class="v3p-tab" data-pane="clients" hidden>
-  <div id="crmClients" class="crm-list"></div>
-  <details class="crm-access"><summary>Доступ в личный кабинет: выдать, сбросить пароль, отключить</summary>
-  <form class="k v3p-form v3p-inline" id="v3clientForm"><b class="v3c-title">Выдать доступ в кабинет</b>
-   <div class="v3p-grid"><label class="v3p-f"><span>Почта (логин) *</span><input name="email" type="email" required></label><label class="v3p-f"><span>Имя</span><input name="name"></label><label class="v3p-f"><span>Компания</span><input name="company"></label><label class="v3p-f"><span>Телефон</span><input name="phone"></label></div>
-   <p class="v3p-err" id="v3clientErr" role="alert"></p><p class="v3p-ok" id="v3clientOk"></p><button type="submit" class="calculate">Создать доступ</button></form>
-  <div id="v3clientsList" class="v3p-list"></div></details></div>
+  <div class="v3p-tab" data-pane="quotes" hidden><div id="v3quotesList" class="v3p-list"></div></div>
+  <div class="v3p-tab" data-pane="leads" hidden><div id="v3leadsList" class="v3p-list"></div></div>
+  <div class="v3p-tab" data-pane="timeoff" hidden><div id="cxTimeoff"></div></div>
+  <div class="v3p-tab" data-pane="ved" hidden><div id="cxVed"></div></div>
+  <div class="v3p-tab" data-pane="tnved" hidden><div id="cxTnved"></div></div>
+  <div class="v3p-tab" data-pane="tariffs" hidden><div id="crmTariffs"></div></div>
+  <div class="v3p-tab" data-pane="analytics" hidden><div id="cxAnalytics"></div></div>
+  <div class="v3p-tab" data-pane="journal" hidden><p class="v3p-muted jrn-intro">Всё, что вводят на сайте: каждый расчёт, заявка, КП, регистрация и вход — отдельной строкой, каждое поле в своей колонке.</p><div id="jrnBox"></div></div>
+  <div class="v3p-tab" data-pane="holidays" hidden><div id="cxHolidays"></div></div>
+  <div class="v3p-tab" data-pane="mail" hidden><div id="cxMail"></div></div>
+  <div class="v3p-tab" data-pane="bot" hidden><div id="cxBot"></div></div>
+  <div class="v3p-tab" data-pane="security" hidden><div id="cxSecurity"></div></div>
+  <div class="v3p-tab" data-pane="company" hidden><div id="cxCompany"></div></div>
+  </div>
+ </div>
 </div></section>
 </main>
 <div class="v3-ask" id="v3ask" hidden role="dialog" aria-modal="true" aria-labelledby="v3askT"><div class="v3-askbox k"><b id="v3askT">Сохранить изменения?</b><p id="v3askP"></p><div class="v3-askbtns"><button type="button" class="calculate" data-ask="save">Сохранить</button><button type="button" class="v3-askx" data-ask="leave">Выйти без сохранения</button><button type="button" class="v3c-link" data-ask="stay">Остаться</button></div></div></div>
@@ -236,6 +251,6 @@
 <script src="/kb.js?v=3" defer></script>
 <script src="/i18n-v3.js?v=7" defer></script>
 <script src="/theme-v3.js?v=20261106-v11" defer></script>
-<script src="/track.js?v=1" defer></script><script src="/rates-dyn.js?v=1" defer></script><script src="/tour.js?v=1" defer></script><script src="/crm-ui.js?v=2" defer></script><script src="/journal-ui.js?v=1" defer></script><script src="/portal-ui.js?v=13" defer></script>
+<script src="/track.js?v=1" defer></script><script src="/rates-dyn.js?v=1" defer></script><script src="/tour.js?v=1" defer></script><script src="/ved.js?v=1" defer></script><script src="/crm-kit.js?v=1" defer></script><script src="/crm-ui.js?v=3" defer></script><script src="/crm-calc-ui.js?v=1" defer></script><script src="/crm-tasks-ui.js?v=1" defer></script><script src="/crm-clients-ui.js?v=1" defer></script><script src="/crm-sys-ui.js?v=1" defer></script><script src="/tnved-ui.js?v=1" defer></script><script src="/journal-ui.js?v=1" defer></script><script src="/portal-ui.js?v=13" defer></script>
 
 </body></html>

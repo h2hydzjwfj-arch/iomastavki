@@ -100,24 +100,30 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await A.p.click('#v3loginForm [type=submit]'); await A.p.waitForFunction(() => document.body.classList.contains('role-admin'), null, { timeout: 8000 });
     });
     await step('Админ: раздел «Работа» — заявки гостя стали сделками', async () => {
-      await A.p.click('.v3-nav [data-open-view=workView]'); await A.p.waitForSelector('#crmList [data-deal]'); await shot(A.p, '06_admin_deals');
+      await A.p.click('.v3-nav [data-open-view=workView]'); await A.p.waitForSelector('#crmInbox [data-x=open]'); await shot(A.p, '06_admin_inbox');
     });
     await step('Админ: карточка сделки — файл из заявки, заметка, этап', async () => {
-      await A.p.fill('#crmQ', 'Документы UI'); await A.p.waitForSelector('#crmList [data-deal] >> text=Документы UI', { timeout: 6000 }).catch(() => {});
-      await A.p.click('#crmList [data-deal]'); await A.p.waitForSelector('#crmDeal .crm-deal'); await shot(A.p, '06b_deal_card');
-      await A.p.click('#crmDeal [data-ct=files]'); await A.p.waitForSelector('#crmDeal .crm-file');
-      await A.p.click('#crmDeal [data-ct=act]'); await A.p.fill('#crmNote textarea', 'Позвонил, клиент ждёт КП'); await A.p.click('#crmNote [type=submit]'); await A.p.waitForSelector('.crm-evt:has-text("клиент ждёт КП")');
-      await A.p.selectOption('#crmDeal .crm-stage', 'Расчёт'); await A.p.click('#crmForm [type=submit]'); await A.p.waitForSelector('.crm-fld:has-text("Расчёт")'); await shot(A.p, '06c_deal_saved');
+      await A.p.fill('#crmInbox [data-x=q]', 'Документы UI'); await A.p.waitForSelector('#crmInbox [data-x=open]:has-text("Документы UI")', { timeout: 8000 });
+      await A.p.click('#crmInbox [data-x=open]:has-text("Документы UI")'); await A.p.waitForSelector('#crmDeal .cx-deal'); await shot(A.p, '06b_deal_card');
+      await A.p.click('#crmDeal [data-t=files]'); await A.p.waitForSelector('#crmDeal .cx-fi');
+      await A.p.click('#crmDeal [data-t=act]'); await A.p.fill('#crmDeal .cx-add [data-a=text]', 'Позвонил, клиент ждёт КП'); await A.p.click('#crmDeal .cx-add [type=submit]'); await A.p.waitForSelector('#crmDeal .cx-act:has-text("клиент ждёт КП")');
+      await A.p.selectOption('#crmDeal .cx-stagesel', 'Расчёт'); await A.p.waitForSelector('#crmDeal .cx-hist:has-text("Расчёт")'); await shot(A.p, '06c_deal_saved');
+    });
+    await step('Админ: задачи, калькулятор ВЭД и коды ТН ВЭД', async () => {
+      await A.p.click('#workView .cx-nav [data-tab=tasks]'); await A.p.waitForSelector('#cxTasks .cx-search', { timeout: 8000 });
+      await A.p.click('#workView .cx-nav [data-tab=ved]'); await A.p.click('#cxVed [data-c=create][data-t=our_contract]'); await A.p.waitForSelector('#cxVed .cv-layout');
+      await A.p.fill('#cxVed [data-k=invoice_amount]', '10000'); await A.p.waitForFunction(() => { const b = document.querySelector('#cxVed .cv-total b'); return b && /[1-9]/.test(b.textContent); }, null, { timeout: 6000 }); await shot(A.p, '06e_ved_calc');
+      await A.p.click('#workView .cx-nav [data-tab=tnved]'); await A.p.waitForSelector('#cxTnved [data-tq]'); await shot(A.p, '06f_tnved');
     });
     await step('Админ: база клиентов с сортировкой', async () => {
-      await A.p.click('#workView [data-tab=clients]'); await A.p.waitForSelector('#crmClients [data-cli]'); await A.p.selectOption('#crmCliSort', 'frequency'); await A.p.waitForTimeout(400); await shot(A.p, '06d_clients');
+      await A.p.click('#workView .cx-nav [data-tab=clients]'); await A.p.waitForSelector('#crmClients [data-cli]'); await A.p.selectOption('#crmCliSort', 'frequency'); await A.p.waitForTimeout(400); await shot(A.p, '06d_clients');
     });
     await step('Админ: создаёт клиента', async () => {
-      await A.p.click('#workView [data-tab=clients]'); await A.p.click('.crm-access summary'); await A.p.fill('#v3clientForm [name=email]', 'ui@ci.test'); await A.p.fill('#v3clientForm [name=name]', 'Клиент UI');
+      await A.p.click('#workView .cx-nav [data-tab=clients]'); await A.p.click('.crm-access summary'); await A.p.fill('#v3clientForm [name=email]', 'ui@ci.test'); await A.p.fill('#v3clientForm [name=name]', 'Клиент UI');
       await A.p.click('#v3clientForm [type=submit]'); await A.p.waitForSelector('#v3clientOk code'); clientPw = await A.p.textContent('#v3clientOk code');
     });
     await step('Админ: создаёт груз', async () => {
-      await A.p.click('#workView [data-tab=ships]'); await A.p.selectOption('#v3shipClient', { label: 'Клиент UI' });
+      await A.p.click('#workView .cx-nav [data-tab=ships]'); await A.p.selectOption('#v3shipClient', { label: 'Клиент UI' });
       await A.p.fill('#v3shipForm [name=from]', 'Шанхай'); await A.p.fill('#v3shipForm [name=to]', 'Москва'); await A.p.fill('#v3shipForm [name=costs]', 'Фрахт; 2450; USD');
       await A.p.click('#v3shipForm [type=submit]'); await A.p.waitForSelector('#v3shipsList .v3p-ship'); await shot(A.p, '07_admin_ships');
     });
@@ -129,7 +135,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await A.p.waitForSelector('#v3shipsList .trk-stops li.cur:has-text("Новосибирск")'); await shot(A.p, '07b_admin_track');
     });
     await step('Админ: журнал — все расчёты и заявки отдельными строками', async () => {
-      await A.p.click('#workView [data-tab=journal]'); await A.p.waitForSelector('#jrnBox table.jrn tbody tr', { timeout: 8000 });
+      await A.p.click('#workView .cx-nav [data-tab=journal]'); await A.p.waitForSelector('#jrnBox table.jrn tbody tr', { timeout: 8000 });
       const types = await A.p.$$eval('#jrnBox td.ty', els => els.map(e => e.textContent)); if (!types.some(t => /Расчёт/.test(t)) || !types.some(t => /Заявка/.test(t))) throw new Error('в журнале нет расчётов или заявок: ' + types.slice(0, 8).join(', '));
       await shot(A.p, '07c_admin_journal');
     });
