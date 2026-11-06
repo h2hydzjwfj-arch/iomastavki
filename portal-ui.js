@@ -101,8 +101,9 @@
     var ev=(s.events||[]).slice().reverse(),T=TR();
     var now=T?T.nowText(s):(ST[s.status]||s.status);
     return '<article class="k v3p-ship" data-id="'+esc(s.id)+'"><header><div><span class="tag">№ '+esc(s.number)+'</span><h3>'+esc(s.from||'—')+' → '+esc(s.to||'—')+'</h3><small>'+(MODE[s.mode]||'Транспорт уточняется')+' · прибытие: '+(s.eta?date(s.eta):'уточняется')+(clientName?' · '+esc(clientName):'')+'</small></div><span class="v3p-status s-'+esc(s.status)+'">'+esc(now)+'</span></header>'
-      +(T?'<div class="trk-wrap">'+T.rail(s,{admin:admin})+'<aside class="trk-bot"><div class="trk-bh"><i></i><b>Сообщения по грузу</b></div>'+T.history(s,4)+'</aside></div>':steps(s.status))
+      +(T?'<div class="trk-wrap"><div class="trk-main">'+T.rail(s,{admin:admin}):steps(s.status))
       +'<div class="v3p-cols"><section><b class="v3p-h">Груз</b>'+cargo(s)+'</section><section><b class="v3p-h">Сколько и за что</b>'+costs(s.costs)+'</section><section><b class="v3p-h">Документы</b>'+docs(s,admin)+(admin?'<label class="v3p-upl">＋ Загрузить документ<input type="file" data-upl="'+esc(s.id)+'" hidden></label>':'')+'</section></div>'
+      +(T?'</div><aside class="trk-bot"><div class="trk-bh"><i></i><b>Сообщения по грузу</b></div>'+T.history(s,4)+'</aside></div>':'')
       +(ev.length>4?'<details class="v3p-hist"><summary>История ('+ev.length+')</summary><ul>'+ev.map(function(x){return '<li><time>'+dtime(x.date)+'</time><b>'+esc(x.stage&&T?T.TITLE[x.stage]:(ST[x.status]||x.status))+'</b>'+(x.note?' — '+esc(x.note):'')+'</li>'}).join('')+'</ul></details>':'')
       +(admin?trackForm(s):'')
       +'</article>'}

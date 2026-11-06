@@ -284,7 +284,7 @@
   pickList.addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; if (b.dataset.cid) pick(pickSide === 'o' ? 'from' : 'to', BY[b.dataset.cid]); else pick(pickSide === 'o' ? 'from' : 'to', null, pickQ.value); closePick(); });
   fromBtn.addEventListener('click', function (e) { e.stopPropagation(); if (!pickBox.hidden && pickSide === 'o') return closePick(); openPick('o', fromBtn); });
   toBtn.addEventListener('click', function (e) { e.stopPropagation(); if (!pickBox.hidden && pickSide === 'd') return closePick(); openPick('d', toBtn); });
-  document.addEventListener('click', function (e) { if (!pickBox.hidden && !pickBox.contains(e.target) && e.target !== fromBtn && e.target !== toBtn) closePick(); });
+  document.addEventListener('click', function (e) { if (!pickBox.hidden && !pickBox.contains(e.target) && !pickBox.contains(window.__iomaDownOn || null) && !fromBtn.contains(e.target) && !toBtn.contains(e.target)) closePick(); });
 
   /* ---------- мышь, палец, колесо */
   var ptrs = new Map(), drag = null, live = 0, wheelOk = false, wheelT = 0;
