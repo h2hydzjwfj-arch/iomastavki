@@ -25,7 +25,7 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
   try {
     // --- страницы и файлы
     await check('Главная открывается', async () => { const r = await fetch(B + '/'); ok(r.status === 200); ok((await r.text()).includes('iomastavka')); });
-    for (const f of ['/app.js', '/styles.css', '/theme-v3.css', '/theme-v3.js', '/portal-ui.js', '/palettes.css', '/routes-kb.js', '/i18n-v3.js', '/kb.js', '/v4.css', '/geo-asia.js', '/map-calc.js', '/track.js', '/rates-dyn.js', '/tour.js', '/journal-ui.js'])
+    for (const f of ['/app.js', '/styles.css', '/theme-v3.css', '/theme-v3.js', '/portal-ui.js', '/palettes.css', '/routes-kb.js', '/i18n-v3.js', '/kb.js', '/v4.css', '/geo-asia.js', '/map-calc.js', '/track.js', '/rates-dyn.js', '/tour.js', '/journal-ui.js', '/ved.js', '/crm.css', '/crm-kit.js', '/crm-ui.js', '/crm-calc-ui.js', '/crm-tasks-ui.js', '/crm-clients-ui.js', '/crm-sys-ui.js', '/tnved-ui.js'])
       await check('Файл ' + f, async () => { const r = await fetch(B + f); ok(r.status === 200, 'код ' + r.status); });
     await check('robots.txt и sitemap.xml', async () => { ok((await fetch(B + '/robots.txt')).status === 200); ok((await (await fetch(B + '/sitemap.xml')).text()).includes('<urlset')); });
     await check('Несуществующая страница → 404', async () => { ok((await fetch(B + '/net-takoy')).status === 404); });
@@ -150,6 +150,24 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       const fd = new FormData(); fd.append('file', new Blob([csv]), 'deals.csv'); const im = await call('a', 'POST', '/api/deals/import', fd); ok(im.ok && im.added === 1, JSON.stringify(im));
       const again = new FormData(); again.append('file', new Blob([csv]), 'deals.csv'); ok((await call('a', 'POST', '/api/deals/import', again)).added === 0, 'дубль импортирован');
       ok((await call('g', 'GET', '/api/deals'))._status === 401, 'гостю видны сделки');
+    });
+    await check('CRM: задачи, финансы, калькулятор ВЭД по курсу ЦБ, коды ТН ВЭД', async () => {
+      const d = await call('a', 'POST', '/api/deals', { title: 'ВЭД CI', contactName: 'Олег', funnel: 'Контракт West Asia', weight: 500 }); ok(d.ok && d.item.funnel === 'Контракт West Asia', JSON.stringify(d).slice(0, 200));
+      const y = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+      const t = await call('a', 'POST', '/api/tasks', { dealId: d.item.id, type: 'Звонок', desc: 'Перезвонить CI', deadline: y }); ok(t.ok && t.item.overdue, 'задача не просрочена');
+      ok((await call('a', 'GET', '/api/crm/badges')).tasksOverdue >= 1, 'нет счётчика просроченных');
+      const r = await call('a', 'GET', '/api/ved/rates'); ok(r.rates && r.rates.USD === 80, 'курсы: ' + JSON.stringify(r).slice(0, 120));
+      const c = await call('a', 'POST', '/api/calc', { dealId: d.item.id, calc_type: 'our_contract' }); ok(c.ok, JSON.stringify(c).slice(0, 200));
+      const p = await call('a', 'PATCH', '/api/calc/' + c.id, { items: [{ ...c.doc.items[0], invoice_amount: 10000, invoice_currency: 'USD', duty_rate: 10 }], freight_total: 1000, freight_currency: 'USD' });
+      ok(p.result && p.result.customs_base_sum_rub === 880000 && p.result.duty_sum_rub === 88000, 'расчёт: ' + JSON.stringify(p.result || p).slice(0, 200));
+      ok((await call('a', 'POST', '/api/calc/' + c.id + '/to-finance')).added >= 4, 'расчёт не перенесён в финансы');
+      const fin = await call('a', 'GET', '/api/deals/' + d.item.id + '/finance'); ok(fin.expense > 0, 'нет расходов в финансах');
+      const csv = 'Код;Наименование;Пошлина;НДС\n6201400000;Куртки из химических нитей мужские;10%, но не менее 2,2 евро за 1 кг;22%\n8517130000;Смартфоны;0%;22%\n';
+      const fd = new FormData(); fd.append('file', new Blob([csv]), 'tnved.csv'); const im = await call('a', 'POST', '/api/tnved/import', fd); ok(im.ok && im.added === 2, JSON.stringify(im));
+      const s = await call('a', 'GET', '/api/tnved/search?q=' + encodeURIComponent('куртк')); ok(s.items && s.items[0].code === '6201400000', 'поиск ТН ВЭД');
+      const lk = await call('a', 'GET', '/api/tnved/lookup?code=6201400000'); ok(lk.duty_type === 'min' && lk.eur_per_kg === 2.2, 'данные для калькулятора: ' + JSON.stringify(lk).slice(0, 160));
+      ok((await call('g', 'GET', '/api/tnved/search?q=8517'))._status === 401, 'гостю доступен справочник');
+      ok((await call('g', 'GET', '/api/tasks'))._status === 401, 'гостю доступны задачи');
     });
     await check('Отключённый клиент теряет доступ', async () => { await call('a', 'PATCH', '/api/clients/' + cl.id, { active: false }); ok((await call('c', 'GET', '/api/my/shipments'))._status === 401); });
     await check('Выход', async () => { await call('a', 'POST', '/api/logout'); });

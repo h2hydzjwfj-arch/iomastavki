@@ -78,15 +78,15 @@ const tgServer = http.createServer((req, res) => {
       await waitMsg(/Проверка iomastavka/, ADMIN_CHAT);
     });
     await step('Заявка гостя стала сделкой в разделе «Работа»', async () => {
-      await A.p.click('.v3-nav [data-open-view=workView]'); await A.p.waitForSelector('#crmList [data-deal]:has-text("Сергей Иванов")'); await slow(A.p); await shot(A.p, 'admin_leads');
+      await A.p.click('.v3-nav [data-open-view=workView]'); await A.p.waitForSelector('#crmInbox [data-x=open]:has-text("Сергей Иванов")'); await slow(A.p); await shot(A.p, 'admin_leads');
     });
     await step('Вы создаёте клиенту доступ', async () => {
-      await A.p.click('#workView [data-tab=clients]'); await A.p.click('.crm-access summary'); await A.p.fill('#v3clientForm [name=email]', clientEmail); await A.p.fill('#v3clientForm [name=name]', 'Анна Петрова');
+      await A.p.click('#workView .cx-nav [data-tab=clients]'); await A.p.click('.crm-access summary'); await A.p.fill('#v3clientForm [name=email]', clientEmail); await A.p.fill('#v3clientForm [name=name]', 'Анна Петрова');
       await A.p.fill('#v3clientForm [name=company]', 'ООО Вектор'); await A.p.click('#v3clientForm [type=submit]'); await A.p.waitForSelector('#v3clientOk code');
       clientPw = (await A.p.textContent('#v3clientOk code')).trim(); await slow(A.p); await shot(A.p, 'admin_client_created');
     });
     await step('Вы оформляете груз клиенту', async () => {
-      await A.p.click('#workView [data-tab=ships]'); await A.p.selectOption('#v3shipClient', { label: 'Анна Петрова · ООО Вектор' });
+      await A.p.click('#workView .cx-nav [data-tab=ships]'); await A.p.selectOption('#v3shipClient', { label: 'Анна Петрова · ООО Вектор' });
       await A.p.fill('#v3shipForm [name=from]', 'Шанхай'); await A.p.fill('#v3shipForm [name=to]', 'Москва'); await A.p.selectOption('#v3shipForm [name=mode]', 'rail');
       await A.p.fill('#v3shipForm [name=cargo]', 'Запчасти, 6 паллет'); await A.p.fill('#v3shipForm [name=weight]', '1200'); await A.p.fill('#v3shipForm [name=volume]', '4.5');
       await A.p.fill('#v3shipForm [name=costs]', 'Фрахт ЖД; 2450; USD\nТаможенные платежи; 184300; RUB');
@@ -118,7 +118,7 @@ const tgServer = http.createServer((req, res) => {
       await C.p.evaluate(() => window.__v3open('cabinetView')); await C.p.click('#v3cabTabs [data-ctab=quotes]'); await C.p.waitForSelector('#v3cabQuotes .v3p-qrow'); await slow(C.p); await shot(C.p, 'client_my_kp');
     });
     await step('Вы меняете статус груза → клиенту приходит уведомление', async () => {
-      await A.p.bringToFront(); await A.p.evaluate(() => window.__v3open('workView')); await A.p.click('#workView [data-tab=ships]');
+      await A.p.bringToFront(); await A.p.evaluate(() => window.__v3open('workView')); await A.p.click('#workView .cx-nav [data-tab=ships]');
       const id = await A.p.getAttribute('#v3shipsList .v3p-ship', 'data-id');
       const F = `.trk-form[data-ship="${id}"]`;
       await A.p.selectOption(F + ' [data-f=stage]', 'ru'); await A.p.fill(F + ' [data-f=nowCity]', 'Новосибирск'); await A.p.fill(F + ' [data-f=address]', 'Москва, ул. Складская, 3');
