@@ -117,8 +117,9 @@
     return v;
   }
   var raf = 0;
-  function apply() { if (raf) return; raf = requestAnimationFrame(function () { raf = 0; vp.setAttribute('transform', 'translate(' + view.ox.toFixed(2) + ' ' + view.oy.toFixed(2) + ') scale(' + view.s.toFixed(4) + ')'); place(); stage.classList.toggle('zoomed', view.s > view.home.s * 1.05); }); }
+  function apply() { if (raf || !view.home) return; raf = requestAnimationFrame(function () { raf = 0; vp.setAttribute('transform', 'translate(' + view.ox.toFixed(2) + ' ' + view.oy.toFixed(2) + ') scale(' + view.s.toFixed(4) + ')'); place(); stage.classList.toggle('zoomed', view.s > view.home.s * 1.05); }); }
   function setView(v, anim) {
+    if (!view.home) return;
     v = clamp({ s: v.s, ox: v.ox, oy: v.oy });
     if (!anim || reduce) { view.s = v.s; view.ox = v.ox; view.oy = v.oy; apply(); return; }
     var a = { s: view.s, ox: view.ox, oy: view.oy }, t0 = performance.now(), D = 380;
@@ -138,6 +139,7 @@
   function tw(text, sz, bold) { var k = text + '|' + sz + bold; if (wcache[k]) return wcache[k]; cv.font = (bold ? '700 ' : '600 ') + sz + 'px ' + (getComputedStyle(host).fontFamily || 'sans-serif'); return (wcache[k] = cv.measureText(text).width); }
   function hit(a, list) { for (var i = 0; i < list.length; i++) { var b = list[i]; if (a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1]) return true; } return false; }
   function place() {
+    if (!view.home) return;
     var s = view.s, z = s / view.home.s, maxT = z >= 2.3 ? 3 : z >= 1.45 ? 2 : 1;
     var obs = obstacles(), boxes = [];
     var on = { }; if (sel.from) on[sel.from.id] = 'from'; if (sel.to) on[sel.to.id] = 'to'; if (sel.check) on[sel.check] = 'chk';
