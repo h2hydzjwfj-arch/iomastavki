@@ -168,7 +168,7 @@
 
   /* ---------- маршрут: коридор из справочника маршрутов (routes-kb.js), от города до города */
   var MODE_OF = { air: 'air', ltl_auto: 'auto', ftl_auto: 'auto', lcl_rail: 'rail', fcl_rail: 'rail', lcl_sea: 'sea' };
-  var COL = { rail: '#9CE8CB', auto: '#FFD08A', sea: '#8FC7FF', air: '#F3A6FF' };
+  var COL = { rail: '#E6EEF8', auto: '#9DB8FF', sea: '#5CC8FF', air: '#C9A8FF' };
   var curMode = '';
   function km(a, b) { var dl = (b[0] - a[0]) * Math.cos((a[1] + b[1]) / 2 * rad); var dp = b[1] - a[1]; return Math.sqrt(dl * dl + dp * dp) * 111; }
   function ll(c) { return [c.lon, c.lat]; }

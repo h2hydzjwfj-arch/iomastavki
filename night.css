@@ -1,0 +1,291 @@
+/* IOMASTAVKA — тема «Полночь и стекло».
+   Подключается последней. Включается классом body.night; тёмный вариант — body.manual-dark (по умолчанию),
+   светлый — body.manual-light. Первый экран и подвал всегда тёмные. Анимации — только transform/opacity. */
+
+/* ---------- токены ---------- */
+html:root body.night{
+  --n-night:#05061A;--n-deep:#03040F;--n-navy:#0D1030;--n-ice:#A9C3E3;--n-hot:#EAF0FF;--n-acc:#4D7CFF;--n-acc2:#3D5AFE;
+  --n-mut-d:#9AA5BF;--n-line-d:rgba(255,255,255,.09);--n-glass:rgba(255,255,255,.07);
+  --n-ease:cubic-bezier(.16,1,.3,1);
+  --v-bg:#F2F4F9;--v-ink:#0B1030;--v-mut:#566079;--v-card:#FFFFFF;--v-bd:rgba(11,16,48,.09);
+  --v-acc:#3D5AFE;--v-accd:#2C44D6;--v-mint:#E8EDFB;--v-amber:#3D5AFE;--v-amberd:#2C44D6;--v-field:#EEF1F8;
+  --v-shadow:0 10px 30px rgba(11,16,48,.07);--v-shadow-h:0 22px 46px rgba(11,16,48,.14);--v-ease:var(--n-ease);
+  --ink:var(--v-ink);--muted:var(--v-mut);--line:var(--v-bd);--blue:var(--v-acc);--blue2:var(--v-acc);--ice:var(--v-mint);
+  --n-btn:#0B1030;--n-btn-fg:#FFFFFF;
+}
+html:root body.night.manual-dark{
+  --v-bg:#05061A;--v-ink:#EEF2FA;--v-mut:#9AA5BF;--v-card:#0D1030;--v-bd:rgba(255,255,255,.08);
+  --v-acc:#4D7CFF;--v-accd:#3D5AFE;--v-mint:#131738;--v-amber:#A9C3E3;--v-amberd:#7FA2D8;--v-field:#11153A;
+  --v-shadow:0 10px 30px rgba(0,0,0,.45);--v-shadow-h:0 22px 50px rgba(0,0,0,.6);
+  --n-btn:#FFFFFF;--n-btn-fg:#000000;
+}
+html:root body.night,html:root body.night button,html:root body.night input,html:root body.night textarea,html:root body.night select{font-family:'Manrope','DM Sans',-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif!important;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+html:root body.night{letter-spacing:-.005em}
+html:root body.night .weather-scene{display:none!important}
+html:root body.night.manual-dark{color-scheme:dark}
+
+/* ---------- кнопки ---------- */
+html:root body.night .nbtn{display:inline-flex;align-items:center;justify-content:center;gap:14px;height:58px;padding:0 26px;border-radius:10px;border:1px solid transparent;font-size:17px;font-weight:500;letter-spacing:-.01em;cursor:pointer;white-space:nowrap;transition:background-color .35s ease,border-color .35s ease,opacity .3s ease,transform .5s var(--n-ease)}
+html:root body.night .nbtn:hover{transform:translateY(-1px)}
+html:root body.night .nbtn:active{transform:scale(.98)}
+html:root body.night .nbtn:focus-visible{outline:2px solid var(--n-ice);outline-offset:3px}
+html:root body.night .nbtn-s{height:52px;font-size:16px;padding:0 22px}
+html:root body.night .nbtn-w{background:#FFFFFF;color:#000;padding-right:16px}
+html:root body.night .nbtn-w:hover{background:#E4EAF3}
+html:root body.night .nbtn-b{background:#000;color:#fff;padding-right:16px}
+html:root body.night .nbtn-b:hover{background:#161A2E}
+html:root body.night .nbtn-g{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.14);color:#fff;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+html:root body.night .nbtn-g:hover{background:rgba(255,255,255,.18)}
+html:root body.night .nchev{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#000;color:#fff;flex:none;transition:transform .5s var(--n-ease)}
+html:root body.night .nbtn-b .nchev{background:#fff;color:#000}
+html:root body.night .nchev svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+html:root body.night .nbtn:hover .nchev{transform:translateX(3px)}
+/* основные кнопки сайта: «Рассчитать», «Сохранить», «Отправить» */
+html:root body.night .calculate,html:root body.night .assistant-save,html:root body.night .v3-grid .go{background:var(--n-btn)!important;color:var(--n-btn-fg)!important;border:0!important;border-radius:10px!important;box-shadow:none!important;font-weight:600!important;letter-spacing:-.01em}
+html:root body.night .calculate:hover,html:root body.night .assistant-save:hover,html:root body.night .v3-grid .go:hover{opacity:.9;transform:translateY(-1px);background:var(--n-btn)!important;box-shadow:none!important}
+html:root body.night .mc-ready .go{animation:none!important}
+
+/* ---------- шапка ---------- */
+html:root body.night .topbar{background:#05061A!important;border-bottom:1px solid rgba(255,255,255,.07)!important;box-shadow:none!important;color:#fff}
+html:root body.night .brand,html:root body.night .brand span{color:#fff!important;-webkit-text-fill-color:#fff!important;background:none!important;font-weight:600!important;letter-spacing:-.025em!important;text-shadow:none!important;animation:none!important}
+html:root body.night .brand{font-size:24px!important}
+html:root body.night .v3-nav{background:rgba(255,255,255,.07)!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:14px!important;padding:5px!important;box-shadow:none!important;-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+html:root body.night .v3-nav button{color:rgba(255,255,255,.80)!important;font-weight:500!important;border-radius:10px!important;letter-spacing:-.005em}
+html:root body.night .v3-nav button:hover{color:#fff!important}
+html:root body.night .v3-nav button.on{color:#fff!important}
+html:root body.night .v3-pill{background:rgba(255,255,255,.13)!important;border-radius:10px!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.10)!important}
+html:root body.night .v3-cap{background:rgba(255,255,255,.07)!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:12px!important}
+html:root body.night .v3-cap .lang{color:rgba(255,255,255,.75)!important;border-radius:9px!important;background:transparent!important}
+html:root body.night .v3-cap .lang.active{background:#fff!important;color:#000!important}
+html:root body.night .v3-theme,html:root body.night .v3-acc{background:rgba(255,255,255,.07)!important;border:1px solid rgba(255,255,255,.12)!important;color:#fff!important;border-radius:12px!important;box-shadow:none!important}
+html:root body.night .v3-theme svg{stroke:#fff!important}
+html:root body.night .v3-loginbtn,html:root body.night .logout{background:#000!important;color:#fff!important;border:1px solid rgba(255,255,255,.14)!important;border-radius:10px!important;font-weight:500!important;box-shadow:none!important}
+html:root body.night .v3-loginbtn:hover,html:root body.night .logout:hover{background:#161A2E!important}
+html:root body.night .control-launcher,html:root body.night .control-tool{background:rgba(255,255,255,.07)!important;border:1px solid rgba(255,255,255,.12)!important;color:#fff!important;box-shadow:none!important}
+
+/* ---------- главная: общий ритм ---------- */
+html:root body.night .home-view{padding:0 0 0!important;align-items:stretch!important;gap:0!important}
+html:root body.night .home-view>.v3-grid{width:min(1328px,calc(100% - 2*clamp(16px,4vw,56px)));margin:0 auto 0!important;max-width:none!important}
+html:root body.night .ney{display:block;font-size:13px;font-weight:500;letter-spacing:.32em;text-transform:uppercase;color:var(--v-ink)}
+html:root body.night .ney2{display:block;font-size:11px;font-weight:500;letter-spacing:.32em;text-transform:uppercase;color:var(--n-mut-d)}
+
+/* ---------- первый экран ---------- */
+html:root body.night .nh{position:relative;overflow:hidden;min-height:clamp(560px,78vh,820px);display:flex;flex-direction:column;justify-content:flex-end;background:linear-gradient(165deg,#59688A 0%,#36446A 24%,#1A2450 52%,#0B1030 78%,#05061A 100%);color:#fff;isolation:isolate}
+html:root body.night .nh-bg{position:absolute;inset:0;z-index:-1;pointer-events:none}
+html:root body.night .nh-sphere{position:absolute;top:-210px;right:-90px;width:clamp(360px,54vw,800px);aspect-ratio:1/1;border-radius:50%;background:radial-gradient(circle at 34% 30%,#51679C 0%,#25335F 30%,#0F173B 62%,#070A22 100%);box-shadow:inset 26px -34px 80px -26px rgba(169,195,227,.55),0 0 0 1px rgba(169,195,227,.10);animation:nDrift 26s ease-in-out infinite alternate;will-change:transform}
+html:root body.night .nh-sweep{position:absolute;left:18%;top:34%;width:1100px;height:280px;transform:rotate(-36deg);background:radial-gradient(ellipse at center,rgba(169,195,227,.20),rgba(169,195,227,0) 66%)}
+html:root body.night .nh-flute,html:root body.night .nf-flute,html:root body.night .nt-flute{position:absolute;top:0;bottom:0;left:0;width:64%;background:repeating-linear-gradient(90deg,rgba(255,255,255,.075) 0px,rgba(255,255,255,0) 9px,rgba(4,6,20,.24) 24px,rgba(255,255,255,.06) 27px);-webkit-mask-image:linear-gradient(90deg,#000 0%,#000 40%,transparent 100%);mask-image:linear-gradient(90deg,#000 0%,#000 40%,transparent 100%)}
+html:root body.night .nh-grain{position:absolute;inset:0;width:100%;height:100%;opacity:.12}
+html:root body.night .nh-in{width:min(1328px,calc(100% - 2*clamp(16px,4vw,56px)));margin:0 auto;padding:110px 0 72px;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:40px 48px}
+html:root body.night .nh-l{flex:1 1 680px;display:flex;flex-direction:column;align-items:flex-start;gap:26px;min-width:0}
+html:root body.night .nh-badge{display:inline-flex;align-items:center;gap:10px;padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:12.5px;font-weight:500;letter-spacing:.14em;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+html:root body.night .nh-badge i{width:6px;height:6px;border-radius:50%;background:var(--n-acc);box-shadow:0 0 10px var(--n-acc)}
+html:root body.night .nh-h1{margin:0;font-size:clamp(44px,6vw,92px)!important;line-height:.98!important;font-weight:500!important;letter-spacing:-.04em!important;color:#fff!important;text-wrap:balance}
+html:root body.night .nh-r{flex:0 1 500px;display:flex;flex-direction:column;gap:28px}
+html:root body.night .nh-p{margin:0;font-size:22px;line-height:1.4;letter-spacing:-.01em;color:rgba(255,255,255,.92);text-wrap:pretty}
+html:root body.night .nh-btns{display:flex;flex-wrap:wrap;gap:8px}
+html:root body.night .nh-l>*,html:root body.night .nh-r{animation:nUp 1.1s var(--n-ease) both}
+html:root body.night .nh-l>*:nth-child(2){animation-delay:.08s}
+html:root body.night .nh-r{animation-delay:.18s}
+
+/* ---------- заголовки секций ---------- */
+html:root body.night .nsec-h{width:min(1328px,calc(100% - 2*clamp(16px,4vw,56px)));margin:0 auto;padding:clamp(72px,9vw,128px) 0 40px;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px 64px}
+html:root body.night .nsec-h>div{display:flex;flex-direction:column;gap:24px;max-width:760px}
+html:root body.night .nsec h2,html:root body.night .nsec-h h2,html:root body.night .nfoot h2{margin:0;font-size:clamp(34px,4.4vw,64px);line-height:1.04;font-weight:500;letter-spacing:-.035em;color:var(--v-ink);text-wrap:balance}
+html:root body.night .nsec-h p{margin:0;max-width:440px;font-size:18px;line-height:1.5;color:var(--v-mut)}
+html:root body.night .nsec{width:min(1328px,calc(100% - 2*clamp(16px,4vw,56px)));margin:0 auto;padding:clamp(80px,10vw,136px) 0 0}
+html:root body.night .nsec-hc{display:flex;flex-direction:column;align-items:center;text-align:center;gap:22px;margin-bottom:64px}
+html:root body.night .nsec-hc p{margin:0;max-width:560px;font-size:19px;line-height:1.45;color:var(--v-mut)}
+
+/* ---------- сетка главной (карта и плитки) ---------- */
+html:root body.night .v3-grid .k{border-radius:20px!important;background:var(--v-card)!important;border:1px solid var(--v-bd)!important;box-shadow:none!important}
+html:root body.night.manual-dark .v3-grid .k{background:linear-gradient(140deg,rgba(255,255,255,.065),rgba(255,255,255,.02))!important;border-color:rgba(255,255,255,.09)!important}
+html:root body.night .v3-grid .k:hover{border-color:rgba(130,160,255,.30)!important}
+html:root body.night .v3-grid .k b{font-weight:500;letter-spacing:-.02em}
+html:root body.night .v3-grid .tag{background:transparent!important;color:var(--v-mut)!important;padding:0!important;font-size:11px!important;font-weight:500!important;letter-spacing:.28em!important}
+html:root body.night .v3-grid .k .ic{color:var(--v-acc)!important;stroke:currentColor}
+html:root body.night .v3-ai,html:root body.night .v3-imp,html:root body.night .v3-tn,html:root body.night .v3-wx{background:var(--v-card)!important}
+html:root body.night.manual-dark .v3-ai,html:root body.night.manual-dark .v3-imp,html:root body.night.manual-dark .v3-tn,html:root body.night.manual-dark .v3-wx{background:linear-gradient(140deg,rgba(255,255,255,.065),rgba(255,255,255,.02))!important}
+html:root body.night .v3-cta{background:var(--n-btn)!important;color:var(--n-btn-fg)!important;border:0!important}
+html:root body.night .v3-cta b,html:root body.night .v3-cta small,html:root body.night .v3-cta .plane{color:var(--n-btn-fg)!important}
+html:root body.night .v3-cta small{opacity:.7}
+html:root body.night .v3-cur .spk path{stroke:var(--v-acc)!important}
+html:root body.night .v3-cur .rt b{font-weight:500!important;letter-spacing:-.02em}
+html:root body.night .v3-badges .pop{background:var(--v-mint)!important;color:var(--v-ink)!important}
+html:root body.night .v3-curd{background:var(--v-mint)!important;color:var(--v-ink)!important}
+html:root body.night .v3-wave i{background:var(--v-acc)!important}
+
+/* карта-калькулятор */
+html:root body.night .v3-grid .k.mc{background:#070A22!important;border:1px solid rgba(255,255,255,.09)!important}
+html:root body.night .mc{--sea:#060920;--land:#0F1640;--land-live:#142057;--lake:#060920;--bd:rgba(169,195,227,.34);--pin:#DCE7F5}
+html:root body.night .mc-grid path{stroke:rgba(169,195,227,.06)}
+html:root body.night .mc-r-dash{stroke:#05061A}
+html:root body.night .mc-comet{fill:#fff;filter:drop-shadow(0 0 6px #9DB8FF)}
+html:root body.night .mc-head h2{font-weight:500!important;letter-spacing:-.025em!important;text-shadow:0 2px 12px rgba(0,0,0,.6)!important}
+html:root body.night .mc .tag{color:rgba(255,255,255,.75)!important}
+html:root body.night .mc-hint{color:#C3CBDD!important;font-weight:500!important}
+html:root body.night .mc-hint::before{background:var(--n-acc)!important;box-shadow:0 0 8px var(--n-acc)}
+html:root body.night .mc-panel,html:root body.night .mc-res,html:root body.night .mc-cap,html:root body.night .mc-zoom button,html:root body.night .mc-pick{background:rgba(6,8,30,.78)!important;border-color:rgba(255,255,255,.10)!important}
+html:root body.night .mc-panel{border-radius:16px!important}
+html:root body.night .mc-f{border-radius:10px!important;background:rgba(255,255,255,.06)!important;border-color:rgba(255,255,255,.10)!important}
+html:root body.night .mc-f:hover,html:root body.night .mc-f:focus-within{background:rgba(255,255,255,.10)!important;border-color:rgba(169,195,227,.45)!important}
+html:root body.night .mc-f i{background:rgba(255,255,255,.12)!important;color:#fff!important}
+html:root body.night .mc-f.set i{background:#fff!important;color:#000!important}
+html:root body.night .mc-pin i{box-shadow:0 0 0 2px rgba(5,6,26,.8)!important}
+html:root body.night .mc-pin span{color:#E6EEF8!important;text-shadow:0 1px 3px rgba(0,0,0,.8),0 0 8px rgba(5,6,26,.9)!important}
+html:root body.night .mc-pin.t3 span{color:#AEB8D0!important}
+html:root body.night .mc-pin.k-x i{background:var(--n-ice)!important}
+html:root body.night .mc-pin.k-x span,html:root body.night .mc-pin.chk span{color:#BFD0FF!important}
+html:root body.night .mc-pin.from i{background:var(--n-acc)!important;box-shadow:0 0 0 3px #fff,0 0 18px 4px rgba(77,124,255,.75)!important}
+html:root body.night .mc-pin.to i{background:#fff!important;box-shadow:0 0 0 3px var(--n-acc),0 0 18px 4px rgba(255,255,255,.4)!important}
+html:root body.night .mc-pin.from span,html:root body.night .mc-pin.to span{background:#fff!important;color:#05061A!important;font-weight:600!important;border-radius:8px}
+html:root body.night .mc-pin:hover span{background:#fff!important;color:#05061A!important}
+
+/* ---------- «Инструменты логиста» ---------- */
+html:root body.night .ncards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr));gap:24px}
+html:root body.night .ncard{position:relative;display:flex;flex-direction:column;gap:26px;padding:20px 20px 28px;border-radius:14px;background:#10122A;border:1px solid rgba(255,255,255,.05);transition:border-color .5s ease,transform .7s var(--n-ease)}
+html:root body.night .ncard:hover{border-color:rgba(130,160,255,.32);transform:translateY(-3px)}
+html:root body.night .nill{position:relative;aspect-ratio:1/1;border-radius:9px;overflow:hidden;background:#04061A}
+html:root body.night .nill svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+html:root body.night .ncard-a{all:unset;display:flex;flex-direction:column;gap:8px;padding:0 4px;cursor:pointer;color:#fff}
+html:root body.night .ncard-a::after{content:"";position:absolute;inset:0;border-radius:14px}
+html:root body.night .ncard-a:focus-visible::after{outline:2px solid var(--n-ice);outline-offset:3px}
+html:root body.night .ncard-a b{font-size:clamp(24px,2.2vw,32px);font-weight:500;letter-spacing:-.025em;line-height:1.1}
+html:root body.night .ncard-a small{font-size:16px;line-height:1.45;color:#C3CBDD}
+html:root body.night.manual-light .ncard{background:#0E1130}
+
+/* ---------- «Работа» / «Как мы работаем» ---------- */
+html:root body.night .nw-box{padding:clamp(26px,4vw,64px);border-radius:20px;background:#070923;border:1px solid rgba(255,255,255,.05);color:#fff}
+html:root body.night .nw-box h2,html:root body.night .nw-box .ney{color:#fff}
+html:root body.night .nw-top{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:20px 64px;margin-bottom:clamp(36px,6vw,88px)}
+html:root body.night .nw-top>div{display:flex;flex-direction:column;gap:22px}
+html:root body.night .nw-top h2{font-size:clamp(32px,3.6vw,52px)!important}
+html:root body.night .nw-top p{margin:0;max-width:460px;font-size:18px;line-height:1.5;color:#C3CBDD}
+html:root body.night .nw-row{display:flex;flex-wrap:wrap;gap:48px;align-items:stretch}
+html:root body.night .nw-l{flex:1 1 380px;min-width:0}
+html:root body.night .nw-group{display:flex;flex-direction:column;gap:34px;min-height:420px}
+html:root body.night .nw-pane{display:none;flex-direction:column;gap:20px}
+html:root body.night .nw-pane.on{display:flex;animation:nUp .9s var(--n-ease) both}
+html:root body.night .nw-pane h3{margin:0;font-size:clamp(30px,3.2vw,48px);line-height:1.06;font-weight:500;letter-spacing:-.03em;color:#fff}
+html:root body.night .nw-pane p{margin:0;max-width:460px;font-size:18px;line-height:1.5;color:#C3CBDD}
+html:root body.night .nw-tabs{display:flex;flex-direction:column;border-bottom:1px solid rgba(255,255,255,.08)}
+html:root body.night .nw-tabs button{all:unset;display:grid;grid-template-columns:48px minmax(0,1fr);align-items:center;gap:12px;min-height:56px;padding:6px 0;border-top:1px solid rgba(255,255,255,.08);font-size:18px;color:#9AA5BF;cursor:pointer;transition:color .3s ease}
+html:root body.night .nw-tabs button:hover,html:root body.night .nw-tabs button.on{color:#fff}
+html:root body.night .nw-tabs button:focus-visible{outline:2px solid var(--n-ice);outline-offset:2px}
+html:root body.night .nw-tabs i{font-style:normal;font-size:13px;color:#6F7A96;font-variant-numeric:tabular-nums}
+html:root body.night .nw-tabs .on i{color:var(--n-acc)}
+html:root body.night .nw-group>.nbtn{align-self:flex-start}
+html:root body.night .nw-vis{flex:1.3 1 480px;position:relative;min-height:420px;border-radius:12px;overflow:hidden;background:#03040F;border:1px solid rgba(255,255,255,.05)}
+html:root body.night .nw-num{position:absolute;top:20px;left:24px;z-index:1;font-size:14px;color:#9AA5BF;font-variant-numeric:tabular-nums}
+html:root body.night .nw-bg,html:root body.night .nw-sea{position:absolute;inset:0;width:100%;height:100%}
+html:root body.night .nw-sea{inset:-4%;width:108%;height:108%;animation:nSway 14s ease-in-out infinite alternate;will-change:transform}
+
+/* ---------- «Сроки до Москвы» ---------- */
+html:root body.night .nt-box{position:relative;overflow:hidden;border-radius:20px;border:1px solid rgba(255,255,255,.06);background:linear-gradient(160deg,#2B3758 0%,#141C3E 40%,#070A24 100%);color:#fff}
+html:root body.night .nt-flute{width:60%}
+html:root body.night .nt-in{position:relative;padding:clamp(26px,4vw,56px);display:flex;flex-wrap:wrap;gap:48px;align-items:stretch}
+html:root body.night .nt-l{flex:1 1 380px;display:flex;flex-direction:column;align-items:flex-start;gap:22px}
+html:root body.night .nt-l .ney{font-size:11px;color:#C3CBDD}
+html:root body.night .nt-l h2{font-size:clamp(28px,2.8vw,42px)!important;line-height:1.1!important;color:#fff!important}
+html:root body.night .nt-l p{margin:0;max-width:420px;font-size:16px;line-height:1.5;color:#C3CBDD}
+html:root body.night .nt-l .nbtn{margin-top:auto}
+html:root body.night .nt-stack{flex:1 1 420px;display:flex;flex-direction:column;gap:10px}
+html:root body.night .nt-c{display:flex;flex-direction:column;gap:20px;padding:24px 26px;border-radius:6px;background:rgba(30,38,70,.72);border:1px solid rgba(255,255,255,.06)}
+html:root body.night .nt-c b{font-size:clamp(38px,3.6vw,54px);line-height:1;font-weight:500;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+html:root body.night .nt-c span{font-size:13px;color:#C3CBDD}
+html:root body.night .nt-w{background:#fff;color:#05061A}
+html:root body.night .nt-w span{color:#4A5068}
+
+/* ---------- подвал ---------- */
+html:root body.night .nfoot{position:relative;overflow:hidden;margin-top:clamp(80px,10vw,136px);background:linear-gradient(170deg,#5A698B 0%,#3A486C 30%,#1C2652 62%,#0E1538 100%);color:#fff;isolation:isolate}
+html:root body.night .nf-bg{position:absolute;inset:0;z-index:-1;pointer-events:none}
+html:root body.night .nf-flute{width:70%}
+html:root body.night .nf-sphere{position:absolute;top:-120px;left:30%;width:clamp(320px,46vw,680px);aspect-ratio:1/1;border-radius:50%;background:radial-gradient(circle at 36% 30%,#4E6498 0%,#22305C 34%,#0E163A 66%,#080B26 100%);box-shadow:inset 24px -30px 70px -24px rgba(169,195,227,.5)}
+html:root body.night .nf-arc{position:absolute;left:-25%;right:-25%;bottom:-560px;height:760px;border-radius:50%;border-top:1px solid rgba(169,195,227,.55);background:radial-gradient(ellipse 60% 30% at 50% 0%,rgba(150,180,225,.55),rgba(16,26,66,.95) 70%)}
+html:root body.night .nf-in{width:min(1328px,calc(100% - 2*clamp(16px,4vw,56px)));margin:0 auto;padding:clamp(96px,12vw,160px) 0 48px}
+html:root body.night .nfoot h2{color:#fff;font-size:clamp(40px,5.6vw,88px)!important;letter-spacing:-.04em!important}
+html:root body.night .nfoot .nh-btns{margin-top:34px}
+html:root body.night .nf-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:40px;margin-top:clamp(120px,16vw,200px)}
+html:root body.night .nf-brand{display:flex;flex-direction:column;gap:10px}
+html:root body.night .nf-brand b{font-size:clamp(28px,3vw,40px);font-weight:500;letter-spacing:-.03em}
+html:root body.night .nf-brand span{font-size:17px;color:rgba(255,255,255,.9)}
+html:root body.night .nf-brand small{font-size:13px;color:rgba(255,255,255,.65)}
+html:root body.night .nf-cols{display:flex;gap:clamp(40px,6vw,96px)}
+html:root body.night .nf-cols nav{display:flex;flex-direction:column;gap:12px}
+html:root body.night .nf-cols b{font-size:21px;font-weight:500;margin-bottom:6px}
+html:root body.night .nf-cols button{all:unset;font-size:16px;color:rgba(255,255,255,.86);cursor:pointer;transition:color .25s}
+html:root body.night .nf-cols button:hover,html:root body.night .nf-cols .lang.active{color:#fff;text-decoration:underline;text-underline-offset:4px}
+html:root body.night .nf-cols button:focus-visible{outline:2px solid #fff;outline-offset:3px}
+
+/* ---------- окна и формы (общие) ---------- */
+html:root body.night .k{border-radius:18px}
+html:root body.night .view-layer .v3-head h1,html:root body.night .v3-portal .v3-head h1{font-weight:500!important;letter-spacing:-.035em!important}
+html:root body.night .v3c-chips .chip.on,html:root body.night .v3-grid .chip.on{background:var(--n-btn)!important;color:var(--n-btn-fg)!important;box-shadow:none!important}
+html:root body.night .v3c-link,html:root body.night .v3c-more summary{color:var(--v-acc)!important}
+
+/* ---------- анимации ---------- */
+@keyframes nUp{from{opacity:0;transform:translate3d(0,22px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+@keyframes nDrift{from{transform:translate3d(0,0,0)}to{transform:translate3d(-30px,24px,0)}}
+@keyframes nSway{from{transform:translate3d(-14px,0,0)}to{transform:translate3d(14px,-6px,0)}}
+@media (prefers-reduced-motion:reduce){html:root body.night .nh-sphere,html:root body.night .nw-sea,html:root body.night .nh-l>*,html:root body.night .nh-r,html:root body.night .nw-pane.on{animation:none!important}}
+
+/* ---------- телефон ---------- */
+@media (max-width:760px){
+  html:root body.night .nh{min-height:0}
+  html:root body.night .nh-in{padding:72px 0 44px;gap:28px}
+  html:root body.night .nh-p{font-size:19px}
+  html:root body.night .nbtn{height:54px;font-size:16px}
+  html:root body.night .nsec-hc{margin-bottom:40px}
+  html:root body.night .nw-group,html:root body.night .nw-vis{min-height:320px}
+  html:root body.night .nf-cols{gap:40px}
+}
+
+/* ---------- правки после первого просмотра ---------- */
+html:has(body.night.manual-dark){background:#05061A!important}
+html:has(body.night.manual-light){background:#F2F4F9!important}
+html:root body.night .mc-head{display:none!important}
+html:root body.night .v3-grid .k.v3-cta,html:root body.night.manual-dark .v3-grid .k.v3-cta{background:var(--n-btn)!important;border-color:transparent!important}
+html:root body.night .v3-grid .k.v3-cta:hover{opacity:.92}
+/* трекер груза: вместо красного — голубой неон */
+html:root body.night .trk,html:root body.night .trk-mini{--red:#4D7CFF;--red2:#3D5AFE}
+html:root body.night .trk-now,html:root body.night .trk-tile-now,html:root body.night .trk-tag{color:var(--v-acc)!important;background:transparent!important}
+html:root body.night .trk-bh i,html:root body.night .trk-stops li.done::before{background:var(--n-acc)!important}
+html:root body.night .trk-stops li.cur::before{color:var(--n-acc)!important;box-shadow:0 0 0 2px var(--n-acc)!important}
+html:root body.night .trk-fin .trk-ct{box-shadow:0 8px 18px rgba(77,124,255,.35)!important}
+html:root body.night .trk-bot{background:var(--v-mint)!important}
+html:root body.night .trk-rates{background:#0D1030!important}
+html:root body.night .trk-rates .v3c-link{color:#A9C3E3!important}
+html:root body.night .v3-orb,html:root body.night .v3-orbbig{background:radial-gradient(circle at 30% 30%,#fff,#BFD0FF 28%,#4D7CFF 70%,#1A2A8F)!important;box-shadow:0 0 40px rgba(77,124,255,.45)!important}
+html:root body.night .control-launcher{border-radius:12px!important}
+
+/* ---------- «витринные» панели: вместо зелёной/синей заливки — полночный градиент со стеклом ---------- */
+html:root body.night .v3c-res,html:root body.night .v3c-hero,html:root body.night .v3c-mapbox,html:root body.night .v3-drop,
+html:root body.night .customs-shell,html:root body.night .customs-shell.customs-shell,html:root body.night .v3p-kpprice,html:root body.night .kb-pulse,
+html:root body.night .news-item:first-child,html:root body.night .news-list .nw-lead,html:root body.night .service-main,
+html:root body.night.manual-dark .v3c-res,html:root body.night.manual-dark .v3c-hero,html:root body.night.manual-dark .v3c-mapbox,html:root body.night.manual-dark .v3-drop,
+html:root body.night.manual-dark .customs-shell,html:root body.night.manual-dark .customs-shell.customs-shell,html:root body.night.manual-dark .v3p-kpprice,html:root body.night.manual-dark .service-main{
+  background:linear-gradient(155deg,#34426A 0%,#1A2450 42%,#0B1030 100%)!important;border:1px solid rgba(255,255,255,.08)!important;color:#fff}
+html:root body.night .kb-pulse>*,html:root body.night .customs-shell>*{position:relative}
+html:root body.night .v3-drop{border:1.5px dashed rgba(169,195,227,.45)!important}
+html:root body.night .customs-shell input{background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.12)!important;color:#fff!important}
+
+/* ---------- «Работа» (CRM) в новой палитре ---------- */
+html:root body.night .cx-dh,html:root body.night.manual-dark .cx-dh,html:root body.night .cv-total{background:linear-gradient(155deg,#34426A 0%,#1A2450 50%,#0B1030 100%)!important;border:1px solid rgba(255,255,255,.08);box-shadow:none!important}
+html:root body.night.manual-dark .cx-nav.v3p-tabs .chip.on,html:root body.night.manual-dark .cx-pills button.on,html:root body.night.manual-dark .cx-ava{color:#BFD0FF!important}
+html:root body.night .cx-nav.v3p-tabs .chip.on{background:rgba(77,124,255,.14)!important}
+html:root body.night.manual-light .cx-nav.v3p-tabs .chip.on{background:var(--v-mint)!important;color:var(--v-accd)!important}
+html:root body.night .cx-nav.v3p-tabs .chip.on::before{background:var(--n-acc)!important}
+html:root body.night #workView .v3-head h1{font-weight:500!important;letter-spacing:-.035em!important}
+html:root body.night .v3-drop,html:root body.night .v3-drop b,html:root body.night .v3-drop strong,html:root body.night .v3-drop .ic{color:#fff!important}
+html:root body.night .v3-drop small,html:root body.night .v3-drop span:not(.ic){color:rgba(255,255,255,.78)!important}
+html:root body.night .home-view>*{flex-shrink:0}
+@media (max-width:700px){
+  html:root body.night .logout{background-color:#fff!important;border-color:#fff!important}
+  html:root body.night .brand{font-size:20px!important}
+}
+@media (max-width:700px){
+  html:root body.night .topbar{row-gap:6px!important}
+  html:root body.night .brand{font-size:18px!important;line-height:1!important}
+  html:root body.night .v3-nav{padding:3px!important;border-radius:12px!important}
+  html:root body.night .v3-nav button{padding:8px 11px!important;font-size:13px!important}
+}
