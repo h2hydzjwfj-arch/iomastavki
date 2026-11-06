@@ -407,7 +407,7 @@ function setup(app, ctx) {
     const d = db(); let logins = [];
     if (ctx.journal) { try { const months = (await ctx.journal.monthsList()).slice(0, 2); for (const m of months) logins = logins.concat((await ctx.journal.list(m)).filter(r => r.type === 'login' || r.type === 'login_fail')); } catch {} }
     const fails24 = logins.filter(r => r.type === 'login_fail' && Date.parse(r.at) > Date.now() - 864e5).length;
-    res.json({ ok: true, secrets: SECRETS.map(([key, label, kind]) => ({ key, label, kind, set: !!(process.env[key] || (key === 'SUPABASE_SERVICE_KEY' && process.env.SUPABASE_SERVICE_ROLE_KEY)) })),
+    res.json({ ok: true, secrets: SECRETS.map(([key, label, kind]) => ({ key, label, kind, set: key === 'SUPABASE_URL' ? !!require('./cloud').supabaseUrl() : key === 'SUPABASE_SERVICE_KEY' ? !!require('./cloud').supabaseKey() : !!process.env[key] })),
       logins: logins.slice(0, 80).map(r => ({ at: r.at, ok: r.type === 'login', role: r.role || '', name: r.name || '', login: r.contact || r.email || '', visitor: r.visitor || '', result: r.result || '' })),
       fails24, storage: store.kind, sessionVersion: d.settings.adminSv || 0, customPassword: !!d.settings.adminHash, lastLogoutAll: d.settings.adminSvAt || null });
   });

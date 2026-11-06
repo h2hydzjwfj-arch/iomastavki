@@ -7,9 +7,19 @@
 const fs = require('fs');
 const path = require('path');
 
+// Принимаем и распространённые варианты имён переменных (как их называет Supabase или другие инструкции).
+const URL_NAMES = ['SUPABASE_URL', 'SUPABASE_PROJECT_URL', 'SUPABASE_API_URL', 'NEXT_PUBLIC_SUPABASE_URL'];
+const KEY_NAMES = ['SUPABASE_SERVICE_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SERVICE_ROLE', 'SUPABASE_SECRET_KEY', 'SUPABASE_SECRET', 'SUPABASE_KEY'];
+const pick = (env, names) => { for (const n of names) { const v = String(env[n] || '').trim(); if (v) return v; } return ''; };
+// Адрес: допускаем хвосты вроде /rest/v1 и косую черту в конце — берём только https://<проект>.supabase.co
+function supabaseUrl(env = process.env) { const v = pick(env, URL_NAMES).replace(/\s/g, ''); const m = v.match(/^https?:\/\/([a-z0-9-]+)\.supabase\.(co|in)/i); return m ? 'https://' + m[1].toLowerCase() + '.supabase.' + m[2].toLowerCase() : v.replace(/\/+$/, ''); }
+function supabaseKey(env = process.env) { return pick(env, KEY_NAMES); }
+// Имена (без значений) переменных со словом SUPABASE — чтобы подсказать, что не так
+function supabaseVarNames(env = process.env) { return Object.keys(env).filter(k => /SUPABASE/i.test(k) && String(env[k] || '').trim()).sort(); }
+
 function createCloud(env = process.env) {
-  const url = String(env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
-  const key = String(env.SUPABASE_SERVICE_KEY || env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const url = supabaseUrl(env);
+  const key = supabaseKey(env);
   if (!url || !key) return null;
   if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(url)) { console.error('SUPABASE_URL должен выглядеть как https://xxxx.supabase.co'); return null; }
   const bucket = String(env.SUPABASE_BUCKET || 'iomastavka').replace(/[^a-z0-9_-]/gi, '') || 'iomastavka';
@@ -68,4 +78,4 @@ function createCloud(env = process.env) {
   }
   return { kind: 'supabase', bucket, ensureBucket, get, put, del, syncFiles };
 }
-module.exports = { createCloud };
+module.exports = { supabaseUrl, supabaseKey, supabaseVarNames, URL_NAMES, KEY_NAMES, createCloud };
