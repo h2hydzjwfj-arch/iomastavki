@@ -1,23 +1,3 @@
-(function loadEnvFile(){
-  try {
-    const envPath = require('path').join(__dirname, '.env');
-    if (require('fs').existsSync(envPath)) {
-      const content = require('fs').readFileSync(envPath, 'utf8');
-      content.split(/\r?\n/).forEach(function(line){
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('#')) return;
-        const eq = trimmed.indexOf('=');
-        if (eq < 1) return;
-        const key = trimmed.slice(0, eq).trim();
-        let val = trimmed.slice(eq + 1).trim();
-        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) val = val.slice(1, -1);
-        if (!process.env[key]) process.env[key] = val;
-      });
-      console.log('[env] Loaded: ' + Object.keys(process.env).filter(function(k){return /_API_KEY|_TOKEN/.test(k);}).join(', '));
-    }
-  } catch (e) { console.warn('[env]', e.message); }
-})();
-
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -26,2544 +6,772 @@ const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const multer = require('multer');
-const { execFile } = require('child_process');
-const os = require('os');
-const feeds = require('./lib/feeds');
-const extract = require('./lib/extract');
-const insights = require('./lib/insights');
-const weatherLib = require('./lib/weather');
+const { signSession, verifySession, safeFetchText } = require('./security');
+let compression = null; try { compression = require('compression'); } catch { /* необязательная зависимость */ }
 const upload = multer({storage: multer.memoryStorage(), limits:{fileSize: 15*1024*1024}});
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 const ROOT = __dirname;
-const DATA_DIR = path.join(ROOT, 'data');
+const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, 'data');
 const RATES_FILE = process.env.RATES_FILE || path.join(DATA_DIR, 'rates.json');
 const MAX_RATE_RECORDS = 5000;
 
-const GROQ_MODELS = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b'];
-const EDGE_VOICES = { ru:'ru-RU-DmitryNeural', en:'en-US-GuyNeural', zh:'zh-CN-YunxiNeural', tr:'tr-TR-AhmetNeural' };
-
+// За прокси Render без этого все посетители выглядят как один IP, и лимит запросов общий на весь сайт.
+app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false }));
+// CSP пока в режиме «только отчёт»: ничего не ломает, нарушения видны в консоли браузера.
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy-Report-Only', "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'");
+  next();
+});
+if (compression) app.use(compression());
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }));
+// Общий лимит — только на API: статика (скрипты, стили, картинки) не считается, а работа в CRM делает много коротких запросов.
+app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, max: 1500, standardHeaders: true, legacyHeaders: false }));
+// Перебор пароля администратора: не более 8 попыток за 15 минут с одного IP.
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, skipSuccessfulRequests: true, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много попыток входа. Попробуйте позже.' } });
+// Эндпоинты, которые тратят деньги на OpenAI: ограничиваем частоту.
+const aiLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много запросов. Подождите несколько минут.' } });
+const importLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 15, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много импортов. Попробуйте позже.' } });
+app.use(['/api/ai', '/api/tts', '/api/transcribe', '/api/realtime/call', '/api/news/article', '/api/customs/check'], aiLimiter);
+app.use(['/api/rates/import', '/api/rates/import-text', '/api/agents/import'], importLimiter);
+// Роли: гость / клиент / администратор (portal.js). Всё, что стоит денег или раскрывает
+// контакты и ставки агентов, — только администратору.
+const cloud = require('./cloud').createCloud();
+// Лучшая ставка из базы для КП (тот же подбор, что и в /api/rates/recommend).
+function bestRate({ from, to, mode, distance }) {
+  const db = ensureRateDb();
+  const m = db.records.map(r => ({ ...r, _score: routeScore(r, from, to, mode, Number.isFinite(distance) ? distance : null) }))
+    .filter(r => r._score > 0 && Number.isFinite(Number(r.rate)))
+    .sort((a, b) => b._score - a._score || new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+  return m[0] || null;
+}
+const portal = require('./portal').setup(app, { verifySession, DATA_DIR, upload, rateLimit, cloud, engine: q => bestRate(q), rates: () => cbrRatesToday(),
+  agents: () => { try { const r = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'agents.json'), 'utf8')); return Array.isArray(r) && r.length ? r : BUILTIN_AGENTS; } catch { return BUILTIN_AGENTS; } },
+  // ИИ для разбора инвойсов и упаковочных листов (если задан OPENAI_API_KEY)
+  ai: { enabled: () => !!process.env.OPENAI_API_KEY, run: async input => { const out = await responsesRequest({ key: process.env.OPENAI_API_KEY, preferred: process.env.OPENAI_MODEL, input, max_output_tokens: 8000 }); if (out.error) throw new Error(out.error.error || 'AI error'); return responseText(out.d); } } });
+app.use(['/api/agents', '/api/agents/import', '/api/rates/import', '/api/rates/import-text', '/api/rates/import-local',
+  '/api/ai', '/api/tts', '/api/transcribe', '/api/realtime/call', '/api/customs/check', '/api/news/article/audio'], portal.admin);
+app.get('/api/rates', portal.admin);
+app.put('/api/rates', portal.admin);
 
 const fallbackHash = 'scrypt$16384$8$1$bd186dac2105a3d050c5f769e28d25a2$51e731def6ff02e823b43cb8cfce55adcad745c5c72935ce68d875f583096288';
 
-function safeReadRates(){ try { return JSON.parse(fs.readFileSync(RATES_FILE, 'utf8')); } catch(e){ return {}; } }
-function ensureRateDb(){
+function safeReadRates() {
+  // Сначала рабочая база (DATA_DIR, туда пишет импорт), иначе — стартовая база из репозитория.
+  try { return JSON.parse(fs.readFileSync(RATES_FILE, 'utf8')); } catch {}
+  try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'rates.json'), 'utf8')); } catch { return {}; }
+}
+
+function ensureRateDb() {
   const raw = safeReadRates();
   if (Array.isArray(raw)) return { version: 2, updatedAt: null, records: raw };
   if (raw && Array.isArray(raw.records)) return raw;
   const records = [];
   for (const [company, v] of Object.entries(raw || {})) {
-    if (v && v.latestRate) records.push(Object.assign({ company }, v.latestRate, { source: 'legacy' }));
+    if (!v || typeof v !== 'object') continue;
+    if (v.latestRate && typeof v.latestRate === 'object') records.push({ company, ...v.latestRate, source: 'legacy', updatedAt: new Date().toISOString() });
   }
   return { version: 2, updatedAt: null, records };
 }
-function normalizeText(s=''){ return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
-function routeScore(record, from, to, mode, distance){
+function normalizeText(s='') { return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+function routeScore(record, from, to, mode, distance) {
   const a=normalizeText(from), b=normalizeText(to), rf=normalizeText(record.from), rt=normalizeText(record.to);
   let score=0;
   if (rf && (rf===a || rf.includes(a) || a.includes(rf))) score+=8;
+  else if (rf && a && (rf.split(/\s+/)[0]===a.split(/\s+/)[0])) score+=3;
   if (rt && (rt===b || rt.includes(b) || b.includes(rt))) score+=8;
+  else if (rt && b && (rt.split(/\s+/)[0]===b.split(/\s+/)[0])) score+=3;
   if (mode && record.mode && normalizeText(record.mode)===normalizeText(mode)) score+=5;
   if (Number.isFinite(distance) && Number(record.distanceKm)) score += Math.max(0,5-Math.abs(distance-Number(record.distanceKm))/1200);
+  if (record.validUntil){const t=Date.parse(record.validUntil);if(Number.isFinite(t)&&t>=Date.now())score+=1;} else if(record.approximateAfterValidity) score+=0.25;
   return score;
 }
-
-// ============ AI ОЧЕРЕДЬ (защита от 429) ============
-let AI_LOCK = Promise.resolve();
-function withAiLock(fn){
-  const run = async function(){ return await fn(); };
-  const next = AI_LOCK.then(run, run);
-  AI_LOCK = next.catch(function(){});
-  return next;
+function parseJsonLoose(text) {
+  const cleaned=String(text||'').replace(/```json/gi,'').replace(/```/g,'').trim();
+  const start=Math.min(...[cleaned.indexOf('{'),cleaned.indexOf('[')].filter(x=>x>=0));
+  const end=Math.max(cleaned.lastIndexOf('}'),cleaned.lastIndexOf(']'));
+  if(start===Infinity || end<start) throw new Error('No JSON');
+  return JSON.parse(cleaned.slice(start,end+1));
 }
-function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
-
-async function groqRequest(model, messages, maxTokens, key){
-  for (let attempt = 1; attempt <= 2; attempt++){
-    try {
-      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method:'POST',
-        headers:{'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'},
-        body: JSON.stringify({ model, messages, max_tokens: maxTokens || 2000, temperature: 0.5, response_format:{type:'json_object'} }),
-        signal: AbortSignal.timeout(60000)
-      });
-      if (r.ok){
-        const d = await r.json();
-        const text = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-        if (text) return { ok:true, text };
-      }
-      const errText = await r.text();
-      if (r.status === 429 || /rate limit/i.test(errText)){
-        // При 429 сразу отдаём наверх — пусть пробует Gemini
-        return { ok:false, rateLimited:true };
-      }
-      if (/decommissioned|does not exist/i.test(errText)) return { ok:false, fatal:true };
-      return { ok:false, error: 'HTTP ' + r.status };
-    } catch(e){
-      if (attempt < 2){ await sleep(800); continue; }
-      return { ok:false, error: e.message };
-    }
+async function openAIFileUpload(buffer, filename, mimetype, key) {
+  const form=new FormData();
+  form.append('purpose','user_data');
+  form.append('file',new Blob([buffer],{type:mimetype||'application/octet-stream'}),filename||'rate-file');
+  const r=await fetch('https://api.openai.com/v1/files',{method:'POST',headers:{Authorization:`Bearer ${key}`},body:form});
+  const d=await r.json(); if(!r.ok) throw new Error(d?.error?.message||'OpenAI file upload failed');
+  return d.id;
+}
+async function extractRatesWithAI({key, text, fileId, filename, note=''}) {
+  const model=process.env.OPENAI_MODEL || 'gpt-5.6-luna';
+  const prompt=`Ты извлекаешь ставки международной логистики из КП, прайса, переписки или текста. Верни ТОЛЬКО JSON-массив объектов без markdown. Поля каждого объекта: company, from, to, mode, incoterms, distanceKm, basis (weight|volume|container|shipment|unknown), weightKg, volumeM3, rate, currency, minCharge, transitDays, validUntil, notes, source. Не выдумывай отсутствующие данные: ставь null. Если в документе несколько ставок — создай несколько объектов. rate должно быть числом только если цена однозначно указана. mode: air|road|rail|sea|multimodal. ${note?`Дополнительная информация пользователя: ${note}`:''}`;
+  const content=[{type:'input_text',text:prompt}];
+  if(fileId) content.push({type:'input_file',file_id:fileId});
+  else content.push({type:'input_text',text:String(text||'')});
+  const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model,input:[{role:'user',content}],max_output_tokens:2500})});
+  const d=await r.json(); if(!r.ok) throw new Error(d?.error?.message||'AI extraction failed');
+  const out=typeof d.output_text==='string'?d.output_text:(d.output||[]).flatMap(o=>o.content||[]).map(c=>c.text||c.value||'').filter(Boolean).join('\n');
+  const parsed=parseJsonLoose(out); return Array.isArray(parsed)?parsed:[parsed];
+}
+function mergeRateRecords(records, sourceLabel='manual') {
+  const db=ensureRateDb(); const now=new Date().toISOString();
+  const incoming=(records||[]).filter(x=>x&&typeof x==='object').map(x=>({...x, source:x.source||sourceLabel, updatedAt:now}));
+  for(const rec of incoming){
+    const key=[normalizeText(rec.company),normalizeText(rec.from),normalizeText(rec.to),normalizeText(rec.mode),normalizeText(rec.incoterms),String(rec.weightKg||''),String(rec.volumeM3||'')].join('|');
+    const idx=db.records.findIndex(old=>[normalizeText(old.company),normalizeText(old.from),normalizeText(old.to),normalizeText(old.mode),normalizeText(old.incoterms),String(old.weightKg||''),String(old.volumeM3||'')].join('|')===key);
+    if(idx>=0) db.records[idx]={...db.records[idx],...rec,updatedAt:now}; else db.records.push(rec);
   }
-  return { ok:false };
+  db.records=db.records.slice(-MAX_RATE_RECORDS); db.updatedAt=now; saveRates(db); return {db, added:incoming.length};
 }
 
-function repairJSON(raw){
-  if (typeof raw !== 'string') return raw;
-  let t = raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
-  const ob = t.indexOf('{'), obr = t.indexOf('[');
-  let s = -1;
-  if (ob < 0 && obr < 0) throw new Error('No JSON');
-  if (ob < 0) s = obr; else if (obr < 0) s = ob; else s = Math.min(ob, obr);
-  const e = Math.max(t.lastIndexOf('}'), t.lastIndexOf(']'));
-  if (e <= s) throw new Error('Broken JSON');
-  t = t.slice(s, e+1).replace(/,\s*([}\]])/g, '$1');
-  try { return JSON.parse(t); } catch(e){}
-  try {
-    const fixed = t.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/gs, function(m){ return m.replace(/\n/g,'\\n').replace(/\r/g,'\\r').replace(/\t/g,'\\t'); });
-    return JSON.parse(fixed);
-  } catch(e){}
-  throw new Error('JSON repair failed');
+function saveRates(data) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(RATES_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
-
-// ========== Google Gemini (резервный провайдер) ==========
-async function geminiRequest(systemPrompt, userPrompt, maxTokens, jsonMode){
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) return { ok:false, error:'no key' };
-  const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
-  const body = {
-    contents: [
-      { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userPrompt }] }
-    ],
-    generationConfig: {
-      maxOutputTokens: maxTokens || 2000,
-      temperature: 0.5
-    }
-  };
-  if (jsonMode) body.generationConfig.responseMimeType = 'application/json';
-  for (const model of models){
-    for (let attempt = 1; attempt <= 2; attempt++){
-      try {
-        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-          signal: AbortSignal.timeout(90000)
-        });
-        if (r.ok){
-          const d = await r.json();
-          const parts = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts;
-          const text = parts && parts.map(function(x){return x.text||'';}).join('');
-          if (text) return { ok:true, text };
-        }
-        const errText = await r.text();
-        if (r.status === 429 || /rate limit|quota/i.test(errText)){
-          if (attempt < 2){ await sleep(3000); continue; }
-        }
-        if (r.status === 400 && /API_KEY_INVALID|API key not valid/i.test(errText)) return { ok:false, fatal:true };
-        break;
-      } catch(e){
-        if (attempt < 2){ await sleep(2000); continue; }
-      }
-    }
-  }
-  return { ok:false };
-}
-
-async function geminiChatJSON(systemPrompt, userPrompt, maxTokens){
-  const res = await geminiRequest(systemPrompt + ' Return ONLY valid JSON.', userPrompt, maxTokens, true);
-  if (!res.ok) return null;
-  try { return repairJSON(res.text); } catch(e){ console.warn('[AI] Gemini JSON repair fail'); return null; }
-}
-async function geminiChatText(systemPrompt, userPrompt, maxTokens){
-  const res = await geminiRequest(systemPrompt, userPrompt, maxTokens, false);
-  return res.ok ? res.text : null;
-}
-
-async function aiChatJSON(systemPrompt, userPrompt, maxTokens){
-  return withAiLock(async function(){
-    const messages = [
-      { role:'system', content: systemPrompt + ' Return ONLY valid JSON.' },
-      { role:'user', content: userPrompt }
-    ];
-    if (process.env.GROQ_API_KEY){
-      for (const model of GROQ_MODELS){
-        const res = await groqRequest(model, messages, maxTokens, process.env.GROQ_API_KEY);
-        if (res.ok){
-          console.log('[AI] Groq ' + model + ' OK');
-          try { return repairJSON(res.text); } catch(e){ console.warn('[AI] JSON repair fail'); }
-        }
-        if (res.fatal) continue;
-      }
-    }
-    if (process.env.GEMINI_API_KEY){
-      const g = await geminiChatJSON(systemPrompt, userPrompt, maxTokens);
-      if (g && typeof g === 'object' && Object.keys(g).length){
-        console.log('[AI] Gemini OK');
-        return g;
-      }
-    }
-    if (process.env.DEEPSEEK_API_KEY){
-      for (let attempt = 1; attempt <= 2; attempt++){
-        try {
-          const r = await fetch('https://api.deepseek.com/chat/completions', {
-            method:'POST',
-            headers:{'Authorization': 'Bearer ' + process.env.DEEPSEEK_API_KEY, 'Content-Type':'application/json'},
-            body: JSON.stringify({ model:'deepseek-chat', messages, max_tokens: maxTokens || 4000, temperature:0.5, response_format:{type:'json_object'} }),
-            signal: AbortSignal.timeout(120000)
-          });
-          if (r.ok){
-            const d = await r.json();
-            const text = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-            if (text){ console.log('[AI] DeepSeek OK'); return repairJSON(text); }
-          }
-        } catch(e){ if (attempt < 2) await sleep(3000); }
-      }
-    }
-    throw new Error('Все AI-провайдеры недоступны');
-  });
-}
-
-async function aiChatText(systemPrompt, userPrompt, maxTokens, opts){
-  // opts.priority: interactive requests (chat) skip the background queue
-  const runner = (opts && opts.priority) ? function(f){ return f(); } : withAiLock;
-  return runner(async function(){
-    const messages = [
-      { role:'system', content: systemPrompt },
-      { role:'user', content: userPrompt }
-    ];
-    // 1. GROQ
-    if (process.env.GROQ_API_KEY){
-      let rateLimited = false;
-      for (const model of GROQ_MODELS){
-        try {
-          const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method:'POST',
-            headers:{'Authorization': 'Bearer ' + process.env.GROQ_API_KEY, 'Content-Type':'application/json'},
-            body: JSON.stringify({ model, messages, max_tokens: maxTokens || 2000, temperature: 0.5 }),
-            signal: AbortSignal.timeout(45000)
-          });
-          if (r.ok){
-            const d = await r.json();
-            const text = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-            if (text){ console.log('[AI] Groq OK (' + model + ')'); return text; }
-          }
-          if (r.status === 429){ rateLimited = true; console.log('[AI] Groq 429 (' + model + ')'); break; }
-          console.log('[AI] Groq HTTP ' + r.status);
-        } catch(e){ console.log('[AI] Groq error: ' + e.message); }
-      }
-      if (rateLimited) console.log('[AI] Groq rate-limited → Gemini');
-    } else {
-      console.log('[AI] Groq — нет ключа');
-    }
-
-    // 2. GEMINI
-    if (process.env.GEMINI_API_KEY){
-      try {
-        const g = await geminiChatText(systemPrompt, userPrompt, maxTokens);
-        if (g){ console.log('[AI] Gemini OK'); return g; }
-        console.log('[AI] Gemini вернул пусто');
-      } catch(e){ console.log('[AI] Gemini error: ' + e.message); }
-    } else {
-      console.log('[AI] Gemini — нет ключа');
-    }
-
-    // 3. DEEPSEEK
-    if (process.env.DEEPSEEK_API_KEY){
-      try {
-        const r = await fetch('https://api.deepseek.com/chat/completions', {
-          method:'POST',
-          headers:{'Authorization': 'Bearer ' + process.env.DEEPSEEK_API_KEY, 'Content-Type':'application/json'},
-          body: JSON.stringify({ model:'deepseek-chat', messages, max_tokens: maxTokens || 2000, temperature:0.5 }),
-          signal: AbortSignal.timeout(60000)
-        });
-        if (r.ok){
-          const d = await r.json();
-          const text = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-          if (text){ console.log('[AI] DeepSeek OK'); return text; }
-        }
-        console.log('[AI] DeepSeek HTTP ' + r.status);
-      } catch(e){ console.log('[AI] DeepSeek error: ' + e.message); }
-    } else {
-      console.log('[AI] DeepSeek — нет ключа');
-    }
-
-    throw new Error('Все AI-провайдеры недоступны');
-  });
-}
-
-
-// ========== Streaming chat (Server-Sent Events) ==========
-async function streamOpenAICompat(url, key, body, onDelta, timeoutMs){
-  const r = await fetch(url, {
-    method:'POST',
-    headers:{'Authorization':'Bearer ' + key, 'Content-Type':'application/json'},
-    body: JSON.stringify(Object.assign({}, body, { stream:true })),
-    signal: AbortSignal.timeout(timeoutMs || 60000)
-  });
-  if (!r.ok){
-    const t = await r.text().catch(function(){ return ''; });
-    const e = new Error('HTTP ' + r.status + ' ' + t.slice(0, 200)); e.status = r.status; e.body = t; throw e;
-  }
-  const reader = r.body.getReader();
-  const dec = new TextDecoder();
-  let buf = '', total = '';
-  for (;;){
-    const chunk = await reader.read();
-    if (chunk.done) break;
-    buf += dec.decode(chunk.value, { stream:true });
-    let i;
-    while ((i = buf.indexOf('\n')) >= 0){
-      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
-      if (line.indexOf('data:') !== 0) continue;
-      const p = line.slice(5).trim();
-      if (p === '[DONE]') return total;
-      try {
-        const j = JSON.parse(p);
-        const d = j.choices && j.choices[0] && j.choices[0].delta;
-        const t = d && d.content;
-        if (t){ total += t; onDelta(t); }
-      } catch(e){}
-    }
-  }
-  return total;
-}
-
-/** Streams an answer. Order: Groq (fast, low reasoning effort) -> DeepSeek -> Gemini (no streaming, sent as one piece). */
-async function aiStreamChat(messages, onDelta){
-  if (process.env.GROQ_API_KEY){
-    for (const model of ['openai/gpt-oss-20b', 'openai/gpt-oss-120b']){
-      for (const withEffort of [true, false]){
-        try {
-          const body = { model, messages, max_tokens: 1500, temperature: 0.5 };
-          if (withEffort) body.reasoning_effort = 'low';
-          const t = await streamOpenAICompat('https://api.groq.com/openai/v1/chat/completions', process.env.GROQ_API_KEY, body, onDelta, 45000);
-          if (t) return t;
-        } catch(e){
-          if (e.status === 429){ console.log('[AI-stream] Groq 429 (' + model + ')'); break; }
-          if (withEffort && /reasoning/i.test(e.body || e.message)) continue;
-          console.log('[AI-stream] Groq ' + model + ': ' + e.message.slice(0, 120));
-          break;
-        }
-      }
-    }
-  }
-  if (process.env.DEEPSEEK_API_KEY){
-    try {
-      const t = await streamOpenAICompat('https://api.deepseek.com/chat/completions', process.env.DEEPSEEK_API_KEY, { model:'deepseek-chat', messages, max_tokens: 1500, temperature: 0.5 }, onDelta, 60000);
-      if (t) return t;
-    } catch(e){ console.log('[AI-stream] DeepSeek: ' + e.message.slice(0, 120)); }
-  }
-  if (process.env.GEMINI_API_KEY){
-    const sys = messages.filter(function(m){ return m.role === 'system'; }).map(function(m){ return m.content; }).join('\n');
-    const usr = messages.filter(function(m){ return m.role !== 'system'; }).map(function(m){ return (m.role === 'assistant' ? 'Assistant: ' : 'User: ') + m.content; }).join('\n');
-    const g = await geminiChatText(sys, usr, 1500);
-    if (g){ onDelta(g); return g; }
-  }
-  throw new Error('AI is unavailable');
-}
-
-function preprocessForTts(text, lang){
-  let t = String(text || '');
-  t = t.replace(/\$\s*(\d[\d.,]*)\s*[-–—]\s*\$?\s*(\d[\d.,]*)/g, '$1-$2 долларов');
-  t = t.replace(/(\d[\d.,]*)\s*[-–—]\s*(\d[\d.,]*)\s*\$/g, '$1-$2 долларов');
-  t = t.replace(/\$\s*(\d[\d.,]*)/g, '$1 долларов');
-  t = t.replace(/(\d[\d.,]*)\s*\$/g, '$1 долларов');
-  t = t.replace(/(\d[\d.,]*)\s*₽/g, '$1 рублей');
-  t = t.replace(/₽\s*(\d[\d.,]*)/g, '$1 рублей');
-  t = t.replace(/(\d[\d.,]*)\s*€/g, '$1 евро');
-  t = t.replace(/€\s*(\d[\d.,]*)/g, '$1 евро');
-  t = t.replace(/(\d[\d.,]*)\s*¥/g, '$1 юаней');
-  t = t.replace(/(\d[\d.,]*)\s*%/g, '$1 процентов');
-  if (lang === 'ru') t = t.replace(/(\d)\.(\d)/g, '$1,$2');
-  if (lang === 'ru'){
-    t = t.replace(/(^|[^А-Яа-яЁёA-Za-z])ТН ВЭД([^А-Яа-яЁёA-Za-z]|$)/g, '$1тэ-эн вэ-э-дэ$2');
-    t = t.replace(/(^|[^А-Яа-яЁёA-Za-z])НПЗ([^А-Яа-яЁёA-Za-z]|$)/g, '$1эн-пэ-зэ$2');
-    t = t.replace(/(^|[^А-Яа-яЁёA-Za-z])Ж\/Д([^А-Яа-яЁёA-Za-z]|$)/g, '$1жэ-дэ$2');
-    t = t.replace(/(^|[^А-Яа-яЁёA-Za-z])ЖД([^А-Яа-яЁёA-Za-z]|$)/g, '$1жэ-дэ$2');
-    t = t.replace(/(^|[^А-Яа-яЁёA-Za-z])ВЭД([^А-Яа-яЁёA-Za-z]|$)/g, '$1вэ-э-дэ$2');
-    t = t.replace(/(^|[^А-Яа-яЁёA-Za-z])ФТС([^А-Яа-яЁёA-Za-z]|$)/g, '$1эф-тэ-эс$2');
-    t = t.replace(/(^|[^А-Яа-яЁёA-Za-z])ЕАЭС([^А-Яа-яЁёA-Za-z]|$)/g, '$1е-а-е-эс$2');
-    t = t.replace(/(^|[^А-Яа-яЁёA-Za-z])КП([^А-Яа-яЁёA-Za-z]|$)/g, '$1ка-пэ$2');
-  }
-  t = t.replace(/[▪•●◆■]/g, ', ');
-  t = t.replace(/[#*`>_]+/g, ' ');
-  t = t.replace(/\s*[—–]\s*/g, ', ');
-  t = t.replace(/\s+/g, ' ').trim();
-  return t;
-}
-
-function runEdgeTts(text, voice, out){
-  return new Promise(function(resolve, reject){
-    execFile('python3', ['-m','edge_tts','--voice',voice,'--rate=-5%','--text',text,'--write-media',out],
-      { timeout: 90000, maxBuffer: 10*1024*1024 },
-      function(err, so, se){
-        if (err) return reject(new Error((se||err.message).slice(0,200)));
-        resolve(out);
-      });
-  });
-}
-
-// ========== КЭШ АУДИО (для Edge TTS) ==========
-const AUDIO_CACHE_DIR = require('path').join(ROOT, 'data', 'audio-cache');
-try { require('fs').mkdirSync(AUDIO_CACHE_DIR, { recursive: true }); } catch(e){}
-
-function audioKey(text, voice){
-  return require('crypto').createHash('md5')
-    .update(String(voice) + '||' + String(text))
-    .digest('hex');
-}
-
-function getCachedAudio(key){
-  try {
-    const file = require('path').join(AUDIO_CACHE_DIR, key + '.mp3');
-    if (!require('fs').existsSync(file)) return null;
-    return require('fs').readFileSync(file);
-  } catch(e){ return null; }
-}
-
-function setCachedAudio(key, buffer){
-  try {
-    if (!buffer || !buffer.length) return;
-    const file = require('path').join(AUDIO_CACHE_DIR, key + '.mp3');
-    require('fs').writeFileSync(file, buffer);
-  } catch(e){ console.warn('[audio-cache] save:', e.message); }
-}
-
-async function synthesizeEdge(text, lang){
-  const voice = EDGE_VOICES[lang] || EDGE_VOICES.ru;
-  const clean = preprocessForTts(text, lang);
-  const ck = audioKey(clean, voice);
-  const cached = getCachedAudio(ck);
-  if (cached){
-    console.log('[edge-tts] CACHE HIT (' + cached.length + ' bytes)');
-    return cached;
-  }
-  const MAX = 2000;
-  const parts = [];
-  let rest = clean;
-  while (rest.length > 0){
-    let cut = Math.min(MAX, rest.length);
-    if (cut < rest.length){
-      const end = Math.max(rest.lastIndexOf('. ', cut), rest.lastIndexOf('? ', cut), rest.lastIndexOf('! ', cut));
-      if (end > MAX*0.4) cut = end+1;
-    }
-    parts.push(rest.slice(0,cut).trim());
-    rest = rest.slice(cut).trim();
-    if (parts.length > 25) break;
-  }
-  console.log('[edge-tts] voice=' + voice + ' parts=' + parts.length + ' (parallel x2)');
-  const buffers = new Array(parts.length);
-  const CONCURRENCY = 4;
-  for (let i = 0; i < parts.length; i += CONCURRENCY){
-    const promises = [];
-    for (let j = i; j < Math.min(i + CONCURRENCY, parts.length); j++){
-      promises.push((async function(idx){
-        const tmp = path.join(os.tmpdir(), 'edge-tts-' + crypto.randomBytes(6).toString('hex') + '.mp3');
-        try {
-          await runEdgeTts(parts[idx], voice, tmp);
-          buffers[idx] = fs.readFileSync(tmp);
-        } finally {
-          try { fs.unlinkSync(tmp); } catch(e){}
-        }
-      })(j));
-    }
-    await Promise.all(promises);
-  }
-  const result = Buffer.concat(buffers.filter(Boolean));
-  setCachedAudio(ck, result);
-  return result;
-}
-
-// ============ NEWS ============
-const newsCache = { at: 0, items: [], translations: {} };
-const NEWS_CACHE_FILE = path.join(DATA_DIR, 'news-cache.json');
-
-function loadNewsCacheFromDisk(){
-  try {
-    if (!fs.existsSync(NEWS_CACHE_FILE)) return;
-    const d = JSON.parse(fs.readFileSync(NEWS_CACHE_FILE, 'utf8'));
-    if (d && Array.isArray(d.items)) {
-      newsCache.at = d.at || 0;
-      newsCache.items = d.items;
-      newsCache.translations = d.translations || {};
-      console.log('[news-cache] загружено с диска: items=' + d.items.length + ', переводов=' + Object.keys(newsCache.translations).length);
-    }
-  } catch(e){ console.warn('[news-cache] load error: ' + e.message); }
-}
-function saveNewsCacheToDisk(){
-  try {
-    fs.mkdirSync(DATA_DIR, {recursive:true});
-    fs.writeFileSync(NEWS_CACHE_FILE, JSON.stringify(newsCache), 'utf8');
-  } catch(e){ console.warn('[news-cache] save error: ' + e.message); }
-}
-loadNewsCacheFromDisk();
-
-function stripSource(t){
-  let x = String(t||'').trim();
-  x = x.replace(/\s+[-–—]\s+[A-Za-zА-Яа-яЁё][\w\.\-]*\.(?:ru|ua|com|net|kz|by|org|info|biz|io|cn|tv|uz|kg|am|az|ge|md)(?:\.[a-z]{2})?\s*$/i,'');
-  x = x.replace(/\s+[-–—]\s+[A-Z][a-zA-Z]+(?:[\s\-][A-Z][a-zA-Z]+){0,2}\s*$/i,'');
-  x = x.replace(/\s+[-–—]\s+[А-ЯЁ][а-яё]+(?:[\s\-][А-ЯЁ][а-яё]+){0,2}\s*$/i,'');
-  return x.trim();
-}
-function xmlUnescape(s){
-  return String(s||'').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1')
-    .replace(/&#(\d+);/g,function(_,n){return String.fromCodePoint(Number(n))})
-    .replace(/&#x([0-9a-f]+);/gi,function(_,n){return String.fromCodePoint(parseInt(n,16))})
-    .replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'")
-    .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\s+/g,' ').trim();
-}
-async function fetchRss(url, source){
-  try {
-    const r = await fetch(url, { headers:{'User-Agent':'Mozilla/5.0 Chrome/120'}, signal: AbortSignal.timeout(12000) });
-    if (!r.ok) return [];
-    const xml = await r.text();
-    const blocks = xml.match(/<item[\s\S]*?<\/item>/gi) || [];
-    const out = [];
-    for (const b of blocks.slice(0,30)){
-      const t = xmlUnescape((b.match(/<title[^>]*>([\s\S]*?)<\/title>/i)||[])[1]||'');
-      const l = xmlUnescape((b.match(/<link[^>]*>([\s\S]*?)<\/link>/i)||[])[1]||'').trim();
-      const d = xmlUnescape((b.match(/<description[^>]*>([\s\S]*?)<\/description>/i)||[])[1]||'');
-      const p = (b.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/i)||[])[1]||'';
-      if (!t) continue;
-      const dt = Date.parse(p);
-      out.push({ title: t, link: l, date: Number.isFinite(dt)?new Date(dt).toISOString():new Date().toISOString(), source, description: d.slice(0,400) });
-    }
-    return out;
-  } catch(e){ return []; }
-}
-function isUrgent(t){ return /(обязательн|запрет|пошлин|таможенн|маркиров|лиценз|санкц|mandatory|ban|duty|tariff|customs|sanction)/i.test(String(t||'')); }
-let newsRefreshing = null;
-async function fetchNews(){
-  if (newsRefreshing) return newsRefreshing;
-  newsRefreshing = (async function(){
-    let items = [];
-    try { items = await feeds.fetchAllNews(function(m){ console.log(m); }); } catch(e){ console.warn('[news] fetch failed: ' + e.message); }
-    if (!items.length){ return newsCache.items; } // never replace a good list with an empty one
-    const same = newsCache.items.length === items.length && newsCache.items.every(function(x, i){ return x.link === items[i].link; });
-    newsCache.at = Date.now();
-    newsCache.items = items;
-    if (!same) newsCache.translations = {};
-    saveNewsCacheToDisk();
-    warmNewsTranslations().catch(function(e){ console.warn('[news-warm] ' + e.message); });
-    warmOriginals(items.slice(0, 12)).catch(function(){});
-    return items;
-  })().finally(function(){ newsRefreshing = null; });
-  return newsRefreshing;
-}
-
-async function warmNewsTranslations(){
-  if (!newsCache.items.length) return;
-  console.log('[news-warm] старт прогрева переводов...');
-  for (const lg of ['en','zh','tr']){
-    try {
-      if (newsCache.translations && newsCache.translations[lg]) { console.log('[news-warm] ' + lg + ' уже есть'); continue; }
-      await translateNewsItems(newsCache.items, lg);
-      await sleep(1500);
-    } catch(e){ console.warn('[news-warm] ' + lg + ' fail: ' + e.message); }
-  }
-  console.log('[news-warm] готово');
-}
-
-// ============ Article ============
-// ========== Дисковый кэш статей ==========
-const ARTICLE_CACHE_DIR = path.join(DATA_DIR, 'articles-cache');
-try { fs.mkdirSync(ARTICLE_CACHE_DIR, { recursive: true }); } catch(e){}
-
-function articleKey(title, lang){
-  const norm = String(title||'').toLowerCase().replace(/[^a-zа-яё0-9]+/gi, '').slice(0, 100);
-  return crypto.createHash('md5').update(norm + '::' + lang).digest('hex');
-}
-function articleCachePath(title, lang){
-  return path.join(ARTICLE_CACHE_DIR, articleKey(title, lang) + '.json');
-}
-function getCachedArticle(title, lang){
-  try {
-    const file = articleCachePath(title, lang);
-    if (!fs.existsSync(file)) return null;
-    const st = fs.statSync(file);
-    // Кэш живёт 7 дней
-    if (Date.now() - st.mtimeMs > 7*24*60*60*1000) return null;
-    const d = JSON.parse(fs.readFileSync(file, 'utf8'));
-    return d.article || null;
-  } catch(e){ return null; }
-}
-function saveCachedArticle(title, lang, article){
-  try {
-    const file = articleCachePath(title, lang);
-    fs.writeFileSync(file, JSON.stringify({ title, lang, article, cachedAt: new Date().toISOString() }, null, 2), 'utf8');
-  } catch(e){ console.warn('[article-cache] save error:', e.message); }
-}
-function countCachedArticles(){
-  try { return fs.readdirSync(ARTICLE_CACHE_DIR).filter(function(f){ return f.endsWith('.json'); }).length; } catch(e){ return 0; }
-}
-console.log('[article-cache] dir=' + ARTICLE_CACHE_DIR + ' files=' + countCachedArticles());
-
-// ========== Загрузка полного текста статьи с источника ==========
-async function fetchFullArticle(url){
-  if (!/^https?:\/\//i.test(url)) return null;
-  try {
-    const r = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36' },
-      signal: AbortSignal.timeout(12000)
-    });
-    if (!r.ok) return null;
-    let html = await r.text();
-
-    // og:image
-    let image = '';
-    let m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
-         || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-    if (m) image = m[1];
-
-    // og:title
-    let title = '';
-    m = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)
-      || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-    if (m) title = m[1].replace(/<[^>]+>/g, '').trim();
-
-    // og:description
-    let desc = '';
-    m = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i)
-      || html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i);
-    if (m) desc = m[1];
-
-    // Убираем мусор
-    html = html.replace(/<script[\s\S]*?<\/script>/gi, ' ')
-               .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-               .replace(/<nav[\s\S]*?<\/nav>/gi, ' ')
-               .replace(/<footer[\s\S]*?<\/footer>/gi, ' ')
-               .replace(/<aside[\s\S]*?<\/aside>/gi, ' ')
-               .replace(/<header[\s\S]*?<\/header>/gi, ' ')
-               .replace(/<form[\s\S]*?<\/form>/gi, ' ')
-               .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
-               .replace(/<!--[\s\S]*?-->/g, ' ');
-
-    // Основной контент: article / main / body
-    let content = '';
-    let mA = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
-    if (mA) content = mA[1];
-    else {
-      let mM = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
-      if (mM) content = mM[1];
-      else content = html;
-    }
-
-    // Параграфы
-    const paras = content.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) || [];
-    const clean = [];
-    for (let pi = 0; pi < paras.length; pi++){
-      let t = paras[pi].replace(/<[^>]+>/g, ' ')
-        .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'").replace(/&laquo;/g, '«').replace(/&raquo;/g, '»')
-        .replace(/&mdash;/g, '—').replace(/&ndash;/g, '–').replace(/&hellip;/g, '…')
-        .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-        .replace(/\s+/g, ' ').trim();
-      if (t.length > 60) clean.push(t);
-    }
-
-    if (clean.length < 3) return null;
-
-    return {
-      title: title,
-      description: desc,
-      image: image,
-      content: clean.join('\n\n'),
-      sourceUrl: url,
-      paragraphs: clean.length
-    };
-  } catch(e){
-    console.warn('[full-article] ' + e.message);
-    return null;
-  }
-}
-
-async function fetchArticleSource(url){
-  if (!/^https?:\/\//i.test(url)) return '';
-  try {
-    const r = await fetch(url, { headers:{'User-Agent':'Mozilla/5.0'}, signal: AbortSignal.timeout(7000) });
-    if (!r.ok) return '';
-    const html = await r.text();
-    return html.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,18000);
-  } catch(e){ return ''; }
-}
-function buildTemplate(title, description, source, sourceText){
-  const parts = ['## Что произошло','', description || ('Новость из источника ' + source + '.'), '',
-    '## Что это значит для логистики','',
-    'Изменения в международной логистике требуют повышенного внимания к документам, срокам и структуре затрат. Проверьте базис поставки, маршрут и применимые таможенные нормы.', '',
-    '## Что проверить','',
-    '- Базис поставки (Incoterms)',
-    '- Код ТН ВЭД и применяемая пошлина',
-    '- Разрешительные документы и маркировка',
-    '- Даты вступления изменений в силу', '',
-    '## Источник','', 'Новость от ' + source + '.'];
-  return { title, subtitle: description.slice(0,180), content: parts.join('\n'), podcast: description || '' };
-}
-async function fetchPexelsImage(q){
-  const key = process.env.PEXELS_API_KEY;
-  if (!key) return null;
-  try {
-    const r = await fetch('https://api.pexels.com/v1/search?query=' + encodeURIComponent(q) + '&per_page=5&orientation=landscape', { headers:{'Authorization': key}, signal: AbortSignal.timeout(8000) });
-    if (r.ok){ const d = await r.json(); if (d.photos && d.photos.length){ const p = d.photos[Math.floor(Math.random()*d.photos.length)]; return p.src && (p.src.large || p.src.medium) || null; } }
-  } catch(e){}
-  return null;
-}
-function defaultImgQuery(title){
-  const t = String(title||'').toLowerCase();
-  // Хэш от title -> стабильный выбор варианта (но разный для разных новостей)
-  const h = crypto.createHash('md5').update(t).digest('hex');
-  const n = parseInt(h.slice(0, 8), 16);
-  const pick = function(arr){ return arr[n % arr.length]; };
-  if (/таможен|пошлин|декларац|фтс|еэк|вэд|тн.?вэд|сертифик/.test(t)) return pick(['customs documents','customs clearance','border checkpoint','trade documents','customs inspection']);
-  if (/маркиров|честный знак/.test(t)) return pick(['product marking','barcode scanner','qr code label','warehouse label']);
-  if (/нефт|газ|barrel|oil|tanker/.test(t)) return pick(['oil tanker ship','oil refinery','oil pipeline','fuel tanker truck']);
-  if (/железнодорож|жд|rail|поезд/.test(t)) return pick(['freight train railway','cargo train station','railway containers','train tracks']);
-  if (/мор|порт|судно|контейнер|ship|port|container/.test(t)) return pick(['container ship port','cargo ship sea','port terminal crane','shipping containers']);
-  if (/авиа|самолёт|air|flight|cargo plane/.test(t)) return pick(['cargo airplane','airport cargo terminal','air freight loading','cargo plane loading']);
-  if (/грузовик|авто|truck|road/.test(t)) return pick(['cargo truck highway','semi trailer road','truck fleet logistics','truck loading dock']);
-  if (/китай|china/.test(t)) return pick(['china logistics warehouse','shanghai port','china factory export','china cargo terminal']);
-  if (/индия|india/.test(t)) return pick(['india port logistics','india container terminal','mumbai port','india cargo ship']);
-  if (/корея|korea|япония|japan/.test(t)) return pick(['asia port city','korea cargo port','japan container terminal','asia shipping']);
-  if (/склад|warehouse|логист/.test(t)) return pick(['warehouse logistics','distribution center','fulfillment center','cargo storage racks','pallet warehouse','forklift warehouse']);
-  if (/автомобил|машин|car/.test(t)) return pick(['car transport ship','car carrier trailer','auto logistics port','vehicle loading']);
-  if (/рыба|fish|сельхоз|agro|food/.test(t)) return pick(['food cargo shipping','refrigerated container','cold chain logistics','food export']);
-  if (/импорт|экспорт|import|export/.test(t)) return pick(['cargo shipping logistics','export containers port','import logistics warehouse','trade cargo']);
-  if (/дрон|беспилот|drone|uav/.test(t)) return pick(['delivery drone','drone logistics','cargo drone flight','uav delivery']);
-  if (/мебел|furniture/.test(t)) return pick(['furniture warehouse','wooden furniture crates','furniture export','furniture shop warehouse']);
-  return pick(['cargo logistics','freight transport','global shipping','logistics network','supply chain']);
-}
-
-// ============ ROUTES ============
-// Пустая favicon — убирает 404 из консоли
-app.get('/favicon.ico', function(req,res){
-  res.status(204).end();
-});
-
-app.get('/', function(req,res){ res.sendFile(path.join(ROOT,'index.html')); });
-app.get('/app.js', function(req,res){ res.sendFile(path.join(ROOT,'app.js')); });
-app.get('/styles.css', function(req,res){ res.sendFile(path.join(ROOT,'styles.css')); });
-app.get('/cabinet.css', function(req,res){ res.sendFile(path.join(ROOT,'cabinet.css')); });
-app.get('/cabinet.js',  function(req,res){ res.sendFile(path.join(ROOT,'cabinet.js')); });
-app.get('/fix_views.js', function(req,res){ res.sendFile(path.join(ROOT,'fix_views.js')); });
-app.get('/fix_app.js', function(req,res){ res.sendFile(path.join(ROOT,'fix_app.js')); });
-app.get('/api/health', function(req,res){ res.json({ ok:true }); });
-app.get('/api/version', function(req,res){ res.json({ ok:true, version:'98', build:'IOMASTAVKA_FILE_80' }); });
-app.get('/api/config', function(req,res){ res.json({ weatherConfigured: Boolean(process.env.OPENWEATHER_API_KEY), aiConfigured: Boolean(process.env.GROQ_API_KEY || process.env.DEEPSEEK_API_KEY), pexelsConfigured: Boolean(process.env.PEXELS_API_KEY) }); });
-
-// ========== Дорожное расстояние через OSRM + Nominatim ==========
-const LOCAL_CITY_COORDS = {
-  'пекин':[39.9042,116.4074],'beijing':[39.9042,116.4074],
-  'шанхай':[31.2304,121.4737],'shanghai':[31.2304,121.4737],
-  'гуанчжоу':[23.1291,113.2644],'guangzhou':[23.1291,113.2644],
-  'шэньчжэнь':[22.5431,114.0579],'shenzhen':[22.5431,114.0579],
-  'нинбо':[29.8683,121.5440],'ningbo':[29.8683,121.5440],
-  'иу':[29.3068,120.0749],'yiwu':[29.3068,120.0749],
-  'циндао':[36.0671,120.3826],'qingdao':[36.0671,120.3826],
-  'тяньцзинь':[39.3434,117.3616],'tianjin':[39.3434,117.3616],
-  'далянь':[38.9140,121.6147],'dalian':[38.9140,121.6147],
-  'шэньян':[41.8057,123.4315],'shenyang':[41.8057,123.4315],
-  'харбин':[45.8038,126.5349],'harbin':[45.8038,126.5349],
-  'сиань':[34.3416,108.9398],'xian':[34.3416,108.9398],
-  'чжэнчжоу':[34.7466,113.6254],'zhengzhou':[34.7466,113.6254],
-  'ухань':[30.5928,114.3055],'wuhan':[30.5928,114.3055],
-  'чэнду':[30.5728,104.0668],'chengdu':[30.5728,104.0668],
-  'чунцин':[29.4316,106.9123],'chongqing':[29.4316,106.9123],
-  'куньмин':[24.8801,102.8329],'kunming':[24.8801,102.8329],
-  'урумчи':[43.8256,87.6168],'urumqi':[43.8256,87.6168],
-  'москва':[55.7558,37.6173],'moscow':[55.7558,37.6173],
-  'санкт-петербург':[59.9311,30.3609],'saint petersburg':[59.9311,30.3609],'st petersburg':[59.9311,30.3609],
-  'владивосток':[43.1155,131.8855],'vladivostok':[43.1155,131.8855],
-  'находка':[42.8333,132.8833],'nakhodka':[42.8333,132.8833],
-  'новосибирск':[55.0084,82.9357],'novosibirsk':[55.0084,82.9357],
-  'екатеринбург':[56.8389,60.6057],'yekaterinburg':[56.8389,60.6057],
-  'казань':[55.7879,49.1233],'kazan':[55.7879,49.1233],
-  'краснодар':[45.0355,38.9753],'krasnodar':[45.0355,38.9753],
-  'ростов-на-дону':[47.2225,39.7188],'rostov-on-don':[47.2225,39.7188],
-  'хабаровск':[48.4827,135.0838],'khabarovsk':[48.4827,135.0838],
-  'омск':[54.9885,73.3242],'omsk':[54.9885,73.3242],
-  'самара':[53.2001,50.1500],'samara':[53.2001,50.1500],
-  'уфа':[54.7388,55.9721],'ufa':[54.7388,55.9721],
-  'челябинск':[55.1644,61.4368],'chelyabinsk':[55.1644,61.4368],
-  'пермь':[58.0105,56.2502],'perm':[58.0105,56.2502],
-  'тюмень':[57.1522,65.5272],'tyumen':[57.1522,65.5272]
-};
-
-function normalizeCityKeyServer(s){
-  return String(s||'').toLowerCase().trim().replace(/ё/g,'е').replace(/[^a-zа-я0-9 -]/gi,'');
-}
-
-async function geocodeCityServer(name){
-  const key = normalizeCityKeyServer(name);
-  if (LOCAL_CITY_COORDS[key]) return LOCAL_CITY_COORDS[key];
-  try {
-    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=ru,en&q=' + encodeURIComponent(name);
-    const r = await fetch(url, {
-      headers: { 'User-Agent': 'iomastavka-logistics/1.0 (contact@iomastavka.onrender.com)' },
-      signal: AbortSignal.timeout(8000)
-    });
-    if (!r.ok) return null;
-    const d = await r.json();
-    if (!Array.isArray(d) || !d.length) return null;
-    return [parseFloat(d[0].lat), parseFloat(d[0].lon)];
-  } catch(e){ return null; }
-}
-
-function haversineKmServer(a, b){
-  const R=6371, rad=x=>x*Math.PI/180;
-  const dLat=rad(b[0]-a[0]), dLon=rad(b[1]-a[1]);
-  const q=Math.sin(dLat/2)**2+Math.cos(rad(a[0]))*Math.cos(rad(b[0]))*Math.sin(dLon/2)**2;
-  return 2*R*Math.asin(Math.sqrt(q));
-}
-
-app.get('/api/route-distance', async function(req,res){
-  const from = String(req.query.from || '').trim();
-  const to = String(req.query.to || '').trim();
-  if (!from || !to) return res.status(400).json({ ok:false, error:'from/to required' });
-  try {
-    const [c1, c2] = await Promise.all([geocodeCityServer(from), geocodeCityServer(to)]);
-    if (!c1 || !c2) return res.status(404).json({ ok:false, error:'city not found', from:c1, to:c2 });
-    let roadKm = null;
-    try {
-      const url = 'https://router.project-osrm.org/route/v1/driving/' + c1[1] + ',' + c1[0] + ';' + c2[1] + ',' + c2[0] + '?overview=false&alternatives=false';
-      const r = await fetch(url, { signal: AbortSignal.timeout(15000) });
-      if (r.ok){
-        const d = await r.json();
-        if (d.routes && d.routes[0] && Number.isFinite(d.routes[0].distance)){
-          roadKm = Math.round(d.routes[0].distance / 1000);
-        }
-      }
-    } catch(e){ console.warn('[route] osrm: ' + e.message); }
-    const straightKm = Math.round(haversineKmServer(c1, c2));
-    const finalKm = roadKm || Math.round(straightKm * 1.25);
-    console.log('[route] ' + from + ' -> ' + to + ' = ' + finalKm + ' km (road=' + roadKm + ', straight=' + straightKm + ')');
-    res.json({ ok:true, distanceKm: finalKm, roadKm, straightKm, fromCoords:c1, toCoords:c2, source: roadKm ? 'osrm' : 'haversine' });
-  } catch(e){
-    console.error('[route] error:', e.message);
-    res.status(502).json({ ok:false, error:e.message });
-  }
-});
-
-app.get('/api/currency', async function(req,res){
-  try {
-    const r = await fetch('https://www.cbr-xml-daily.ru/daily_json.js', { signal: AbortSignal.timeout(8000) });
-    if (r.ok){
-      const data = await r.json(), items = {};
-      for (const c of ['USD','EUR','CNY']){ const x = data.Valute && data.Valute[c]; if (x && x.Value) items[c] = { nominal:x.Nominal||1, value:Number(x.Value) }; }
-      if (items.USD && items.EUR && items.CNY) return res.json({ ok:true, source:'cbr-xml-daily.ru', date: data.Date, items });
-    }
-    throw new Error('CBR');
-  } catch(e){ res.status(502).json({ ok:false, error:'CBR unavailable' }); }
-});
-
-// Historical CBR rate for a specific past date (calendar picker on the home page).
-app.get('/api/currency/history', async function(req,res){
-  const m = String(req.query.date || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return res.status(400).json({ ok:false, error:'date must be YYYY-MM-DD' });
-  const [, y, mo, d] = m;
-  const today = new Date(); today.setHours(0,0,0,0);
-  const asked = new Date(Number(y), Number(mo)-1, Number(d));
-  if (asked > today) return res.status(400).json({ ok:false, error:'date is in the future' });
-  try {
-    let url = 'https://www.cbr-xml-daily.ru/archive/' + y + '/' + mo + '/' + d + '/daily_json.js';
-    let r = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    // Weekends/holidays have no archive file — CBR publishes the last business day's rate; step back up to 5 days.
-    let tries = 0;
-    let probe = asked;
-    while (!r.ok && tries < 5){
-      probe = new Date(probe.getTime() - 86400000);
-      const py = probe.getFullYear(), pm = String(probe.getMonth()+1).padStart(2,'0'), pd = String(probe.getDate()).padStart(2,'0');
-      url = 'https://www.cbr-xml-daily.ru/archive/' + py + '/' + pm + '/' + pd + '/daily_json.js';
-      r = await fetch(url, { signal: AbortSignal.timeout(8000) });
-      tries++;
-    }
-    if (!r.ok) throw new Error('CBR archive HTTP ' + r.status);
-    const data = await r.json(), items = {};
-    for (const c of ['USD','EUR','CNY']){ const x = data.Valute && data.Valute[c]; if (x && x.Value) items[c] = { nominal:x.Nominal||1, value:Number(x.Value) }; }
-    if (!items.USD || !items.EUR || !items.CNY) throw new Error('incomplete data');
-    res.set('Cache-Control', 'public, max-age=86400');
-    res.json({ ok:true, source:'cbr-xml-daily.ru', requestedDate: req.query.date, date: data.Date, items });
-  } catch(e){ res.status(502).json({ ok:false, error:'CBR archive unavailable for that date' }); }
-});
-
-// ========== Weather (OpenWeather) — drives the animated background ==========
-// Погода через Open-Meteo (бесплатно, без ключа)
-const WMO_RU = {0:'Ясно',1:'Преимущественно ясно',2:'Переменная облачность',3:'Облачно',45:'Туман',48:'Изморозь',51:'Слабая морось',53:'Морось',55:'Сильная морось',56:'Ледяная морось',57:'Сильная ледяная морось',61:'Небольшой дождь',63:'Дождь',65:'Сильный дождь',66:'Ледяной дождь',67:'Сильный ледяной дождь',71:'Небольшой снег',73:'Снег',75:'Сильный снег',77:'Снежная крупа',80:'Небольшой ливень',81:'Ливень',82:'Сильный ливень',85:'Снегопад',86:'Сильный снегопад',95:'Гроза',96:'Гроза с градом',99:'Сильная гроза с градом'};
-const WEATHER_CACHE_MS = 10 * 60 * 1000;
-let weatherCache2 = { at: 0, data: null };
-app.get('/api/weather', async function(req,res){
-  try {
-    if (weatherCache2.data && Date.now() - weatherCache2.at < WEATHER_CACHE_MS){
-      res.set('Cache-Control', 'public, max-age=300');
-      return res.json(weatherCache2.data);
-    }
-    const lat = Number(req.query.lat) || 55.7558;
-    const lon = Number(req.query.lon) || 37.6173;
-    const city = String(req.query.city || 'Москва').slice(0, 40);
-    const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,weather_code,wind_speed_10m,apparent_temperature&timezone=Europe%2FMoscow';
-    const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
-    if (!r.ok) throw new Error('Open-Meteo HTTP ' + r.status);
-    const j = await r.json();
-    const cur = j.current || {};
-    const temp = Math.round(Number(cur.temperature_2m));
-    const feels = Math.round(Number(cur.apparent_temperature));
-    const code = Number(cur.weather_code);
-    const wind = Math.round(Number(cur.wind_speed_10m) * 10) / 10;
-    const desc = WMO_RU[code] || 'Ясно';
-    const result = {
-      ok: true,
-      city: city,
-      temp: temp,
-      feels: feels,
-      wind: wind,
-      code: code,
-      description: desc,
-      text: city + ', ' + (temp > 0 ? '+' : '') + temp + '°, ' + desc
-    };
-    weatherCache2 = { at: Date.now(), data: result };
-    console.log('[weather] ' + result.text);
-    res.set('Cache-Control', 'public, max-age=300');
-    res.json(result);
-  } catch(e){
-    console.warn('[weather] fail: ' + e.message);
-    if (weatherCache2.data) return res.json(weatherCache2.data);
-    res.status(502).json({ ok:false, error: e.message });
-  }
-});
-
-// ========== Перевод заголовков новостей ==========
-const newsTranslationCache = {};
-
-async function translateNewsItems(items, targetLang){
-  if (!items || !items.length || targetLang === 'ru') return items;
-  const langNames = { en:'English', zh:'Chinese', tr:'Turkish' };
-  const langName = langNames[targetLang] || 'English';
-  // 1. Дисковый кэш переводов
-  if (newsCache.translations && Array.isArray(newsCache.translations[targetLang]) &&
-      newsCache.translations[targetLang].length === items.length){
-    console.log('[news-translate] CACHE HIT (disk) ' + targetLang);
-    return newsCache.translations[targetLang];
-  }
-  // 2. Память-кэш
-  const titlesKey = items.slice(0, 30).map(function(x){ return String(x.title||'').slice(0,120); }).join('||');
-  const cacheKey = crypto.createHash('md5').update(targetLang + '::' + titlesKey).digest('hex');
-  const cached = newsTranslationCache[cacheKey];
-  if (cached && Date.now() - cached.at < 60*60*1000) {
-    console.log('[news-translate] CACHE HIT ' + targetLang);
-    if (!newsCache.translations) newsCache.translations = {};
-    newsCache.translations[targetLang] = cached.items;
-    saveNewsCacheToDisk();
-    return cached.items;
-  }
-
-  const BATCH = 12;
-  const translated = [];
-  for (let i = 0; i < items.length; i += BATCH){
-    const chunk = items.slice(i, i + BATCH);
-    const blockText = chunk.map(function(x, idx){
-      return (idx+1) + '. TITLE: ' + String(x.title||'').slice(0,200) + '\n   DESC: ' + String(x.description||'').slice(0,200);
-    }).join('\n');
-    const sys = 'You are a translator. Translate news titles and short descriptions into ' + langName + '. Output ONLY valid JSON.';
-    const usr = 'Translate the following ' + chunk.length + ' news items into ' + langName + '. Keep it short and natural. Return JSON: {"items":[{"title":"...","description":"..."}]} with exactly ' + chunk.length + ' items in the same order.\n\n' + blockText;
-    try {
-      const res = await aiChatJSON(sys, usr, 3500);
-      if (res && Array.isArray(res.items) && res.items.length === chunk.length){
-        for (let j = 0; j < chunk.length; j++){
-          translated.push(Object.assign({}, chunk[j], {
-            title: String(res.items[j].title || chunk[j].title || ''),
-            description: String(res.items[j].description || chunk[j].description || '')
-          }));
-        }
-      } else {
-        chunk.forEach(function(x){ translated.push(x); });
-      }
-    } catch(e){
-      console.warn('[news-translate] batch error: ' + e.message);
-      chunk.forEach(function(x){ translated.push(x); });
-    }
-    if (i + BATCH < items.length) await sleep(500);
-  }
-
-  newsTranslationCache[cacheKey] = { at: Date.now(), items: translated };
-  if (!newsCache.translations) newsCache.translations = {};
-  newsCache.translations[targetLang] = translated;
-  saveNewsCacheToDisk();
-  console.log('[news-translate] ' + targetLang + ' OK (' + translated.length + ' items) + saved to disk');
-  return translated;
-}
-
-app.get('/api/news', async function(req,res){
-  const targetLang = String(req.query.lang || 'ru').toLowerCase().slice(0,2);
-  try {
-    let items = newsCache.items;
-    if (!items.length) items = await fetchNews();
-    else if (Date.now() - newsCache.at > 30*60*1000) fetchNews().catch(function(){}); // stale-while-revalidate
-    if (targetLang && targetLang !== 'ru'){
-      try { items = await translateNewsItems(items, targetLang); }
-      catch(e){ console.warn('[news-translate] fail: ' + e.message); }
-    }
-    res.json({ ok:true, updatedAt:newsCache.at, lang: targetLang, items });
-  } catch(e){ res.status(502).json({ ok:false, items:[] }); }
-});
-
-const NEWS_IMAGE_CACHE_FILE = path.join(DATA_DIR, 'news-images.json');
-let newsImageCache = {};
-try { newsImageCache = JSON.parse(fs.readFileSync(NEWS_IMAGE_CACHE_FILE, 'utf8')); } catch(e){}
-function saveNewsImageCache(){
-  try { fs.mkdirSync(DATA_DIR, {recursive:true}); fs.writeFileSync(NEWS_IMAGE_CACHE_FILE, JSON.stringify(newsImageCache), 'utf8'); } catch(e){}
-}
-
-app.get('/api/news/image', async function(req,res){
-  const title = String(req.query.title || '').trim().slice(0, 200);
-  if (!title) return res.status(400).json({ ok:false });
-  const key = crypto.createHash('md5').update(title.toLowerCase()).digest('hex');
-  if (newsImageCache[key]) return res.json({ ok:true, image: newsImageCache[key], fromCache:true });
-  const query = defaultImgQuery(title);
-  const image = await fetchPexelsImage(query);
-  if (image){ newsImageCache[key] = image; saveNewsImageCache(); }
-  res.json({ ok:true, image: image || '', query });
-});
-
-// ========== OLLAMA (локальный AI) ==========
-async function ollamaChatText(systemPrompt, userPrompt, maxTokens, opts){
-  const url = 'http://localhost:11434/api/chat';
-  const model = process.env.OLLAMA_MODEL || 'qwen2.5:7b';
-  const body = {
-    model: model,
-    messages: [
-      { role: 'system', content: String(systemPrompt || '') },
-      { role: 'user',   content: String(userPrompt || '') }
-    ],
-    stream: false,
-    options: {
-      temperature: (opts && opts.temperature) != null ? opts.temperature : 0.5,
-      num_predict: maxTokens || 2000,
-      num_ctx: 16384
-    }
-  };
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout((opts && opts.timeoutMs) || 120000)
-  });
-  if (!r.ok) throw new Error('Ollama HTTP ' + r.status);
-  const d = await r.json();
-  const txt = (d && d.message && d.message.content) || '';
-  return String(txt).trim();
-}
-
-// ========== PLAYBOOK ДЛЯ АДМИН-АССИСТЕНТА ==========
-const PLAYBOOK_FILE = path.join(DATA_DIR, 'admin-playbook.json');
-function loadPlaybook(){
-  try { return JSON.parse(fs.readFileSync(PLAYBOOK_FILE, 'utf8')); }
-  catch(e){ return { version: 0, topics: [] }; }
-}
-
-app.get('/api/admin/playbook', requireAuth, function(req, res){
-  res.json(loadPlaybook());
-});
-
-app.get('/api/admin/playbook/search', requireAuth, function(req, res){
-  const q = String(req.query.q || '').toLowerCase().trim();
-  const pb = loadPlaybook();
-  if (!q) return res.json({ ok:true, topics: [] });
-  const hits = (pb.topics || []).map(function(t){
-    let score = 0;
-    const text = (t.title + ' ' + t.answer + ' ' + (t.keywords||[]).join(' ')).toLowerCase();
-    (t.keywords || []).forEach(function(k){ if (q.includes(String(k).toLowerCase())) score += 10; });
-    if (text.includes(q)) score += 5;
-    const words = q.split(/\\s+/).filter(function(w){ return w.length > 2; });
-    words.forEach(function(w){ if (text.includes(w)) score += 2; });
-    return Object.assign({}, t, { _score: score });
-  }).filter(function(t){ return t._score > 0; })
-    .sort(function(a,b){ return b._score - a._score; })
-    .slice(0, 5);
-  res.json({ ok:true, topics: hits });
-});
-
-app.post('/api/admin/playbook', requireAuth, function(req, res){
-  try {
-    const body = req.body || {};
-    const topic = {
-      id: 't_' + Date.now(),
-      title: String(body.title || '').slice(0, 200),
-      keywords: Array.isArray(body.keywords) ? body.keywords.slice(0, 20) : String(body.keywords||'').split(',').map(s => s.trim()).filter(Boolean),
-      answer: String(body.answer || '').slice(0, 5000)
-    };
-    if (!topic.title || !topic.answer) return res.status(400).json({ ok:false, error:'title and answer required' });
-    const pb = loadPlaybook();
-    pb.topics = pb.topics || [];
-    pb.topics.push(topic);
-    pb.updatedAt = new Date().toISOString();
-    fs.writeFileSync(PLAYBOOK_FILE, JSON.stringify(pb, null, 2));
-    res.json({ ok:true, topic });
-  } catch(e){ res.status(500).json({ ok:false, error: e.message }); }
-});
-
-app.post('/api/admin/assist', requireAuth, async function(req, res){
-  try {
-    const question = String((req.body && req.body.question) || '').slice(0, 2000);
-    if (!question) return res.status(400).json({ ok:false, error:'question required' });
-
-    const pb = loadPlaybook();
-    const q = question.toLowerCase();
-    const scored = (pb.topics || []).map(function(t){
-      let score = 0;
-      const text = (t.title + ' ' + t.answer + ' ' + (t.keywords||[]).join(' ')).toLowerCase();
-      (t.keywords || []).forEach(function(k){ if (q.includes(String(k).toLowerCase())) score += 10; });
-      const words = q.split(/\\s+/).filter(function(w){ return w.length > 2; });
-      words.forEach(function(w){ if (text.includes(w)) score += 3; });
-      return Object.assign({}, t, { _score: score });
-    }).sort(function(a,b){ return b._score - a._score; }).slice(0, 4);
-
-    const context = scored.map(function(t){ return '### ' + t.title + '\\n' + t.answer; }).join('\\n\\n');
-
-    const systemPrompt = [
-      'Ты — помощник менеджера логистической компании (Китай → Россия, работа под ключ).',
-      'Менеджер получает вопрос от клиента. Ты предлагаешь готовый ответ менеджера.',
-      '',
-      'СТИЛЬ: деловой, но тёплый, без канцелярита. Структурированный (списки, разбивка).',
-      'Всегда предупреждает про доп. расходы и курсовую разницу. Не давит, не спорит.',
-      '',
-      'ФОРМАТ: короткий ответ по сути → детали пунктами → открытый вопрос или следующий шаг.',
-      '',
-      'Используй ТОЛЬКО факты из контекста. Если чего-то нет — скажи «уточню и вернусь».',
-      'НЕ выдумывай цифры и сроки.',
-      '',
-      'КОНТЕКСТ:',
-      context || '(нет релевантных тем)'
-    ].join('\\n');
-
-    const userPrompt = 'Вопрос клиента:\n\n' + question + '\n\nНапиши ответ менеджера в его стиле. Коротко и по делу.';
-    let reply = '';
-    let provider = 'none';
-    const t0 = Date.now();
-
-    // IOMA_ASSIST_FALLBACK: Ollama первой (быстро, локально, без лимитов)
-    try {
-      reply = await ollamaChatText(systemPrompt, userPrompt, 900, { timeoutMs: 45000, temperature: 0.6 });
-      provider = 'ollama';
-      console.log('[assist] provider=' + provider + ' in ' + (Date.now()-t0) + 'ms');
-    } catch(eo){
-      console.warn('[assist] ollama fail (' + (Date.now()-t0) + 'ms): ' + eo.message);
-    }
-
-    // Облако: Groq → DeepSeek → Gemini (внутри aiChatText)
-    if (!reply || reply.length < 20){
-      try {
-        const t1 = Date.now();
-        reply = await aiChatText(systemPrompt, userPrompt, 900);
-        provider = 'cloud';
-        console.log('[assist] provider=' + provider + ' in ' + (Date.now()-t1) + 'ms');
-      } catch(ec){
-        console.warn('[assist] cloud fail: ' + ec.message);
-      }
-    }
-
-    // Если ни один не справился
-    if (!reply || reply.length < 20){
-      return res.status(502).json({ ok:false, error:'Все AI-провайдеры сейчас недоступны. Попробуйте через минуту.' });
-    }
-    console.log('[assist] final provider=' + provider + ', length=' + reply.length);
-
-    if (!reply) return res.status(502).json({ ok:false, error:'empty reply' });
-
-    res.json({ ok:true, question, reply, matchedTopics: scored.map(t => ({ title: t.title, id: t.id })) });
-  } catch(e){
-    console.warn('[assist] error: ' + e.message);
-    res.status(500).json({ ok:false, error: e.message });
-  }
-});
-
-// ========== РЕРАЙТ СТАТЬИ ==========
-const REWRITE_DIR = path.join(DATA_DIR, 'articles-rewrite');
-try { fs.mkdirSync(REWRITE_DIR, { recursive: true }); } catch(e){}
-const rewriteMem = new Map();
-function rewriteFile(id){ return path.join(REWRITE_DIR, String(id).replace(/[^a-z0-9]/gi,'') + '.json'); }
-function rewriteGet(id){
-  if (rewriteMem.has(id)) return rewriteMem.get(id);
-  try {
-    const f = rewriteFile(id), st = fs.statSync(f);
-    if (Date.now() - st.mtimeMs > 30*24*60*60*1000) return null;
-    const rec = JSON.parse(fs.readFileSync(f,'utf8'));
-    rewriteMem.set(id, rec); return rec;
-  } catch(e){ return null; }
-}
-function rewriteSave(rec){
-  rewriteMem.set(rec.id, rec);
-  if (rewriteMem.size > 500) rewriteMem.delete(rewriteMem.keys().next().value);
-  try { fs.writeFileSync(rewriteFile(rec.id), JSON.stringify(rec), 'utf8'); } catch(e){}
-}
-const REWRITE_PROMPT = [
-  'Ты — редактор новостного сайта по логистике и ВЭД. Тебе дают оригинал новостной статьи.',
-  '',
-  'Задача: переписать текст своими словами — это называется рерайт.',
-  '',
-  'ЖЁСТКИЕ ПРАВИЛА:',
-  '1. Сохрани ВСЕ факты, цифры, даты, названия компаний, имена, цитаты, номера законов и нормативных актов — без изменений.',
-  '2. НЕ добавляй ничего от себя: ни новых фактов, ни комментариев, ни выводов.',
-  '3. НЕ убирай смысловые блоки.',
-  '4. Меняй формулировки: слова на синонимы, структуру предложений, порядок слов. Стиль — деловой, но живой.',
-  '5. Убери из текста все ссылки в квадратных и круглых скобках, а также html-теги. Оставь только текст.',
-  '6. НЕ упоминай источник, сайт, автора — это сделают отдельно.',
-  '7. Форматируй в Markdown: абзацы через пустую строку, при необходимости списки и подзаголовки.',
-  '8. Отвечай ТОЛЬКО переработанным текстом, без преамбул.',
-  '',
-  'Начни.'
-].join('\n');
-
-app.post('/api/news/rewrite', async function(req, res){
-  try {
-    const id = String((req.body && req.body.id) || '').trim();
-    if (!id) return res.status(400).json({ ok:false, error:'id required' });
-
-    const cached = rewriteGet(id);
-    if (cached && cached.markdown) {
-      return res.json({ ok:true, cached:true, id,
-        title:cached.title, image:cached.image, source:cached.source,
-        publishedAt:cached.publishedAt, sourceUrl:cached.sourceUrl, markdown:cached.markdown });
-    }
-
-    const item = (newsCache.items || []).find(function(x){ return x.id === id; }) || findNewsItem({ id: id });
-    if (!item) return res.status(404).json({ ok:false, error:'news item not found' });
-
-    const rec = await loadOriginal(item);
-    const orig = (rec && rec.orig) || {};
-    const originalText = String(orig.markdown || '').trim();
-    if (!originalText) return res.status(500).json({ ok:false, error:'original text empty' });
-
-    const userPrompt = 'Оригинал статьи:\n\n' + originalText.slice(0, 12000);
-    let rewritten = '';
-    // 1) Локальный Ollama — быстро, бесплатно, без лимитов
-    try {
-      rewritten = await ollamaChatText(REWRITE_PROMPT, userPrompt, 2400, { timeoutMs: 120000 });
-      console.log('[rewrite] via Ollama OK, len=' + rewritten.length);
-    } catch(eo){
-      console.warn('[rewrite] Ollama fail: ' + eo.message + ' → пробую облако');
-      // 2) Облачные провайдеры (Groq → Gemini → DeepSeek)
-      try {
-        rewritten = await aiChatText(REWRITE_PROMPT, userPrompt, 2200);
-        console.log('[rewrite] via cloud OK, len=' + rewritten.length);
-      } catch(ec){
-        console.warn('[rewrite] cloud fail: ' + ec.message + ' → fallback на анонс');
-      }
-    }
-    rewritten = String(rewritten || '').trim();
-    // 3) Последний fallback: если AI не справился, отдаём анонс как есть
-    if (rewritten.length < 100){
-      const desc = String(orig.description || '').trim();
-      const md = String(orig.markdown || '').trim();
-      rewritten = desc.length > 80 ? desc : (md.slice(0, 800) || item.description || item.title || 'Текст недоступен');
-      console.warn('[rewrite] используется fallback-текст, len=' + rewritten.length);
-    }
-
-    // Чистим заголовок от суффикса «— Название сайта»
-    let cleanTitle = String(orig.title || item.title || '').trim();
-    cleanTitle = cleanTitle.replace(/\s*[-–—]\s*(Портал[^\n]*|Официальный сайт[^\n]*|Главная[^\n]*)$/i, '').trim();
-    cleanTitle = cleanTitle.replace(/\s*[-–—]\s*[^-–—]{0,80}$/, '').trim() || cleanTitle;
-
-    // Если нет оригинальной картинки — берём из Pexels по заголовку
-    let imageUrl = String(orig.image || '').trim();
-    if (!imageUrl && typeof fetchPexelsImage === 'function' && typeof defaultImgQuery === 'function'){
-      try {
-        imageUrl = await fetchPexelsImage(defaultImgQuery(cleanTitle)) || '';
-        console.log('[rewrite] Pexels image: ' + (imageUrl ? 'OK' : 'none'));
-      } catch(e){ console.warn('[rewrite] Pexels fail: ' + e.message); }
-    }
-
-    const record = {
-      id,
-      title: cleanTitle,
-      image: imageUrl,
-      source: orig.siteName || item.source || '',
-      publishedAt: orig.publishedAt || item.date || '',
-      sourceUrl: orig.sourceUrl || item.link || '',
-      markdown: rewritten,
-      at: Date.now()
-    };
-    rewriteSave(record);
-
-    res.json({ ok:true, cached:false, id:record.id, title:record.title, image:record.image,
-      source:record.source, publishedAt:record.publishedAt, sourceUrl:record.sourceUrl, markdown:record.markdown });
-  } catch(e){
-    console.warn('[rewrite] error: ' + e.message);
-    res.status(500).json({ ok:false, error: e.message });
-  }
-});
-
-// ========== Articles v2: the real text of the real article. Nothing is written by an AI. ==========
-// Only translation (into en/zh/tr) uses an AI, and it is cached + prepared in the background.
-const ART2_DIR = path.join(DATA_DIR, 'articles-v2');
-try { fs.mkdirSync(ART2_DIR, { recursive: true }); } catch(e){}
-const FULL_TEXT_ALL = /^(1|true|yes)$/i.test(String(process.env.NEWS_FULL_TEXT || ''));
-const art2Mem = new Map();      // id -> record (source of truth while the process lives)
-const art2Inflight = {};        // key -> Promise
-const art2Failed = {};          // id -> timestamp of last failed download
-
-function art2File(id){ return path.join(ART2_DIR, String(id).replace(/[^a-z0-9]/gi, '') + '.json'); }
-function art2Get(id){
-  if (art2Mem.has(id)) return art2Mem.get(id);
-  try {
-    const f = art2File(id), st = fs.statSync(f);
-    if (Date.now() - st.mtimeMs > 14*24*60*60*1000) return null;
-    const rec = JSON.parse(fs.readFileSync(f, 'utf8'));
-    art2Mem.set(id, rec);
-    return rec;
-  } catch(e){ return null; }
-}
-function art2Save(rec){
-  art2Mem.set(rec.id, rec);
-  if (art2Mem.size > 300) art2Mem.delete(art2Mem.keys().next().value);
-  try { fs.writeFileSync(art2File(rec.id), JSON.stringify(rec), 'utf8'); } catch(e){}
-}
-async function mapLimit(list, limit, fn){
-  const out = new Array(list.length); let next = 0;
-  async function worker(){ for (;;){ const i = next++; if (i >= list.length) return; out[i] = await fn(list[i], i); } }
-  await Promise.all(Array.from({ length: Math.min(limit, list.length) }, worker));
-  return out;
-}
-
-function findNewsItem(body){
-  const link = String(body.link || '').trim();
-  const id = String(body.id || '').trim();
-  let it = (newsCache.items || []).find(function(x){ return (id && x.id === id) || (link && x.link === link); });
-  if (it) return it;
-  const src = feeds.SOURCES.find(function(s){ return s.name === String(body.source || ''); });
-  return {
-    id: feeds.hash(link || body.title), title: stripSource(String(body.title || '')), link: link,
-    description: String(body.description || ''), source: String(body.source || ''), sourceId: src ? src.id : '',
-    kind: src ? src.kind : 'media', reuse: src ? src.reuse : 'excerpt', category: [], date: new Date().toISOString()
-  };
-}
-function reuseMode(item){ return (FULL_TEXT_ALL || item.reuse === 'full') ? 'full' : 'excerpt'; }
-
-async function loadOriginal(item){
-  const cached = art2Get(item.id);
-  if (cached && cached.orig && cached.orig.ok) return cached;
-  if (art2Failed[item.id] && Date.now() - art2Failed[item.id] < 3*60*1000 && cached) return cached;
-  const key = 'o' + item.id;
-  if (art2Inflight[key]) return art2Inflight[key];
-  const p = (async function(){
-    let url = item.link || '';
-    if (/news\.google\.com/i.test(url)) url = await feeds.resolveGoogleNewsUrl(url);
-    let orig = null;
-    if (url && /^https?:\/\//i.test(url)){
-      try {
-        const page = await feeds.getText(url, { timeout: 12000 });
-        const ex = extract.extractArticle(page.text, page.finalUrl || url);
-        if (ex && ex.paragraphs >= 2 && ex.chars > 300){
-          orig = { ok:true, title: ex.title || item.title, description: ex.description || '', markdown: ex.markdown, image: ex.image || '', siteName: ex.siteName || '', publishedAt: ex.publishedAt || item.date, sourceUrl: page.finalUrl || url, fetchedAt: Date.now() };
-        }
-      } catch(e){ console.warn('[article] download failed: ' + e.message + ' | ' + url.slice(0, 80)); }
-    }
-    // Fallback: Jina Reader — превращает любую страницу в markdown
-    if (!orig && url && /^https?:\/\//i.test(url)){
-      try {
-        const jinaUrl = 'https://r.jina.ai/' + url;
-        const jinaRes = await fetch(jinaUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'text/plain' },
-          signal: AbortSignal.timeout(25000)
-        });
-        if (jinaRes.ok){
-          let txt = await jinaRes.text();
-          const idx = txt.indexOf('Markdown Content:');
-          if (idx !== -1) txt = txt.slice(idx + 'Markdown Content:'.length).trim();
-          // Чистим типичный мусор навигации
-          txt = txt
-            .replace(/\[!\[Image[^\]]*\]\([^)]*\)\]\([^)]*\)/g, '')
-            .replace(/\[Войти\]\([^)]*\)/gi, '')
-            .replace(/\[Евразийский экономический союз\]\([^)]*\)/gi, '')
-            .replace(/\[Евразийская экономическая комиссия\]\([^)]*\)/gi, '')
-            .replace(/\[Правовой портал\]\([^)]*\)/gi, '')
-            .replace(/\[Суд Евразийского экономического союза\]\([^)]*\)/gi, '')
-            .replace(/^\s*Оценка регулирующего воздействия[\s\S]{0,300}?воздействия\s*$/m, '')
-            .replace(/\n{3,}/g, '\n\n')
-            .trim();
-          if (txt.length > 400){
-            orig = {
-              ok: true,
-              title: item.title,
-              description: item.description || '',
-              markdown: txt.slice(0, 20000),
-              image: item.image || '',
-              siteName: item.source || '',
-              publishedAt: item.date,
-              sourceUrl: url,
-              fetchedAt: Date.now(),
-              viaJina: true
-            };
-            console.log('[article] via Jina OK: ' + url.slice(0, 80));
-          }
-        }
-      } catch(e){ console.warn('[article] Jina fail: ' + e.message); }
-    }
-
-    if (!orig){
-      art2Failed[item.id] = Date.now();
-      orig = { ok:false, title: item.title, description: item.description || '', markdown: item.description || '', image: item.image || '', siteName: item.source || '', publishedAt: item.date, sourceUrl: url || item.link, fetchedAt: Date.now() };
-    }
-    const rec = { id: item.id, orig: orig, tr: (cached && cached.tr) || {} };
-    if (orig.ok) art2Save(rec); else art2Mem.set(item.id, rec);
-    return rec;
-  })().finally(function(){ delete art2Inflight[key]; });
-  art2Inflight[key] = p;
-  return p;
-}
-
-async function warmOriginals(items){
-  await mapLimit(items, 3, async function(it){ try { await loadOriginal(it); } catch(e){} });
-}
-async function prewarmArticles(N){
-  // Cheap now: download the real articles (no AI). Optionally pre-translate with PREWARM_TRANSLATIONS=1.
-  const items = (newsCache.items || []).slice(0, Math.max(1, Math.min(20, N || 5)));
-  await warmOriginals(items);
-  if (/^(1|true)$/i.test(String(process.env.PREWARM_TRANSLATIONS || ''))){
-    for (const it of items.slice(0, 5)){
-      const rec = await loadOriginal(it);
-      if (!rec.orig.ok) continue;
-      const mode = reuseMode(it), cut = insights.applyReuse(rec.orig.markdown, mode);
-      for (const lg of ['en', 'zh', 'tr']){ if (!rec.tr[lg]) { try { await ensureTranslation(it, rec, lg, cut, mode); } catch(e){} } }
-    }
-  }
-}
-
-// ---- translation (fast path: small model, parallel chunks, never waits in the chat queue)
-let transActive = 0; const transWaiters = [];
-async function transSlot(){
-  if (transActive >= 4) await new Promise(function(r){ transWaiters.push(r); });
-  transActive++;
-  return function(){ transActive--; const w = transWaiters.shift(); if (w) w(); };
-}
-async function aiTranslateText(text, LANG){
-  const sys = 'You are a professional news translator. Translate the user text into ' + LANG + '. Keep Markdown syntax, list markers, table pipes, link URLs, numbers, dates, currencies, customs/HS codes, abbreviations and proper names exactly as they are. Do not add, remove, summarise or comment on anything. Output only the translation.';
-  const messages = [{ role:'system', content: sys }, { role:'user', content: text }];
-  const maxTokens = Math.min(6000, Math.ceil(text.length * 1.6) + 300);
-  const release = await transSlot();
-  try {
-    if (process.env.GROQ_API_KEY){
-      for (const model of ['openai/gpt-oss-20b', 'openai/gpt-oss-120b']){
-        for (const withEffort of [true, false]){
-          try {
-            const body = { model, messages, max_tokens: maxTokens, temperature: 0.2 };
-            if (withEffort) body.reasoning_effort = 'low';
-            const r = await fetch('https://api.groq.com/openai/v1/chat/completions', { method:'POST', headers:{ 'Authorization':'Bearer ' + process.env.GROQ_API_KEY, 'Content-Type':'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(40000) });
-            if (r.ok){ const d = await r.json(); const t = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content; if (t && t.trim()) return t.trim(); break; }
-            const errText = await r.text();
-            if (r.status === 429) break;
-            if (withEffort && /reasoning/i.test(errText)) continue;
-            break;
-          } catch(e){ break; }
-        }
-      }
-    }
-    if (process.env.GEMINI_API_KEY){
-      try { const g = await geminiChatText(sys, text, maxTokens); if (g && g.trim()) return g.trim(); } catch(e){}
-    }
-    if (process.env.DEEPSEEK_API_KEY){
-      try {
-        const r = await fetch('https://api.deepseek.com/chat/completions', { method:'POST', headers:{ 'Authorization':'Bearer ' + process.env.DEEPSEEK_API_KEY, 'Content-Type':'application/json' }, body: JSON.stringify({ model:'deepseek-chat', messages, max_tokens: maxTokens, temperature: 0.2 }), signal: AbortSignal.timeout(50000) });
-        if (r.ok){ const d = await r.json(); const t = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content; if (t && t.trim()) return t.trim(); }
-      } catch(e){}
-    }
-    return null;
-  } finally { release(); }
-}
-
-function subtitleFor(item, rec, mdText){
-  const d = String(rec.orig.description || item.description || '').trim();
-  if (d.length < 40 || d.length > 320) return '';
-  if (mdText && mdText.slice(0, 120).toLowerCase().indexOf(d.slice(0, 60).toLowerCase()) === 0) return '';
-  return d;
-}
-
-function ensureTranslation(item, rec, lang, cut, mode){
-  const key = 't' + item.id + lang;
-  if (art2Inflight[key]) return art2Inflight[key];
-  const LANG = { en:'English', zh:'Simplified Chinese', tr:'Turkish' }[lang];
-  if (!LANG) return Promise.resolve(null);
-  const p = (async function(){
-    const subtitle = subtitleFor(item, rec, cut.content);
-    const head = rec.orig.title + '\n@@\n' + subtitle;
-    const parts = [head].concat(insights.splitForTranslation(cut.content, 1800));
-    const out = await mapLimit(parts, 3, function(txt){ return aiTranslateText(txt, LANG); });
-    if (out.some(function(x){ return !x; })) throw new Error('translation incomplete');
-    const hs = String(out[0]).split(/\n?@@\n?/);
-    const tr = { title: (hs[0] || '').trim(), subtitle: (hs[1] || '').trim(), markdown: out.slice(1).join('\n\n'), mode: mode, at: Date.now() };
-    rec.tr = rec.tr || {}; rec.tr[lang] = tr;
-    art2Save(rec);
-    return tr;
-  })().finally(function(){ delete art2Inflight[key]; });
-  art2Inflight[key] = p;
-  p.catch(function(e){ console.warn('[translate] ' + lang + ': ' + e.message); });
-  return p;
-}
-
-const imageForTitleCache = {};
-async function imageForTitle(title){
-  const key = crypto.createHash('md5').update(String(title).toLowerCase()).digest('hex');
-  if (newsImageCache[key]) return newsImageCache[key];
-  if (imageForTitleCache[key] !== undefined) return imageForTitleCache[key];
-  const img = await fetchPexelsImage(defaultImgQuery(title));
-  imageForTitleCache[key] = img || '';
-  if (img){ newsImageCache[key] = img; saveNewsImageCache(); }
-  return img || '';
-}
-
-async function buildArticleView(item, rec, lang, mode, cut, tr, status){
-  const o = rec.orig;
-  const shownMd = tr ? tr.markdown : cut.content;
-  const facts = insights.extractFacts(cut.content, 8);
-  const trTitles = (lang !== 'ru' && newsCache.translations && newsCache.translations[lang]) || null;
-  const relatedItems = insights.related(item, newsCache.items || [], 3).map(function(x){
-    const idx = (newsCache.items || []).findIndex(function(y){ return y.link === x.link; });
-    const tt = trTitles && trTitles[idx];
-    return { id: x.id, title: (tt && tt.title) || x.title, link: x.link, date: x.date, source: x.source, image: x.image || '' };
-  });
-  let image = (mode === 'full' && o.image) ? o.image : '';
-  let imageKind = image ? 'source' : '';
-  if (!image){ try { image = await imageForTitle(item.title); imageKind = image ? 'stock' : ''; } catch(e){} }
-  return {
-    title: tr && tr.title ? tr.title : (o.title || item.title),
-    subtitle: tr ? tr.subtitle : subtitleFor(item, rec, cut.content),
-    content: shownMd,
-    image: image, imageKind: imageKind,
-    source: item.source || o.siteName, sourceId: item.sourceId || '', sourceKind: item.kind || 'media',
-    sourceUrl: o.sourceUrl || item.link, publishedAt: o.publishedAt || item.date,
-    isOriginal: true, textOk: !!o.ok,
-    reuse: mode, truncated: !!cut.truncated,
-    facts: facts, related: relatedItems, category: item.category || [],
-    readingMinutes: insights.readingMinutes(shownMd),
-    lang: tr ? lang : 'ru', requestedLang: lang, translation: lang === 'ru' ? 'na' : (tr ? 'ready' : status)
-  };
-}
-
-app.post('/api/news/article', async function(req,res){
-  const body = req.body || {};
-  if (!String(body.title || '').trim() && !String(body.link || '').trim()) return res.status(400).json({ ok:false, error:'Title required' });
-  const lang = ['ru','en','zh','tr'].indexOf(String(body.language || 'ru').toLowerCase().slice(0,2)) >= 0 ? String(body.language).toLowerCase().slice(0,2) : 'ru';
-  try {
-    const item = findNewsItem(body);
-    const rec = await loadOriginal(item);
-    const mode = reuseMode(item);
-    const cut = insights.applyReuse(rec.orig.markdown, mode);
-    let tr = null, status = 'na';
-    if (lang !== 'ru'){
-      const have = rec.tr && rec.tr[lang];
-      if (have && have.mode === mode) tr = have;
-      else {
-        const p = ensureTranslation(item, rec, lang, cut, mode);
-        const wait = Number.isFinite(Number(body.wait)) ? Math.max(0, Math.min(25000, Number(body.wait))) : 2500;
-        try { tr = await Promise.race([p, sleep(wait).then(function(){ return null; })]); status = tr ? 'ready' : 'pending'; }
-        catch(e){ tr = null; status = 'failed'; }
-      }
-    }
-    // Prepare the other languages in the background so switching languages is instant
-    if (rec.orig.ok && (process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY || process.env.DEEPSEEK_API_KEY)){
-      ['en','zh','tr'].filter(function(l){ return l !== lang && !(rec.tr && rec.tr[l] && rec.tr[l].mode === mode); }).forEach(function(l, i){
-        setTimeout(function(){ ensureTranslation(item, rec, l, cut, mode).catch(function(){}); }, 400 + i*700);
-      });
-    }
-    const article = await buildArticleView(item, rec, lang, mode, cut, tr, status);
-    res.json({ ok:true, article: article, fromCache: !!(rec.orig.fetchedAt && Date.now() - rec.orig.fetchedAt > 5000) });
-  } catch(e){
-    console.warn('[article] ' + e.message);
-    res.status(502).json({ ok:false, error: e.message });
-  }
-});
-
-// Ручной запуск прогрева
-app.post('/api/articles/prewarm', function(req,res){
-  const n = Math.max(1, Math.min(20, Number(req.body && req.body.n) || 5));
-  console.log('[prewarm] ручной запуск, n=' + n);
-  prewarmArticles(n).catch(function(e){ console.warn('[prewarm] error: ' + e.message); });
-  res.json({ ok: true, started: true, n: n });
-});
-
-// Служебный endpoint — сколько статей в кэше
-app.get('/api/articles/cache-stats', function(req,res){
-  res.json({ ok:true, count: countCachedArticles(), dir: ARTICLE_CACHE_DIR });
-});
-
-app.post('/api/news/article/audio', async function(req,res){
-  const text = String(req.body?.text || '').trim();
-  if (!text) return res.status(400).json({ ok:false, error:'Text required' });
-  const lang = String(req.body?.language || 'ru').slice(0,2);
-  try {
-    const buf = await synthesizeEdge(text, lang);
-    if (!buf.length) throw new Error('Empty');
-    res.set('Content-Type','audio/mpeg');
-    res.set('Cache-Control','public, max-age=3600');
-    res.send(buf);
-  } catch(e){ res.status(502).json({ ok:false, error:e.message }); }
-});
-
-app.post('/api/transcribe', upload.single('file'), async function(req,res){
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) return res.status(503).json({ ok:false, error:'No OpenAI key for transcription' });
-  if (!req.file?.buffer) return res.status(400).json({ ok:false, error:'No file' });
-  try {
-    const form = new FormData();
-    form.append('file', new Blob([req.file.buffer],{type:req.file.mimetype||'audio/webm'}), 'voice.webm');
-    form.append('model','whisper-1');
-    const r = await fetch('https://api.openai.com/v1/audio/transcriptions',{method:'POST',headers:{Authorization:'Bearer '+key},body:form});
-    const d = await r.json();
-    if (!r.ok) return res.status(r.status).json({ ok:false, error:d.error?.message });
-    res.json({ ok:true, text:d.text || '' });
-  } catch(e){ res.status(502).json({ ok:false, error:e.message }); }
-});
-
-const RESET_RATE = new Map();
-const RESET_WINDOW_MS = 60 * 60 * 1000;
-const RESET_MAX = 3;
-
-app.post('/api/password-reset/request', async function(req, res){
-  try {
-    const email = String((req.body && req.body.email) || '').trim().toLowerCase();
-    if (!email) return res.status(400).json({ ok:false, error:'email required' });
-    const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim();
-    const now = Date.now();
-    const arr = (RESET_RATE.get(ip) || []).filter(function(t){ return now - t < RESET_WINDOW_MS; });
-    if (arr.length >= RESET_MAX) return res.status(429).json({ ok:false, error:'Слишком много попыток. Попробуйте через час.' });
-    arr.push(now); RESET_RATE.set(ip, arr);
-
-    const clients = require('./lib/clients');
-    const c = clients.findByEmail(email);
-    if (!c) {
-      return res.json({ ok:false, error:'not_found', message:'Email ' + email + ' не зарегистрирован. Проверьте написание или создайте новый аккаунт.' });
-    }
-
-    const r = clients.setResetToken(email);
-    if (!r) {
-      return res.json({ ok:false, error:'token_failed', message:'Не удалось создать токен. Попробуйте позже.' });
-    }
-
-    const host = req.headers.host || ('localhost:' + PORT);
-    const proto = req.headers['x-forwarded-proto'] || 'http';
-    const resetUrl = proto + '://' + host + '/reset?token=' + r.token;
-
-    const html = '<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#f7f9fd;border-radius:14px">'
-      + '<h2 style="color:#0e1428;margin-top:0">Восстановление пароля</h2>'
-      + '<p>Здравствуйте, ' + (c.name || c.email) + '!</p>'
-      + '<p>Вы запросили сброс пароля на сайте iomastavka.</p>'
-      + '<p style="margin:24px 0"><a href="' + resetUrl + '" style="display:inline-block;padding:12px 24px;background:#1257e0;color:#fff;text-decoration:none;border-radius:10px;font-weight:600">Сбросить пароль</a></p>'
-      + '<p style="font-size:13px;color:#889">Или скопируйте: ' + resetUrl + '</p>'
-      + '<p style="font-size:13px;color:#889">Ссылка действует 1 час.</p>'
-      + '</div>';
-
-    let emailSent = false;
-    try {
-      await sendEmail('Восстановление пароля на iomastavka', html);
-      emailSent = true;
-      console.log('[password-reset] email sent to ' + email);
-    } catch(e){
-      console.warn('[password-reset] email fail: ' + e.message);
-      console.log('[password-reset] ССЫЛКА: ' + resetUrl);
-    }
-    res.json({
-      ok: true,
-      emailSent: emailSent,
-      email: email,
-      resetUrl: emailSent ? null : resetUrl,
-      message: emailSent
-        ? 'Письмо со ссылкой отправлено на ' + email + '. Проверьте почту (включая Спам).'
-        : 'Письмо не удалось отправить (тестовый режим Resend). Используйте ссылку ниже.'
-    });
-  } catch(e){
-    console.warn('[password-reset] error: ' + e.message);
-    res.status(500).json({ ok:false, error:'Ошибка сервера' });
-  }
-});
-
-app.post('/api/password-reset/confirm', function(req, res){
-  try {
-    const token = String((req.body && req.body.token) || '').trim();
-    const password = String((req.body && req.body.password) || '');
-    if (!token) return res.status(400).json({ ok:false, error:'Не указан токен' });
-    if (password.length < 6) return res.status(400).json({ ok:false, error:'Пароль минимум 6 символов' });
-    const clients = require('./lib/clients');
-    const c = clients.findByResetToken(token);
-    if (!c) return res.status(400).json({ ok:false, error:'Ссылка недействительна или истекла' });
-    const ok = clients.setPassword(c.id, password);
-    if (!ok) return res.status(500).json({ ok:false, error:'Не удалось сохранить пароль' });
-    console.log('[password-reset] password changed for ' + c.email);
-    res.json({ ok:true, message:'Пароль обновлён' });
-  } catch(e){
-    console.warn('[password-reset] confirm error: ' + e.message);
-    res.status(500).json({ ok:false, error:'Ошибка сервера' });
-  }
-});
-
-app.get('/reset', function(req, res){
-  res.sendFile(path.join(ROOT, 'reset.html'));
-});
-
-app.post('/api/assist', async function(req, res){
-  try {
-    const question = String((req.body && req.body.question) || '').slice(0, 2000);
-    if (!question.trim()) return res.status(400).json({ ok:false, error:'question required' });
-    const auth = req.cookies && req.cookies.auth;
-    const role = (auth === 'admin' || auth === '1') ? 'admin' : (auth && String(auth).startsWith('client:') ? 'client' : 'guest');
-
-    const pb = loadPlaybook();
-    const q = question.toLowerCase();
-    const allowed = (pb.topics || []).filter(function(t){
-      if (role === 'admin') return true;
-      return (t.role || 'public') === 'public';
-    });
-
-    // Подбор релевантных тем
-    const scored = allowed.map(function(t){
-      let score = 0;
-      const text = (t.title + ' ' + t.answer + ' ' + (t.keywords||[]).join(' ')).toLowerCase();
-      (t.keywords || []).forEach(function(k){ if (q.includes(String(k).toLowerCase())) score += 10; });
-      const words = q.split(/\s+/).filter(function(w){ return w.length > 2; });
-      words.forEach(function(w){ if (text.includes(w)) score += 3; });
-      return Object.assign({}, t, { _score: score });
-    }).sort(function(a,b){ return b._score - a._score; }).slice(0, 4);
-
-    const topScore = scored.length ? (scored[0]._score || 0) : 0;
-    const context = scored.map(function(t){ return '### ' + t.title + '\n' + t.answer; }).join('\n\n');
-
-    // БЫСТРЫЙ ПУТЬ: score >= 12 И короткий вопрос -> короткий ответ мгновенно
-    const shortQ = question.trim().length < 80;
-    if (topScore >= 12 && shortQ){
-      const top = scored[0];
-      let replyFast = String(top.shortAnswer || top.answer || '').trim();
-      // Добавляем сноску
-      replyFast = replyFast + '\n\n_Уточните детали у вашего менеджера._';
-      console.log('[assist] FAST match: ' + top.title + ' (score=' + topScore + ')');
-      return res.json({
-        ok: true,
-        role: role,
-        mode: 'fast',
-        provider: 'playbook',
-        reply: replyFast,
-        matchedTopics: [{ title: String(top.title||''), id: String(top.id||'') }]
-      });
-    }
-
-    let sysLines, userPrompt;
-    let mode = 'chat';
-
-    if (topScore > 0){
-      // Есть ответ в playbook — используем его как основу
-      mode = 'playbook';
-      sysLines = [
-        'Ты — умный ассистент логистической компании (Китай → Россия).',
-        'Отвечай ТОЛЬКО на русском. Максимум 2-3 предложения.',
-        'Отвечай РОВНО на заданный вопрос, НЕ вываливай всю информацию из контекста.',
-        'Если вопрос про конкретный товар или услугу — в конце задай 1 уточняющий вопрос (например: «Уточните, что за товар?»).',
-        'Используй цифры РОВНО как в контексте, не переставляй (ДС=20000, СС=от 100000).',
-        'НЕ пиши «уточню и вернусь» — это невозможно.',
-        'В САМОМ КОНЦЕ с новой строки курсивом добавь: _Уточните детали у вашего менеджера._',
-        '',
-        'РОЛЬ: ' + (role === 'admin' ? 'администратор компании' : (role === 'client' ? 'клиент' : 'гость сайта')),
-        '',
-        'КОНТЕКСТ:',
-        context
-      ];
-      userPrompt = 'Вопрос клиента: ' + question + '\n\nОтветь коротко (2-3 предложения). В конце уточняющий вопрос и курсивная сноска.';
-    } else {
-      // Нет ответа — свободный чат через облако
-      mode = 'freechat';
-      sysLines = [
-        'Ты — AI-ассистент логистической компании (Китай → Россия).',
-        'Ты общаешься с ' + (role === 'admin' ? 'администратором компании (твоим создателем — уважай его, он всегда прав про бизнес)' : (role === 'client' ? 'клиентом' : 'гостем сайта')) + '.',
-        '',
-        'ПРАВИЛА:',
-        '1. Отвечай ТОЛЬКО на русском. Дружелюбно, тепло, коротко (1-3 предложения).',
-        '2. Если гость просто здоровается или болтает — поддержи разговор, будь вежлив. Например на «привет» — «Здравствуйте! Чем могу помочь?».',
-        '3. Если это вопрос про логистику/бизнес, а точного ответа нет — скажи: «Уточните у менеджера — он поможет с деталями», но дружелюбно.',
-        '4. НЕ выдумывай цифры, сроки, названия компаний, формулы.',
-        '5. Если тебя просят раскрыть внутренние цифры, себестоимость, формулы расчёта — НЕ раскрывай, скажи «уточните у менеджера».',
-        '6. Никогда не говори что ты «уточнишь и вернёшься» — это невозможно.',
-        '7. Максимум 4 предложения в ответе.'
-      ];
-      userPrompt = question;
-    }
-
-    const systemPrompt = sysLines.join('\n');
-    let reply = '';
-    let provider = 'none';
-    const t0 = Date.now();
-
-    // Приоритет: облако (Groq → DeepSeek → Gemini) — быстрое и качественное
-    try {
-      const t1 = Date.now();
-      reply = await aiChatText(systemPrompt, userPrompt, 300);
-      provider = 'cloud';
-      console.log('[assist] mode=' + mode + ' role=' + role + ' provider=cloud ' + (Date.now()-t1) + 'ms');
-    } catch(ec){
-      console.warn('[assist] cloud fail: ' + ec.message + ' → Ollama');
-    }
-
-    // Fallback: Ollama (локальная, если облако недоступно)
-    if (!reply || reply.length < 10){
-      try {
-        const t2 = Date.now();
-        reply = await ollamaChatText(systemPrompt, userPrompt, 300, { timeoutMs: 45000, temperature: 0.6 });
-        provider = 'ollama';
-        console.log('[assist] mode=' + mode + ' provider=ollama ' + (Date.now()-t2) + 'ms');
-      } catch(eo){
-        console.warn('[assist] ollama fail: ' + eo.message);
-      }
-    }
-
-    if (!reply || reply.length < 5){
-      return res.status(502).json({ ok:false, error:'AI недоступен. Попробуйте через минуту.' });
-    }
-
-    res.json({
-      ok: true,
-      role: role,
-      mode: mode,
-      provider: provider,
-      reply: String(reply).trim(),
-      matchedTopics: scored.filter(function(t){ return t._score > 0; }).map(function(t){ return { title: String(t.title||''), id: String(t.id||'') }; })
-    });
-  } catch(e){
-    console.warn('[assist] error: ' + e.message);
-    res.status(500).json({ ok:false, error: e.message });
-  }
-});
-
-app.get('/api/agents', function(req,res){
-  try {
-    const file = path.join(DATA_DIR,'agents.json');
-    let records = JSON.parse(fs.readFileSync(file,'utf8'));
-    const auth = req.cookies && req.cookies.auth;
-    const isAdmin = auth === 'admin' || auth === '1';
-    if (!isAdmin) records = records.filter(function(r){ return !r.private; });
-    res.json({ ok:true, records, total: records.length, isAdmin });
-  } catch(e){
-    try {
-      const b = JSON.parse(fs.readFileSync(path.join(ROOT,'agents.json'),'utf8'));
-      res.json({ ok:true, records:b, total: b.length, isAdmin: false });
-    } catch(e2){ res.json({ ok:true, records:[], total: 0, isAdmin: false }); }
-  }
-});
-
-app.get('/api/rates', function(req,res){ res.json(ensureRateDb()); });
-
-app.get('/api/rates/recommend', function(req,res){
-  const db = ensureRateDb();
-  const from = String(req.query.from||''), to = String(req.query.to||''), mode = String(req.query.mode||''), distance = Number(req.query.distance);
-  const matches = db.records.map(function(r){ return Object.assign({}, r, { _score: routeScore(r, from, to, mode, Number.isFinite(distance)?distance:null) }); })
-    .filter(function(r){ return r._score > 0; })
-    .sort(function(a,b){ return b._score - a._score; })
-    .slice(0,8);
-  res.json({ ok:true, matches });
-});
-
-app.post('/api/agents/import', async function(req,res){
-  const text = String(req.body?.text || '').trim();
-  if (!text) return res.status(400).json({ ok:false });
-  try {
-    const sys = 'Extract agents. Return JSON array with fields: company, contact, phone, email, site, modes[], transport[], notes.';
-    const parsed = await aiChatJSON(sys, text.slice(0,60000), 2500);
-    const incoming = Array.isArray(parsed) ? parsed : [];
-    const file = path.join(DATA_DIR,'agents.json');
-    let existing = [];
-    try { existing = JSON.parse(fs.readFileSync(file,'utf8')); } catch(e){}
-    for (const a of incoming){
-      if (!a || !a.company) continue;
-      existing.push(Object.assign({ id: existing.length+1 }, a));
-    }
-    fs.writeFileSync(file, JSON.stringify(existing,null,2));
-    res.json({ ok:true, added: incoming.length });
-  } catch(e){ res.status(502).json({ ok:false, error:e.message }); }
-});
-
-app.post('/api/rates/import', upload.single('file'), async function(req,res){
-  if (!req.file?.buffer && !String(req.body?.text||'').trim()) return res.status(400).json({ ok:false });
-  try {
-    const content = req.file?.buffer ? req.file.buffer.toString('utf8') : String(req.body?.text||'');
-    const sys = 'Extract logistics rates. Return JSON array: company, from, to, mode, incoterms, rate, currency.';
-    const parsed = await aiChatJSON(sys, content.slice(0,60000), 3000);
-    const records = Array.isArray(parsed) ? parsed : [parsed];
-    const db = ensureRateDb();
-    for (const r of records) db.records.push(r);
-    saveRates(db);
-    res.json({ ok:true, added: records.length });
-  } catch(e){ res.status(502).json({ ok:false, error:e.message }); }
-});
-
-function saveRates(data){ fs.mkdirSync(DATA_DIR,{recursive:true}); fs.writeFileSync(RATES_FILE, JSON.stringify(data,null,2), 'utf8'); }
-
-app.post('/api/ai', async function(req,res){
-  const message = String(req.body?.message || '').trim();
-  if (!message) return res.status(400).json({ ok:false });
-  const history = Array.isArray(req.body?.history) ? req.body.history.slice(-10) : [];
-  const language = String(req.body?.language || 'ru').slice(0, 2);
-  const langName = { ru:'Russian', en:'English', zh:'Chinese', tr:'Turkish' }[language] || 'Russian';
-  const ctxRaw = req.body?.context;
-  const ctx = (typeof ctxRaw === 'string' ? ctxRaw : (ctxRaw && typeof ctxRaw === 'object' ? JSON.stringify(Object.fromEntries(Object.entries(ctxRaw).filter(function(e){ return e[1] !== '' && e[1] !== null; }))) : '')).slice(0, 800);
-  const sys = 'Ты AI-ассистент iomastavka — помощник по логистике Китай–Россия, ВЭД, таможне, ставкам и Incoterms. Отвечай на языке пользователя (' + langName + '). '
-    + 'Отвечай коротко и по делу: на приветствие и простые вопросы — одной-двумя фразами. Подробно — только когда просят. Не выдумывай ставки, сроки, законы и цифры: если не уверен, так и скажи. '
-    + 'Сегодня ' + new Date().toISOString().slice(0, 10) + '.' + (ctx ? ' Контекст калькулятора пользователя: ' + ctx : '');
-  const messages = [{ role:'system', content: sys }]
-    .concat(history.filter(function(h){ return h && h.content; }).map(function(h){ return { role: h.role === 'assistant' ? 'assistant' : 'user', content: String(h.content).slice(0, 4000) }; }))
-    .concat([{ role:'user', content: message.slice(0, 8000) }]);
-  const wantsStream = /text\/event-stream/i.test(String(req.headers.accept || '')) || req.body?.stream === true;
-  if (!wantsStream){
-    try {
-      const historyText = history.map(function(h){ return (h.role === 'assistant' ? 'Assistant: ' : 'User: ') + h.content; }).join('\n');
-      const text = await aiChatText(sys, (historyText ? historyText + '\n' : '') + 'User: ' + message, 1500, { priority:true });
-      return res.json({ ok:true, text });
-    } catch(e){ return res.status(502).json({ ok:false, error:e.message }); }
-  }
-  res.writeHead(200, { 'Content-Type':'text/event-stream; charset=utf-8', 'Cache-Control':'no-cache, no-transform', 'Connection':'keep-alive', 'X-Accel-Buffering':'no' });
-  const send = function(o){ try { res.write('data: ' + JSON.stringify(o) + '\n\n'); } catch(e){} };
-  send({ start:true });
-  try { await aiStreamChat(messages, function(t){ send({ delta:t }); }); send({ done:true }); }
-  catch(e){ send({ error: e.message }); }
-  res.end();
-});
-
-app.post('/api/customs/check', async function(req,res){
-  const code = String(req.body?.code || '').replace(/\D/g,'').slice(0,10);
-  if (code.length !== 10) return res.status(400).json({ ok:false, error:'Нужен 10-значный код' });
-  console.log('[customs] запрос code=' + code + ' | Groq=' + (process.env.GROQ_API_KEY?'yes':'no') + ' Gemini=' + (process.env.GEMINI_API_KEY?'yes':'no') + ' DeepSeek=' + (process.env.DEEPSEEK_API_KEY?'yes':'no'));
-  const t0 = Date.now();
-  try {
-    const FACTS_DATE = '2026-09-22';
-    const sys = 'Ты специалист по ВЭД РФ и ЕАЭС с 20-летним опытом. Отвечай на русском. Давай точную информацию по коду ТН ВЭД: описание, пошлину, НДС, акциз, таможенный сбор, маркировку Честный знак, разрешительные документы (сертификаты, декларации), запреты и ограничения. Если чего-то нет — пиши "не установлено". '
-      + 'ОБЯЗАТЕЛЬНО учти следующие факты (актуальны на ' + FACTS_DATE + ', выше приоритетом, чем любые твои прежние знания): '
-      + 'с 1 января 2026 года основная ставка НДС в РФ — 22% (была 20% до 2026 года), согласно Федеральному закону от 28.11.2025 №425-ФЗ; льготная ставка 10% сохраняется для социально значимых товаров (продукты, лекарства, медизделия, книги, детские товары); ставка 0% — для экспорта и отдельных операций. '
-      + 'Если код относится к социально значимой категории по правительственному перечню — укажи 10%, иначе укажи 22%, и явно укажи, к какой категории отнёс товар. '
-      + 'В конце ответа ОБЯЗАТЕЛЬНО добавь отдельную строку "АКТУАЛЬНОСТЬ:" с текстом на русском о том, что ставки пошлин и НДС нужно дополнительно сверить на сайте customs.gov.ru или через ФТС перед подачей декларации, так как ставки пошлин (в отличие от НДС) периодически меняются точечно по конкретным кодам.';
-    const usr = 'Код ТН ВЭД ЕАЭС: ' + code + '\n\nВерни строго в формате (каждая строка начинается с метки):\nКОД: ' + code + '\nОПИСАНИЕ: [полное наименование товара]\nИМПОРТНАЯ ПОШЛИНА: [ставка, % или €/кг]\nНДС: [ставка, %]\nАКЦИЗ: [ставка или "нет"]\nТАМОЖЕННЫЙ СБОР: [сумма в рублях по стоимости]\nЧЕСТНЫЙ ЗНАК: [подлежит/не подлежит маркировке]\nРАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: [сертификаты/декларации, если нужны]\nЗАПРЕТЫ И ОГРАНИЧЕНИЯ: [если есть]\nДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: [важные примечания]';
-    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('Превышено время ожидания (60 сек)')), 60000));
-    const text = await Promise.race([aiChatText(sys, usr, 2500), timeout]);
-    const dt = Math.round((Date.now()-t0)/1000);
-    console.log('[customs] OK за ' + dt + ' сек, длина=' + (text||'').length);
-    if (!text || !text.trim()) throw new Error('Пустой ответ от AI');
-    res.json({ ok:true, code, title:'ТН ВЭД ' + code, analysis:text });
-  } catch(e){
-    const dt = Math.round((Date.now()-t0)/1000);
-    console.error('[customs] FAIL за ' + dt + ' сек: ' + e.message);
-    res.status(502).json({ ok:false, error:e.message });
-  }
-});
-
-
-// ========== РОЛИ + ЗАЩИТА + ЗАЯВКИ ==========
-function isAdmin(req){
-  return !!(req.cookies && (req.cookies.auth === 'admin' || req.cookies.auth === '1'));
-}
-function requireAuth(req, res, next){
-  if (isAdmin(req)) return next();
-  return res.status(401).json({ ok:false, error:'Auth required' });
-}
-function esc(s){ return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-
-app.get('/api/whoami', function(req, res){
-  const auth = req.cookies && req.cookies.auth;
-  if (!auth || auth === '') {
-    return res.status(401).json({ ok: false, error: 'unauthorized' });
-  }
-  if (auth === 'admin' || auth === '1') {
-    return res.json({ ok: true, role: 'admin', username: 'admin', email: '' });
-  }
-  if (String(auth).startsWith('client:')) {
-    const clients = require('./lib/clients');
-    const c = clients.findById(String(auth).slice(7));
-    if (!c || !c.active) return res.status(401).json({ ok: false, error: 'unauthorized' });
-    return res.json({ ok: true, role: 'client', username: c.name, email: c.email, clientId: c.id });
-  }
-  return res.status(401).json({ ok: false, error: 'unauthorized' });
-});
-
-app.get('/admin.js', requireAuth, function(req, res){
-  res.sendFile(require('path').join(ROOT, 'admin.js'));
-});
-app.get('/contract.js', requireAuth, function(req, res){
-  res.sendFile(require('path').join(ROOT, 'contract.js'));
-});
-
-
-// ========== ANTI-SPAM (серверная защита) ==========
-const SPAM_BLOCKS_FILE = require('path').join(ROOT, 'data', 'spam-blocks.json');
-const SPAM_LOG_FILE = require('path').join(ROOT, 'data', 'spam-log.json');
-const IP_RATE = new Map();          // ip -> [timestamps]
-const CONTACT_RECENT = new Map();   // contact -> timestamp
-const RATE_WINDOW_MS = 60 * 60 * 1000;    // 1 час
-const RATE_MAX = 2;                        // 2 заявки в час с одного IP
-const DUP_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 часа
-const MIN_FORM_TIME_MS = 3000;             // 3 секунды
-
-function loadBlocks(){
-  try { return JSON.parse(require('fs').readFileSync(SPAM_BLOCKS_FILE, 'utf8')); } catch(e){ return {}; }
-}
-function saveBlocks(b){
-  try {
-    require('fs').mkdirSync(require('path').dirname(SPAM_BLOCKS_FILE), { recursive:true });
-    require('fs').writeFileSync(SPAM_BLOCKS_FILE, JSON.stringify(b, null, 2));
-  } catch(e){}
-}
-function isBlockedIP(ip){
-  const b = loadBlocks();
-  return b[ip] && (!b[ip].until || b[ip].until > Date.now());
-}
-function blockIP(ip, reason){
-  const b = loadBlocks();
-  b[ip] = { reason: reason || 'manual', at: Date.now(), until: Date.now() + 7*24*60*60*1000 };
-  saveBlocks(b);
-  console.warn('[spam] BLOCKED ' + ip + ' — ' + reason);
-}
-function logSpam(entry){
-  try {
-    require('fs').mkdirSync(require('path').dirname(SPAM_LOG_FILE), { recursive:true });
-    let log = [];
-    try { log = JSON.parse(require('fs').readFileSync(SPAM_LOG_FILE, 'utf8')); } catch(e){}
-    log.unshift(entry);
-    if (log.length > 500) log = log.slice(0, 500);
-    require('fs').writeFileSync(SPAM_LOG_FILE, JSON.stringify(log, null, 2));
-  } catch(e){}
-}
-
-function validateContactServer(c){
-  const v = String(c||'').trim();
-  if (v.length < 6) return 'Контакт слишком короткий';
-  if (v.length > 200) return 'Контакт слишком длинный';
-  const digits = v.replace(/\D/g,'');
-  if (digits.length >= 6){
-    if (digits.length < 10) return 'В номере меньше 10 цифр';
-    if (digits.length > 15) return 'В номере больше 15 цифр';
-    if (/^(\d)\1+$/.test(digits)) return 'Номер из одинаковых цифр';
-    if (/0{6,}/.test(digits)) return 'Много нулей подряд';
-    if (/^[78]9{5,}$/.test(digits)) return 'Подозрительный номер';
-    if (/^[78]0+$/.test(digits)) return 'Номер из нулей';
-    // Три и более одинаковых цифры подряд: 999, 111, 000
-    if (/(\d)\1{4,}/.test(digits)) return 'Слишком много одинаковых цифр подряд';
-  }
-  if (v.indexOf('@') > -1){
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return 'Некорректный email';
-  }
-  return '';
-}
-
-function validateNameServer(n){
-  const v = String(n||'').trim();
-  if (v.length < 2) return 'Имя слишком короткое';
-  if (v.length > 120) return 'Имя слишком длинное';
-  if (/^(.)\1+$/.test(v)) return 'Некорректное имя';
-  if (/^\d+$/.test(v)) return 'Имя из цифр';
-  return '';
-}
-
-function checkRateLimit(ip){
-  const now = Date.now();
-  let arr = IP_RATE.get(ip) || [];
-  arr = arr.filter(t => now - t < RATE_WINDOW_MS);
-  if (arr.length >= RATE_MAX) return false;
-  arr.push(now);
-  IP_RATE.set(ip, arr);
-  return true;
-}
-
-function checkDuplicate(contact){
-  const now = Date.now();
-  const key = String(contact||'').replace(/\D/g,'').toLowerCase();
-  if (!key) return true;
-  const last = CONTACT_RECENT.get(key);
-  if (last && now - last < DUP_WINDOW_MS) return false;
-  CONTACT_RECENT.set(key, now);
-  // Чистим старые
-  if (CONTACT_RECENT.size > 500){
-    for (const [k, t] of CONTACT_RECENT){ if (now - t > DUP_WINDOW_MS) CONTACT_RECENT.delete(k); }
-  }
-  return true;
-}
-
-const REQUESTS_FILE = require('path').join(ROOT, 'data', 'requests.json');
-
-async function sendTelegram(text){
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!token || !chatId){ console.log('[telegram] skip: нет токена/чата'); return false; }
-  try {
-    const r = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ chat_id: chatId, text: text, parse_mode:'HTML', disable_web_page_preview:true }),
-      signal: AbortSignal.timeout(10000)
-    });
-    if (r.ok){ console.log('[telegram] sent'); return true; }
-    console.warn('[telegram] HTTP ' + r.status + ': ' + (await r.text()).slice(0,200));
-    return false;
-  } catch(e){ console.warn('[telegram] error: ' + e.message); return false; }
-}
-
-async function sendEmail(subject, html){
-  const key = process.env.RESEND_API_KEY;
-  const to = process.env.NOTIFY_EMAIL;
-  const from = process.env.RESEND_FROM || 'onboarding@resend.dev';
-  if (!key || !to){ console.log('[email] skip: нет RESEND_API_KEY/NOTIFY_EMAIL'); return false; }
-  try {
-    const r = await fetch('https://api.resend.com/emails', {
-      method:'POST',
-      headers:{'Authorization':'Bearer '+key, 'Content-Type':'application/json'},
-      body: JSON.stringify({ from: from, to: [to], subject: subject, html: html }),
-      signal: AbortSignal.timeout(10000)
-    });
-    if (r.ok){ console.log('[email] sent'); return true; }
-    console.warn('[email] HTTP ' + r.status);
-    return false;
-  } catch(e){ console.warn('[email] error: ' + e.message); return false; }
-}
-
-app.post('/api/requests', async function(req, res){
-  try {
-    const ip = String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
-    const ua = String(req.headers['user-agent'] || '').slice(0, 200);
-    const name = String((req.body && req.body.name) || '').trim().slice(0,120);
-    const contact = String((req.body && req.body.contact) || '').trim().slice(0,200);
-    const body = String((req.body && req.body.body) || '').trim().slice(0,2000);
-    const honey = String((req.body && req.body.website) || '').trim();
-    const formTs = Number((req.body && req.body._t) || 0);
-
-    // 1. IP в блок-листе
-    if (isBlockedIP(ip)){
-      console.warn('[spam] blocked IP tried: ' + ip);
-      logSpam({ at: Date.now(), ip, ua, name, contact, reason: 'blocked-ip' });
-      return res.status(200).json({ ok:true, id: 0 });  // тихо
-    }
-
-    // 2. Honeypot
-    if (honey){
-      console.warn('[spam] honeypot filled: ' + ip);
-      logSpam({ at: Date.now(), ip, ua, name, contact, reason: 'honeypot' });
-      blockIP(ip, 'honeypot');
-      return res.status(200).json({ ok:true, id: 0 });
-    }
-
-    // 3. Слишком быстро — заявка за < 3 сек = бот
-    if (formTs > 0 && Date.now() - formTs < MIN_FORM_TIME_MS){
-      console.warn('[spam] too fast: ' + ip + ' (' + (Date.now() - formTs) + 'ms)');
-      logSpam({ at: Date.now(), ip, ua, name, contact, reason: 'too-fast' });
-      return res.status(200).json({ ok:true, id: 0 });
-    }
-
-    // 4. Пустые поля
-    if (!name || !contact) return res.status(400).json({ ok:false, error:'name and contact required' });
-
-    // 5. Валидация имени и контакта
-    const errName = validateNameServer(name);
-    if (errName){
-      console.warn('[spam] bad name: ' + errName + ' | ' + name);
-      logSpam({ at: Date.now(), ip, ua, name, contact, reason: 'name: ' + errName });
-      return res.status(400).json({ ok:false, error: errName });
-    }
-    const errContact = validateContactServer(contact);
-    if (errContact){
-      console.warn('[spam] bad contact: ' + errContact + ' | ' + contact);
-      logSpam({ at: Date.now(), ip, ua, name, contact, reason: 'contact: ' + errContact });
-      return res.status(400).json({ ok:false, error: errContact });
-    }
-
-    // 6. Rate limit по IP
-    if (!checkRateLimit(ip)){
-      console.warn('[spam] rate limit: ' + ip);
-      logSpam({ at: Date.now(), ip, ua, name, contact, reason: 'rate-limit' });
-      return res.status(429).json({ ok:false, error: 'Слишком много заявок. Подождите час.' });
-    }
-
-    // 7. Дубликат контакта
-    if (!checkDuplicate(contact)){
-      console.warn('[spam] duplicate contact: ' + contact);
-      logSpam({ at: Date.now(), ip, ua, name, contact, reason: 'duplicate' });
-      return res.status(429).json({ ok:false, error: 'Заявка с таким контактом уже отправлена.' });
-    }
-    const fs = require('fs');
-    fs.mkdirSync(require('path').dirname(REQUESTS_FILE), { recursive:true });
-    let list = [];
-    try { list = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8')); } catch(e){ list = []; }
-    const clientId = (req.cookies && String(req.cookies.auth||'').startsWith('client:')) ? String(req.cookies.auth).slice(7) : null;
-    const entry = { id: Date.now(), name, contact, body, clientId, at: new Date().toISOString(), ip: req.ip };
-    list.unshift(entry);
-    if (list.length > 500) list = list.slice(0, 500);
-    fs.writeFileSync(REQUESTS_FILE, JSON.stringify(list, null, 2));
-    console.log('[request] NEW from ' + name + ' / ' + contact);
-    const when = new Date(entry.at).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' });
-    const tgText = '<b>🆕 Новая заявка</b>\n\n<b>Имя:</b> ' + esc(name) + '\n<b>Контакт:</b> ' + esc(contact) + (body ? '\n<b>Сообщение:</b>\n' + esc(body) : '') + '\n\n<b>IP:</b> ' + esc(ip) + '\n<b>UA:</b> ' + esc(ua.slice(0,80)) + '\n\n<i>' + when + ' (МСК)</i>';
-    const mailHtml = '<h2>🆕 Новая заявка с iomastavka</h2><p><b>Имя:</b> ' + esc(name) + '</p><p><b>Контакт:</b> ' + esc(contact) + '</p>' + (body ? '<p><b>Сообщение:</b><br>' + esc(body).replace(/\n/g, '<br>') + '</p>' : '') + '<p style="color:#889"><i>' + when + ' (МСК)</i></p>';
-    Promise.allSettled([sendTelegram(tgText), sendEmail('Новая заявка: ' + name, mailHtml)]).catch(function(){});
-    res.json({ ok:true, id: entry.id });
-  } catch(e){
-    console.warn('[request] error: ' + e.message);
-    res.status(500).json({ ok:false, error: e.message });
-  }
-});
-
-app.get('/api/requests', requireAuth, function(req, res){
-  try {
-    const fs = require('fs');
-    const list = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8'));
-    res.json({ ok:true, requests: list });
-  } catch(e){ res.json({ ok:true, requests: [] }); }
-});
-
-// ========== МОИ ЗАЯВКИ (для клиента) ==========
-app.get('/api/my-orders', function(req, res) {
-  const auth = req.cookies && req.cookies.auth;
-  if (!auth || !String(auth).startsWith('client:')) {
-    return res.status(401).json({ ok:false, error:'unauthorized' });
-  }
-  const clientId = String(auth).slice(7);
-  const fs = require('fs');
-  let all = [];
-  try { all = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8')) || []; } catch(e) { all = []; }
-  const mine = all.filter(function(r){ return String(r.clientId||'') === clientId; });
-  res.json({ ok:true, count: mine.length, orders: mine });
-});
-
-app.post('/api/login', function(req,res){
-  const body = req.body || {};
-  const email = String(body.email || '').trim().toLowerCase();
-  const password = String(body.password || '');
-
-  if (!email) return res.status(400).json({ ok:false, error:'email required' });
-  if (!password) return res.status(400).json({ ok:false, error:'password required' });
-
-  const adminEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-
-  // Админ: email совпадает с ADMIN_EMAIL
-  if (adminEmail && email === adminEmail) {
-    if (!verifyPassword(password)) return res.status(401).json({ ok:false, error:'invalid credentials' });
-    res.cookie('auth','admin',{httpOnly:true,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
-    res.cookie('authUser','admin',{httpOnly:false,sameSite:'lax',maxAge:8*60*60*1000,path:'/'});
-    return res.json({ ok:true, role:'admin' });
-  }
-
-  // Клиент
-  const clients = require('./lib/clients');
-  const c = clients.verifyClient(email, password);
-  if (!c) return res.status(401).json({ ok:false, error:'invalid credentials' });
-  res.cookie('auth', 'client:' + c.id, { httpOnly:true, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
-  res.cookie('authUser', c.name, { httpOnly:false, sameSite:'lax', maxAge:8*60*60*1000, path:'/' });
-  res.json({ ok:true, role:'client', name:c.name, email:c.email });
-});
-
-// ========== РЕГИСТРАЦИЯ КЛИЕНТА ==========
-const REG_RATE = new Map();
-const REG_WINDOW_MS = 60 * 60 * 1000; // 1 час
-const REG_MAX = 3;                    // 3 регистрации с одного IP в час
-
-app.post('/api/register', function(req, res) {
-  try {
-    const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim();
-    const now = Date.now();
-    const arr = (REG_RATE.get(ip) || []).filter(function(t){ return now - t < REG_WINDOW_MS; });
-    if (arr.length >= REG_MAX) {
-      return res.status(429).json({ ok:false, error:'too many registrations, try later' });
-    }
-
-    const body = req.body || {};
-
-    // Honeypot — если бот заполнил скрытое поле "website", молча возвращаем ok, но клиента не создаём
-    if (body.website || body.honeypot) {
-      console.log('[register] honeypot triggered, ip=' + ip);
-      return res.json({ ok:true });
-    }
-
-    // Минимум 3 секунды на форму
-    const t = Number(body.t || 0);
-    if (!t || (now - t) < 3000) {
-      return res.status(400).json({ ok:false, error:'form too fast' });
-    }
-
-    const email = String(body.email || '').trim().toLowerCase();
-    const name = String(body.name || '').trim();
-    const password = String(body.password || '');
-
-    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      return res.status(400).json({ ok:false, error:'invalid email' });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ ok:false, error:'password min 6 chars' });
-    }
-
-    const clients = require('./lib/clients');
-    const c = clients.createClient({ email: email, name: name, password: password });
-
-    arr.push(now);
-    REG_RATE.set(ip, arr);
-
-    console.log('[register] new client:', c.email, 'ip=' + ip);
-    res.json({ ok:true, id:c.id, email:c.email, name:c.name });
-  } catch (e) {
-    const msg = String((e && e.message) || e);
-    if (msg.indexOf('already exists') !== -1) return res.status(409).json({ ok:false, error:'email already registered' });
-    console.error('[register]', msg);
-    res.status(500).json({ ok:false, error:'server error' });
-  }
-});
-app.get('/api/logout', function(req, res){
-  res.clearCookie('auth', { path: '/', httpOnly: true, sameSite: 'lax' });
-  res.clearCookie('authUser', { path: '/', httpOnly: true, sameSite: 'lax' });
-  res.clearCookie('auth', { path: '/', sameSite: 'lax' });
-  res.clearCookie('authUser', { path: '/', sameSite: 'lax' });
-  res.clearCookie('auth', { path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
-  res.clearCookie('authUser', { path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
-  res.clearCookie('auth', { path: '/' });
-  res.clearCookie('authUser', { path: '/' });
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-  res.setHeader('Pragma', 'no-cache');
-  console.log('[logout] GET cleared');
-  res.redirect('/?t=' + Date.now());
-});
-
-app.post('/api/logout', function(req, res){
-  res.clearCookie('auth', { path: '/', httpOnly: true, sameSite: 'lax' });
-  res.clearCookie('authUser', { path: '/', httpOnly: true, sameSite: 'lax' });
-  res.clearCookie('auth', { path: '/', sameSite: 'lax' });
-  res.clearCookie('authUser', { path: '/', sameSite: 'lax' });
-  res.clearCookie('auth', { path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
-  res.clearCookie('authUser', { path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
-  res.clearCookie('auth', { path: '/' });
-  res.clearCookie('authUser', { path: '/' });
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-  res.setHeader('Pragma', 'no-cache');
-  console.log('[logout] POST cleared');
-  res.json({ ok: true });
-});
-
-function verifyPassword(pw){
+function verifyPassword(password) {
   const raw = process.env.ADMIN_PASSWORD_HASH || fallbackHash;
   const p = raw.split('$');
-  if (p.length !== 6) return false;
+  if (p.length !== 6 || p[0] !== 'scrypt') return false;
+  const N = Number(p[1]), r = Number(p[2]), salt = Buffer.from(p[4], 'hex'), expected = p[5];
   try {
-    const salt = Buffer.from(p[4],'hex'), expected = p[5];
-    const actual = crypto.scryptSync(String(pw), salt, 32, { N:Number(p[1]), r:Number(p[2]), p:Number(p[3]), maxmem:64*1024*1024 }).toString('hex');
-    return crypto.timingSafeEqual(Buffer.from(actual,'hex'), Buffer.from(expected,'hex'));
-  } catch(e){ return false; }
+    const actual = crypto.scryptSync(String(password), salt, 32, { N, r, p: Number(p[3]), maxmem: 64 * 1024 * 1024 }).toString('hex');
+    return crypto.timingSafeEqual(Buffer.from(actual, 'hex'), Buffer.from(expected, 'hex'));
+  } catch { return false; }
+}
+function auth(req, res, next) {
+  // Раньше пропускала любая кука auth=1, которую можно подделать. Теперь нужна подписанная сессия.
+  const sess = verifySession(req.cookies?.auth);
+  if (sess && sess.role === 'admin') return next();
+  return res.status(401).json({ ok: false, error: 'Unauthorized' });
 }
 
-// Периодический прогрев каждые 6 часов
-setInterval(function(){
-  console.log('[prewarm] плановый (каждые 6ч)');
-  prewarmArticles(5).catch(function(){});
-}, 6*60*60*1000);
-
-
-// ========== TELEGRAM AI-АССИСТЕНТ ==========
-// Гибрид: отвечает и админу, и клиентам. Разные роли → разные промпты.
-// Память: последние 5 сообщений на чат. В оперативке (сбрасывается при перезапуске).
-
-const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TG_ADMIN_ID = String(process.env.TELEGRAM_CHAT_ID || '').trim();
-const TG_API = TG_TOKEN ? ('https://api.telegram.org/bot' + TG_TOKEN) : '';
-const TG_MEMORY = new Map();       // chatId -> [{role, content}, ...]
-const TG_OFFSET_FILE = require('path').join(ROOT, 'data', 'tg-offset.json');
-const TG_MAX_HISTORY = 5;
-const TG_POLL_INTERVAL = 2000;     // 2 сек
-
-function tgSaveOffset(n){
-  try { require('fs').writeFileSync(TG_OFFSET_FILE, JSON.stringify({ offset: n })); } catch(e){}
+// Страница всегда свежая, скрипты и стили кэшируются на час (в index.html они подключаются с ?v=...).
+app.get('/', (req,res) => { res.set('Cache-Control', 'no-cache'); res.sendFile(path.join(ROOT, 'index.html'), { cacheControl: false }); });
+app.get('/app.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'app.js'), { cacheControl: false }); });
+app.get('/styles.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'styles.css'), { cacheControl: false }); });
+app.get('/theme-v3.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.js'), { cacheControl: false }); });
+app.get('/portal-ui.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'portal-ui.js'), { cacheControl: false }); });
+app.get('/routes-kb.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'routes-kb.js'), { cacheControl: false }); });
+app.get('/i18n-v3.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'i18n-v3.js'), { cacheControl: false }); });
+app.get('/crm-ui.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'crm-ui.js'), { cacheControl: false }); });
+app.get('/kb.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'kb.js'), { cacheControl: false }); });
+app.get('/palettes.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'palettes.css'), { cacheControl: false }); });
+app.get('/theme-v3.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.css'), { cacheControl: false }); });
+// Новые модули главной и кабинета: карта-калькулятор, трекинг груза, динамика курса, экскурсия, журнал
+for (const f of ['journal-ui.js', 'geo-asia.js', 'map-calc.js', 'track.js', 'rates-dyn.js', 'tour.js', 'v4.css', 'ved.js', 'crm.css', 'crm-kit.js', 'crm-calc-ui.js', 'crm-tasks-ui.js', 'crm-clients-ui.js', 'crm-sys-ui.js', 'tnved-ui.js', 'crm-rates-ui.js']) app.get('/' + f, (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, f), { cacheControl: false }); });
+const SITE_URL = process.env.SITE_URL || 'https://iomastavki.onrender.com';
+app.get('/robots.txt', (req,res) => { res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${SITE_URL}/sitemap.xml\n`); });
+app.get('/sitemap.xml', (req,res) => { const urls = ['/'].concat(seoPages ? seoPages.urls() : []); res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${SITE_URL}${u === '/' ? '/' : u}</loc><lastmod>2026-11-06</lastmod><changefreq>${u === '/novosti' || u === '/' ? 'daily' : 'monthly'}</changefreq><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('')}</urlset>`); });
+let seoPages = null;
+// Почему хранилище не подключилось — без значений ключей, только что не так (видно в проверке сайта и в «Работе»).
+let cloudError = '';
+function storageIssue() {
+  if (cloud) return cloudError ? 'Supabase не отвечает: ' + cloudError.slice(0, 160) : '';
+  const u = String(process.env.SUPABASE_URL || '').trim().replace(/\/+$/, ''), k = String(process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (!u && !k) return 'в Environment этого сервиса нет SUPABASE_URL и SUPABASE_SERVICE_KEY';
+  if (!u) return 'в Environment нет SUPABASE_URL';
+  if (!k) return 'в Environment нет SUPABASE_SERVICE_KEY';
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(u)) return 'SUPABASE_URL в неверном виде — нужно https://<проект>.supabase.co, без /rest/v1 и других хвостов';
+  return 'ключи заданы, но подключение не создано';
 }
-function tgLoadOffset(){
+app.get('/api/health', (req,res) => res.json({ ok: true, storage: cloud && !cloudError ? 'supabase' : 'local', storageIssue: storageIssue() || undefined, uptime: Math.round(process.uptime()) }));
+app.get('/api/version', (req,res) => res.json({ok:true,version:'28',build:'IOMASTAVKA_FILE_28'}));
+// Weather without API key: Open-Meteo (fixed URL, cached 10 min).
+let weatherCache = { at: 0, data: null };
+app.get('/api/weather', async (req,res) => {
   try {
-    const d = JSON.parse(require('fs').readFileSync(TG_OFFSET_FILE, 'utf8'));
-    return Number(d.offset) || 0;
-  } catch(e){ return 0; }
+    if (weatherCache.data && Date.now() - weatherCache.at < 10*60*1000) return res.json(weatherCache.data);
+    const lat = Number(process.env.WEATHER_LAT || 55.7558), lon = Number(process.env.WEATHER_LON || 37.6173);
+    const city = process.env.WEATHER_CITY || 'Москва';
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,cloud_cover,wind_speed_10m,is_day&daily=sunrise,sunset&timezone=auto&timeformat=unixtime&forecast_days=1`;
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 6000);
+    const r = await fetch(url, { signal: ctrl.signal }); clearTimeout(t);
+    if (!r.ok) throw new Error('weather upstream ' + r.status);
+    const j = await r.json(); const c = j.current || {}; const code = Number(c.weather_code);
+    const main = code === 0 || code === 1 ? 'Clear' : code <= 3 || code === 45 || code === 48 ? 'Clouds' : code >= 51 && code <= 57 ? 'Drizzle' : (code >= 61 && code <= 67) || (code >= 80 && code <= 82) ? 'Rain' : (code >= 71 && code <= 77) || code === 85 || code === 86 ? 'Snow' : code >= 95 ? 'Thunderstorm' : 'Clouds';
+    const data = { city, main, temp: c.temperature_2m, clouds: c.cloud_cover, wind: c.wind_speed_10m, sunrise: j.daily?.sunrise?.[0], sunset: j.daily?.sunset?.[0], updatedAt: new Date().toISOString() };
+    weatherCache = { at: Date.now(), data }; res.json(data);
+  } catch (e) { res.status(502).json({ error: 'weather unavailable' }); }
+});
+app.get('/api/config', (req,res) => res.json({ weatherConfigured: true, aiConfigured: Boolean(process.env.OPENAI_API_KEY), ftsConfigured: Boolean(process.env.API_CLOUD_FTS_TOKEN) }));
+
+// Курсы ЦБ РФ: на сегодня или на выбранную дату (?date=YYYY-MM-DD) + динамика за 30 дней для мини-графиков.
+const CBR_IDS = { USD: 'R01235', EUR: 'R01239', CNY: 'R01375' };
+const curCache = new Map();
+const pad2 = n => String(n).padStart(2, '0');
+const cbrDate = d => `${pad2(d.getUTCDate())}/${pad2(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
+const numRu = v => Number(String(v || '').replace(/\s/g, '').replace(',', '.'));
+function parseCbrDaily(xml) {
+  const items = {};
+  for (const block of xml.match(/<Valute\b[\s\S]*?<\/Valute>/gi) || []) {
+    const code = (block.match(/<CharCode>([^<]+)<\/CharCode>/i) || [])[1];
+    if (!CBR_IDS[code]) continue;
+    const nominal = numRu((block.match(/<Nominal>([^<]+)<\/Nominal>/i) || [])[1]) || 1;
+    const value = numRu((block.match(/<Value>([^<]+)<\/Value>/i) || [])[1]);
+    if (value) items[code] = { nominal: 1, value: +(value / nominal).toFixed(4) };
+  }
+  const date = (xml.match(/<ValCurs[^>]*Date="([^"]+)"/i) || [])[1] || '';
+  return { date, items };
+}
+function parseCbrDynamic(xml) {
+  const out = [];
+  for (const rec of xml.match(/<Record\b[\s\S]*?<\/Record>/gi) || []) {
+    const date = (rec.match(/Date="([^"]+)"/) || [])[1];
+    const nominal = numRu((rec.match(/<Nominal>([^<]+)<\/Nominal>/i) || [])[1]) || 1;
+    const value = numRu((rec.match(/<Value>([^<]+)<\/Value>/i) || [])[1]);
+    if (date && value) out.push({ date, value: +(value / nominal).toFixed(4) });
+  }
+  return out;
+}
+async function fetchText(url) {
+  const r = await fetch(url, { headers: { 'User-Agent': 'iomastavka/2.0' }, signal: AbortSignal.timeout(8000) });
+  if (!r.ok) throw new Error('upstream ' + r.status);
+  return r.text();
+}
+// Курсы ЦБ на сегодня для калькулятора ВЭД и финансов сделки (кеш 30 минут). IOMA_FIXED_RATES — только для автотестов.
+let cbrToday = { at: 0, data: null };
+async function cbrRatesToday() {
+  if (process.env.IOMA_FIXED_RATES) { try { return { date: 'тест', rates: JSON.parse(process.env.IOMA_FIXED_RATES) }; } catch {} }
+  if (cbrToday.data && Date.now() - cbrToday.at < 30 * 60 * 1000) return cbrToday.data;
+  let data = null;
+  try { const p = parseCbrDaily(await fetchText('https://www.cbr.ru/scripts/XML_daily.asp')); if (p.items.USD) { const rates = {}; for (const k of Object.keys(p.items)) rates[k] = p.items[k].value; data = { date: p.date, rates }; } } catch {}
+  if (!data) { try { const j = JSON.parse(await fetchText('https://www.cbr-xml-daily.ru/daily_json.js')); const rates = {}; for (const k of Object.keys(CBR_IDS)) { const x = j.Valute && j.Valute[k]; if (x && x.Value) rates[k] = +(x.Value / (x.Nominal || 1)).toFixed(4); } if (rates.USD) { const d = new Date(j.Date); data = { date: `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`, rates }; } } catch {} }
+  if (data) cbrToday = { at: Date.now(), data };
+  return data || (cbrToday.data || { date: '', rates: {} });
+}
+app.get('/api/currency', async (req,res) => {
+  const today = new Date(); today.setUTCHours(0, 0, 0, 0);
+  let day = today;
+  if (req.query.date) {
+    const m = String(req.query.date).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return res.status(400).json({ ok: false, error: 'Дата в формате ГГГГ-ММ-ДД' });
+    day = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    if (isNaN(day) || day < new Date(Date.UTC(1993, 0, 1)) || day > new Date(today.getTime() + 864e5)) return res.status(400).json({ ok: false, error: 'Выберите дату с 1993 года по завтрашний день' });
+  }
+  const key = day.toISOString().slice(0, 10), isToday = key === today.toISOString().slice(0, 10);
+  const hit = curCache.get(key);
+  if (hit && (Date.now() - hit.at < (isToday ? 30 * 60 * 1000 : 7 * 864e5))) return res.json(hit.data);
+  let data = null;
+  try {
+    const parsed = parseCbrDaily(await fetchText('https://www.cbr.ru/scripts/XML_daily.asp' + (req.query.date ? '?date_req=' + cbrDate(day) : '')));
+    if (parsed.items.USD && parsed.items.EUR && parsed.items.CNY) data = { ok: true, source: 'cbr.ru', date: parsed.date, items: parsed.items };
+  } catch {}
+  if (!data) {
+    try {
+      const url = req.query.date ? `https://www.cbr-xml-daily.ru/archive/${day.getUTCFullYear()}/${pad2(day.getUTCMonth() + 1)}/${pad2(day.getUTCDate())}/daily_json.js` : 'https://www.cbr-xml-daily.ru/daily_json.js';
+      const j = JSON.parse(await fetchText(url)), items = {};
+      for (const code of Object.keys(CBR_IDS)) { const x = j.Valute && j.Valute[code]; if (x && x.Value) items[code] = { nominal: 1, value: +(x.Value / (x.Nominal || 1)).toFixed(4), prev: x.Previous ? +(x.Previous / (x.Nominal || 1)).toFixed(4) : undefined }; }
+      if (items.USD && items.EUR && items.CNY) { const d = new Date(j.Date); data = { ok: true, source: 'cbr-xml-daily.ru', date: `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`, items }; }
+    } catch {}
+  }
+  if (!data) return res.status(502).json({ ok: false, error: req.query.date ? 'Нет курса ЦБ на эту дату — попробуйте другую' : 'CBR unavailable' });
+  // Динамика за 30 дней до выбранной даты (для мини-графиков и изменения за день).
+  try {
+    const from = new Date(day.getTime() - 30 * 864e5);
+    const series = await Promise.all(Object.entries(CBR_IDS).map(async ([code, id]) => [code, parseCbrDynamic(await fetchText(`https://www.cbr.ru/scripts/XML_dynamic.asp?date_req1=${cbrDate(from)}&date_req2=${cbrDate(day)}&VAL_NM_RQ=${id}`))]));
+    data.series = {};
+    for (const [code, list] of series) if (list.length > 1) {
+      data.series[code] = list.map(x => x.value);
+      const it = data.items[code]; if (it && it.prev == null) { const i = list.findIndex(x => Math.abs(x.value - it.value) < 1e-4); const p = i > 0 ? list[i - 1] : list[list.length - 2]; if (p) it.prev = p.value; }
+    }
+  } catch {}
+  curCache.set(key, { at: Date.now(), data });
+  if (curCache.size > 200) curCache.delete(curCache.keys().next().value);
+  res.json(data);
+});
+
+// Динамика курса за период: /api/currency/dynamics?code=CNY&from=2026-01-01&to=2026-11-06
+// (ЦБ РФ, XML_dynamic). KZT и KRW показываем за 100 тенге и 1000 вон — как в официальной таблице ЦБ.
+const DYN_IDS = { ...CBR_IDS, KZT: 'R01335', KRW: 'R01815' };
+const DYN_NOMINAL = { KZT: 100, KRW: 1000 };
+const dynCache = new Map();
+app.get('/api/currency/dynamics', async (req, res) => {
+  const code = String(req.query.code || 'CNY').toUpperCase();
+  if (!DYN_IDS[code]) return res.status(400).json({ ok: false, error: 'Валюта: ' + Object.keys(DYN_IDS).join(', ') });
+  const parse = v => { const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null; };
+  const today = new Date(); today.setUTCHours(0, 0, 0, 0);
+  const to = parse(req.query.to) || today, from = parse(req.query.from) || new Date(to.getTime() - 30 * 864e5);
+  if (isNaN(from) || isNaN(to) || from >= to) return res.status(400).json({ ok: false, error: 'Начало периода должно быть раньше конца' });
+  if (from < new Date(Date.UTC(1993, 0, 1)) || to > new Date(today.getTime() + 864e5)) return res.status(400).json({ ok: false, error: 'Выберите даты с 1993 года по завтрашний день' });
+  if (to - from > 30 * 366 * 864e5) return res.status(400).json({ ok: false, error: 'Слишком длинный период: не больше 30 лет' });
+  const key = code + from.toISOString().slice(0, 10) + to.toISOString().slice(0, 10);
+  const fresh = to >= today ? 30 * 60 * 1000 : 7 * 864e5, hit = dynCache.get(key);
+  if (hit && Date.now() - hit.at < fresh) return res.json(hit.data);
+  let list;
+  try { list = parseCbrDynamic(await fetchText(`https://www.cbr.ru/scripts/XML_dynamic.asp?date_req1=${cbrDate(from)}&date_req2=${cbrDate(to)}&VAL_NM_RQ=${DYN_IDS[code]}`)); }
+  catch { return res.status(502).json({ ok: false, error: 'ЦБ сейчас не отвечает — попробуйте через минуту' }); }
+  if (!list.length) return res.status(404).json({ ok: false, error: 'За этот период у ЦБ нет курса ' + code });
+  const nom = DYN_NOMINAL[code] || 1;
+  const points = list.map(x => { const [d, m, y] = x.date.split('.'); return { d: `${y}-${m}-${d}`, v: +(x.value * nom).toFixed(4) }; });
+  const vals = points.map(p => p.v), first = vals[0], last = vals[vals.length - 1];
+  const data = { ok: true, code, nominal: nom, from: points[0].d, to: points[points.length - 1].d, points, min: Math.min(...vals), max: Math.max(...vals), first, last, change: +(last - first).toFixed(4), changePct: +((last - first) / first * 100).toFixed(2) };
+  dynCache.set(key, { at: Date.now(), data }); if (dynCache.size > 300) dynCache.delete(dynCache.keys().next().value);
+  res.json(data);
+});
+
+const CITY_ALIASES = {
+ 'аньян':['Anyang','CN','Хэнань','安阳'],'anyang':['Anyang','CN','Хэнань','安阳'],
+ 'ханьдань':['Handan','CN','Хэбэй','邯郸'],'handan':['Handan','CN','Хэбэй','邯郸'],
+ 'пиндиншань':['Pingdingshan','CN','Хэнань','平顶山'],'хэфэй':['Hefei','CN','Аньхой','合肥'],
+ 'нантонг':['Nantong','CN','Цзянсу','南通'],'наньтун':['Nantong','CN','Цзянсу','南通'],
+ 'чжэнчжоу':['Zhengzhou','CN','Хэнань','郑州'],'циндао':['Qingdao','CN','Шаньдун','青岛'],
+ 'сучжоу':['Suzhou','CN','Цзянсу','苏州'],'suzhou':['Suzhou','CN','Цзянсу','苏州'],
+ 'гуанчжоу':['Guangzhou','CN','Гуандун','广州'],'шанхай':['Shanghai','CN','Шанхай','上海'],
+ 'пекин':['Beijing','CN','Пекин','北京'],'шэньчжэнь':['Shenzhen','CN','Гуандун','深圳'],
+ 'тяньцзинь':['Tianjin','CN','Тяньцзинь','天津'],'чэнду':['Chengdu','CN','Сычуань','成都'],
+ 'чунцин':['Chongqing','CN','Чунцин','重庆'],'ухань':['Wuhan','CN','Хубэй','武汉'],
+ 'нанкин':['Nanjing','CN','Цзянсу','南京'],'сямэнь':['Xiamen','CN','Фуцзянь','厦门'],
+ 'фошань':['Foshan','CN','Гуандун','佛山'],'дунгуань':['Dongguan','CN','Гуандун','东莞'],
+ 'нинбо':['Ningbo','CN','Чжэцзян','宁波'],'ханчжоу':['Hangzhou','CN','Чжэцзян','杭州'],
+ 'чжуншань':['Zhongshan','CN','Гуандун','中山'],'сучжо́у':['Suzhou','CN','Цзянсу','苏州']
+};
+app.get('/api/cities', async (req,res) => {
+  const q=String(req.query.q||'').trim(), country=String(req.query.country||'CN').toUpperCase(), limit=Math.min(100,Math.max(1,Number(req.query.limit)||30));
+  const ASIA_CODES_SERVER=new Set(['CN','JP','KR','KP','MN','IN','PK','BD','NP','BT','LK','MV','AF','ID','TH','VN','MY','SG','PH','MM','KH','LA','BN','TL','KZ','UZ','KG','TJ','TM']);
+  const isAsiaScope=country==='ASIA';
+  const allowedCodes=isAsiaScope?ASIA_CODES_SERVER:new Set([country]);
+  if(!q) return res.json({ok:true,results:[]});
+  try{
+    const alias=CITY_ALIASES[normalizeText(q)]; const searchName=alias?.[0]||q; const results=[];
+    const add=(x)=>{if(!x)return;const name=x.name||x.city||x.town||x.village||x.municipality||x.display_name?.split(',')[0];if(!name)return;results.push({name,nameEn:x.nameEn||x.name||name,nameZh:x.nameZh||x.name||name,admin1:x.admin1||x.state||x.province||'',country:x.country||'China',country_code:x.country_code||country,latitude:Number(x.latitude??x.lat),longitude:Number(x.longitude??x.lon)})};
+    try{const u=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchName)}&count=100&language=en&format=json`;const r=await fetch(u,{headers:{'User-Agent':'iomastavastka/1.0'}});if(r.ok){const d=await r.json();for(const x of d.results||[]){if((isAsiaScope&&ASIA_CODES_SERVER.has(String(x.country_code||'').toUpperCase()))||(!isAsiaScope&&x.country_code===country))add({name:x.name,nameEn:x.name,admin1:x.admin1,country:x.country,country_code:x.country_code,latitude:x.latitude,longitude:x.longitude})}}}catch{}
+    if(q.length>=1){try{const cc=isAsiaScope?[...ASIA_CODES_SERVER].map(x=>x.toLowerCase()).join(','):country.toLowerCase(); const u=`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=100&countrycodes=${cc}&q=${encodeURIComponent(q)}`;const r=await fetch(u,{headers:{'User-Agent':'iomastavka/1.1'}});if(r.ok){const d=await r.json();for(const x of d)add(x)}}catch{}}
+    if(alias && (isAsiaScope||country===alias[1])) add({name:alias[0],nameEn:alias[0],nameZh:alias[3],admin1:alias[2],country:'China',country_code:'CN',latitude:null,longitude:null});
+    const seen=new Set(); const clean=results.filter(x=>{if(x.country_code&&((isAsiaScope&&!ASIA_CODES_SERVER.has(String(x.country_code).toUpperCase()))||(!isAsiaScope&&x.country_code!==country)))return false;const k=normalizeText(`${x.name}|${x.admin1}|${x.country_code}`);if(seen.has(k))return false;seen.add(k);return true});
+    clean.sort((a,b)=>{const aa=normalizeText(`${a.name} ${a.nameEn} ${a.nameZh}`),bb=normalizeText(`${b.name} ${b.nameEn} ${b.nameZh}`),qq=normalizeText(q);const sa=aa.startsWith(qq)?0:aa.includes(qq)?1:2,sb=bb.startsWith(qq)?0:bb.includes(qq)?1:2;return sa-sb});
+    res.json({ok:true,results:clean.slice(0,limit)});
+  }catch{res.status(502).json({ok:false,error:'city search unavailable',results:[]});}
+});
+
+app.get('/api/geocode', async (req,res) => {
+  const q=String(req.query.q||'').trim(), country=String(req.query.country||'').toLowerCase(), scope=String(req.query.scope||'').toLowerCase();
+  const asiaCodes=new Set(['cn','jp','kr','kp','mn','in','pk','bd','np','bt','lk','mv','af','id','th','vn','my','sg','ph','mm','kh','la','bn','tl','kz','uz','kg','tj','tm']);
+  if(!q)return res.json({ok:true,results:[]});
+  try{
+    const cc=scope==='asia'||scope==='china'?'cn,jp,kr,kp,mn,in,pk,bd,np,bt,lk,mv,af,id,th,vn,my,sg,ph,mm,kh,la,bn,tl,kz,uz,kg,tj,tm':country;
+    const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=20${cc?`&countrycodes=${encodeURIComponent(cc)}`:''}&q=${encodeURIComponent(q)}`;
+    const r=await fetch(url,{headers:{'User-Agent':'iomastavka/1.3 (logistics calculator)'}}); if(!r.ok)throw new Error('geocode unavailable');
+    const data=await r.json();
+    const results=(data||[]).map(x=>({name:x.name||x.display_name?.split(',')[0]||q,nameEn:x.name||x.display_name?.split(',')[0]||q,nameZh:x.name||x.display_name?.split(',')[0]||q,admin1:x.address?.state||x.address?.province||'',country:x.address?.country||'',country_code:x.address?.country_code||'',latitude:Number(x.lat),longitude:Number(x.lon),display_name:x.display_name||''})).filter(x=>Number.isFinite(x.latitude)&&Number.isFinite(x.longitude)).filter(x=>scope==='asia'||scope==='china'?asiaCodes.has(String(x.country_code).toLowerCase()):(!country||String(x.country_code).toLowerCase()===country));
+    res.json({ok:true,results});
+  }catch{res.status(502).json({ok:false,error:'geocode unavailable',results:[]});}
+});
+
+
+function stripHtml(html='') {
+  return String(html)
+    .replace(/<script[\s\S]*?<\/script>/gi,' ')
+    .replace(/<style[\s\S]*?<\/style>/gi,' ')
+    .replace(/<[^>]+>/g,' ')
+    .replace(/&nbsp;/gi,' ')
+    .replace(/&amp;/gi,'&').replace(/&quot;/gi,'"').replace(/&#39;/gi,"'")
+    .replace(/&lt;/gi,'<').replace(/&gt;/gi,'>')
+    .replace(/\s+/g,' ').trim();
+}
+function xmlUnescape(s=''){return stripHtml(String(s)).replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16)));}
+function newsIsUrgent(item={}) {
+  const text=String(item.title||'')+' '+String(item.description||'');
+  return /(обязательн|вступ(ает|ил).*сил|запрет|ограничен|пошлин|тариф|таможенн|маркиров|санкц|лиценз|сертификат|электронн.*транспортн|транспортн.*накладн|law|mandatory|ban|restriction|customs|duty|tariff|sanction|licen[cs]|certificate)/i.test(text);
+}
+async function fetchRss(url, sourceName){
+  try{
+    const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0 iomastavka news/28'},signal:AbortSignal.timeout(9000)});
+    if(!r.ok)return [];
+    const xml=await r.text(); const items=[];
+    const blocks=xml.match(/<item[\s\S]*?<\/item>/gi)||[];
+    for(const block of blocks.slice(0,20)){
+      const title=(block.match(/<title[^>]*>([\s\S]*?)<\/title>/i)||[])[1]||'';
+      const link=(block.match(/<link[^>]*>([\s\S]*?)<\/link>/i)||[])[1]||'';
+      const desc=(block.match(/<description[^>]*>([\s\S]*?)<\/description>/i)||[])[1]||'';
+      const pub=(block.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/i)||[])[1]||'';
+      const t=xmlUnescape(title), l=xmlUnescape(link).trim(), d=xmlUnescape(desc);
+      if(!t)continue;
+      const date=Date.parse(pub); items.push({title:t,link:l,date:Number.isFinite(date)?new Date(date).toISOString():new Date().toISOString(),source:sourceName,description:d.slice(0,500)});
+    }
+    return items;
+  }catch{return []}
+}
+async function fetchNews(){
+  const queries=[
+    ['https://news.google.com/rss/search?q='+encodeURIComponent('логистика Китай Россия таможня')+'&hl=ru&gl=RU&ceid=RU:ru','Логистика · Китай / Россия'],
+    ['https://news.google.com/rss/search?q='+encodeURIComponent('таможня ЕАЭС пошлина маркировка')+'&hl=ru&gl=RU&ceid=RU:ru','Таможня · ЕАЭС'],
+    ['https://news.google.com/rss/search?q='+encodeURIComponent('электронная транспортная накладная Россия')+'&hl=ru&gl=RU&ceid=RU:ru','Транспортные документы · Россия'],
+    ['https://news.google.com/rss/search?q='+encodeURIComponent('China Russia freight rail sea air logistics')+'&hl=en&gl=US&ceid=US:en','Asia logistics'],
+    ['https://news.google.com/rss/search?q='+encodeURIComponent('контейнерные перевозки Китай ставки')+'&hl=ru&gl=RU&ceid=RU:ru','Ставки и контейнеры'],
+    ['https://news.google.com/rss/search?q='+encodeURIComponent('Забайкальск OR Владивосток порт контейнеры')+'&hl=ru&gl=RU&ceid=RU:ru','Погранпереходы и порты'],
+    ['https://news.google.com/rss/search?q='+encodeURIComponent('ФТС импорт изменения правил')+'&hl=ru&gl=RU&ceid=RU:ru','Таможня · ФТС']
+  ];
+  const lists=await Promise.all(queries.map(([u,s])=>fetchRss(u,s)));
+  let all=lists.flat();
+  // Keep recent items first and remove duplicate headlines.
+  const seen=new Set();
+  all=all.filter(x=>{const k=normalizeText(x.title);if(!k||seen.has(k))return false;seen.add(k);return true});
+  all.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  // Сначала свежие (2 недели), затем добираем до 18 материалов за 2 месяца — лента не бывает пустой.
+  const age=x=>Date.now()-new Date(x.date).getTime();
+  const recent=all.filter(x=>age(x)<=14*864e5), older=all.filter(x=>age(x)>14*864e5&&age(x)<=60*864e5);
+  const selected=recent.concat(recent.length<18?older.slice(0,18-recent.length):[]).slice(0,30).map(x=>({...x,urgent:newsIsUrgent(x)}));
+  if(!selected.length){
+    const key=process.env.OPENAI_API_KEY;
+    if(key){
+      const prompt=`Собери 10 свежих новостей за последние 7 дней для сайта iomastavka: международная логистика Азия/Китай→Россия, перевозки, ВЭД, таможня ЕАЭС/РФ, документы и обязательные требования. Приоритет: официальные источники ФТС/ЕЭК/Минтранс/правительство, затем надежные отраслевые СМИ. Верни только JSON-массив объектов: title,link,date,source,description,urgent. urgent=true только для реально значимых изменений правил, запретов, пошлин, обязательных требований или таможенных решений. Текущая дата: ${new Date().toISOString()}`;
+      const out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input:[{role:'user',content:prompt}],tools:[{type:'web_search',search_context_size:'medium'}],max_output_tokens:2200});
+      if(!out.error){try{const raw=responseText(out.d);const parsed=parseJsonLoose(raw);if(Array.isArray(parsed))selected.push(...parsed.map(x=>({...x,urgent:Boolean(x.urgent)||newsIsUrgent(x)})).slice(0,24));}catch{}}
+    }
+  }
+  newsCache.at=Date.now(); newsCache.items=selected;
+  return selected;
+}
+const newsCache={at:0,items:[]};
+
+seoPages = require('./seo').setup(app, { site: () => SITE_URL, newsItems: async () => (Date.now()-newsCache.at < 6*60*60*1000 && newsCache.items.length) ? newsCache.items : await fetchNews() });
+app.get('/api/news', async (req,res) => {
+  try {
+    const items = (Date.now()-newsCache.at < 6*60*60*1000 && newsCache.items.length) ? newsCache.items : await fetchNews();
+    res.json({ok:true, updatedAt:newsCache.at, items});
+  } catch { res.status(502).json({ok:false,error:'news unavailable',items:[]}); }
+});
+
+
+function langName(code){return code==='zh'?'Chinese':code==='en'?'English':code==='tr'?'Turkish':'Russian';}
+
+function openAIModel(preferred){
+  const m=String(preferred||'').trim();
+  // API model IDs are different from internal ChatGPT model labels. GPT-5.6 Luna is a valid API model.
+  if(m && !/mini-test|local|chatgpt/i.test(m)) return m;
+  return 'gpt-5';
+}
+function aiModelCandidates(preferred){
+  const first=openAIModel(preferred);
+  return [...new Set([first,'gpt-5','gpt-4.1-mini','gpt-4o-mini'])];
+}
+async function responsesRequest({key,preferred,input,tools,max_output_tokens=1000}){
+  let last={status:502,error:'OpenAI request failed'};
+  for(const model of aiModelCandidates(preferred)){
+    const body={model,input,max_output_tokens};
+    if(tools) body.tools=tools;
+    try{
+      const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify(body)});
+      const raw=await r.text(); let d={}; try{d=JSON.parse(raw)}catch{}
+      if(r.ok)return {r,d};
+      last={status:r.status,error:d?.error?.message||raw||`Model ${model} failed`};
+    }catch(e){last={status:502,error:e.message||'OpenAI unavailable'};}
+  }
+  return {error:last};
+}
+function responseText(d){
+  let text=typeof d?.output_text==='string'?d.output_text:'';
+  if(!text&&Array.isArray(d?.output)) text=d.output.flatMap(o=>Array.isArray(o.content)?o.content:[]).map(c=>c.text||c.value||'').filter(Boolean).join('\n');
+  return String(text||'').trim();
 }
 
-function tgKeyboard(){
+app.post('/api/realtime/call', async (req,res)=>{
+  const key=process.env.OPENAI_API_KEY; if(!key)return res.status(503).json({ok:false,error:'AI key not configured'});
+  const sdp=String(req.body?.sdp||''); if(!sdp)return res.status(400).json({ok:false,error:'SDP offer required'});
+  const language=String(req.body?.language||'ru'); const context=req.body?.context||{};
+  const instructions=`You are iomastavka, a calm expert logistics assistant for China/Asia to Russia. Speak naturally like a premium OpenAI voice assistant. Respond in ${langName(language)} unless the user asks for another language. Keep answers concise but useful. You can discuss logistics, Incoterms, customs, transport, rates, cities and the calculator context. Never invent rates. Current calculator context: ${JSON.stringify(context)}`;
+  try{
+    const model=process.env.OPENAI_REALTIME_MODEL||'gpt-realtime-2.1';
+    const form=new FormData(); form.append('sdp',sdp); form.append('session',new Blob([JSON.stringify({type:'realtime',model,instructions,output_modalities:['audio'],audio:{input:{turn_detection:{type:'server_vad',create_response:true,interrupt_response:true}},output:{voice:process.env.OPENAI_REALTIME_VOICE||'marin'}}})],{type:'application/json'}),'session.json');
+    const r=await fetch(`https://api.openai.com/v1/realtime/calls?model=${encodeURIComponent(model)}`,{method:'POST',headers:{Authorization:`Bearer ${key}`},body:form});
+    const text=await r.text();
+    if(!r.ok) {
+      let message=text||'Realtime call failed';
+      try { const parsed=JSON.parse(text); message=parsed?.error?.message||parsed?.error||message; } catch {}
+      return res.status(r.status).json({ok:false,error:message});
+    }
+    // The Realtime WebRTC endpoint returns the SDP answer as plain text.
+    res.status(200).type('application/sdp').send(text);
+  }catch(e){res.status(502).json({ok:false,error:e.message||'Realtime unavailable'});}
+});
+
+async function fetchArticleSource(url){
+  if(!/^https?:\/\//i.test(url))return '';
+  // Защита от SSRF: адрес приходит от посетителя, поэтому закрытые и внутренние адреса запрещены.
+  try{const html=await safeFetchText(url,{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0'},timeoutMs:7000,maxBytes:1000000});return stripHtml(html).slice(0,18000);}catch{return '';}
+}
+function parseLooseJson(text){try{return JSON.parse(text)}catch{const a=text.indexOf('{'),b=text.lastIndexOf('}');if(a>=0&&b>a)return JSON.parse(text.slice(a,b+1));throw new Error('Invalid article JSON')}}
+app.post('/api/news/article', async(req,res)=>{
+  const key=process.env.OPENAI_API_KEY;if(!key)return res.status(503).json({ok:false,error:'AI key not configured'});
+  const title=String(req.body?.title||'').trim(); if(!title)return res.status(400).json({ok:false,error:'Article title required'});
+  const language=String(req.body?.language||'ru'); const sourceText=await fetchArticleSource(String(req.body?.link||''));
+  const model=openAIModel(process.env.OPENAI_MODEL);
+  const prompt=`Create a beautiful, self-contained study article from the supplied news item. If the source page text is empty or inaccessible, use the supplied title and description only and clearly avoid unsupported specifics; still produce a useful explanatory article rather than an error. Language: ${langName(language)}. Do not tell the reader to visit another site. Explain the event, logistics/customs implications, key terms, practical takeaways and a short "what to watch next" section. Make it useful for someone learning international logistics. 700-1000 words. Return ONLY JSON with keys title, subtitle, content, podcast. content must be markdown text with headings; podcast is a natural spoken script under 3500 characters. Preserve factual uncertainty and never invent numbers not supported by the source. News title: ${title}. Source: ${String(req.body?.source||'')}. Description: ${String(req.body?.description||'')}. Source page text (may be empty): ${sourceText}`;
+  try{
+    const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model,input:[{role:'user',content:prompt}],max_output_tokens:2200})});
+    const d=await r.json();if(!r.ok)return res.status(r.status).json({ok:false,error:d?.error?.message||'Article generation failed'});
+    const out=d.output_text||((d.output||[]).flatMap(o=>o.content||[]).map(c=>c.text||c.value||'').filter(Boolean).join('\\n'));
+    const a=parseLooseJson(out); a.source=String(req.body?.source||''); a.image=String(req.body?.image||''); res.json({ok:true,article:a});
+  }catch(e){res.status(502).json({ok:false,error:e.message||'Article unavailable'});}
+});
+app.post('/api/news/article/audio', async(req,res)=>{
+  const key=process.env.OPENAI_API_KEY;if(!key)return res.status(503).json({ok:false,error:'AI key not configured'});
+  const input=String(req.body?.text||'').trim().slice(0,4096);if(!input)return res.status(400).json({ok:false,error:'Text required'});
+  const language=String(req.body?.language||'ru');
+  try{const r=await fetch('https://api.openai.com/v1/audio/speech',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model:'gpt-4o-mini-tts',voice:process.env.OPENAI_TTS_VOICE||'onyx',input,response_format:'mp3',speed:.94,instructions:`Professional male narrator. Warm, confident, cinematic documentary style. Speak clearly in ${langName(language)}, with natural pauses and calm authority.`})});if(!r.ok)return res.status(r.status).json({ok:false,error:await r.text()||'TTS failed'});res.set('Content-Type','audio/mpeg');res.set('Cache-Control','no-store');res.send(Buffer.from(await r.arrayBuffer()));}catch(e){res.status(502).json({ok:false,error:e.message||'TTS unavailable'});}
+});
+
+app.post('/api/login', loginLimiter, (req,res) => {
+  const login = String(req.body?.login || '').trim().toLowerCase(), password = String(req.body?.password || '');
+  let payload = null;
+  // Администратор входит по логину «admin» или по почте из ADMIN_EMAIL (как в прежней версии сайта).
+  const adminEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  if (!login || login === 'admin' || (adminEmail && login === adminEmail)) { if (portal.adminPasswordOk(password)) payload = { role: 'admin', name: 'Администратор', sv: (portal.store.load().settings || {}).adminSv || 0 }; }
+  else { const u = portal.findClient(login, password); if (u) payload = { role: 'client', uid: u.id, name: u.name, sv: u.sv || 0 }; }
+  if (!payload) { portal.log(req, 'login_fail', { contact: login.slice(0, 120) }); return res.status(401).json({ ok:false, error:'Неверный логин или пароль' }); }
+  { const u = payload.role === 'client' ? portal.store.load().users.find(x => x.id === payload.uid) : null;
+    portal.log(req, 'login', { role: payload.role, uid: payload.uid, name: payload.name, email: u ? u.email : '', phone: u ? u.phone : '', company: u ? u.company : '', result: req.body?.remember ? 'с «Запомнить меня»' : '' }); }
+  // «Запомнить меня»: клиент — 30 дней, администратор — 7 дней; иначе 8 часов.
+  const ttl = req.body?.remember ? (payload.role === 'admin' ? 7 : 30) * 24 * 60 * 60 * 1000 : 8 * 60 * 60 * 1000;
+  res.cookie('auth', signSession(payload, Date.now(), ttl), { httpOnly:true, secure:true, sameSite:'lax', maxAge:ttl, path:'/' });
+  res.json({ ok:true, role: payload.role, name: payload.name });
+});
+const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много регистраций. Попробуйте позже.' } });
+app.post('/api/register', registerLimiter, async (req,res) => {
+  const b = req.body || {};
+  if (b.website) return res.json({ ok: true, role: 'guest' }); // ловушка для ботов
+  const r = await portal.registerClient(b);
+  if (r.error) return res.status(r.status || 400).json({ ok: false, error: r.error });
+  portal.log(req, 'register', { role: 'client', uid: r.user.id, name: r.user.name, email: r.user.email, phone: r.user.phone, company: r.user.company });
+  const ttl = 30 * 24 * 60 * 60 * 1000;
+  res.cookie('auth', signSession({ role: 'client', uid: r.user.id, name: r.user.name }, Date.now(), ttl), { httpOnly:true, secure:true, sameSite:'lax', maxAge:ttl, path:'/' });
+  res.json({ ok: true, role: 'client', name: r.user.name });
+});
+app.post('/api/logout', (req,res) => {
+  res.clearCookie('auth', { httpOnly:true, secure:true, sameSite:'lax', path:'/' });
+  res.json({ ok:true });
+});
+const BUILTIN_AGENTS = [{"id":1,"company":"Multiwell","contact":"Kane","phone":"8 616 608 738 886","email":"sales344@multiwell.net","site":"www.multiwell.net","modes":["rail","road","sea"],"transport":["Прямое Ж/Д","Авто","Море"],"notes":"Сборные груза"},{"id":2,"company":"Multiwell","contact":"Sakiya","phone":"8 619 860 070 462","email":"sales242@multiwell.net","site":"www.multiwell.net","modes":["rail","road","sea"],"transport":["Прямое Ж/Д","Авто","Море"],"notes":"Сборные груза"},{"id":3,"company":"CR FREIGHT","contact":"Ирина Андреева","phone":"8 911 195 62 31","email":"andreeva@crfreight.cn","site":"","modes":["air"],"transport":["Авиа"],"notes":"Опасный"},{"id":4,"company":"CR FREIGHT","contact":"Ella и другие","phone":"","email":"cs19@crfreight.cn, ella@crfreight.cn, sr16@crfreight.cn","site":"","modes":["air"],"transport":["Авиа"],"notes":"Опасный"},{"id":5,"company":"TRANSIT, LLC","contact":"Konstantin Leonov","phone":"8 914 791 87 81","email":"k.leonov@transitllc.ru","site":"www.transitllc.ru","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":"Сборные груза, Ж/Д по России"},{"id":6,"company":"TRANSIT, LLC","contact":"Tatyana Iskaleeva","phone":"8 908 450 11 98","email":"t.iskaleeva@transitllc.ru","site":"www.transitllc.ru","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":"Сборные груза, Ж/Д по России"},{"id":7,"company":"TRANSIT, LLC","contact":"","phone":"","email":"directrail@transitllc.ru","site":"www.transitllc.ru","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":"Сборные груза, Ж/Д по России"},{"id":8,"company":"Русмарин","contact":"Евгений Ермоленко","phone":"8 921 401 61 29","email":"evermolenko@rusmarine.ru","site":"www.rusmarine.ru","modes":["rail","road","air","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Авиа","Море","Море + Ж/Д"],"notes":"Сборные груза"},{"id":9,"company":"Qtavia","contact":"Anastasiia Snatkina","phone":"86 131 499 21 667","email":"a.snatkina@qtavia.com","site":"https://qtavia.com/","modes":["air"],"transport":["Авиа"],"notes":""},{"id":10,"company":"Qtavia","contact":"Linara Iliazova","phone":"8 936 131 23 25","email":"linara.iliazova@qtavia.com","site":"https://qtavia.com/","modes":["air"],"transport":["Авиа"],"notes":""},{"id":11,"company":"Qtavia","contact":"Naida Azadova","phone":"8 986 749 55 92","email":"naida.azadova@qtavia.com","site":"https://qtavia.com/","modes":["air"],"transport":["Авиа"],"notes":""},{"id":12,"company":"ФЛГ","contact":"Александр Токарев","phone":"8 906 238 85 17","email":"sales@flgrussia.com","site":"https://flgrussia.com/","modes":["rail","road"],"transport":["Прямое Ж/Д","Авто"],"notes":"Сборные груза"},{"id":13,"company":"РусКарго","contact":"Alina Karpova","phone":"8 981 930 24 66","email":"kas@r-cargo.com","site":"https://r-cargo.com/","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":""},{"id":14,"company":"YM Trans Group","contact":"Милена Никитина","phone":"8 925 988 65 99","email":"982@ymtrans.ru","site":"www.ymtrans.ru","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":""},{"id":15,"company":"JENTY","contact":"Marina Kostukovich","phone":"375 29 192 46 69","email":"m.kostukovich@jenty-spedition.com","site":"https://jenty-spedition.ru/","modes":["road"],"transport":["Авто"],"notes":"Сборные груза"},{"id":16,"company":"Consolidator-DV LLC","contact":"Timofei Bakanovich","phone":"8 964 432 57 95","email":"import5@consolidator-dv.ru","site":"http://consolidator-dv.ru/","modes":["sea"],"transport":["Море"],"notes":"Сборные груза"},{"id":17,"company":"ТАМГА","contact":"Осипов Николай","phone":"8 985 279 69 39","email":"n.osipov@tamga80.ru","site":"https://tamga80.ru/ru","modes":["road"],"transport":["Авто"],"notes":"Сборные груза, Негабарит"},{"id":18,"company":"Green Avia","contact":"Kuzmina Maria","phone":"8 936 506 11 15","email":"sales3@avia-dostavka.com","site":"https://avia-dostavka.com/","modes":["air"],"transport":["Авиа"],"notes":""},{"id":19,"company":"Sky Cargo Service","contact":"Ekaterina Ivanova","phone":"8 913 061 71 56","email":"sales10@scs-aero.ru","site":"www.scs-aero.ru","modes":["air"],"transport":["Авиа"],"notes":""},{"id":20,"company":"Альфа Транзит","contact":"Щепина Виктория","phone":"8 916 894 05 20","email":"v.shchepina@alfa-transit.com","site":"www.alfa-transit.com","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":"Сборные груза, Ж/Д по России, Негабарит, Опасный"},{"id":21,"company":"Шатл Логистик / Shuttle-Logistic","contact":"Братасенко Михаил","phone":"8 999 614 64 92","email":"mb@shuttle-logistic.ru","site":"www.shuttle-logistic.ru","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":"Сборные груза, Ж/Д по России, Негабарит, Опасный"},{"id":22,"company":"Chengdu Tiechi Silk Road Supply Chain Management","contact":"Lily","phone":"8 619 115 959 752","email":"lily@tsrscm.com","site":"http://tsrscm.com/ru/","modes":["rail"],"transport":["Прямое Ж/Д"],"notes":"Сборные груза"},{"id":23,"company":"GUANGZHOU ETY TRANS INTERNATIONAL FREIGHT FORWARDING","contact":"Vera Yao","phone":"8 615 999 941 607","email":"vera@cnetytrans.com","site":"www.cnetytrans.com","modes":["rail","sea","multimodal"],"transport":["Прямое Ж/Д","Море","Море + Ж/Д"],"notes":""},{"id":24,"company":"A2","contact":"Микулин Владимир","phone":"8 913 061 71 56","email":"v.mikulin@a2-express.com","site":"a2-express.com","modes":["air"],"transport":["Авиа"],"notes":""},{"id":25,"company":"RUTENSIL Logistics","contact":"Алина","phone":"8 906 351 17 33","email":"108@rutensil.com","site":"http://rutensil.com/","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":"Сборные груза, Европа"},{"id":26,"company":"ВТХ","contact":"Станислав","phone":"8 914 077 79 26","email":"vthopr4@vostoktransholding.ru","site":"http://vostoktransholding.ru/","modes":["sea","multimodal"],"transport":["Море","Море + Ж/Д"],"notes":"Сборные груза, США, Европа"},{"id":27,"company":"ВТХ","contact":"Алексей","phone":"8 914 704 43 41","email":"sales4@vostoktransholding.ru","site":"http://vostoktransholding.ru/","modes":["sea","multimodal"],"transport":["Море","Море + Ж/Д"],"notes":"Сборные груза, США, Европа"},{"id":28,"company":"Chongqing Gudali Supply Chain Management","contact":"Logan","phone":"8 613 827 428 296","email":"logan@gdl-rail.com","site":"logan@gdl-rail.com","modes":["rail","road"],"transport":["Прямое Ж/Д","Авто"],"notes":"Сборные груза"},{"id":29,"company":"Вэй Трейд","contact":"Рукосуева Евгения Олеговна","phone":"8 902 981 11 04","email":"e.rukosueva@way-trade.ru","site":"https://way-trade.ru/","modes":["rail","road","multimodal"],"transport":["Прямое Ж/Д","Авто","Море + Ж/Д"],"notes":""},{"id":30,"company":"WAY GROUP","contact":"Общий","phone":"8 800 600 04 30","email":"info@wayg.ru","site":"https://www.wayg.ru/","modes":["rail","road","sea","multimodal"],"transport":["Прямое Ж/Д","Авто","Море","Море + Ж/Д"],"notes":"Сборные груза, Негабарит"},{"id":31,"company":"ФИТ, Владивосток","contact":"Маргарита","phone":"8-800-23-444-99 ext. 41501; +7-914-794-20-89","email":"NNKuznetsova@fesco.com","site":"https://www.fesco.ru/ru/","modes":["rail","sea","multimodal"],"transport":["Прямое Ж/Д","Море","Море + Ж/Д"],"notes":"Сборные груза, Ж/Д по России, Негабарит"},{"id":32,"company":"Нью Вэй Лоджистик","contact":"Боев Сергей","phone":"8 914 320 65 95","email":"310@newwaylogistic.ru","site":"https://newwaylogistic.ru/","modes":["sea","multimodal"],"transport":["Море","Море + Ж/Д"],"notes":"Ж/Д по России, Опасный"},{"id":33,"company":"ВЕЛЕС","contact":"Венера Рашидова","phone":"8 918 418 69 82","email":"operative2@velesforwarding.ru","site":"www.velesforwarding.ru","modes":["sea"],"transport":["Море"],"notes":"Новороссийск, Негабарит, Опасный"},{"id":34,"company":"ГАЛЕАС","contact":"Роман","phone":"8 961 520 31 25","email":"r.kuznetsov@galeasgroup.ru","site":"https://galeasgroup.ru/","modes":["sea"],"transport":["Море"],"notes":"Новороссийск"},{"id":35,"company":"Znylogistics","contact":"Maya","phone":"","email":"operator01@znylogistics.com","site":"","modes":["road"],"transport":["Авто"],"notes":"Турция"},{"id":36,"company":"РТТК","contact":"Алексей Веслополов (Чита)","phone":"8 3022 21 18 18; 8 914 464 23 32","email":"rttk888@mail.ru","site":"https://www.rttk.net/","modes":["rail","road"],"transport":["Ж/Д","Авто"],"notes":"Негабарит, Россия, Китай"},{"id":37,"company":"Tu-Tell","contact":"Вадим","phone":"375 33 3071468","email":"t14@tutell.com","site":"https://www.tutell.com/","modes":["road"],"transport":["Авто"],"notes":"Сборные груза, Турция, Европа"},{"id":38,"company":"СДЕК","contact":"Палащук Владислав Сергеевич","phone":"8 924 697 72 73","email":"v.palashchuk@cdek.ru","site":"www.cdek.ru","modes":["road"],"transport":["Мелкие груза"],"notes":"Китай"},{"id":39,"company":"ИП Полчанинов Кирилл Александрович","contact":"Кирилл","phone":"7 925 991 25 75","email":"pka666@yandex.ru","site":"","modes":["road"],"transport":["Автовывоз с СВХ, машина 42-43 куб.м."],"notes":"Россия, Москва, МО"},{"id":40,"company":"ИП Диана Куркина","contact":"Евгений","phone":"7 962 936 27 08","email":"yevgeniy-kurkin@mail.ru","site":"","modes":["road"],"transport":["Автовывоз с СВХ, машина до 18 куб.м."],"notes":"Россия, Москва, МО"},{"id":41,"company":"Автовывоз — Алексей","contact":"Алексей","phone":"7 985 227 06 67","email":"","site":"","modes":["road"],"transport":["Автовывоз с СВХ, более 20 куб.м."],"notes":"Россия, Москва, МО"}];
+app.get('/api/agents', (req,res) => { try { const file=path.join(DATA_DIR,'agents.json'); const records=JSON.parse(fs.readFileSync(file,'utf8')); const out=Array.isArray(records)&&records.length?records:BUILTIN_AGENTS; res.json({ok:true,records:out}); } catch { res.json({ok:true,records:BUILTIN_AGENTS}); } });
+app.get('/api/rates', (req,res) => res.json(ensureRateDb()));
+app.get('/api/rates/recommend', (req,res) => {
+  const db=ensureRateDb(); const from=String(req.query.from||''), to=String(req.query.to||''), mode=String(req.query.mode||''); const distance=Number(req.query.distance);
+  const matches=db.records.map(r=>({...r,_score:routeScore(r,from,to,mode,Number.isFinite(distance)?distance:null)})).filter(r=>r._score>0).sort((a,b)=>b._score-a._score||new Date(b.updatedAt||0)-new Date(a.updatedAt||0)).slice(0,8);
+  const prices=matches.filter(r=>Number.isFinite(Number(r.rate))).map(r=>Number(r.rate));
+  const isAdmin = portal.roleOf(req).role === 'admin';
+  // Гостям и клиентам — только ориентир: без названий агентов, контактов и внутренних заметок.
+  const shown = isAdmin ? matches : matches.map(r => ({ from: r.from, to: r.to, mode: r.mode, rate: r.rate, currency: r.currency, basis: r.basis, container: r.container, transitDays: r.transitDays, company: '', notes: '', approximate: true }));
+  res.json({ok:true,matches:shown,range:prices.length?{min:Math.min(...prices),max:Math.max(...prices),currency:matches.find(r=>Number.isFinite(Number(r.rate)))?.currency||'RUB'}:null});
+});
+app.put('/api/rates', auth, (req,res) => {
+  const data=req.body;
+  if(!data || typeof data!=='object' || Array.isArray(data)) return res.status(400).json({ok:false,error:'Некорректные данные'});
+  saveRates(data); res.json({ok:true});
+});
+
+app.post('/api/agents/import', auth, async (req,res) => {
+  const key=process.env.OPENAI_API_KEY;
+  if(!key) return res.status(503).json({ok:false,error:'AI key not configured'});
+  const text=String(req.body?.text||'').trim();
+  if(!text) return res.status(400).json({ok:false,error:'Пустой текст'});
+  const system=`Ты извлекаешь данные экспедиторов из текста КП, писем, прайс-листов и контактных листов. Верни ТОЛЬКО валидный JSON-массив объектов без markdown. Поля каждого объекта: company, contact, phone, email, site, modes, transport, notes. modes допускаются только rail, road, air, sea, multimodal. transport — массив строк на языке исходного текста. Не придумывай данные. Если один и тот же человек/компания встречается несколько раз, объедини очевидные дубли. Если данных нет, оставь пустую строку/массив.`;
+  try{
+    const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model:openAIModel(process.env.OPENAI_MODEL),input:[{role:'system',content:system},{role:'user',content:text.slice(0,140000)}],max_output_tokens:1400})});
+    const d=await r.json(); if(!r.ok)return res.status(r.status).json({ok:false,error:d?.error?.message||'AI request failed'});
+    let raw=d.output_text||''; if(!raw&&Array.isArray(d.output))raw=d.output.flatMap(o=>o.content||[]).map(c=>c.text||'').join('');
+    raw=raw.replace(/^```json\s*/,'').replace(/\s*```$/,'').trim(); const parsed=JSON.parse(raw); const incoming=Array.isArray(parsed)?parsed:[];
+    const file=path.join(DATA_DIR,'agents.json'); let existing=[]; try{existing=JSON.parse(fs.readFileSync(file,'utf8'))}catch{}
+    const norm=x=>String(x||'').toLowerCase().replace(/[^a-zа-яё0-9]+/gi,''); const keyOf=x=>[norm(x.company),norm(x.contact),norm(x.email),norm(x.phone)].filter(Boolean).join('|');
+    let added=0; for(const a of incoming){if(!a||!String(a.company||'').trim())continue;const rec={company:String(a.company||'').trim(),contact:String(a.contact||'').trim(),phone:String(a.phone||'').trim(),email:String(a.email||'').trim(),site:String(a.site||'').trim(),modes:Array.isArray(a.modes)?a.modes.filter(Boolean):[],transport:Array.isArray(a.transport)?a.transport.filter(Boolean):[],notes:String(a.notes||'').trim()};const k=keyOf(rec);const idx=existing.findIndex(x=>keyOf(x)===k);if(idx>=0){existing[idx]={...existing[idx],...Object.fromEntries(Object.entries(rec).filter(([_,v])=>v!==''&&!(Array.isArray(v)&&!v.length)))}}else{existing.push({id:existing.reduce((m,x)=>Math.max(m,Number(x.id)||0),0)+1,...rec});added++}}
+    fs.writeFileSync(file,JSON.stringify(existing,null,2)); res.json({ok:true,added,records:existing.slice(-Math.max(added,1))});
+  }catch(e){res.status(502).json({ok:false,error:e.message||'Не удалось разобрать контакты'})}
+});
+
+app.post('/api/rates/import-local', auth, (req,res) => {
+  const records=Array.isArray(req.body?.records)?req.body.records:[];
+  if(!records.length)return res.status(400).json({ok:false,error:'Нет ставок'});
+  try{const result=mergeRateRecords(records,'browser-local');res.json({ok:true,added:result.added,records:result.db.records.slice(-result.added)})}catch(e){res.status(500).json({ok:false,error:e.message||'Не удалось сохранить ставки'})}
+});
+
+app.post('/api/rates/import', upload.single('file'), async (req,res) => {
+  const key=process.env.OPENAI_API_KEY;
+  if(!key) return res.status(503).json({ok:false,error:'AI key not configured'});
+  if(!req.file?.buffer && !String(req.body?.text||'').trim()) return res.status(400).json({ok:false,error:'Нужен файл или текст'});
+  let fileId=null;
+  try {
+    if(req.file?.buffer) fileId=await openAIFileUpload(req.file.buffer,req.file.originalname,req.file.mimetype,key);
+    const records=await extractRatesWithAI({key,text:req.body?.text,fileId,filename:req.file?.originalname,note:req.body?.note});
+    const result=mergeRateRecords(records,req.file?.originalname||'manual');
+    res.json({ok:true,added:result.added,records:result.db.records.slice(-result.added)});
+  } catch(e) { res.status(502).json({ok:false,error:e.message||'Не удалось обработать ставку'}); }
+});
+app.post('/api/rates/import-text', async (req,res) => {
+  const key=process.env.OPENAI_API_KEY;
+  if(!key) return res.status(503).json({ok:false,error:'AI key not configured'});
+  const text=String(req.body?.text||'').trim(); if(!text) return res.status(400).json({ok:false,error:'Пустой текст'});
+  try { const records=await extractRatesWithAI({key,text,note:req.body?.note}); const result=mergeRateRecords(records,'chat-text'); res.json({ok:true,added:result.added,records:result.db.records.slice(-result.added)}); }
+  catch(e){res.status(502).json({ok:false,error:e.message||'Не удалось обработать текст'});}
+});
+
+app.post('/api/transcribe', upload.single('file'), async (req,res) => {
+  const key=process.env.OPENAI_API_KEY;
+  if(!key) return res.status(503).json({ok:false,error:'AI key not configured'});
+  if(!req.file?.buffer) return res.status(400).json({ok:false,error:'Audio file is required'});
+  try{
+    const form=new FormData();
+    form.append('file',new Blob([req.file.buffer],{type:req.file.mimetype||'audio/webm'}),req.file.originalname||'voice.webm');
+    form.append('model',process.env.OPENAI_TRANSCRIBE_MODEL||'gpt-4o-mini-transcribe');
+    if(req.body?.language) form.append('language',String(req.body.language));
+    const r=await fetch('https://api.openai.com/v1/audio/transcriptions',{method:'POST',headers:{'Authorization':`Bearer ${key}`},body:form});
+    const d=await r.json(); if(!r.ok)return res.status(r.status).json({ok:false,error:d?.error?.message||'Transcription failed'});
+    res.json({ok:true,text:d.text||''});
+  }catch{res.status(502).json({ok:false,error:'Transcription unavailable'});}
+});
+
+app.post('/api/tts', async (req,res) => {
+  const key=process.env.OPENAI_API_KEY;
+  if(!key) return res.status(503).json({ok:false,error:'AI key not configured'});
+  const input=String(req.body?.input||'').trim();
+  if(!input) return res.status(400).json({ok:false,error:'Empty input'});
+  try{
+    const r=await fetch('https://api.openai.com/v1/audio/speech',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model:'gpt-4o-mini-tts',voice:process.env.OPENAI_TTS_VOICE||'marin',input,response_format:'mp3',instructions:'Natural, calm, warm professional voice. Speak clearly and not too quickly.'})});
+    if(!r.ok){const d=await r.text();return res.status(r.status).json({ok:false,error:d||'TTS request failed'});}
+    const buf=Buffer.from(await r.arrayBuffer());
+    res.set('Content-Type','audio/mpeg');res.set('Cache-Control','no-store');res.send(buf);
+  }catch{res.status(502).json({ok:false,error:'TTS unavailable'});}
+});
+
+function relevantRateRecords(db, context){
+ const from=String(context.from||''),to=String(context.to||''),mode=String(context.transport||'').toLowerCase(),distance=Number(context.distanceKm);
+ return db.records.map(r=>({...r,_score:routeScore(r,from,to,mode,Number.isFinite(distance)?distance:null)})).sort((a,b)=>b._score-a._score||new Date(b.updatedAt||0)-new Date(a.updatedAt||0)).slice(0,40);
+}
+
+
+async function fetchAltaTnved(code){
+  const url=`https://www.alta.ru/tnved/code/${encodeURIComponent(code)}/`;
+  const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0','Accept':'text/html,application/xhtml+xml'}});
+  if(!r.ok) throw new Error(`Alta HTTP ${r.status}`);
+  const html=await r.text();
+  const text=html.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/&quot;/gi,'"').replace(/&amp;/gi,'&').replace(/\s+/g,' ').trim();
+  if(!new RegExp(`\\b${code}\\b`).test(text)) throw new Error('TN VED code not found');
+  const titleMatch=text.match(new RegExp(`Код ТН ВЭД\\s*${code}\\s+(.+?)\\s+Информация по товарному коду`, 'i'));
+  const dutyMatch=text.match(/Базовая ставка таможенной пошлины\\s+([^]+?)\\s+НДС/i);
+  const vatMatch=text.match(/НДС\\s+([^]+?)\\s+Экспорт/i);
+  const exciseMatch=text.match(/Акциз\\s+([^]+?)\\s+Не облагается|Акциз\\s+([^]+?)(?:\\s+Ставки|\\s+Особенности)/i);
   return {
-    keyboard: [
-      [{ text: '🤖 AI-ассистент' }, { text: '📋 Оставить заявку' }],
-      [{ text: '📊 Тарифы' },       { text: '📞 Контакты' }]
-    ],
-    resize_keyboard: true,
-    persistent: true
+    source:'Alta-Soft',url,code,
+    title:titleMatch?.[1]?.trim()||`ТН ВЭД ЕАЭС ${code}`,
+    duty:dutyMatch?.[1]?.trim()||'Не удалось извлечь из страницы',
+    vat:vatMatch?.[1]?.trim()||'Не удалось извлечь из страницы',
+    excise:(exciseMatch?.[1]||exciseMatch?.[2]||'Не удалось извлечь из страницы').trim(),
+    text
   };
 }
 
-async function tgSend(chatId, text, withKeyboard){
-  if (!TG_API) return false;
-  try {
-    const body = {
-      chat_id: chatId,
-      text: text,
-      parse_mode: 'HTML',
-      disable_web_page_preview: true
-    };
-    if (withKeyboard) body.reply_markup = tgKeyboard();
-    const r = await fetch(TG_API + '/sendMessage', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(15000)
-    });
-    if (r.ok) return true;
-    console.warn('[tg] send HTTP ' + r.status + ': ' + (await r.text()).slice(0,200));
-    return false;
-  } catch(e){ console.warn('[tg] send error: ' + e.message); return false; }
-}
-
-async function tgAnswerWithAI(chatId, userText, isAdmin){
-  // Получаем память
-  let mem = TG_MEMORY.get(chatId) || [];
-  mem.push({ role: 'user', content: userText });
-  // Обрезаем до последних 5 пар (10 сообщений) — но в промпте ограничим
-  if (mem.length > TG_MAX_HISTORY * 2) mem = mem.slice(-TG_MAX_HISTORY * 2);
-
-  // Системный промпт разный для админа и клиента
-  const sys = isAdmin
-    ? 'Ты — IOMA AI, создан Романом Мамедовым. Отвечай хозяину (Роман) на русском, кратко, по делу. Если спросят «кто тебя создал» — отвечай: «Меня создал Роман Мамедов». Специализация: логистика Китай–Россия, ВЭД, таможня, Инкотермс, ТН ВЭД. Если не знаешь — скажи «не знаю».'
-    : 'Ты — IOMA AI, ассистент компании iomastavka. Отвечай клиентам на русском, вежливо, коротко. Помогаешь с вопросами о доставке из Китая, таможне, сроках, документах. Если вопрос сложный — предложи оставить заявку (кнопка «📋 Оставить заявку») или перейти на сайт. Не выдумывай цены и сроки.';
-
-  // Формируем одну строку из истории для aiChatText
-  const historyText = mem.slice(0, -1)
-    .map(m => (m.role === 'assistant' ? 'Assistant: ' : 'User: ') + m.content)
-    .join('\n');
-  const fullPrompt = historyText
-    ? historyText + '\nUser: ' + userText
-    : userText;
-
-  try {
-    const answer = await aiChatText(sys, fullPrompt, 800, { priority: true });
-    if (!answer || !answer.trim()){
-      await tgSend(chatId, 'Не удалось получить ответ. Попробуйте позже.', false);
-      return;
-    }
-    mem.push({ role: 'assistant', content: answer });
-    TG_MEMORY.set(chatId, mem);
-    await tgSend(chatId, answer, false);
-  } catch(e){
-    console.warn('[tg-ai] error: ' + e.message);
-    await tgSend(chatId, 'Извините, сервис временно недоступен. Попробуйте ещё раз.', true);
+app.post('/api/customs/check', async (req,res) => {
+  const code=String(req.body?.code||'').replace(/\D/g,'').slice(0,10);
+  if(code.length!==10) return res.status(400).json({ok:false,error:'Введите полный 10-значный код ТН ВЭД ЕАЭС'});
+  const key=process.env.OPENAI_API_KEY;
+  // Сначала — собственный справочник ТН ВЭД (без внешних сервисов). Если код в нём есть, сторонние страницы не запрашиваем.
+  let local=null; try{ local=portal.tnved.get(code); }catch{}
+  const localFacts=local?`Собственный справочник компании${local.exact?'':' (ближайшая позиция '+local.code+')'}: наименование=${local.name||'—'}; пошлина=${local.duty||'—'}; НДС=${local.vat||'—'}; акциз=${local.excise||'—'}; разрешительные документы=${local.cert||'—'}; техрегламенты=${local.reglament||'—'}; маркировка «Честный знак»=${local.marking||'—'}; единица=${local.unit||'—'}${local.radio?'; товар из Приложения №1 к ПП №1637 — сбор 73 860 ₽':''}.`:'';
+  const localCard=local?{code:local.code,exact:local.exact,name:local.name||'',duty:local.duty||'',vat:local.vat||'',excise:local.excise||'',cert:local.cert||'',reglament:local.reglament||'',marking:local.marking||'',unit:local.unit||'',note:local.note||'',radio:!!local.radio}:null;
+  if(!key&&local){
+    return res.json({ok:true,code,title:local.name||`ТН ВЭД ЕАЭС ${code}`,local:localCard,analysis:`КОД: ${code}\nОПИСАНИЕ: ${local.name||'—'}${local.exact?'':' (ближайшая позиция '+local.code+')'}\nИМПОРТНАЯ ПОШЛИНА: ${local.duty||'нет в справочнике'}\nНДС: ${local.vat||'общая ставка 22%'}\nАКЦИЗ: ${local.excise||'—'}\nТАМОЖЕННЫЙ СБОР: ${local.radio?'73 860 ₽ (товар из Приложения №1 к ПП №1637)':'по шкале от таможенной стоимости декларации — посчитает «Калькулятор ВЭД»'}\nЧЕСТНЫЙ ЗНАК: ${local.marking||'нет данных в справочнике'}\nРАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: ${local.cert||'нет данных в справочнике'}${local.reglament?' ('+local.reglament+')':''}\nЕДИНИЦА ИЗМЕРЕНИЯ: ${local.unit||'—'}\nДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: ${local.note||'—'}\nИСТОЧНИКИ: собственный справочник ТН ВЭД\nПРИМЕЧАНИЕ: окончательная классификация и применяемые меры зависят от точных характеристик товара и документов.`});
   }
-}
-
-async function tgHandleUpdate(update){
-  try {
-    const msg = update.message || update.edited_message;
-    if (!msg || !msg.chat || !msg.text) return;
-    const chatId = String(msg.chat.id);
-    const text = String(msg.text).trim();
-    const isAdmin = chatId === TG_ADMIN_ID;
-
-    // Скриптовые кнопки
-    if (text === '/start'){
-      const hello = isAdmin
-        ? '👋 Привет, Роман!\n\nЯ — IOMA AI.\n\n• Напиши вопрос — отвечу как ассистент\n• Клиенты будут получать сюда заявки\n\nКнопки ниже помогут.'
-        : '👋 Здравствуйте!\n\nЯ — IOMA AI, ассистент iomastavka.\n\nМогу помочь с доставкой из Китая, таможней, сроками и документами. Спрашивайте!';
-      await tgSend(chatId, hello, true);
-      return;
-    }
-    if (text === '🤖 AI-ассистент'){
-      await tgSend(chatId, 'Напишите ваш вопрос — отвечу как AI.', true);
-      return;
-    }
-    if (text === '📋 Оставить заявку'){
-      await tgSend(chatId, 'Заполните форму на сайте: <b>iomastavki.onrender.com</b> — нажмите «Оставить заявку».\n\nИли напишите здесь: имя, контакт и суть вопроса — я передам менеджеру.', true);
-      return;
-    }
-    if (text === '📊 Тарифы'){
-      await tgSend(chatId, 'Актуальные тарифы уточняйте у менеджера. Оставьте заявку на сайте — рассчитаем индивидуально.', true);
-      return;
-    }
-    if (text === '📞 Контакты'){
-      await tgSend(chatId, 'Сайт: iomastavki.onrender.com\nTelegram: @iomastavka_bot', true);
-      return;
-    }
-
-    // /block <ip> — заблокировать IP (только для админа)
-    if (text.startsWith('/block ') && isAdmin){
-      const targetIP = text.slice(7).trim();
-      if (targetIP && /^[\d.:a-fA-F]+$/.test(targetIP)){
-        blockIP(targetIP, 'manual via telegram');
-        await tgSend(chatId, '✅ IP заблокирован: <code>' + targetIP + '</code>', true);
-      } else {
-        await tgSend(chatId, 'Формат: /block 1.2.3.4', true);
-      }
-      return;
-    }
-    if (text === '/blocks' && isAdmin){
-      const b = loadBlocks();
-      const list = Object.keys(b).slice(0, 20).map(k => '• ' + k + ' — ' + (b[k].reason || '?')).join('\n');
-      await tgSend(chatId, 'Заблокированные IP:\n' + (list || '(пусто)'), true);
-      return;
-    }
-    if (text === '/spamlog' && isAdmin){
-      try {
-        const log = JSON.parse(require('fs').readFileSync(SPAM_LOG_FILE, 'utf8'));
-        const last = log.slice(0, 10).map(e => '• ' + (e.reason || '?') + ' — ' + (e.contact || '').slice(0,30)).join('\n');
-        await tgSend(chatId, 'Последние спам-заявки:\n' + (last || '(пусто)'), true);
-      } catch(e){ await tgSend(chatId, 'Лог пуст', true); }
-      return;
-    }
-
-    // Всё остальное — в AI
-    await tgAnswerWithAI(chatId, text, isAdmin);
-  } catch(e){
-    console.warn('[tg-handle] error: ' + e.message);
+  let alta=null;
+  if(!(local&&local.exact)){ try{ alta=await fetchAltaTnved(code); }catch{} }
+  const baseFacts=(localFacts?localFacts+' ':'')+(alta?`Публичная справочная страница Альта-Софт для кода ${code}: название=${alta.title}; импортная пошлина=${alta.duty}; НДС=${alta.vat}; акциз=${alta.excise}; источник=${alta.url}.`:'Публичную страницу Альта-Софт получить не удалось.');
+  if(!key){
+    if(!alta) return res.status(503).json({ok:false,error:'OPENAI_API_KEY не настроен на сервере и справочная страница ТН ВЭД недоступна'});
+    return res.json({ok:true,code,title:alta.title,analysis:`КОД: ${code}\nОПИСАНИЕ: ${alta.title}\nИМПОРТНАЯ ПОШЛИНА: ${alta.duty}\nНДС: ${alta.vat}\nАКЦИЗ: ${alta.excise}\nТАМОЖЕННЫЙ СБОР: требуется рассчитать по таможенной стоимости; ставка зависит от вида декларации и действующих правил\nЧЕСТНЫЙ ЗНАК: зависит от конкретного товара и его характеристик — требуется отдельная проверка\nРАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: зависят от товара\nЗАПРЕТЫ И ОГРАНИЧЕНИЯ: требуется отдельная проверка\nЕДИНИЦА ИЗМЕРЕНИЯ: требуется уточнение по полной тарифной позиции\nДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: ${baseFacts}\nИСТОЧНИКИ: ${alta.url}\nПРИМЕЧАНИЕ: окончательная классификация и применяемые меры зависят от точных характеристик товара и документов.`,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
   }
-}
+  const prompt=`Ты — специалист по ВЭД и таможенному оформлению РФ/ЕАЭС. Проверь РОВНО код ТН ВЭД ${code}. Не заменяй его похожим кодом. Пользователь специально просит проверить код через официальный сайт ФТС России customs.gov.ru.
 
-let tgOffset = tgLoadOffset();
-// Если offset = 0 (первый запуск или файл пуст) — «съедаем» всю историю, чтобы не отвечать на старые сообщения
-if (tgOffset === 0 && TG_API){
-  (async () => {
-    try {
-      const r = await fetch(TG_API + '/getUpdates?timeout=0&offset=-1');
-      if (r.ok){
-        const d = await r.json();
-        if (d.ok && Array.isArray(d.result) && d.result.length){
-          const last = d.result[d.result.length - 1];
-          tgOffset = last.update_id;
-          tgSaveOffset(tgOffset);
-          console.log('[tg] начальный offset установлен на ' + tgOffset + ' (старые сообщения пропущены)');
-        }
-      }
-    } catch(e){ console.warn('[tg] init offset: ' + e.message); }
-  })();
-}
-let tgPolling = false;
+ПОРЯДОК ПРОВЕРКИ:
+1) Сначала используй web search с разрешённым доменом customs.gov.ru и ищи сведения именно по коду ${code}. Это главный источник для ответа. Ищи ставки/меры таможенно-тарифного и нетарифного регулирования, платежи, ограничения и связанные материалы ФТС.
+2) Затем проверь ЕЭК и официальные нормативные акты ЕАЭС/РФ, если на customs.gov.ru недостаточно данных или требуется подтвердить актуальность ставки.
+3) Альта-Софт используй только как дополнительный справочный источник, а не вместо ФТС.
+4) Не выдумывай данные. Если официальный сайт не содержит конкретной ставки или она зависит от условий, так и напиши.
+5) Таможенный сбор нельзя назвать одной фиксированной суммой без таможенной стоимости и применимого вида декларации — укажи правило и что нужно для расчёта.
+6) Отдельно проверь Честный ЗНАК, разрешительные документы, запреты/ограничения и единицу измерения.
 
-async function tgPoll(){
-  if (tgPolling || !TG_API) return;
-  tgPolling = true;
-  try {
-    const url = TG_API + '/getUpdates?timeout=25&offset=' + (tgOffset + 1);
-    const r = await fetch(url, { signal: AbortSignal.timeout(30000) });
-    if (!r.ok){ tgPolling = false; return; }
-    const d = await r.json();
-    if (d.ok && Array.isArray(d.result)){
-      for (const u of d.result){
-        await tgHandleUpdate(u);
-        tgOffset = Math.max(tgOffset, u.update_id);
-      }
-      if (d.result.length) tgSaveOffset(tgOffset);
+${baseFacts}
+
+Ответ строго:
+КОД: ${code}
+ОПИСАНИЕ: ...
+ИМПОРТНАЯ ПОШЛИНА: ...
+НДС: ...
+АКЦИЗ: ...
+ТАМОЖЕННЫЙ СБОР: ...
+ЧЕСТНЫЙ ЗНАК: ТРЕБУЕТСЯ / НЕ ТРЕБУЕТСЯ / ЗАВИСИТ ОТ ХАРАКТЕРИСТИК — почему
+РАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: ...
+ЗАПРЕТЫ И ОГРАНИЧЕНИЯ: ...
+ЕДИНИЦА ИЗМЕРЕНИЯ: ...
+ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: ...
+ИСТОЧНИКИ: ...
+ПРИМЕЧАНИЕ: окончательная классификация и применяемые меры зависят от точных характеристик товара и документов.`;
+  try{
+    let out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL||'gpt-5.6-luna',input:prompt,tools:[{type:'web_search',filters:{allowed_domains:['customs.gov.ru']}}],max_output_tokens:3500});
+    if(out.error) out=await responsesRequest({key,preferred:'gpt-5.6-luna',input:prompt,tools:[{type:'web_search',filters:{allowed_domains:['customs.gov.ru','eec.eaeunion.org','pravo.gov.ru']}}],max_output_tokens:3500});
+    if(out.error) out=await responsesRequest({key,preferred:'gpt-5.6-luna',input:prompt,tools:[{type:'web_search'}],max_output_tokens:3500});
+    if(out.error){
+      if(alta) return res.json({ok:true,code,title:alta.title,analysis:`КОД: ${code}\nОПИСАНИЕ: ${alta.title}\nИМПОРТНАЯ ПОШЛИНА: ${alta.duty}\nНДС: ${alta.vat}\nАКЦИЗ: ${alta.excise}\nТАМОЖЕННЫЙ СБОР: требуется рассчитать по таможенной стоимости и виду декларации\nЧЕСТНЫЙ ЗНАК: требуется отдельная проверка по характеристикам товара\nРАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: требуется отдельная проверка\nЗАПРЕТЫ И ОГРАНИЧЕНИЯ: требуется отдельная проверка\nЕДИНИЦА ИЗМЕРЕНИЯ: уточнить по тарифной позиции\nДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: ${baseFacts}\nИСТОЧНИКИ: ${alta.url}\nПРИМЕЧАНИЕ: ответ сформирован из доступной справочной страницы; для юридически значимых решений проверьте первоисточник.`,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
+      return res.status(out.error.status||502).json({ok:false,error:out.error.error||'Не удалось проверить код ТН ВЭД'});
     }
-  } catch(e){
-    // timeout — нормально
-  } finally {
-    tgPolling = false;
+    const text=responseText(out.d); if(!text) throw new Error('Пустой ответ от справочного сервиса');
+    res.json({ok:true,code,title:local&&local.name?local.name:`ТН ВЭД ЕАЭС ${code}`,local:localCard,analysis:text,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
+  }catch(e){
+    if(alta) return res.json({ok:true,code,title:alta.title,analysis:`КОД: ${code}\nОПИСАНИЕ: ${alta.title}\nИМПОРТНАЯ ПОШЛИНА: ${alta.duty}\nНДС: ${alta.vat}\nАКЦИЗ: ${alta.excise}\nТАМОЖЕННЫЙ СБОР: требуется рассчитать по таможенной стоимости и виду декларации\nЧЕСТНЫЙ ЗНАК: требуется отдельная проверка по характеристикам товара\nРАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: требуется отдельная проверка\nЗАПРЕТЫ И ОГРАНИЧЕНИЯ: требуется отдельная проверка\nЕДИНИЦА ИЗМЕРЕНИЯ: уточнить по тарифной позиции\nДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: ${baseFacts}\nИСТОЧНИКИ: ${alta.url}\nПРИМЕЧАНИЕ: ${e.message}`,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
+    res.status(502).json({ok:false,error:e.message||'Ошибка проверки ТН ВЭД'});
   }
-}
-
-if (TG_API){
-  console.log('[tg] Telegram AI-ассистент запущен (chat_id админа: ' + TG_ADMIN_ID + ')');
-  setInterval(tgPoll, TG_POLL_INTERVAL);
-  setTimeout(tgPoll, 1000);
-} else {
-  console.log('[tg] TELEGRAM_BOT_TOKEN не задан — ассистент отключён');
-}
-
-app.listen(PORT, function(){
-  console.log('iomastavka listening on ' + PORT);
-  if (!newsCache.items.length || Date.now() - newsCache.at > 30*60*1000) fetchNews().catch(function(e){ console.warn('[startup] news: ' + e.message); });
-  setInterval(function(){ fetchNews().catch(function(){}); }, 30*60*1000);
-  setTimeout(function(){ if (newsCache.items.length && (!newsCache.translations || !newsCache.translations.en)){ console.log('[startup] прогрев переводов новостей...'); warmNewsTranslations().catch(function(){}); } }, 20000);
-  setTimeout(function(){
-    console.log('[startup] автопрогрев 5 статей в фоне...');
-    fetch('http://localhost:' + PORT + '/api/articles/prewarm', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ n:5 }) }).catch(function(){});
-  }, 60000);
 });
+
+app.post('/api/ai', async (req,res) => {
+  const key=process.env.OPENAI_API_KEY;
+  if(!key) return res.status(503).json({ok:false,error:'OPENAI_API_KEY не настроен на сервере'});
+  const message=String(req.body?.message||'').trim();
+  const history=Array.isArray(req.body?.history)?req.body.history.slice(-10):[];
+  const context=req.body?.context&&typeof req.body.context==='object'?req.body.context:{};
+  if(!message) return res.status(400).json({ok:false,error:'Empty message'});
+  const db=ensureRateDb();
+  const relevantRates=relevantRateRecords(db,context);
+  const modeFactor={Авиа:167,Air:167,авиа:167,Авто:400,Road:400,авто:400,ЖД:500,Rail:500,жд:500,Море:1000,Sea:1000,море:1000,'Море + ЖД':1000,'Sea + Rail':1000,multimodal:1000};
+  const factor=modeFactor[String(context.transport||'')]||167;
+  const volume=Number(context.lengthMm||0)*Number(context.widthMm||0)*Number(context.heightMm||0)/1e9*Number(context.pieces||1);
+  const chargeableKg=Math.max(Number(context.weightKg||0),volume*factor);
+  const system=`Ты AI-ассистент сайта iomastavka — специализированный помощник по международной логистике, ВЭД, Китай/Азия → Россия, ставкам, маршрутам, Incoterms, таможне, документам и анализу КП. Отвечай на языке интерфейса пользователя, если он не попросил другой язык. Для tr используй естественный турецкий язык. Не превращай короткие запросы вроде «курс» в случайный ответ: уточни, какой курс нужен. Для свежих фактов используй web search. Не выдумывай ставки и таможенные данные. Исторические ставки из базы ниже помечай как исторические/ориентировочные, если срок не подтверждён. Текущий расчётный вес: ${chargeableKg.toFixed(1)} кг. Фактор: ${factor} кг/м³. База ставок: ${JSON.stringify(relevantRates)}. Контекст калькулятора: ${JSON.stringify(context)}.`;
+  let kbExtra=''; try{ if(portal.crm2.siteBotEnabled()) kbExtra=portal.crm2.botContext(message); }catch{}
+  const t0=Date.now();
+  const input=[{role:'system',content:system+kbExtra},...history.map(x=>({role:x.role==='assistant'?'assistant':'user',content:String(x.content||'')})),{role:'user',content:message}];
+  try{
+    let out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input,tools:[{type:'web_search',search_context_size:'medium'}],max_output_tokens:1200});
+    if(out.error) out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input,max_output_tokens:1200});
+    if(out.error)return res.status(out.error.status||502).json({ok:false,error:out.error.error||'AI request failed'});
+    const text=responseText(out.d);
+    if(!text)return res.status(502).json({ok:false,error:'OpenAI returned an empty response'});
+    try{ portal.crm2.botLog({channel:'site',username:req.who?.name||'Администратор',visitor:String(req.get('x-ioma-visitor')||'').slice(0,40),q:message,a:text,ms:Date.now()-t0}); }catch{}
+    res.json({ok:true,text});
+  }catch(e){res.status(502).json({ok:false,error:e.message||'AI unavailable'});}
+});
+
+app.use('/api', (req,res) => res.status(404).json({ error: 'not found' }));
+app.use((req,res) => res.status(404).type('html').send('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>404 — iomastavka</title><body style="font-family:system-ui;background:#F7F5EF;color:#1B2B26;display:grid;place-items:center;height:100vh;margin:0;text-align:center"><div><h1 style="font-size:64px;margin:0;color:#2E7D5B">404</h1><p>Такой страницы нет.</p><a href="/" style="background:#E8A33D;color:#1B2B26;padding:12px 22px;border-radius:14px;text-decoration:none;font-weight:700">На главную</a></div>'));
+(async () => {
+  // Сначала поднимаем данные из Supabase (если подключён), потом принимаем запросы.
+  try {
+    if (cloud) {
+      await cloud.ensureBucket();
+      await cloud.syncFiles(DATA_DIR, ['rates.json', 'agents.json']);
+      console.log('Хранилище: Supabase (' + cloud.bucket + ')');
+      // Бесплатный Supabase ставит проект на паузу после недели тишины — раз в 12 часов обращаемся к нему.
+      setInterval(() => { cloud.get('state/portal.json').catch(() => {}); }, 12 * 60 * 60 * 1000).unref();
+    } else console.warn('Хранилище: локальные файлы. На бесплатном Render они стираются при перезапуске — подключите Supabase.');
+    await portal.store.init();
+    await portal.tnved.init();
+    portal.setEnvAdminCheck(verifyPassword);
+    // Telegram-бот: принимаем сообщения клиентов (привязка /start) через webhook.
+    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_WEBHOOK_SECRET) {
+      const site = String(process.env.SITE_URL || 'https://iomastavki.onrender.com').replace(/\/+$/, '');
+      portal.tg.setWebhook(site + '/api/telegram/webhook', process.env.TELEGRAM_WEBHOOK_SECRET)
+        .then(r => console.log('Telegram webhook:', r && r.ok ? 'ok' : (r && r.description)))
+        .catch(e => console.error('Telegram webhook:', e.message));
+    }
+  } catch (e) { console.error('Ошибка подключения хранилища:', e.message); if (cloud) cloudError = String(e.message || e).replace(/eyJ[\w.-]+/g, '***'); }
+  app.listen(PORT, () => console.log(`iomastavka listening on ${PORT}`));
+})();
+// Перед остановкой сохраняем несохранённое.
+process.on('SIGTERM', async () => { try { await portal.store.flush(); } catch {} try { await portal.journal.flush(); } catch {} try { await portal.tnved.flush(); } catch {} process.exit(0); });
