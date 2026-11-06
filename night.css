@@ -289,3 +289,25 @@ html:root body.night .home-view>*{flex-shrink:0}
   html:root body.night .v3-nav{padding:3px!important;border-radius:12px!important}
   html:root body.night .v3-nav button{padding:8px 11px!important;font-size:13px!important}
 }
+
+/* ---------- ТН ВЭД: стоимость, вес и количество → пошлина в ₽, НДС и сбор ---------- */
+html:root body.night .customs-calc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:-12px 0 18px}
+html:root body.night .customs-calc label{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:12.5px;font-weight:500;color:var(--n-ice);letter-spacing:.01em}
+html:root body.night .customs-shell .customs-calc input{width:100%;min-width:0;height:48px!important;padding:0 14px;border-radius:10px;border:1px solid;font:600 17px 'Manrope',system-ui,sans-serif!important;letter-spacing:0;font-variant-numeric:tabular-nums;outline:none}
+html:root body.night .customs-calc input:focus{border-color:rgba(169,195,227,.6)!important}
+html:root body.night .customs-shell .customs-calc input::placeholder{color:rgba(238,242,250,.38)!important;font-weight:500;font-size:14.5px}
+html:root body.night .customs-report{margin:0 0 16px;padding:18px 20px 16px;border-radius:14px;background:rgba(3,4,15,.42);border:1px solid rgba(255,255,255,.10);color:#EEF2FA;font-size:15px;line-height:1.55;transition:opacity .3s var(--n-ease)}
+html:root body.night .customs-report.hidden{display:none!important}
+html:root body.night .customs-report.loading .tnr-body{opacity:.45}
+html:root body.night .tnr-l{overflow-wrap:anywhere}
+html:root body.night .tnr-l+.tnr-l:not(.tnr-sub){margin-top:6px}
+html:root body.night .tnr-l b{font-weight:700;color:#fff}
+html:root body.night .tnr-sub{padding-left:26px;color:var(--n-mut-d);font-size:13.5px;line-height:1.5}
+html:root body.night .tnr-wait{color:var(--n-ice);font-size:14px}
+html:root body.night .tnr-err{color:#FFB8B8;font-size:14px}
+html:root body.night .tnr-foot{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);font-size:12.5px;color:var(--n-mut-d)}
+html:root body.night .tnr-copy{height:32px;padding:0 14px;border-radius:8px;border:0;background:#fff;color:#000;font-size:13px;font-weight:600;cursor:pointer}
+html:root body.night .tnr-copy:hover{background:#E4EAF3}
+html:root body.night .tnr-foot a{color:var(--n-ice);text-decoration:none}
+html:root body.night .tnr-foot a:hover{text-decoration:underline}
+@media(max-width:650px){html:root body.night .customs-calc{grid-template-columns:1fr 1fr;margin-top:-10px}html:root body.night .customs-calc label:first-child{grid-column:1/-1}html:root body.night .customs-report{padding:14px 14px 12px;font-size:14px}html:root body.night .tnr-sub{padding-left:16px}}
