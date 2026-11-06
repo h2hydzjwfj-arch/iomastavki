@@ -1,7 +1,7 @@
 'use strict';
 // Постоянное хранение в Supabase Storage (бесплатно). Нужны две переменные в Render:
 //   SUPABASE_URL          — https://<проект>.supabase.co
-//   SUPABASE_SERVICE_KEY  — ключ service_role (секретный, только на сервере)
+//   SUPABASE_SERVICE_KEY  — секретный ключ: новый sb_secret_… или старый service_role (только на сервере)
 // Таблицы создавать не нужно: сайт сам создаёт закрытое хранилище (bucket) и кладёт туда
 // состояние (клиенты, грузы, заявки), ставки, агентов и документы.
 const fs = require('fs');
@@ -28,7 +28,10 @@ function createCloud(env = process.env) {
   async function call(method, p, body, headers = {}) {
     const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 20000);
     try {
-      return await fetch(url + p, { method, body, signal: ctrl.signal, headers: { Authorization: 'Bearer ' + key, apikey: key, ...headers } });
+      // Новые ключи Supabase (sb_secret_…) — не JWT: передаются только в apikey, иначе Supabase отвечает «Invalid JWT».
+      // Старый service_role (eyJ…) — как раньше, в apikey и Authorization.
+      const auth = /^sb_/i.test(key) ? { apikey: key } : { Authorization: 'Bearer ' + key, apikey: key };
+      return await fetch(url + p, { method, body, signal: ctrl.signal, headers: { ...auth, ...headers } });
     } finally { clearTimeout(t); }
   }
   async function ensureBucket() {
