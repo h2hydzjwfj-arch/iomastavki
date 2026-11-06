@@ -105,8 +105,8 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       const j = await call('a', 'GET', '/api/journal'); ok(j.ok && Array.isArray(j.items), JSON.stringify(j).slice(0, 200));
       const calc = j.items.find(x => x.type === 'calc' && x.from === 'Иу'); ok(calc && calc.weight === 400 && calc.price > 0, 'нет расчёта Иу → Москва: ' + JSON.stringify(j.items.slice(0, 3)).slice(0, 300));
       ok(j.items.some(x => x.type === 'login' && x.email === 'client@ci.test'), 'нет входа клиента');
-      const r = await fetch(B + '/api/journal/export', { headers: { Cookie: 'auth=' + jar.a } }); const t = await r.text();
-      ok(r.status === 200 && t.charCodeAt(0) === 0xFEFF && /Дата и время;Действие/.test(t), 'выгрузка не похожа на CSV для Excel');
+      const r = await fetch(B + '/api/journal/export', { headers: { Cookie: 'auth=' + jar.a } }); const buf = Buffer.from(await r.arrayBuffer()); const t = buf.toString('utf8');
+      ok(r.status === 200 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF && /Дата и время;Действие/.test(t), 'выгрузка не похожа на CSV для Excel: ' + r.status + ' ' + t.slice(0, 60));
     });
     await check('Курс ЦБ: динамика юаня за месяц', async () => { const j = await call('g', 'GET', '/api/currency/dynamics?code=CNY'); ok(j._status === 200 && j.points.length > 5, 'код ' + j._status); }, { soft: true });
     await check('Курс ЦБ: динамика — неверные параметры отклоняются', async () => { ok((await call('g', 'GET', '/api/currency/dynamics?code=XXX'))._status === 400); ok((await call('g', 'GET', '/api/currency/dynamics?code=CNY&from=2026-05-01&to=2026-04-01'))._status === 400); });

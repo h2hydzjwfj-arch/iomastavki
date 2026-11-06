@@ -385,3 +385,4 @@ body.manual-dark .rd-g{stroke:rgba(255,255,255,.08)}
 .tour-next:focus-visible{outline:2px solid var(--v-ink);outline-offset:3px}
 .tour-next:focus:not(:focus-visible){outline:none}
 @media (max-width:650px){.trk-mini-l{display:none}.trk-tile-now{font-size:12.5px}}
+html:root body .jrn-bar .jrn-csv{width:auto!important;flex:none;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px!important;margin:0!important;border-radius:14px!important;font-size:15px!important;text-decoration:none}
