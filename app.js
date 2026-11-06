@@ -561,6 +561,7 @@ async function checkCustomsCode(){
   const code=String(input?.value||'').replace(/\D/g,'').slice(0,10);
   if(!code||code.length<4){if(status)status.textContent=lang==='tr'?'En az 4 hane girin.':lang==='en'?'Enter at least 4 digits.':'Введите минимум 4 цифры кода ТН ВЭД.';return;}
   if(status)status.textContent=lang==='tr'?'Kod kontrol ediliyor…':lang==='en'?'Checking code…':'Проверяю код…';
+  checkTnvedReport();
   if(result){result.classList.add('hidden');result.innerHTML='';}
   try{
     const r=await fetch('/api/customs/check',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({code})});
@@ -571,6 +572,28 @@ async function checkCustomsCode(){
     if(result){const raw=String(d.analysis||(lang==='tr'?'Bilgi bulunamadı.':lang==='en'?'No information found.':'Информация не найдена.')); const lines=raw.split(/\n+/).map(x=>x.trim()).filter(Boolean); const labels=['КОД','ОПИСАНИЕ','ИМПОРТНАЯ ПОШЛИНА','НДС','АКЦИЗ','ТАМОЖЕННЫЙ СБОР','ЧЕСТНЫЙ ЗНАК','РАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ','ЗАПРЕТЫ И ОГРАНИЧЕНИЯ','ЕДИНИЦА ИЗМЕРЕНИЯ','ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ','ИСТОЧНИКИ','ПРИМЕЧАНИЕ']; const cards=lines.map(line=>{const m=line.match(/^([^:]{2,45}):\s*(.*)$/); if(!m||!labels.includes(m[1].toUpperCase())) return `<div class="customs-free-line">${escapeHtml(line)}</div>`; const cls=m[1].toUpperCase()==='ЧЕСТНЫЙ ЗНАК'?' customs-marking':''; return `<div class="customs-info-card${cls}"><div class="customs-info-label">${escapeHtml(m[1])}</div><div class="customs-info-value">${escapeHtml(m[2])}</div></div>`}).join(''); result.innerHTML=`<div class="customs-result-title">${escapeHtml(d.title||('ТН ВЭД '+code))}</div><div class="customs-result-grid">${cards}</div>`;result.classList.remove('hidden')}
   }catch(e){if(status)status.textContent=e.message||(lang==='tr'?'Kontrol hatası':lang==='en'?'Check error':'Ошибка проверки');}
 }
+// Отчёт по коду ТН ВЭД из справочника alta.ru: дерево позиции, пошлина с суммой в ₽, НДС и сбор (как tools/tnved_check.py и бот /tnved).
+let tnvedReportSeq=0,tnvedReportTimer=null;
+async function checkTnvedReport(){
+  const box=$('#customsReport'); if(!box)return;
+  const code=String($('#customsCode')?.value||'').replace(/\D/g,'');
+  if(code.length!==10){tnvedReportSeq++;box.classList.add('hidden');box.innerHTML='';return;}
+  const seq=++tnvedReportSeq;
+  if(!box.querySelector('.tnr-body'))box.innerHTML='<div class="tnr-wait">Считаю пошлину, НДС и сбор…</div>';
+  box.classList.remove('hidden');box.classList.add('loading');
+  try{
+    const r=await fetch('/api/tnved/check',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({code,value:$('#customsValue')?.value||'',weight:$('#customsWeight')?.value||'',qty:$('#customsQty')?.value||''})});
+    const d=await r.json().catch(()=>({}));
+    if(seq!==tnvedReportSeq)return;
+    if(!r.ok||!d.ok)throw new Error(d.error||'Не удалось проверить код');
+    const lines=String(d.report||'').split('\n').map(l=>{const sub=/^\s{2,}/.test(l),t=l.trim(),m=t.match(/^(\S+ (?:Код|Пошлина|НДС|Сбор):)\s(.*)$/);return `<div class="tnr-l${sub?' tnr-sub':''}">${m?`<b>${escapeHtml(m[1])}</b> ${escapeHtml(m[2])}`:escapeHtml(t)}</div>`}).join('');
+    box.dataset.report=d.report||'';
+    box.innerHTML=`<div class="tnr-body">${lines}</div><div class="tnr-foot"><button type="button" class="tnr-copy">Скопировать</button><a href="${escapeHtml(d.url||'https://www.alta.ru/tnved/')}" target="_blank" rel="noopener">Справочник alta.ru ↗</a><span>Справочно: ставки зависят от страны происхождения и условий поставки</span></div>`;
+  }catch(e){if(seq===tnvedReportSeq){box.dataset.report='';box.innerHTML=`<div class="tnr-err">${escapeHtml(e.message||'Ошибка проверки')}</div>`;}}
+  finally{if(seq===tnvedReportSeq)box.classList.remove('loading');}
+}
+['#customsValue','#customsWeight','#customsQty'].forEach(s=>{const el=$(s);if(!el)return;el.addEventListener('input',()=>{clearTimeout(tnvedReportTimer);tnvedReportTimer=setTimeout(checkTnvedReport,450)});el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();clearTimeout(tnvedReportTimer);checkTnvedReport()}})});
+$('#customsReport')?.addEventListener('click',e=>{const b=e.target.closest('.tnr-copy');if(!b)return;const t=$('#customsReport').dataset.report||'';const done=()=>{b.textContent='Скопировано';setTimeout(()=>{b.textContent='Скопировать'},1600)};if(navigator.clipboard&&t)navigator.clipboard.writeText(t).then(done).catch(()=>{});});
 $('#customsCheck')?.addEventListener('click',e=>{e.preventDefault();checkCustomsCode()});
 $('#customsCode')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();checkCustomsCode()}});
 let customsAutoTimer=null; $('#customsCode')?.addEventListener('input',()=>{const v=$('#customsCode').value.replace(/\D/g,''); if(v.length===10){clearTimeout(customsAutoTimer);customsAutoTimer=setTimeout(checkCustomsCode,250);}});

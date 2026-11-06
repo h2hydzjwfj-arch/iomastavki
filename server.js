@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const { signSession, verifySession, safeFetchText } = require('./security');
+const TNVED_CHECK = require('./tnved-check');
 let compression = null; try { compression = require('compression'); } catch { /* необязательная зависимость */ }
 const upload = multer({storage: multer.memoryStorage(), limits:{fileSize: 15*1024*1024}});
 
@@ -640,24 +641,16 @@ function relevantRateRecords(db, context){
 }
 
 
+// Страница кода в справочнике Альта-Софт (разбор — tnved-check.js, общий с разделом «ТН ВЭД» и ботом).
 async function fetchAltaTnved(code){
-  const url=`https://www.alta.ru/tnved/code/${encodeURIComponent(code)}/`;
-  const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0 iomastavka/1.0','Accept':'text/html,application/xhtml+xml'}});
-  if(!r.ok) throw new Error(`Alta HTTP ${r.status}`);
-  const html=await r.text();
-  const text=html.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/&quot;/gi,'"').replace(/&amp;/gi,'&').replace(/\s+/g,' ').trim();
-  if(!new RegExp(`\\b${code}\\b`).test(text)) throw new Error('TN VED code not found');
-  const titleMatch=text.match(new RegExp(`Код ТН ВЭД\\s*${code}\\s+(.+?)\\s+Информация по товарному коду`, 'i'));
-  const dutyMatch=text.match(/Базовая ставка таможенной пошлины\\s+([^]+?)\\s+НДС/i);
-  const vatMatch=text.match(/НДС\\s+([^]+?)\\s+Экспорт/i);
-  const exciseMatch=text.match(/Акциз\\s+([^]+?)\\s+Не облагается|Акциз\\s+([^]+?)(?:\\s+Ставки|\\s+Особенности)/i);
+  const info=await TNVED_CHECK.fetchTnved(code);
+  const [vatHead,vatExtra]=TNVED_CHECK.vatLines(info.vat);
   return {
-    source:'Alta-Soft',url,code,
-    title:titleMatch?.[1]?.trim()||`ТН ВЭД ЕАЭС ${code}`,
-    duty:dutyMatch?.[1]?.trim()||'Не удалось извлечь из страницы',
-    vat:vatMatch?.[1]?.trim()||'Не удалось извлечь из страницы',
-    excise:(exciseMatch?.[1]||exciseMatch?.[2]||'Не удалось извлечь из страницы').trim(),
-    text
+    source:'Alta-Soft',url:info.url,code,
+    title:info.levels.map(l=>l.text).join(' → ')||`ТН ВЭД ЕАЭС ${code}`,
+    duty:info.duty.text+(info.duty.note?` (${info.duty.note})`:''),
+    vat:[vatHead,...vatExtra].join('; '),
+    excise:info.excise||'Не указан в справочнике'
   };
 }
 
