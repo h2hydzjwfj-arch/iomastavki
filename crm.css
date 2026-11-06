@@ -428,7 +428,6 @@ html:root body #customsFind{width:100%;box-sizing:border-box;padding:13px 16px;b
   .cv-layout{grid-template-columns:1fr}.cv-aside{position:static}
   .cx-deal{grid-template-columns:1fr}
 }
-}
 @media (max-width:900px){
   .cx-shell{grid-template-columns:1fr;gap:12px}
   .cx-nav.v3p-tabs{position:sticky;top:0;z-index:5;flex-direction:row;flex-wrap:nowrap;gap:4px;padding:6px;border-radius:18px;overflow-x:auto;overflow-y:hidden;max-height:none;scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch}.cx-nav.v3p-tabs::-webkit-scrollbar{display:none}
@@ -596,7 +595,7 @@ html:root body #workView .calculate:hover{background:var(--v-accd)!important}
 /* узкий экран */
 @media (max-width:900px){
   .cx-shell{grid-template-columns:1fr}
-  .cx-nav.v3p-tabs{gap:4px;padding:6px}
+  .cx-nav.v3p-tabs{gap:4px;padding:6px;position:sticky;top:0;z-index:20;box-shadow:0 6px 16px rgba(0,0,0,.08)}
   .cx-grp-end{padding-top:0;border-top:0;padding-left:6px;border-left:1px solid var(--v-bd)}
   .cx-nav.v3p-tabs .chip.on{box-shadow:none}
   .cx-bar .cx-search{flex-basis:100%}
@@ -686,3 +685,8 @@ html:root body .cx-ov input[type=checkbox],html:root body #workView input[type=c
 @container cxmain (max-width:620px){.cx-pview .cx-tr{grid-template-columns:minmax(0,1fr) auto}.cx-pview .cx-tr>:nth-child(2),.cx-pview .cx-tr>:nth-child(3){grid-column:1}}
 .cx-newbox[open]>summary{font-size:0!important}
 .cx-newbox[open]>summary::before{content:'Скрыть форму';font-size:14px}
+/* телефон: карточка сделки не шире экрана (вкладки прокручиваются внутри) */
+.cx-dside,.cx-dmain{min-width:0}
+@media (max-width:1100px){.cx-deal{grid-template-columns:minmax(0,1fr)!important}}
+#workView{overflow-x:hidden}
+.cx-ctext{width:100%;box-sizing:border-box;margin-top:8px;font:14px/1.5 inherit;font-family:inherit;padding:12px 14px;border-radius:14px;border:1px solid var(--v-bd);background:var(--v-field);color:var(--v-ink);resize:vertical}

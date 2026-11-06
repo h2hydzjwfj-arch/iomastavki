@@ -25,7 +25,7 @@
 
   function draw() {
     var r = V, rates = r.rates.slice().sort(function (a, b) { var o = { confirmed: 0, proposed: 1, rejected: 2 }; return (o[a.status] - o[b.status]) || ((a.usd || 1e12) - (b.usd || 1e12)); });
-    var h = '<div class="cx-bar"><button type="button" class="cx-btn primary" data-r="ask">Запросить ставки</button><button type="button" class="cx-btn ghost" data-r="reply"' + (r.requests.length ? '' : ' disabled title="Сначала отправьте запрос"') + '>Вставить ответ агента</button><button type="button" class="cx-btn ghost" data-r="manual"' + (r.requests.length ? '' : ' disabled') + '>+ Ставка вручную</button><button type="button" class="cx-link" data-r="base">База агентов</button></div>';
+    var h = '<div class="cx-bar"><button type="button" class="cx-btn primary" data-r="ask">Запросить ставки</button><button type="button" class="cx-btn ghost" data-r="reply"' + (r.requests.length ? '' : ' disabled title="Сначала отправьте запрос"') + '>Вставить ответ агента</button><button type="button" class="cx-btn ghost" data-r="manual"' + (r.requests.length ? '' : ' disabled') + '>+ Ставка вручную</button><button type="button" class="cx-btn ghost" data-r="client">Ставка клиенту</button><button type="button" class="cx-link" data-r="base">База агентов</button></div>';
     if (r.questions.length) h += '<div class="cx-qbox"><b>Агенты спрашивают</b>' + r.questions.map(function (q) { return '<div><span><b>' + esc(q.agent) + ':</b> ' + q.questions.map(esc).join(' · ') + '</span><button type="button" class="cx-link" data-r="ans" data-id="' + q.replyId + '">Ответили</button></div>'; }).join('') + '</div>';
     h += rates.length ? '<div class="cx-table cx-rates"><div class="cx-tr cx-thd"><span>Агент</span><span>Ставка</span><span class="lp">≈ USD</span><span class="lp">Транзит</span><span></span></div>' + rates.map(rateRow).join('') + '</div>'
       : r.requests.length ? '<p class="cx-empty">Ответов пока нет. Когда агент ответит — нажмите «Вставить ответ агента», ставку найдёт ИИ.</p>' : '';
@@ -92,6 +92,42 @@
     el.addEventListener('click', function (e) { var d = e.target.closest('[data-del]'); if (!d) return; K.confirm('Удалить агента из вашей базы?').then(function (ok) { if (ok) api('/api/crm/agents/' + d.dataset.del, { method: 'DELETE' }).then(reload).catch(function (x) { toast(x.message, 'err'); }); }); });
   }
 
+  /* «Ставка клиенту» — тексты по рабочим шаблонам: под контракт клиента (EXW / фрахт / авто / декларант) и под наш контракт (всё включено) */
+  var MODE_UP = { auto: 'АВТО', road: 'АВТО', rail: 'ЖД', sea: 'МОРЕ', air: 'АВИА', multimodal: 'МОРЕ + ЖД' };
+  var CUR_W = { CNY: 'юаней', USD: 'USD', EUR: 'евро', RUB: 'руб.' };
+  function money(v) { return Number(v || 0).toLocaleString('ru-RU', { maximumFractionDigits: 0 }); }
+  function inDays(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString('ru-RU'); }
+  function clientText(kind, D) {
+    var x = deal, best = D.rate, days = String((best && best.transit) || '').replace(/[^\d–-]/g, '') || '__', valid = (best && best.valid) || inDays(14) + ' г.';
+    var who = String(x.contactName || '').split(' ')[0];
+    if (kind === 'client') return ['Условия ' + (x.incoterms || 'EXW') + ':', (x.incoterms || 'EXW') + ' — ____ USD', 'Фрахт — ' + (best ? money(best.amount) + ' ' + best.currency : '____ USD'), (x.mode === 'auto' || x.mode === 'road' ? '' : 'Авто — ____ руб.'), 'Терминальные расходы — уже включены в стоимость', 'Услуги декларанта:', 'Под ваш ЭЦП – 25 000 рублей', 'Под печать брокера – 30 000 рублей', 'Транзитное время ' + days + ' дней. Ставка валидна – до ' + valid].filter(Boolean).join('\n');
+    var c = D.calc, cur = (c && c.display_currency) || 'CNY', w = CUR_W[cur] || cur;
+    return [(who ? who + ', добрый день' : 'Добрый день') + ', направляю Вам ставку!', '', 'Ставка (' + (MODE_UP[x.mode] || 'АВТО') + ')', x.cargo ? 'Груз: ' + x.cargo : '', x.weight ? 'Вес: ' + money(x.weight) + ' кг' : '', x.volume ? 'Объем: ' + String(x.volume).replace('.', ',') + ' м3' : '',
+      'Условия поставки: ' + (x.incoterms || 'EXW') + ' ' + (x.from || '') + ' - ' + (x.to || 'Москва'), c ? 'Инвойс – ' + money(c.invoice_sum_display) + ' ' + w : 'Инвойс – ____',
+      'Стоимость под наш контракт составит - ' + (c ? money(c.grand_total_display) + ' ' + w : '____') + ' (оплата инвойса уже входит в эту стоимость), в ставку включено:',
+      '- инвойс', '- оплата инвойса (по коммерческому курсу банка)', '- фрахт + локальные расходы по Китаю', '- таможенные платежи', '- терминальные расходы', '- ДС (декларация соответствия)',
+      'Дополнительные расходы (ИДК, взвешивание и т. д.) в ставку не включены, при их возникновении они оплачиваются по факту.', 'Транзитное время - ' + days + ' дней. Ставка валидна до ' + valid].filter(function (l, i) { return l !== '' || i === 1; }).join('\n');
+  }
+  function clientModal() {
+    var conf = V.rates.filter(function (t) { return t.status === 'confirmed'; }).sort(function (a, b) { return (a.usd || 1e12) - (b.usd || 1e12); });
+    api('/api/calc?deal=' + encodeURIComponent(deal.id)).then(function (r) {
+      var last = (r.items || []).filter(function (c) { return c.calc_type === 'our_contract'; })[0];
+      return last ? api('/api/calc/' + last.id).then(function (o) { return o.result; }) : null;
+    }).catch(function () { return null; }).then(function (calc) {
+      var D = { rate: conf[0] || null, calc: calc }, kind = calc ? 'our' : 'client';
+      var md = K.modal('Ставка клиенту', '<div class="cx-seg" data-k><button type="button" data-v="our"' + (kind === 'our' ? ' class="on"' : '') + '>Под наш контракт</button><button type="button" data-v="client"' + (kind === 'client' ? ' class="on"' : '') + '>Под контракт клиента</button></div>'
+        + '<p class="cx-mut cx-small">' + (D.rate ? 'Фрахт и срок — из подтверждённой ставки ' + esc(D.rate.agent) + '.' : 'Подтверждённой ставки агента нет — впишите фрахт сами.') + (calc ? ' Инвойс и итог — из калькулятора ВЭД.' : ' Расчёта ВЭД нет — итог впишите сами.') + '</p>'
+        + '<textarea data-t rows="16" class="cx-ctext"></textarea>', '<button type="button" class="cx-btn ghost" data-note>В ленту сделки</button>' + (deal.contactEmail ? '<button type="button" class="cx-btn ghost" data-mail>Отправить на ' + esc(deal.contactEmail) + '</button>' : '') + '<button type="button" class="cx-btn primary" data-copy>Скопировать</button>', { wide: true, noFocus: true });
+      var ta = $('[data-t]', md.el); ta.value = clientText(kind, D);
+      md.el.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-k] [data-v]'); if (b) { $$('[data-k] button', md.el).forEach(function (z) { z.classList.toggle('on', z === b); }); ta.value = clientText(b.dataset.v, D); return; }
+        if (e.target.closest('[data-copy]')) return copyText(ta.value);
+        if (e.target.closest('[data-note]')) return api('/api/deals/' + deal.id + '/notes', { method: 'POST', body: { text: ta.value, type: 'rate' } }).then(function () { toast('Ставка сохранена в ленте сделки'); md.close(); }).catch(function (x) { toast(x.message, 'err'); });
+        if (e.target.closest('[data-mail]')) return api('/api/mail/send', { method: 'POST', body: { to: deal.contactEmail, subject: 'Ставка: ' + (deal.cargo || deal.title || ''), text: ta.value, dealId: deal.id } }).then(function () { toast('Письмо отправлено'); md.close(); }).catch(function (x) { toast(x.message, 'err'); });
+      });
+    });
+  }
+
   function onClick(e) {
     var b = e.target.closest('[data-r]'); if (!b || !box.contains(b) || b.disabled) return;
     var r = b.dataset.r, id = b.dataset.id;
@@ -100,6 +136,7 @@
     if (r === 'reply1') return replyModal(b.dataset.rq, id);
     if (r === 'manual') return manualModal();
     if (r === 'base') return baseModal();
+    if (r === 'client') return clientModal();
     if (r === 'copy') { var q = V.requests.find(function (x) { return x.id === id; }); return api('/api/deals/' + deal.id + '/rq/draft').then(function (d) { copyText((q && q.subject) || d.subject + '\n\n' + d.text); }); }
     if (r === 'delrq') return K.confirm('Удалить запрос вместе с ответами и ставками?').then(function (ok) { if (ok) api('/api/rq/' + id, { method: 'DELETE' }).then(load).catch(function (x) { toast(x.message, 'err'); }); });
     if (r === 'ok' || r === 'no' || r === 'back') return api('/api/rq/rates/' + id, { method: 'PATCH', body: { status: r === 'ok' ? 'confirmed' : r === 'no' ? 'rejected' : 'proposed' } }).then(load).catch(function (x) { toast(x.message, 'err'); });

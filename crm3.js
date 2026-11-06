@@ -51,6 +51,9 @@ function parseRatesPlain(text) {
     out.push({ amount, currency: cur, unit, container, quote: String(m[0]).trim().slice(0, 120) });
     if (out.length >= 6) break;
   }
+  const tr = text.match(/(?:transit|транзит\w*|срок\w*)[^\d]{0,20}(\d{1,3}(?:\s*[-–]\s*\d{1,3})?)\s*(?:дн|days|day|сут)/i) || text.match(/(\d{1,3}(?:\s*[-–]\s*\d{1,3})?)\s*(?:дн\w*|days)/i);
+  const vl = text.match(/(?:valid(?:\s+till|\s+until)?|действ\w*\s+до|валидн\w*\s+до|до)\s*[:–-]?\s*(\d{1,2}[./]\d{1,2}(?:[./]\d{2,4})?)/i);
+  for (const r of out) { if (tr) r.transit = tr[1].replace(/\s+/g, '') + ' дн.'; if (vl) r.valid = vl[1]; }
   return out;
 }
 
