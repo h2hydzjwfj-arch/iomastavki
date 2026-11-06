@@ -59,26 +59,50 @@ function rowsToRecords(rows) {
 
 function createTnved(dataDir, cloud) {
   const file = path.join(dataDir, 'tnved.json');
-  let list = null, index = null, meta = { importedAt: null, source: '', count: 0 }, dirty = false, timer = null;
+  let list = null, index = null, meta = { importedAt: null, source: '', count: 0 }, diffs = [], dirty = false, timer = null;
   function build() { index = list.map(r => ({ r, n: norm(r.name), d: r.code })); meta.count = list.length; }
-  function readLocal() { try { const j = JSON.parse(fs.readFileSync(file, 'utf8')); list = Array.isArray(j.items) ? j.items : []; meta = { ...meta, ...(j.meta || {}) }; } catch { list = []; } build(); }
+  function readLocal() { try { const j = JSON.parse(fs.readFileSync(file, 'utf8')); list = Array.isArray(j.items) ? j.items : []; meta = { ...meta, ...(j.meta || {}) }; diffs = Array.isArray(j.diffs) ? j.diffs : []; } catch { list = []; } build(); }
   async function init() {
-    if (cloud) { try { const buf = await cloud.get('state/tnved.json'); if (buf) { const j = JSON.parse(buf.toString('utf8')); list = j.items || []; meta = { ...meta, ...(j.meta || {}) }; build(); writeLocal(); return; } } catch (e) { console.error('tnved cloud', e.message); } }
+    if (cloud) { try { const buf = await cloud.get('state/tnved.json'); if (buf) { const j = JSON.parse(buf.toString('utf8')); list = j.items || []; meta = { ...meta, ...(j.meta || {}) }; diffs = Array.isArray(j.diffs) ? j.diffs : []; build(); writeLocal(); return; } } catch (e) { console.error('tnved cloud', e.message); } }
     readLocal();
   }
-  function writeLocal() { try { fs.mkdirSync(dataDir, { recursive: true }); const tmp = file + '.' + process.pid + '.tmp'; fs.writeFileSync(tmp, JSON.stringify({ meta, items: list })); fs.renameSync(tmp, file); } catch (e) { if (!cloud) throw e; } }
-  async function flush() { if (!cloud || !dirty) return; dirty = false; try { await cloud.put('state/tnved.json', Buffer.from(JSON.stringify({ meta, items: list })), 'application/json'); } catch (e) { dirty = true; console.error('tnved save', e.message); } }
+  function writeLocal() { try { fs.mkdirSync(dataDir, { recursive: true }); const tmp = file + '.' + process.pid + '.tmp'; fs.writeFileSync(tmp, JSON.stringify({ meta, items: list, diffs })); fs.renameSync(tmp, file); } catch (e) { if (!cloud) throw e; } }
+  async function flush() { if (!cloud || !dirty) return; dirty = false; try { await cloud.put('state/tnved.json', Buffer.from(JSON.stringify({ meta, items: list, diffs })), 'application/json'); } catch (e) { dirty = true; console.error('tnved save', e.message); } }
   function save() { build(); writeLocal(); if (cloud) { dirty = true; clearTimeout(timer); timer = setTimeout(flush, 500); } }
   const all = () => { if (!list) readLocal(); return list; };
 
-  function importRecords(recs, mode, source) {
+  // сравнение с прежним справочником (перенос tnved_diff.js): новые, нет в файле, изменённые ставки и названия, задетые сделки
+  const rateOf = r => [r.duty || '—', r.vat ? 'НДС ' + r.vat : ''].filter(Boolean).join(' · ');
+  function makeDiff(prevList, recs, source, by, affectedFn) {
+    const prev = new Map(prevList.map(r => [r.code, r])), inFile = new Set(recs.map(r => r.code)), cap = a => a.slice(0, 3000);
+    const added = [], rate = [], name = [];
+    for (const r of recs) {
+      const o = prev.get(r.code);
+      if (!o) { added.push({ code: r.code, name: r.name || '', duty: r.duty || '' }); continue; }
+      if (r.duty != null && (o.duty || '') !== (r.duty || '') || r.vat != null && (o.vat || '') !== (r.vat || '')) rate.push({ code: r.code, name: r.name || o.name || '', old: rateOf(o), new: rateOf({ ...o, ...r }) });
+      if (r.name && o.name && norm(o.name) !== norm(r.name)) name.push({ code: r.code, old: o.name, new: r.name });
+    }
+    const removed = prevList.length ? prevList.filter(o => !inFile.has(o.code)).map(o => ({ code: o.code, name: o.name || '', duty: o.duty || '' })) : [];
+    let affected = [];
+    if (affectedFn) { try { const touched = new Map(rate.map(x => [x.code, 'ставка: ' + x.old + ' → ' + x.new]).concat(removed.map(x => [x.code, 'кода нет в новом файле']))); if (touched.size) affected = affectedFn(touched) || []; } catch (e) { console.error('tnved affected', e.message); } }
+    const d = { id: Date.now().toString(36), at: new Date().toISOString(), by: String(by || '').slice(0, 80), source: String(source || '').slice(0, 160), first: !prevList.length,
+      added_n: added.length, removed_n: removed.length, rate_n: rate.length, name_n: name.length, affected_n: affected.length,
+      added: cap(added), removed: cap(removed), rate: cap(rate), name: cap(name), affected: cap(affected) };
+    diffs = [d].concat(diffs).slice(0, 15);
+    return d;
+  }
+  const brief = d => ({ id: d.id, at: d.at, by: d.by, source: d.source, first: d.first, added_n: d.added_n, removed_n: d.removed_n, rate_n: d.rate_n, name_n: d.name_n, affected_n: d.affected_n });
+  function diffList() { all(); return diffs.map(brief); }
+  function diffGet(id) { all(); return diffs.find(d => d.id === id) || null; }
+  function importRecords(recs, mode, source, by, affectedFn) {
     all();
+    const diff = makeDiff(list.slice(), recs, source, by, affectedFn);
     if (mode === 'replace') list = [];
     const byCode = new Map(list.map((r, i) => [r.code, i])); let added = 0, updated = 0;
     for (const r of recs) { if (byCode.has(r.code)) { list[byCode.get(r.code)] = { ...list[byCode.get(r.code)], ...r }; updated++; } else { byCode.set(r.code, list.length); list.push(r); added++; } }
     list.sort((a, b) => a.code.localeCompare(b.code));
     meta.importedAt = new Date().toISOString(); meta.source = String(source || '').slice(0, 160); save();
-    return { added, updated, total: list.length };
+    return { added, updated, total: list.length, diff: brief(diff) };
   }
   function search(q, limit) {
     all(); limit = Math.min(Number(limit) || 30, 200);
@@ -129,14 +153,16 @@ function createTnved(dataDir, cloud) {
   }
   function upsert(rec) { const c = clean(rec); if (c.code.length < 4) throw new Error('Код — от 4 до 10 цифр'); all(); const i = list.findIndex(r => r.code === c.code); if (i >= 0) list[i] = c; else { list.push(c); list.sort((a, b) => a.code.localeCompare(b.code)); } save(); return c; }
   function remove(code) { all(); const c = digits(code); const i = list.findIndex(r => r.code === c); if (i < 0) return false; list.splice(i, 1); save(); return true; }
-  function stats() { all(); const groups = new Set(list.map(r => r.code.slice(0, 2))); return { ...meta, count: list.length, groups: groups.size, withCert: list.filter(r => r.cert).length, withMarking: list.filter(r => r.marking).length }; }
-  return { init, flush, search, get, lookup, certCheck, importRecords, upsert, remove, stats, all: () => all() };
+  function stats() { all(); const groups = new Set(list.map(r => r.code.slice(0, 2))); return { ...meta, count: list.length, groups: groups.size, withCert: list.filter(r => r.cert).length, withMarking: list.filter(r => r.marking).length, history: diffs.length }; }
+  return { init, flush, search, get, lookup, certCheck, importRecords, upsert, remove, stats, diffList, diffGet, all: () => all() };
 }
 
 function setup(app, ctx) {
   const { admin, upload, DATA_DIR, cloud } = ctx;
   const db = ctx.tnved || createTnved(DATA_DIR, cloud);
   const vatDefault = () => (ctx.vedSettings ? ctx.vedSettings().vatDefault : 22);
+  app.get('/api/tnved/diffs', admin, (req, res) => res.json({ ok: true, items: db.diffList() }));
+  app.get('/api/tnved/diffs/:id', admin, (req, res) => { const d = db.diffGet(req.params.id); if (!d) return res.status(404).json({ ok: false, error: 'Не найдено' }); res.json({ ok: true, item: d }); });
   app.get('/api/tnved/stats', admin, (req, res) => res.json({ ok: true, ...db.stats() }));
   app.get('/api/tnved/search', admin, (req, res) => { const r = db.search(req.query.q, req.query.limit); res.json({ ok: true, ...r }); });
   app.get('/api/tnved/lookup', admin, (req, res) => { const r = db.lookup(req.query.code, vatDefault()); if (!r) return res.status(404).json({ ok: false, error: 'Кода нет в локальном справочнике' }); res.json({ ok: true, ...r }); });
@@ -154,7 +180,7 @@ function setup(app, ctx) {
       else if (low.endsWith('.csv') || low.endsWith('.txt') || low.endsWith('.tsv')) recs = rowsToRecords(csvRows(f.buffer.toString('utf8').replace(/^﻿/, '')));
       else return res.status(400).json({ ok: false, error: 'Поддерживаются .xlsx, .csv и .json' });
       if (!recs.length) return res.status(400).json({ ok: false, error: 'В файле не нашлось строк с кодами ТН ВЭД' });
-      res.json({ ok: true, ...db.importRecords(recs, req.body && req.body.mode === 'replace' ? 'replace' : 'merge', name) });
+      res.json({ ok: true, ...db.importRecords(recs, req.body && req.body.mode === 'replace' ? 'replace' : 'merge', name, (ctx.who && ctx.who(req)) || 'Администратор', ctx.affected) });
     } catch (e) { res.status(400).json({ ok: false, error: e.message }); }
   });
   return db;

@@ -17,16 +17,16 @@
   function barHtml(kind) {
     var s = S[kind], m = K.META || {}, inbox = kind === 'inbox';
     var funnels = (m.funnels || []).filter(function (f) { return f !== m.incoming; });
-    var statusL = inbox ? { active: 'Активные', deleted: '🗑 Архив' } : { active: 'Активные', won: 'Завершённые', closed: 'Закрытые', deleted: '🗑 Архив' };
+    var statusL = inbox ? { active: 'Активные', deleted: 'Архив' } : { active: 'Активные', won: 'Завершённые', closed: 'Закрытые', deleted: 'Архив' };
+    var flt = s.manager || s.from || s.to || s.category;
     return '<div class="cx-bar">'
-      + '<div class="cx-seg" role="group" aria-label="Вид"><button type="button" class="' + (s.view === 'table' ? 'on' : '') + '" data-x="view" data-v2="table">☰ Список</button><button type="button" class="' + (s.view === 'kanban' ? 'on' : '') + '" data-x="view" data-v2="kanban">▦ Канбан</button></div>'
-      + '<div class="cx-seg" role="group" aria-label="Статус">' + Object.keys(statusL).map(function (k) { return '<button type="button" class="' + (s.status === k ? 'on' : '') + '" data-x="status" data-v2="' + k + '">' + statusL[k] + '</button>'; }).join('') + '</div>'
-      + '<div class="cx-search"><input type="search" data-x="q" value="' + esc(s.q) + '" placeholder="' + (inbox ? 'Поиск по заявкам' : 'Поиск: клиент, груз, телефон, №…') + '" aria-label="Поиск"></div>'
-      + '<button type="button" class="cx-btn ghost' + (s.manager || s.from || s.to || s.category ? ' act' : '') + '" data-x="filters">⚙ Фильтр' + (s.manager || s.from || s.to || s.category ? ' •' : '') + '</button>'
+      + '<div class="cx-search"><input type="search" data-x="q" value="' + esc(s.q) + '" placeholder="' + (inbox ? 'Поиск по заявкам' : 'Поиск: клиент, груз, телефон, №') + '" aria-label="Поиск"></div>'
+      + '<div class="cx-seg" role="group" aria-label="Вид"><button type="button" class="' + (s.view === 'table' ? 'on' : '') + '" data-x="view" data-v2="table">Список</button><button type="button" class="' + (s.view === 'kanban' ? 'on' : '') + '" data-x="view" data-v2="kanban">Канбан</button></div>'
+      + '<select class="cx-sel" data-x="statussel" aria-label="Какие показать">' + Object.keys(statusL).map(function (k) { return '<option value="' + k + '"' + (s.status === k ? ' selected' : '') + '>' + statusL[k] + '</option>'; }).join('') + '</select>'
+      + '<button type="button" class="cx-btn ghost' + (flt ? ' act' : '') + '" data-x="filters">Фильтр' + (flt ? ' •' : '') + '</button>'
       + '<button type="button" class="cx-btn primary" data-x="new">+ ' + (inbox ? 'Заявка' : 'Сделка') + '</button>'
-      + (inbox ? '' : '<label class="cx-btn ghost cx-imp">Импорт Excel/CSV<input type="file" accept=".xlsx,.csv" data-x="import" hidden></label>')
-      + (inbox ? '' : '<div class="cx-funnels" role="group" aria-label="Воронка"><button type="button" class="chip' + (!s.funnel ? ' on' : '') + '" data-x="funnel" data-v2="">Все сделки</button>' + funnels.map(function (f) { return '<button type="button" class="chip' + (s.funnel === f ? ' on' : '') + '" data-x="funnel" data-v2="' + esc(f) + '">' + esc(f) + '</button>'; }).join('') + '</div>')
-      + '</div>' + (inbox ? '<p class="cx-hint">Новые заявки с сайта, из почты и от менеджеров. Разберите и перенесите готовое в нужную воронку сделки — поле «Воронка» в карточке.</p>' : '');
+      + (inbox ? '' : '<div class="cx-funnels" role="group" aria-label="Воронка">' + (funnels.length < 2 ? '' : '<button type="button" class="chip' + (!s.funnel ? ' on' : '') + '" data-x="funnel" data-v2="">Все</button>' + funnels.map(function (f) { return '<button type="button" class="chip' + (s.funnel === f ? ' on' : '') + '" data-x="funnel" data-v2="' + esc(f) + '">' + esc(f) + '</button>'; }).join('')) + '<label class="cx-link cx-imp" title="Загрузить сделки из Excel или CSV">Импорт из Excel<input type="file" accept=".xlsx,.csv" data-x="import" hidden></label></div>')
+      + '</div>';
   }
   function query(kind, extra) {
     var s = S[kind], p = { status: s.status === 'deleted' ? 'deleted' : s.status, q: s.q, manager: s.manager, from: s.from, to: s.to, category: s.category };
@@ -54,6 +54,7 @@
     box.addEventListener('change', function (e) {
       if (e.target.dataset.x === 'import') { var f = e.target.files[0]; if (!f) return; var fd = new FormData(); fd.append('file', f); e.target.value = ''; toast('Импортирую…');
         api('/api/deals/import', { method: 'POST', body: fd }).then(function (r) { toast('Импортировано сделок: ' + r.added + (r.skipped ? ', пропущено: ' + r.skipped : '')); K.meta(true); render(kind); }).catch(function (x) { toast(x.message, 'err'); }); }
+      if (e.target.dataset.x === 'statussel') { var st = S[kind]; st.status = e.target.value; st.page = 1; st.sel = {}; rebar(kind); render(kind); return; }
       if (e.target.dataset.x === 'selall') { var on = e.target.checked; $$('[data-x=sel]', box).forEach(function (c) { c.checked = on; S[kind].sel[c.dataset.id] = on; }); bulkBar(kind); }
       if (e.target.dataset.x === 'sel') { S[kind].sel[e.target.dataset.id] = e.target.checked; bulkBar(kind); }
     });
@@ -90,10 +91,8 @@
   }
   function card(x) {
     return '<button type="button" class="cx-kc" draggable="true" data-x="open" data-id="' + esc(x.id) + '"><span class="cx-kt"><b>' + esc(x.title || x.number) + '</b>' + catBadge(x.category) + '</span>'
-      + '<small>№ ' + esc(x.number || '') + (x.source ? ' · ' + esc(x.source) : '') + '</small>'
       + '<span class="cx-kcl">' + esc(x.clientName || 'Клиент не указан') + '</span>'
-      + (x.cargo ? '<span class="cx-kcg">📦 ' + esc(x.cargo) + '</span>' : '')
-      + '<span class="cx-kbt"><span>' + (x.manager ? esc(x.manager) : '<i>без ответственного</i>') + '</span><span>' + (x.tasksOverdue ? '<em class="cx-dot red" title="Есть просроченные задачи"></em>' : x.tasksOpen ? '<em class="cx-dot" title="Есть задачи"></em>' : '') + K.d(x.createdAt) + '</span></span>'
+      + '<span class="cx-kbt"><span>' + (x.manager ? esc(x.manager) : '<i>без ответственного</i>') + '</span><span>' + (x.tasksOverdue ? '<em class="cx-dot red" title="Есть просроченные задачи"></em>' : '') + K.d(x.createdAt) + '</span></span>'
       + (x.margin ? '<span class="cx-km' + (x.margin < 0 ? ' neg' : '') + '">' + K.money(x.margin, 'RUB') + '</span>' : '') + '</button>';
   }
   function kanban(kind, body, items, m) {
@@ -126,15 +125,13 @@
     var m = K.META, s = S[kind], inbox = kind === 'inbox';
     if (!r.items.length) { body.innerHTML = '<div class="k v3p-empty"><b>' + (s.q ? 'Ничего не найдено' : inbox ? 'Новых заявок нет' : 'Сделок пока нет') + '</b><small>' + (inbox ? 'Заявки с сайта и заявки по документам появятся здесь сами.' : 'Создайте сделку или перенесите заявку из «Входящих».') + '</small></div>'; return; }
     body.innerHTML = '<div class="cx-bulk" hidden><b></b><select data-x="bulkmgr" aria-label="Ответственный">' + K.mgrOptions('', true, 'Назначить ответственного…') + '</select><button type="button" class="cx-btn" data-x="bulk-mgr">Назначить</button><button type="button" class="cx-btn danger" data-x="bulk-del">В архив</button></div>'
-      + '<div class="cx-table cx-deals"><div class="cx-tr cx-thd"><label class="cx-cb"><input type="checkbox" data-x="selall" aria-label="Выбрать все"></label><span></span>' + th(kind, 'Название', 'title') + '<span>Источник</span>' + (inbox ? '<span>Категория</span>' : '<span>Воронка</span>') + '<span>Клиент</span>' + th(kind, 'Этап', 'stage') + '<span>Перевозка</span><span>Ответственный</span>' + th(kind, 'Создана', 'createdAt') + '</div>'
+      + '<div class="cx-table cx-deals"><div class="cx-tr cx-thd"><label class="cx-cb"><input type="checkbox" data-x="selall" aria-label="Выбрать все"></label>' + th(kind, 'Сделка', 'title') + th(kind, 'Этап', 'stage') + '<span class="lp">Ответственный</span>' + th(kind, 'Создана', 'createdAt') + '</div>'
       + r.items.map(function (x) {
-        return '<div class="cx-tr" role="button" tabindex="0" data-x="open" data-id="' + esc(x.id) + '"><label class="cx-cb"><input type="checkbox" data-x="sel" data-id="' + esc(x.id) + '"' + (s.sel[x.id] ? ' checked' : '') + ' aria-label="Выбрать"></label>' + K.ageDot(x.daysInStage)
-          + '<span class="cx-t"><b>' + esc(x.title || x.number) + '</b><small>№ ' + esc(x.number || '') + (x.files ? ' · 📎 ' + x.files : '') + (x.status !== 'active' ? ' · ' + ({ won: 'завершена', closed: 'закрыта', deleted: 'в архиве' }[x.status]) : '') + (x.funnel === m.incoming && !inbox ? ' · входящие' : '') + '</small></span>'
-          + '<span>' + (x.source ? '<em class="crm-src">' + esc(x.source) + '</em>' : '') + '</span>'
-          + '<span class="cx-mut">' + (inbox ? (catBadge(x.category) || 'заявка') : esc(x.funnel || '')) + '</span>'
-          + '<span class="cx-t2"><b>' + esc(x.clientName || '—') + '</b><small>' + esc(x.clientContact && x.clientContact !== x.clientName ? x.clientContact : '') + '</small></span>'
-          + '<span>' + K.stageBadge(x.stage) + '</span><span class="cx-mut">' + esc((m.modes || {})[x.mode] || '—') + '</span><span class="cx-mut">' + esc(x.manager || '—') + '</span><span class="cx-mut">' + K.d(x.createdAt) + '</span></div>';
-      }).join('') + '</div>' + pager(kind, r.total) + '<p class="cx-total">Всего: ' + r.total + '</p>';
+        var sub = [x.clientName && x.clientName !== x.title ? esc(x.clientName) : '', '№ ' + esc(x.number || ''), x.status !== 'active' ? ({ won: 'завершена', closed: 'закрыта', deleted: 'в архиве' }[x.status]) : '', x.funnel === m.incoming && !inbox ? 'входящие' : ''].filter(Boolean).join(' · ');
+        return '<div class="cx-tr" role="button" tabindex="0" data-x="open" data-id="' + esc(x.id) + '"><label class="cx-cb"><input type="checkbox" data-x="sel" data-id="' + esc(x.id) + '"' + (s.sel[x.id] ? ' checked' : '') + ' aria-label="Выбрать"></label>'
+          + '<span class="cx-t"><b>' + esc(x.title || x.number) + (inbox ? ' ' + catBadge(x.category) : '') + '</b><small>' + sub + '</small></span>'
+          + '<span class="cx-stg">' + K.stageBadge(x.stage) + K.ageDot(x.daysInStage) + '</span><span class="cx-mut lp">' + esc(x.manager || '—') + '</span><span class="cx-mut">' + K.d(x.createdAt) + (x.tasksOverdue ? ' <em class="cx-dot red" title="Есть просроченные задачи"></em>' : '') + '</span></div>';
+      }).join('') + '</div>' + pager(kind, r.total) + (r.total > 50 ? '<p class="cx-total">Всего: ' + r.total + '</p>' : '');
     bulkBar(kind);
   }
   function archive(kind, body, r) {
@@ -168,7 +165,7 @@
     return K.meta().then(function (m) { return api('/api/deals/' + encodeURIComponent(id)).then(function (r) { if (my !== dGen) return; cur = r; renderDeal(box, r, m); }); }).catch(function (e) { box.innerHTML = '<p class="v3p-err">' + esc(e.message) + '</p>'; });
   }
   function reload() { return cur ? openDeal(cur.item.id) : Promise.resolve(); }
-  function sel(name, val, opts, cls) { if (val && opts.indexOf(val) < 0) opts = opts.concat(val); return '<select name="' + name + '"' + (cls ? ' class="' + cls + '"' : '') + '>' + opts.map(function (o) { var v = Array.isArray(o) ? o[0] : o, l = Array.isArray(o) ? o[1] : (o || '—'); return '<option value="' + esc(v) + '"' + (String(v) === String(val || '') ? ' selected' : '') + '>' + esc(l) + '</option>'; }).join('') + '</select>'; }
+  function sel(name, val, opts, cls) { if (val && !opts.some(function (o) { return (Array.isArray(o) ? o[0] : o) === val; })) opts = opts.concat(val); return '<select name="' + name + '"' + (cls ? ' class="' + cls + '"' : '') + '>' + opts.map(function (o) { var v = Array.isArray(o) ? o[0] : o, l = Array.isArray(o) ? o[1] : (o || '—'); return '<option value="' + esc(v) + '"' + (String(v) === String(val || '') ? ' selected' : '') + '>' + esc(l) + '</option>'; }).join('') + '</select>'; }
   function cf(label, inner) { return '<label class="cx-cf"><span>' + label + '</span>' + inner + '</label>'; }
   function renderDeal(box, r, m) {
     var x = r.item, c = r.client, st = r.stages || m.pipelines[x.funnel] || [], closed = x.status !== 'active';
@@ -185,20 +182,24 @@
         + (c.phone ? '<a href="' + esc(/^@/.test(c.phone) ? 'https://t.me/' + c.phone.slice(1) : 'tel:' + c.phone.replace(/[^\d+]/g, '')) + '" target="_blank" rel="noopener">📞 ' + esc(c.phone) + '</a>' : '') + (c.email ? '<a href="mailto:' + esc(c.email) + '">✉️ ' + esc(c.email) + '</a>' : '') + (c.email ? '<button type="button" class="cx-link" data-y="mail">Написать письмо →</button>' : '') + '</div>'
         : '<button type="button" class="cx-client-empty" data-y="linkclient">+ Привязать клиента</button>')
       + '<form class="cx-cfs" id="cxDealForm" autocomplete="off">'
-      + cf('Воронка', sel('funnel', x.funnel, m.funnels)) + cf('Источник', sel('source', x.source, m.sources))
-      + (x.funnel === m.incoming ? cf('Категория', sel('category', x.category || 'заявка', m.categories)) : '')
-      + '<details class="cx-contact"' + (c ? '' : ' open') + '><summary>Контакт из заявки</summary>' + cf('Контакт', '<input name="contactName" value="' + esc(x.contactName || '') + '">') + cf('Компания', '<input name="company" value="' + esc(x.company || '') + '">') + cf('Телефон', '<input name="contactPhone" value="' + esc(tel) + '">' + (telHref ? '<a class="cx-call" href="' + esc(telHref) + '" target="_blank" rel="noopener" title="Позвонить / написать">↗</a>' : '')) + cf('Email', '<input name="contactEmail" value="' + esc(x.contactEmail || '') + '">') + '</details>'
+      + (x.funnel === m.incoming ? cf('Перенести в', sel('funnel', x.funnel, m.funnels)) : '')
       + cf('Груз', '<input name="cargo" value="' + esc(x.cargo || '') + '" placeholder="не указано">')
       + '<div class="cx-pair">' + cf('Вес, кг', '<input name="weight" type="number" step="any" min="0" value="' + esc(x.weight == null ? '' : x.weight) + '">') + cf('Объём, м³', '<input name="volume" type="number" step="any" min="0" value="' + esc(x.volume == null ? '' : x.volume) + '">') + '</div>'
-      + cf('Инкотермс', sel('incoterms', x.incoterms, INCOTERMS)) + cf('Откуда', '<input name="from" value="' + esc(x.from || '') + '">') + cf('Куда', '<input name="to" value="' + esc(x.to || '') + '">')
-      + cf('Тип перевозки', sel('mode', x.mode, modes)) + cf('Тип договора', sel('contractType', x.contractType, [''].concat(CONTRACTS))) + cf('Брокер', sel('broker', x.broker, [''].concat(BROKERS)))
+      + '<div class="cx-pair">' + cf('Откуда', '<input name="from" value="' + esc(x.from || '') + '">') + cf('Куда', '<input name="to" value="' + esc(x.to || '') + '">') + '</div>'
+      + cf('Перевозка', sel('mode', x.mode, modes))
+      + '<details class="cx-more"><summary>Подробнее</summary>'
+      + (x.funnel !== m.incoming ? cf('Воронка', sel('funnel', x.funnel, m.funnels)) : '') + cf('Источник', sel('source', x.source, m.sources))
+      + (x.funnel === m.incoming ? cf('Категория', sel('category', x.category || 'заявка', m.categories)) : '')
+      + cf('Инкотермс', sel('incoterms', x.incoterms, INCOTERMS)) + cf('Тип договора', sel('contractType', x.contractType, [''].concat(CONTRACTS))) + cf('Брокер', sel('broker', x.broker, [''].concat(BROKERS)))
       + cf('Документы', '<input name="documents" value="' + esc(x.documents || '') + '" placeholder="Коносамент, CMR…">')
       + '<div class="cx-pair">' + cf('Сумма сделки', '<input name="amount" type="number" step="any" min="0" value="' + esc(x.amount == null ? '' : x.amount) + '">') + cf('Валюта', sel('currency', x.currency || 'USD', ['USD', 'CNY', 'RUB', 'EUR'])) + '</div>'
+      + '<p class="cx-sub2">Контакт из заявки</p>' + cf('Контакт', '<input name="contactName" value="' + esc(x.contactName || '') + '">') + cf('Компания', '<input name="company" value="' + esc(x.company || '') + '">') + cf('Телефон', '<input name="contactPhone" value="' + esc(tel) + '">' + (telHref ? '<a class="cx-call" href="' + esc(telHref) + '" target="_blank" rel="noopener" title="Позвонить / написать">↗</a>' : '')) + cf('Email', '<input name="contactEmail" value="' + esc(x.contactEmail || '') + '">')
+      + '</details>'
       + '<div class="cx-dacts">' + (closed ? '' : '<button type="button" class="cx-btn danger" data-y="close">Закрыть сделку</button><button type="button" class="cx-btn ok" data-y="won">✓ Успешно</button>') + '<button type="submit" class="cx-btn primary">Сохранить</button></div>'
       + (x.status !== 'deleted' ? '<button type="button" class="cx-link danger" data-y="archive">🗑 Перенести в архив</button>' : '') + '</form>';
     var acts = x.activity || [], tasks = r.tasks || [];
-    var main = '<div class="cx-dtabs" role="tablist">' + [['act', 'Активность (' + acts.filter(function (a) { return !a.internal; }).length + ')'], ['tasks', 'Задачи (' + tasks.length + ')'], ['files', 'Файлы (' + (x.files || []).length + ')'], ['calc', 'Калькулятор ВЭД' + (r.calcs.length ? ' (' + r.calcs.length + ')' : '')], ['kp', 'КП (' + r.quotes.length + ')'], ['fin', 'Финансы']].map(function (t) { return '<button type="button" class="chip' + (lastTab === t[0] ? ' on' : '') + '" data-y="tab" data-t="' + t[0] + '">' + t[1] + '</button>'; }).join('') + '</div>'
-      + '<div class="cx-dpane" data-dp="act"></div><div class="cx-dpane" data-dp="tasks" hidden></div><div class="cx-dpane" data-dp="files" hidden></div><div class="cx-dpane" data-dp="calc" hidden></div><div class="cx-dpane" data-dp="kp" hidden></div><div class="cx-dpane" data-dp="fin" hidden></div>';
+    var main = '<div class="cx-dtabs" role="tablist">' + [['act', 'Активность (' + acts.filter(function (a) { return !a.internal; }).length + ')'], ['tasks', 'Задачи (' + tasks.length + ')'], ['rates', 'Ставки'], ['files', 'Файлы (' + (x.files || []).length + ')'], ['calc', 'Калькулятор ВЭД' + (r.calcs.length ? ' (' + r.calcs.length + ')' : '')], ['kp', 'КП (' + r.quotes.length + ')'], ['fin', 'Финансы']].map(function (t) { return '<button type="button" class="chip' + (lastTab === t[0] ? ' on' : '') + '" data-y="tab" data-t="' + t[0] + '">' + t[1].replace(/ \((\d+)\)$/, function (_, n) { return n === '0' ? '' : ' <small>' + n + '</small>'; }) + '</button>'; }).join('') + '</div>'
+      + '<div class="cx-dpane" data-dp="act"></div><div class="cx-dpane" data-dp="tasks" hidden></div><div class="cx-dpane" data-dp="rates" hidden></div><div class="cx-dpane" data-dp="files" hidden></div><div class="cx-dpane" data-dp="calc" hidden></div><div class="cx-dpane" data-dp="kp" hidden></div><div class="cx-dpane" data-dp="fin" hidden></div>';
     box.innerHTML = '<div class="cx-deal"><aside class="cx-dside k">' + side + '</aside><div class="cx-dmain k">' + main + '</div></div>';
     bindDeal(box);
     showTab(lastTab);
@@ -208,7 +209,7 @@
     $$('.cx-dtabs .chip', box).forEach(function (c) { c.classList.toggle('on', c.dataset.t === t); });
     $$('.cx-dpane', box).forEach(function (p) { p.hidden = p.dataset.dp !== t; });
     var p = $('.cx-dpane[data-dp="' + t + '"]', box);
-    if (t === 'act') actPane(p); if (t === 'tasks') tasksPane(p); if (t === 'files') filesPane(p); if (t === 'kp') kpPane(p); if (t === 'fin') finPane(p);
+    if (t === 'act') actPane(p); if (t === 'tasks') tasksPane(p); if (t === 'files') filesPane(p); if (t === 'kp') kpPane(p); if (t === 'fin') finPane(p); if (t === 'rates' && window.IOMA_RATES) window.IOMA_RATES.mount(p, cur.item);
     if (t === 'calc' && window.IOMA_CALC) window.IOMA_CALC.mount(p, { dealId: cur.item.id, onChange: function () {} });
   }
   function bindDeal(box) {
