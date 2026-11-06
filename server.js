@@ -165,7 +165,18 @@ const SITE_URL = process.env.SITE_URL || 'https://iomastavki.onrender.com';
 app.get('/robots.txt', (req,res) => { res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${SITE_URL}/sitemap.xml\n`); });
 app.get('/sitemap.xml', (req,res) => { const urls = ['/'].concat(seoPages ? seoPages.urls() : []); res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${SITE_URL}${u === '/' ? '/' : u}</loc><lastmod>2026-11-06</lastmod><changefreq>${u === '/novosti' || u === '/' ? 'daily' : 'monthly'}</changefreq><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('')}</urlset>`); });
 let seoPages = null;
-app.get('/api/health', (req,res) => res.json({ ok: true, storage: cloud ? 'supabase' : 'local', uptime: Math.round(process.uptime()) }));
+// Почему хранилище не подключилось — без значений ключей, только что не так (видно в проверке сайта и в «Работе»).
+let cloudError = '';
+function storageIssue() {
+  if (cloud) return cloudError ? 'Supabase не отвечает: ' + cloudError.slice(0, 160) : '';
+  const u = String(process.env.SUPABASE_URL || '').trim().replace(/\/+$/, ''), k = String(process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (!u && !k) return 'в Environment этого сервиса нет SUPABASE_URL и SUPABASE_SERVICE_KEY';
+  if (!u) return 'в Environment нет SUPABASE_URL';
+  if (!k) return 'в Environment нет SUPABASE_SERVICE_KEY';
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(u)) return 'SUPABASE_URL в неверном виде — нужно https://<проект>.supabase.co, без /rest/v1 и других хвостов';
+  return 'ключи заданы, но подключение не создано';
+}
+app.get('/api/health', (req,res) => res.json({ ok: true, storage: cloud && !cloudError ? 'supabase' : 'local', storageIssue: storageIssue() || undefined, uptime: Math.round(process.uptime()) }));
 app.get('/api/version', (req,res) => res.json({ok:true,version:'28',build:'IOMASTAVKA_FILE_28'}));
 // Weather without API key: Open-Meteo (fixed URL, cached 10 min).
 let weatherCache = { at: 0, data: null };
@@ -759,7 +770,7 @@ app.use((req,res) => res.status(404).type('html').send('<!doctype html><meta cha
         .then(r => console.log('Telegram webhook:', r && r.ok ? 'ok' : (r && r.description)))
         .catch(e => console.error('Telegram webhook:', e.message));
     }
-  } catch (e) { console.error('Ошибка подключения хранилища:', e.message); }
+  } catch (e) { console.error('Ошибка подключения хранилища:', e.message); if (cloud) cloudError = String(e.message || e).replace(/eyJ[\w.-]+/g, '***'); }
   app.listen(PORT, () => console.log(`iomastavka listening on ${PORT}`));
 })();
 // Перед остановкой сохраняем несохранённое.
