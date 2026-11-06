@@ -173,7 +173,7 @@ function storageIssue() {
   const hint = seen.length ? ' (сайт видит переменные: ' + seen.join(', ') + ')' : ' (переменных со словом SUPABASE сайт не видит — проверьте, что они добавлены в Environment именно этого сервиса и сделан Deploy)';
   if (!u && !k) return 'нет адреса и ключа Supabase' + hint;
   if (!u) return 'нет адреса Supabase — добавьте SUPABASE_URL' + hint;
-  if (!k) return 'нет ключа Supabase — добавьте SUPABASE_SERVICE_KEY (секретный service_role)' + hint;
+  if (!k) return 'нет секретного ключа Supabase — добавьте SUPABASE_SERVICE_KEY (Supabase → Project Settings → API Keys → Secret key, sb_secret_…; публичный publishable не подходит)' + hint;
   if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(u)) return 'адрес Supabase в неверном виде — нужно https://<проект>.supabase.co' + hint;
   return 'ключи заданы, но подключение не создано' + hint;
 }
