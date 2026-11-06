@@ -690,3 +690,6 @@ html:root body .cx-ov input[type=checkbox],html:root body #workView input[type=c
 @media (max-width:1100px){.cx-deal{grid-template-columns:minmax(0,1fr)!important}}
 #workView{overflow-x:hidden}
 .cx-ctext{width:100%;box-sizing:border-box;margin-top:8px;font:14px/1.5 inherit;font-family:inherit;padding:12px 14px;border-radius:14px;border:1px solid var(--v-bd);background:var(--v-field);color:var(--v-ink);resize:vertical}
+/* отгулы: на узкой области — сотрудник, период, статус, действия */
+@container cxmain (max-width:760px){.cx-totable .cx-tr{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr) auto;min-width:0}}
+#cxVed .cx-intro{display:none}
