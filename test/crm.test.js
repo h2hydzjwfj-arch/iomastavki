@@ -16,8 +16,9 @@ function setupAll() {
   const sent = [];
   const crm = require('../crm').setup(app, { store, admin, upload, str, num, newId });
   const crm2 = require('../crm2').setup(app, { store, admin, upload, str, num, newId, crm, rates: async () => ({ date: '06.11.2026', rates: { USD: 80, EUR: 92, CNY: 11 } }), mail: { enabled: () => true, kind: () => 'SMTP', send: async (...a) => { sent.push(a); } }, tg: { ready: () => false } });
-  const tn = require('../tnved').setup(app, { admin, upload, DATA_DIR: dir, cloud: null, vedSettings: crm2.vedSettings });
-  return { app, store, crm, crm2, tn, sent, call: (m, u, b, x) => app.call(m, u, b, x) };
+  const tn = require('../tnved').setup(app, { admin, upload, DATA_DIR: dir, cloud: null, vedSettings: crm2.vedSettings, affected: crm2.tnvedAffected });
+  const crm3 = require('../crm3').setup(app, { store, admin, upload, str, newId, rates: async () => ({ date: '06.11.2026', rates: { USD: 80, EUR: 92, CNY: 11 } }), mail: { enabled: () => true, kind: () => 'test', send: async (to, subject, text) => { sent.push({ to, subject, text }); } }, publicAgents: () => [{ id: 1, company: 'Multiwell', contact: 'Kane', email: 'kane@example.com', modes: ['rail', 'road', 'sea'] }] });
+  return { app, store, crm, crm2, crm3, tn, sent, call: (m, u, b, x) => app.call(m, u, b, x) };
 }
 
 test('калькулятор ВЭД: пошлина «но не менее», антидемпинг, сбор по шкале и 73 860 ₽', () => {
@@ -157,4 +158,58 @@ test('клиенты: база из сделок, поиск дублей и о�
   cl = await call('GET', '/api/crm/clients'); assert.equal(cl.body.items.length, 1); assert.ok(cl.body.items[0].contacts.some(k => k.name === 'Пётр П.'));
   await call('POST', '/api/crm/clients/' + p + '/entities', { company_name: 'ООО «Насосы»', inn: '7701234567' });
   assert.equal((await call('GET', '/api/crm/clients/' + p)).body.item.entities.length, 1);
+});
+
+test('калькулятор ВЭД сходится с рабочей таблицей «Контракт» (налог 2,2% от всех строк)', () => {
+  // Корпус турбины: инвойс 70 296 ¥, пошлина 12,5%, фрахт 25 800 ¥, страховка 10 000 ₽, комиссия 3%, декларант 25 000 ₽, прибыль 6 400 ¥, курс 11,567
+  const rates = { CNY: 11.567, USD: 80, EUR: 92 };
+  const d = VED.newDoc('our_contract', 'CNY'); d.transport_mode = 'sea'; d.freight_total = 25800; d.freight_currency = 'CNY'; d.insurance_amount = 10000; d.insurance_currency = 'RUB';
+  d.items[0] = Object.assign(VED.newItem('CNY'), { name: 'Корпус турбины', tnved_code: '4202229000', invoice_amount: 70296, invoice_currency: 'CNY', weight: 700, duty_rate: 12.5, vat_rate: 22, auto_lookup: false });
+  d.extra_costs = [{ label: 'Комиссия за перевод', amount: 3, is_percent_of_invoice: true }, { label: 'Декларант', amount: 25000, currency: 'RUB' }, { label: 'Прибыль компании', amount: 6400, currency: 'CNY', rate_mode: 'cbr' }];
+  const r = VED.calcDoc(d, { rates, settings: { taxOnExpensesPct: 2.2 } });
+  const cny = v => Math.round(v / 11.567 * 100) / 100;
+  assert.ok(Math.abs(cny(r.duty_sum_rub + r.vat_sum_rub) - 36117.8) < 0.05, 'таможенные платежи ' + cny(r.duty_sum_rub + r.vat_sum_rub));
+  assert.equal(r.customs_fee_rub, 4924);
+  assert.ok(Math.abs(cny(r.tax_on_expenses_rub) - 3171.83) < 0.05, 'налоги ' + cny(r.tax_on_expenses_rub));
+});
+
+test('ТН ВЭД: история обновлений — новые, нет в файле, изменённые ставки, задетые сделки', async () => {
+  const { call, crm2 } = setupAll();
+  const id = (await call('POST', '/api/deals', { title: 'Куртки', funnel: 'Контракт West Asia' })).body.item.id;
+  const c = await call('POST', '/api/calc', { dealId: id, calc_type: 'our_contract' });
+  await call('PATCH', '/api/calc/' + c.body.id, { items: [{ ...c.body.doc.items[0], tnved_code: '6201400000', invoice_amount: 1000 }] });
+  const up = (csv, mode) => call('POST', '/api/tnved/import', mode ? { mode } : {}, { file: { originalname: 'tnved.csv', buffer: Buffer.from(csv) } });
+  const a = await up('Код;Наименование;Пошлина;НДС\n6201400000;Куртки мужские;10%;22%\n8517130000;Смартфоны;0%;22%\n');
+  assert.ok(a.body.diff.first); assert.equal(a.body.diff.added_n, 2);
+  const b = await up('Код;Наименование;Пошлина;НДС\n6201400000;Куртки мужские;12%;22%\n8471300000;Ноутбуки;0%;22%\n', 'replace');
+  assert.equal(b.body.diff.added_n, 1); assert.equal(b.body.diff.removed_n, 1); assert.equal(b.body.diff.rate_n, 1); assert.equal(b.body.diff.affected_n, 1);
+  const list = await call('GET', '/api/tnved/diffs'); assert.equal(list.body.items.length, 2);
+  const full = await call('GET', '/api/tnved/diffs/' + b.body.diff.id); assert.equal(full.body.item.affected[0].dealId, id); assert.match(full.body.item.rate[0].new, /12%/);
+});
+
+test('агенты: импорт базы, запрос ставок, ответ агента, лучшая ставка, перенос в финансы, прайсы', async () => {
+  const { call, sent } = setupAll();
+  const csv = 'Компания;Виды транспорта;Email;Контакт;Телефон\nAir Star;Авиа;ops@airstar.example;Лиза;+86 1\nRail Go;ЖД, Авто;sales@railgo.example;Том;+86 2\nAir Star;Авиа;ops@airstar.example;Лиза Ван;+86 1\n';
+  const im = await call('POST', '/api/crm/agents/import', {}, { file: { originalname: 'agents.csv', buffer: Buffer.from(csv) } });
+  assert.equal(im.body.added, 2); assert.equal(im.body.updated, 1);
+  const all = await call('GET', '/api/crm/agents?mode=rail'); assert.ok(all.body.items.some(a => a.company === 'Rail Go') && all.body.items.some(a => a.company === 'Multiwell') && !all.body.items.some(a => a.company === 'Air Star'));
+  const deal = (await call('POST', '/api/deals', { title: 'Станки', from: 'Иу', to: 'Москва', mode: 'rail', weight: 8000, volume: 30, funnel: 'Контракт West Asia' })).body.item;
+  const draft = await call('GET', '/api/deals/' + deal.id + '/rq/draft'); assert.match(draft.body.text, /Иу → Москва/);
+  const ids = all.body.items.filter(a => ['Rail Go', 'Multiwell'].includes(a.company)).map(a => a.id);
+  const rq = await call('POST', '/api/deals/' + deal.id + '/rq', { agentIds: ids, subject: draft.body.subject, text: draft.body.text });
+  assert.equal(rq.body.sent, 2); assert.equal(sent.length, 2);
+  const it = rq.body.request.items;
+  const r1 = await call('POST', '/api/rq/' + rq.body.request.id + '/replies', { itemId: it[0].id, text: 'Hello! Rate Yiwu - Moscow: USD 4 200 / 40HQ, transit 25 days. Can you confirm cargo ready date?' });
+  assert.equal(r1.body.rates.length, 1); assert.equal(r1.body.rates[0].amount, 4200); assert.equal(r1.body.rates[0].unit, 'контейнер');
+  await call('POST', '/api/rq/' + rq.body.request.id + '/replies', { itemId: it[1].id, text: 'Ставка: ¥28500 за контейнер 40HQ, срок 30 дней' });
+  const v = await call('GET', '/api/deals/' + deal.id + '/rq');
+  assert.equal(v.body.rates.length, 2); const best = v.body.rates.find(t => t.best); assert.equal(best.currency, 'CNY'); assert.equal(best.usd, 3918.75);
+  assert.equal(v.body.questions.length, 1);
+  const fin = await call('POST', '/api/rq/rates/' + best.id + '/finance', {}); assert.ok(fin.body.ok); assert.equal(fin.body.row.amount_orig, 28500); assert.equal(fin.body.row.rate, 11);
+  const f = await call('GET', '/api/deals/' + deal.id + '/finance'); assert.equal(f.body.expense, 313500);
+  const air = (await call('POST', '/api/deals', { title: 'Образцы', from: 'Шанхай', to: 'Москва', mode: 'air', weight: 100, funnel: 'Контракт West Asia' })).body.item;
+  const refs = (await call('GET', '/api/deals/' + air.id + '/rq')).body.refs;
+  assert.equal(refs[0].agent, 'QT Avia (ГК АТС)'); assert.equal(refs[0].est, 20500);
+  const road = (await call('POST', '/api/deals', { title: 'Одежда', from: 'Гуанчжоу', to: 'Новосибирск', mode: 'auto', weight: 1000, funnel: 'Контракт West Asia' })).body.item;
+  const rr = (await call('GET', '/api/deals/' + road.id + '/rq')).body.refs; assert.equal(rr[0].perKg, 65); assert.equal(rr[0].est, 65000);
 });

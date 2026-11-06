@@ -86,7 +86,7 @@ const tgServer = http.createServer((req, res) => {
       clientPw = (await A.p.textContent('#v3clientOk code')).trim(); await slow(A.p); await shot(A.p, 'admin_client_created');
     });
     await step('Вы оформляете груз клиенту', async () => {
-      await A.p.click('#workView .cx-nav [data-tab=ships]'); await A.p.selectOption('#v3shipClient', { label: 'Анна Петрова · ООО Вектор' });
+      await A.p.click('#workView .cx-nav [data-tab=ships]'); await A.p.click('#v3shipNew > summary'); await A.p.selectOption('#v3shipClient', { label: 'Анна Петрова · ООО Вектор' });
       await A.p.fill('#v3shipForm [name=from]', 'Шанхай'); await A.p.fill('#v3shipForm [name=to]', 'Москва'); await A.p.selectOption('#v3shipForm [name=mode]', 'rail');
       await A.p.fill('#v3shipForm [name=cargo]', 'Запчасти, 6 паллет'); await A.p.fill('#v3shipForm [name=weight]', '1200'); await A.p.fill('#v3shipForm [name=volume]', '4.5');
       await A.p.fill('#v3shipForm [name=costs]', 'Фрахт ЖД; 2450; USD\nТаможенные платежи; 184300; RUB');

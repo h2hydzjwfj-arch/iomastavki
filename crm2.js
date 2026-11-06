@@ -554,7 +554,16 @@ function setup(app, ctx) {
     res.json({ ok: true, answer: a || (kb[0] ? kb[0].content.slice(0, 3500) : ''), source: a ? 'ai' : kb[0] ? 'kb' : 'none', kb: kb.map(k => ({ id: k.id, topic: k.topic })) });
   });
 
-  return { botContext, botLog, telegramMessage, vedSettings, mailAdd, classify, offOn: (name, date) => offOn(db(), name, date), siteBotEnabled: () => bot(db()).answerSite !== false };
+  // какие сделки задевает обновление справочника ТН ВЭД (коды из расчётов ВЭД)
+  function tnvedAffected(touched) {
+    const d = db(), out = [], seen = new Set();
+    for (const doc of d.calcDocs) {
+      if (!doc.dealId) continue; const deal = d.deals.find(x => x.id === doc.dealId); if (!deal || deal.status === 'deleted') continue;
+      for (const it of doc.items || []) { const code = String(it.tnved_code || '').replace(/\D/g, ''); if (!code || !touched.has(code)) continue; const k = deal.id + code; if (seen.has(k)) continue; seen.add(k); out.push({ dealId: deal.id, number: deal.number, deal: deal.title || '', code, what: touched.get(code) }); }
+    }
+    return out;
+  }
+  return { tnvedAffected, botContext, botLog, telegramMessage, vedSettings, mailAdd, classify, offOn: (name, date) => offOn(db(), name, date), siteBotEnabled: () => bot(db()).answerSite !== false };
 }
 
 module.exports = { setup, HOLIDAYS, expandCn, classify, SECRETS };

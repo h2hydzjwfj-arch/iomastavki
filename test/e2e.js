@@ -25,7 +25,7 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
   try {
     // --- страницы и файлы
     await check('Главная открывается', async () => { const r = await fetch(B + '/'); ok(r.status === 200); ok((await r.text()).includes('iomastavka')); });
-    for (const f of ['/app.js', '/styles.css', '/theme-v3.css', '/theme-v3.js', '/portal-ui.js', '/palettes.css', '/routes-kb.js', '/i18n-v3.js', '/kb.js', '/v4.css', '/geo-asia.js', '/map-calc.js', '/track.js', '/rates-dyn.js', '/tour.js', '/journal-ui.js', '/ved.js', '/crm.css', '/crm-kit.js', '/crm-ui.js', '/crm-calc-ui.js', '/crm-tasks-ui.js', '/crm-clients-ui.js', '/crm-sys-ui.js', '/tnved-ui.js'])
+    for (const f of ['/app.js', '/styles.css', '/theme-v3.css', '/theme-v3.js', '/portal-ui.js', '/palettes.css', '/routes-kb.js', '/i18n-v3.js', '/kb.js', '/v4.css', '/geo-asia.js', '/map-calc.js', '/track.js', '/rates-dyn.js', '/tour.js', '/journal-ui.js', '/ved.js', '/crm.css', '/crm-kit.js', '/crm-ui.js', '/crm-calc-ui.js', '/crm-tasks-ui.js', '/crm-clients-ui.js', '/crm-sys-ui.js', '/tnved-ui.js', '/crm-rates-ui.js'])
       await check('Файл ' + f, async () => { const r = await fetch(B + f); ok(r.status === 200, 'код ' + r.status); });
     await check('robots.txt и sitemap.xml', async () => { ok((await fetch(B + '/robots.txt')).status === 200); ok((await (await fetch(B + '/sitemap.xml')).text()).includes('<urlset')); });
     await check('Несуществующая страница → 404', async () => { ok((await fetch(B + '/net-takoy')).status === 404); });
@@ -168,6 +168,10 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       const lk = await call('a', 'GET', '/api/tnved/lookup?code=6201400000'); ok(lk.duty_type === 'min' && lk.eur_per_kg === 2.2, 'данные для калькулятора: ' + JSON.stringify(lk).slice(0, 160));
       ok((await call('g', 'GET', '/api/tnved/search?q=8517'))._status === 401, 'гостю доступен справочник');
       ok((await call('g', 'GET', '/api/tasks'))._status === 401, 'гостю доступны задачи');
+      const ag = await call('a', 'GET', '/api/crm/agents'); ok(ag.items && ag.items.length > 0, 'нет агентов: ' + JSON.stringify(ag).slice(0, 120));
+      const rq = await call('a', 'POST', '/api/deals/' + d.item.id + '/rq', { agentIds: [ag.items[0].id], send: false }); ok(rq.ok && rq.request.items.length === 1, JSON.stringify(rq).slice(0, 160));
+      const rp = await call('a', 'POST', '/api/rq/' + rq.request.id + '/replies', { itemId: rq.request.items[0].id, text: 'Rate: USD 3 900 / 40HQ, 28 days' }); ok(rp.rates && rp.rates[0] && rp.rates[0].amount === 3900, 'ставка из ответа: ' + JSON.stringify(rp).slice(0, 160));
+      ok((await call('g', 'GET', '/api/crm/agents'))._status === 401, 'гостю доступна закрытая база агентов');
     });
     await check('Отключённый клиент теряет доступ', async () => { await call('a', 'PATCH', '/api/clients/' + cl.id, { active: false }); ok((await call('c', 'GET', '/api/my/shipments'))._status === 401); });
     await check('Выход', async () => { await call('a', 'POST', '/api/logout'); });
