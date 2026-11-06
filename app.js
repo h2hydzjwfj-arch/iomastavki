@@ -1,6 +1,17 @@
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
+// Запросы к серверу сайта помечаются языком и анонимным номером посетителя —
+// так в журнале администратора видно, какие расчёты сделал один и тот же гость.
+(()=>{try{
+  const K='iomaVid';let v=localStorage.getItem(K);
+  if(!/^[a-z0-9]{8,32}$/.test(v||'')){v=(Math.random().toString(36).slice(2,10)+Date.now().toString(36)).slice(0,20);localStorage.setItem(K,v)}
+  const f=window.fetch.bind(window);
+  window.fetch=(u,o)=>{try{const s=typeof u==='string'?u:(u&&u.url)||'';
+    if(/^\/api\//.test(s)||s.indexOf(location.origin+'/api/')===0){o=Object.assign({},o||{});const h=new Headers(o.headers||(typeof u!=='string'&&u.headers)||{});h.set('X-Ioma-Visitor',v);h.set('X-Ioma-Lang',localStorage.getItem('iomastavka_lang')||'ru');o.headers=h}
+  }catch(e){}return f(u,o)};
+}catch(e){}})();
+
 // --- Левая кнопка-док: открытие при наведении мыши ---
 (function(){
   const dock = document.getElementById('controlDock');
@@ -67,12 +78,17 @@ const $$ = s => [...document.querySelectorAll(s)];
   };
   const close = () => { document.querySelectorAll('.view-layer').forEach(v=>{v.classList.remove('open');v.setAttribute('aria-hidden','true')}); document.body.classList.remove('view-open'); };
   window.__iomaOpenView=open; window.__iomaCloseViews=close;
+  // Окно закрывается только кликом по фону: нажали И отпустили мышь за окном.
+  // Если зажали внутри окна (например, выделяли текст) и отпустили снаружи — окно остаётся.
+  let downOn=null;
+  document.addEventListener('pointerdown',e=>{downOn=e.target;window.__iomaDownOn=e.target},true);
+  window.__iomaBackdropClick=e=>!!(e&&e.target&&e.target.classList?.contains('view-layer')&&e.target.classList.contains('open')&&downOn===e.target);
   document.addEventListener('click',(e)=>{
     const trigger=e.target.closest?.('[data-open-view]');
     if(trigger){ const name=trigger.getAttribute('data-open-view'); if(open(name)){e.preventDefault();e.stopPropagation();return;} }
     const closeBtn=e.target.closest?.('[data-close-view],.view-close');
     if(closeBtn){ close(); e.preventDefault(); e.stopPropagation(); return; }
-    if(e.target.classList?.contains('view-layer') && e.target.classList.contains('open')){close();}
+    if(window.__iomaBackdropClick(e)){close();}
   }, true);
   window.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
   // Always show a useful last-resort currency until the live CBR request completes.
@@ -333,7 +349,7 @@ function startTarotDust(reverse=false){
 }
 
 function openAgentImporter(){
-  let v=$('#agentImportView'); if(!v){v=document.createElement('section');v.id='agentImportView';v.className='view-layer';v.innerHTML=`<div class="agent-import-shell"><button class="close-button" data-agent-import-close>×</button><span class="eyebrow">ИМПОРТ ЭКСПЕДИТОРОВ</span><h2>Обновить справочник</h2><p>Вставь текст или прикрепи КП/контакты. ИИ выделит компании, контакты, телефоны, почты, сайты и направления и добавит их в справочник.</p><textarea id="agentImportText" placeholder="Вставь сюда текст…"></textarea><div class="agent-import-actions"><label class="attach-button icon-only" for="agentImportFile" title="Прикрепить файл"><svg viewBox="0 0 24 24"><path d="M8.5 12.5 14.9 6.1a3.3 3.3 0 0 1 4.7 4.7l-8.9 8.9a5 5 0 0 1-7.1-7.1l9.2-9.2a2.9 2.9 0 0 1 4.1 4.1l-8.8 8.8a1.4 1.4 0 0 1-2-2l7.9-7.9"/></svg></label><input id="agentImportFile" type="file" accept=".pdf,.txt,.csv,.xlsx,.xls,.docx,.rtf,.json,.png,.jpg,.jpeg,.webp"><button id="agentImportRun" class="calculate">Обновить справочник</button></div><div id="agentImportStatus"></div></div>`;document.querySelector('main').appendChild(v);v.querySelector('[data-agent-import-close]').onclick=()=>v.classList.remove('open');v.addEventListener('click',e=>{if(e.target===v)v.classList.remove('open')});$('#agentImportFile').onchange=()=>{const f=$('#agentImportFile').files?.[0];if(f)$('#agentImportStatus').textContent=f.name};$('#agentImportRun').onclick=async()=>{const st=$('#agentImportStatus');st.textContent='Обрабатываю…';try{let text=$('#agentImportText').value.trim();const f=$('#agentImportFile').files?.[0];if(f)text+=(text?'\n\n':'')+await extractAttachment(f);if(!text)throw new Error('Добавь текст или файл');const r=await fetch('/api/agents/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Не удалось обновить');if(Array.isArray(d.records)&&d.records.length){agentDirectory=agentDirectory.concat(d.records);renderDirectory();}st.textContent=`Добавлено новых контактов: ${d.added||d.records?.length||0}`;setTimeout(()=>v.classList.remove('open'),900)}catch(e){st.textContent=e.message||'Ошибка'}}}
+  let v=$('#agentImportView'); if(!v){v=document.createElement('section');v.id='agentImportView';v.className='view-layer';v.innerHTML=`<div class="agent-import-shell"><button class="close-button" data-agent-import-close>×</button><span class="eyebrow">ИМПОРТ ЭКСПЕДИТОРОВ</span><h2>Обновить справочник</h2><p>Вставь текст или прикрепи КП/контакты. ИИ выделит компании, контакты, телефоны, почты, сайты и направления и добавит их в справочник.</p><textarea id="agentImportText" placeholder="Вставь сюда текст…"></textarea><div class="agent-import-actions"><label class="attach-button icon-only" for="agentImportFile" title="Прикрепить файл"><svg viewBox="0 0 24 24"><path d="M8.5 12.5 14.9 6.1a3.3 3.3 0 0 1 4.7 4.7l-8.9 8.9a5 5 0 0 1-7.1-7.1l9.2-9.2a2.9 2.9 0 0 1 4.1 4.1l-8.8 8.8a1.4 1.4 0 0 1-2-2l7.9-7.9"/></svg></label><input id="agentImportFile" type="file" accept=".pdf,.txt,.csv,.xlsx,.xls,.docx,.rtf,.json,.png,.jpg,.jpeg,.webp"><button id="agentImportRun" class="calculate">Обновить справочник</button></div><div id="agentImportStatus"></div></div>`;document.querySelector('main').appendChild(v);v.querySelector('[data-agent-import-close]').onclick=()=>v.classList.remove('open');v.addEventListener('click',e=>{if(e.target===v&&window.__iomaDownOn===v)v.classList.remove('open')});$('#agentImportFile').onchange=()=>{const f=$('#agentImportFile').files?.[0];if(f)$('#agentImportStatus').textContent=f.name};$('#agentImportRun').onclick=async()=>{const st=$('#agentImportStatus');st.textContent='Обрабатываю…';try{let text=$('#agentImportText').value.trim();const f=$('#agentImportFile').files?.[0];if(f)text+=(text?'\n\n':'')+await extractAttachment(f);if(!text)throw new Error('Добавь текст или файл');const r=await fetch('/api/agents/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Не удалось обновить');if(Array.isArray(d.records)&&d.records.length){agentDirectory=agentDirectory.concat(d.records);renderDirectory();}st.textContent=`Добавлено новых контактов: ${d.added||d.records?.length||0}`;setTimeout(()=>v.classList.remove('open'),900)}catch(e){st.textContent=e.message||'Ошибка'}}}
   v.classList.add('open');
 }
 

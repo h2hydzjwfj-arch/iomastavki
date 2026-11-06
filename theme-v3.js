@@ -60,37 +60,7 @@
   safe(function(){$$('.v3-chips .chip,.v3c-chips .chip').forEach(function(c){c.addEventListener('click',function(e){e.stopPropagation();setMode(c.dataset.m,true)})})});
   safe(function(){if(window.IOMA_ROUTES)drawMode(curMode);else window.addEventListener('load',function(){drawMode(curMode)})});
 
-  /* route card on home: editable from / to / weight, synced with the calculator; the map redraws live */
-  safe(function(){
-    var CITIES=['Шанхай','Нинбо','Иу','Гуанчжоу','Шэньчжэнь','Циндао','Тяньцзинь','Пекин','Сиань','Чэнду','Чунцин','Ухань','Харбин','Далянь','Сямэнь','Фошань','Дунгуань','Урумчи','Москва','Санкт-Петербург','Екатеринбург','Новосибирск','Казань','Нижний Новгород','Краснодар','Ростов-на-Дону','Самара','Челябинск','Омск','Красноярск','Иркутск','Хабаровск','Владивосток','Минск','Алматы','Ташкент'];
-    var dl=$('#v3cities');if(dl)dl.innerHTML=CITIES.map(function(c){return '<option value="'+c+'">'}).join('');
-    var pairs=[['v3hFrom','fromCity'],['v3hTo','toCity'],['v3hW','weight']];
-    function el(id){return document.getElementById(id)}
-    var tm;function redraw(){clearTimeout(tm);tm=setTimeout(function(){drawMode(curMode)},220)}
-    pairs.forEach(function(p){var h=el(p[0]),c=el(p[1]);if(!h||!c)return;
-      h.addEventListener('input',function(){c.value=h.value;try{var m=JSON.parse(localStorage.getItem('iomaCalc')||'{}');m[p[1]]=h.value;localStorage.setItem('iomaCalc',JSON.stringify(m))}catch(e){}if(p[1]!=='weight')redraw()});
-      h.addEventListener('change',function(){c.value=h.value;c.dispatchEvent(new Event('change',{bubbles:true}))});
-      h.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();var g=el('v3go');g&&g.click()}});
-      function back(){if(document.activeElement!==h&&h.value!==c.value){h.value=c.value;if(p[1]!=='weight')redraw()}}
-      c.addEventListener('input',back);c.addEventListener('change',back);setInterval(back,1500);
-    });
-    ['fromCity','toCity'].forEach(function(i){var e=el(i);e&&e.addEventListener('change',redraw)});
-    document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('.lang'))setTimeout(function(){drawMode(curMode)},60)});
-  });
-
-  /* 4. calculate: loader with steps + confetti, then open calculator */
-  function confetti(x,y){if(reduce)return;var C=['#E8A33D','#2E7D5B','#8FD3B0','#fff','#E8A33D'];for(var i=0;i<34;i++){var e=document.createElement('i');e.className='v3cf';e.style.left=x+'px';e.style.top=y+'px';e.style.background=C[i%5];document.body.appendChild(e);var a=Math.random()*Math.PI*2,v=120+Math.random()*260;(function(e,a,v){var an=e.animate([{transform:'translate(0,0) rotate(0)',opacity:1},{transform:'translate('+Math.cos(a)*v+'px,'+(Math.sin(a)*v+160)+'px) rotate('+Math.random()*720+'deg)',opacity:0}],{duration:1300+Math.random()*700,easing:'cubic-bezier(.2,.7,.4,1)'});an.onfinish=function(){e.remove()}})(e,a,v)}}
-  safe(function(){
-    var go=$('#v3go'),ld=$('#v3ld'),t=$('#v3ldt'),hero=$('#v3Hero');if(!go)return;
-    function fit(){ld.style.inset='0'}fit();
-    go.addEventListener('click',function(ev){
-      ev.stopPropagation();
-      var st=['Запрашиваем ставки экспедиторов…','Считаем пошлину и НДС…','Подбираем лучший маршрут…'];
-      ld.classList.add('on');ld.setAttribute('aria-hidden','false');t.textContent=st[0];
-      setTimeout(function(){t.textContent=st[1]},850);setTimeout(function(){t.textContent=st[2]},1700);
-      setTimeout(function(){ld.classList.remove('on');ld.setAttribute('aria-hidden','true');var r=go.getBoundingClientRect();confetti(r.left+r.width/2,r.top);window.__iomaOpenView&&window.__iomaOpenView('calculator');syncNav();window.__v3calc&&window.__v3calc()},reduce?300:2600);
-    });
-  });
+  /* карточка на главной — теперь карта-калькулятор (map-calc.js) */
 
   /* 5. small decorations: wave bars, date, freshness */
   safe(function(){var w=$('.v3-wave');if(w)w.innerHTML=Array.apply(null,{length:12}).map(function(_,i){return '<i style="animation-delay:'+((i*.09)%1)+'s;animation-duration:'+(.7+(i%5)*.15)+'s"></i>'}).join('')});
@@ -150,14 +120,10 @@
     host.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();openCal()});
     host.setAttribute('role','button');host.setAttribute('tabindex','0');host.setAttribute('aria-haspopup','dialog');
     host.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();openCal()}});
-    document.addEventListener('click',function(e){if(pop&&!pop.contains(e.target))closeCal()});
+    document.addEventListener('click',function(e){if(pop&&!pop.contains(e.target)&&!pop.contains(window.__iomaDownOn||null))closeCal()});
     document.addEventListener('keydown',function(e){if(e.key==='Escape'&&pop)closeCal()});
     today.addEventListener('click',function(){inp.value='';load('')});
     load('');
-  });
-  safe(function(){
-    var s=$('#v3fresh'),t0=Date.now();if(!s)return;
-    (function tick(){var m=Math.floor((Date.now()-t0)/60000);s.textContent='Обновлено '+(m<1?'только что':m+' мин назад');setTimeout(tick,30000)})();
   });
 
   /* 6. TN VED typing loop */
@@ -190,7 +156,7 @@
 
   /* 8. tilt on cards (desktop, transform only) */
   if(fine&&!reduce)safe(function(){
-    $$('.v3-grid .k').forEach(function(k){
+    $$('.v3-grid .k:not(.mc)').forEach(function(k){
       k.addEventListener('pointermove',function(e){var r=k.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;k.style.transform='perspective(900px) rotateX('+(-y*4)+'deg) rotateY('+(x*4)+'deg) translateY(-4px)'});
       k.addEventListener('pointerleave',function(){k.style.transform=''});
     });

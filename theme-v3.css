@@ -1160,7 +1160,7 @@ html:root body .v3c-morecard .field:has(#transportBtn),html:root body .v3c-morec
 /* заявка с документами */
 .v3p-drop{display:flex!important;align-items:center;gap:14px;padding:16px 18px!important;border:2px dashed rgba(46,125,91,.35)!important;border-radius:18px!important;background:var(--v-mint)!important;cursor:pointer;text-align:left}
 .v3p-drop .ic{width:30px;height:30px;flex:0 0 30px;fill:none;stroke:var(--v-acc);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.v3p-drop span{display:flex;flex-direction:column;gap:3px}.v3p-drop b{font-size:15px;color:var(--v-ink)}.v3p-drop small{font-size:12.5px;color:var(--v-mut);line-height:1.4}
+.v3p-drop span{display:flex;flex-direction:column;gap:4px}html:root body .view-layer .v3-drop.v3p-drop b{font-size:16px;color:var(--v-ink)!important}html:root body .view-layer .v3-drop.v3p-drop small{font-size:14px!important;color:var(--v-ink)!important;opacity:.78!important;line-height:1.45}
 .v3p-docs.pulse .v3p-drop{animation:v3pulse 1.5s ease}@keyframes v3pulse{0%,100%{box-shadow:0 0 0 0 rgba(232,163,61,0)}30%{box-shadow:0 0 0 6px rgba(232,163,61,.45)}}
 .v3p-flist{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
 .v3p-flist li{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;background:var(--v-field);font-size:13.5px}.v3p-flist li span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.v3p-flist small{color:var(--v-mut)}

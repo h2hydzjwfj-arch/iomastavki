@@ -45,10 +45,37 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
     await step('Гость: ввод калькулятора не теряется после перезагрузки', async () => {
       await p.reload(); await p.waitForFunction(() => document.getElementById('fromCity').value === 'Shanghai', null, { timeout: 5000 });
     });
-    await step('Гость: карточка расчёта на главной редактируется, карта меняется', async () => {
-      await p.evaluate(() => window.__iomaCloseViews()); await p.fill('#v3hFrom', 'Циндао'); await p.fill('#v3hTo', 'Новосибирск'); await p.fill('#v3hW', '800');
+    await step('Гость: карта-калькулятор — города кликом, цена прямо в карточке', async () => {
+      await p.evaluate(() => window.__iomaCloseViews()); await p.waitForSelector('#mcStage .mc-pin');
+      await p.evaluate(() => { window.IOMA_MAP.pick('from', 'qd'); window.IOMA_MAP.pick('to', 'nsk'); });
+      await p.fill('#mcW', '800'); await p.click('#mcGo'); await p.waitForSelector('#mcRes .mc-o', { timeout: 8000 });
       await p.waitForFunction(() => document.getElementById('fromCity').value === 'Циндао' && document.getElementById('toCity').value === 'Новосибирск' && document.getElementById('weight').value === '800');
-      await p.waitForFunction(() => /Циндао/.test(document.querySelector('#v3Hero .v3-map svg').textContent), null, { timeout: 4000 }); await shot(p, '03b_home_card');
+      await p.waitForSelector('#mcRoute .mc-r-line'); await shot(p, '03b_home_map');
+      // клик по городу на самой карте
+      await p.click('#mcEdit');
+      await p.evaluate(() => { const el = document.querySelector('.mc-pin[data-id="sel"]'); const r = el.getBoundingClientRect(); ['pointerdown', 'pointerup'].forEach(t => el.dispatchEvent(new PointerEvent(t, { bubbles: true, clientX: r.left, clientY: r.top, pointerId: 7, pointerType: 'mouse', button: 0 }))); });
+      await p.waitForFunction(() => /Сеул/.test(document.querySelector('#mcFrom b').textContent));
+      // масштаб кнопкой
+      const s0 = await p.evaluate(() => window.IOMA_MAP.view().s); await p.click('.mc-zoom [data-z=in]'); await p.waitForTimeout(500);
+      if (!((await p.evaluate(() => window.IOMA_MAP.view().s)) > s0)) throw new Error('карта не приблизилась');
+    });
+    await step('Гость: динамика курса ЦБ открывается', async () => {
+      await p.click('.rd-open-btn'); await p.waitForSelector('.rd-ov:not([hidden])');
+      await p.waitForFunction(() => document.querySelector('.rd-stats div') || !document.querySelector('.rd-load').hidden && !/Загружаю/.test(document.querySelector('.rd-load').textContent), null, { timeout: 15000 });
+      await p.click('.rd-per [data-rp="365"]'); await p.waitForTimeout(1500); await shot(p, '03c_rates_dynamics');
+      await p.keyboard.press('Escape'); await p.waitForSelector('.rd-ov', { state: 'hidden' });
+    });
+    await step('Гость: экскурсия по сайту открывается и пропускается', async () => {
+      await p.evaluate(() => window.IOMA_TOUR.guest()); await p.waitForSelector('.tour .tour-card'); await shot(p, '03d_tour');
+      await p.click('.tour-next'); await p.waitForTimeout(500); await shot(p, '03e_tour_map'); await p.click('.tour-skip'); await p.waitForSelector('.tour', { state: 'detached' });
+    });
+    await step('Окно не закрывается, если мышь зажали внутри и отпустили снаружи', async () => {
+      await p.evaluate(() => window.__v3open('leadView'));
+      const box = await (await p.$('#leadView .v3p-form')).boundingBox();
+      await p.mouse.move(box.x + 30, box.y + 30); await p.mouse.down(); await p.mouse.move(8, box.y + 30); await p.mouse.up(); await p.waitForTimeout(200);
+      if (!(await p.evaluate(() => document.getElementById('leadView').classList.contains('open')))) throw new Error('окно закрылось');
+      await p.mouse.click(8, 300); await p.waitForTimeout(200);
+      if (await p.evaluate(() => document.getElementById('leadView').classList.contains('open'))) throw new Error('клик по фону не закрыл окно');
     });
     await step('Гость: курс ЦБ на выбранную дату', async () => { await p.evaluate(() => { const i = document.getElementById('v3curDate'); i.value = '2026-08-07'; i.dispatchEvent(new Event('change')); }); await p.waitForFunction(() => /07\.08\.2026|Нет курса|CBR/.test(document.getElementById('v3date').textContent), null, { timeout: 12000 }); });
     await step('Гость: заявка отправляется', async () => {
@@ -93,6 +120,18 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await A.p.click('#workView [data-tab=ships]'); await A.p.selectOption('#v3shipClient', { label: 'Клиент UI' });
       await A.p.fill('#v3shipForm [name=from]', 'Шанхай'); await A.p.fill('#v3shipForm [name=to]', 'Москва'); await A.p.fill('#v3shipForm [name=costs]', 'Фрахт; 2450; USD');
       await A.p.click('#v3shipForm [type=submit]'); await A.p.waitForSelector('#v3shipsList .v3p-ship'); await shot(A.p, '07_admin_ships');
+    });
+    await step('Админ: этап груза на полосе — склад, граница, город по России', async () => {
+      const id = await A.p.getAttribute('#v3shipsList .v3p-ship', 'data-id'); const F = `.trk-form[data-ship="${id}"]`;
+      await A.p.click(`#v3shipsList [data-setstage="border"][data-ship="${id}"]`); await A.p.fill(F + ' [data-f=crossing]', 'Забайкальск');
+      await A.p.click(`[data-trksave="${id}"]`); await A.p.waitForSelector('#v3shipsList .trk-stops li.cur:has-text("Забайкальск")');
+      await A.p.selectOption(F + ' [data-f=stage]', 'ru'); await A.p.fill(F + ' [data-f=nowCity]', 'Новосибирск'); await A.p.click(`[data-trksave="${id}"]`);
+      await A.p.waitForSelector('#v3shipsList .trk-stops li.cur:has-text("Новосибирск")'); await shot(A.p, '07b_admin_track');
+    });
+    await step('Админ: журнал — все расчёты и заявки отдельными строками', async () => {
+      await A.p.click('#workView [data-tab=journal]'); await A.p.waitForSelector('#jrnBox table.jrn tbody tr', { timeout: 8000 });
+      const types = await A.p.$$eval('#jrnBox td.ty', els => els.map(e => e.textContent)); if (!types.some(t => /Расчёт/.test(t)) || !types.some(t => /Заявка/.test(t))) throw new Error('в журнале нет расчётов или заявок: ' + types.slice(0, 8).join(', '));
+      await shot(A.p, '07c_admin_journal');
     });
     await step('Админ: аккаунт и состояние сайта', async () => { await A.p.click('.v3-acc'); await A.p.waitForSelector('#v3accBody .v3p-notif'); await shot(A.p, '08_admin_account'); });
 

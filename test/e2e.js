@@ -25,7 +25,7 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
   try {
     // --- страницы и файлы
     await check('Главная открывается', async () => { const r = await fetch(B + '/'); ok(r.status === 200); ok((await r.text()).includes('iomastavka')); });
-    for (const f of ['/app.js', '/styles.css', '/theme-v3.css', '/theme-v3.js', '/portal-ui.js', '/palettes.css', '/routes-kb.js', '/i18n-v3.js', '/kb.js'])
+    for (const f of ['/app.js', '/styles.css', '/theme-v3.css', '/theme-v3.js', '/portal-ui.js', '/palettes.css', '/routes-kb.js', '/i18n-v3.js', '/kb.js', '/v4.css', '/geo-asia.js', '/map-calc.js', '/track.js', '/rates-dyn.js', '/tour.js', '/journal-ui.js'])
       await check('Файл ' + f, async () => { const r = await fetch(B + f); ok(r.status === 200, 'код ' + r.status); });
     await check('robots.txt и sitemap.xml', async () => { ok((await fetch(B + '/robots.txt')).status === 200); ok((await (await fetch(B + '/sitemap.xml')).text()).includes('<urlset')); });
     await check('Несуществующая страница → 404', async () => { ok((await fetch(B + '/net-takoy')).status === 404); });
@@ -93,6 +93,23 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
     await check('Клиент: видит свой груз', async () => { const j = await call('c', 'GET', '/api/my/shipments'); ok(j.items.length === 1 && j.items[0].status === 'transit'); });
     await check('Клиент: скачивает документ', async () => { const d = (await call('c', 'GET', '/api/my/shipments')).items[0].docs[0]; const r = await call('c', 'GET', `/api/shipments/${sh.id}/docs/${d.id}`, undefined, true); ok(r.status === 200 && (await r.text()).startsWith('%PDF')); });
     await check('Клиенту закрыты заявки и чужие данные', async () => { ok((await call('c', 'GET', '/api/leads'))._status === 403); ok((await call('c', 'GET', '/api/agents'))._status === 403); });
+    await check('Трекинг: этапы груза, город по России и адрес видны клиенту', async () => {
+      let u = await call('a', 'PATCH', '/api/shipments/' + sh.id, { stage: 'border', crossing: 'Забайкальск', customsAt: 'inland' }); ok(u.ok && u.item.stage === 'border', JSON.stringify(u).slice(0, 200));
+      u = await call('a', 'PATCH', '/api/shipments/' + sh.id, { stage: 'ru', nowCity: 'Новосибирск', address: 'Москва, ул. Складская, 3' }); ok(u.item.stage === 'ru' && u.item.status === 'delivery', JSON.stringify(u.item).slice(0, 200));
+      u = await call('a', 'PATCH', '/api/shipments/' + sh.id, { nowCity: 'Екатеринбург' }); ok(/Екатеринбург/.test(u.item.events[u.item.events.length - 1].note), 'смена города не попала в историю');
+      ok((await call('a', 'PATCH', '/api/shipments/' + sh.id, { stage: 'flight' }))._status === 400, 'этап авиа принят для ЖД');
+      const my = (await call('c', 'GET', '/api/my/shipments')).items[0]; ok(my.stage === 'ru' && my.nowCity === 'Екатеринбург' && my.address && my.crossing === 'Забайкальск', JSON.stringify(my).slice(0, 300));
+    });
+    await check('Журнал: расчёты и входы — отдельными строками, гостю и клиенту закрыт', async () => {
+      ok((await call('g', 'GET', '/api/journal'))._status === 401, 'гостю открыт журнал'); ok((await call('c', 'GET', '/api/journal'))._status === 403, 'клиенту открыт журнал');
+      const j = await call('a', 'GET', '/api/journal'); ok(j.ok && Array.isArray(j.items), JSON.stringify(j).slice(0, 200));
+      const calc = j.items.find(x => x.type === 'calc' && x.from === 'Иу'); ok(calc && calc.weight === 400 && calc.price > 0, 'нет расчёта Иу → Москва: ' + JSON.stringify(j.items.slice(0, 3)).slice(0, 300));
+      ok(j.items.some(x => x.type === 'login' && x.email === 'client@ci.test'), 'нет входа клиента');
+      const r = await fetch(B + '/api/journal/export', { headers: { Cookie: 'auth=' + jar.a } }); const t = await r.text();
+      ok(r.status === 200 && t.charCodeAt(0) === 0xFEFF && /Дата и время;Действие/.test(t), 'выгрузка не похожа на CSV для Excel');
+    });
+    await check('Курс ЦБ: динамика юаня за месяц', async () => { const j = await call('g', 'GET', '/api/currency/dynamics?code=CNY'); ok(j._status === 200 && j.points.length > 5, 'код ' + j._status); }, { soft: true });
+    await check('Курс ЦБ: динамика — неверные параметры отклоняются', async () => { ok((await call('g', 'GET', '/api/currency/dynamics?code=XXX'))._status === 400); ok((await call('g', 'GET', '/api/currency/dynamics?code=CNY&from=2026-05-01&to=2026-04-01'))._status === 400); });
     let cq;
     await check('Клиент: КП сохраняется в «Мои КП»', async () => {
       const j = await call('c', 'POST', '/api/quotes', { from: 'Shanghai', to: 'Москва', mode: 'rail', weight: 500 }); ok(j.ok); cq = j.quote;
