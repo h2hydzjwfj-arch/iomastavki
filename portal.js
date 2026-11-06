@@ -162,6 +162,23 @@ function setup(app, opts) {
     rates: opts.rates || (async () => ({ rates: {} })),
     mail: { enabled: () => mail.enabled(), kind: () => mail.kind(), send: (...a) => mail.send(...a) }, tg: { ready: () => tg.ready() } });
   const tnved = require('./tnved').setup(app, { admin, upload, DATA_DIR, cloud: opts.cloud || null, vedSettings: crm2.vedSettings, affected: crm2.tnvedAffected, who: req => roleOf(req).name || 'Администратор' });
+  // Проверка кода ТН ВЭД по справочнику alta.ru: дерево позиции, пошлина с суммой в ₽, НДС и таможенный сбор.
+  // Тот же расчёт, что в tools/tnved_check.py; на сайте — раздел «ТН ВЭД», в Telegram — команда /tnved.
+  const TNV = require('./tnved-check');
+  const tnvedDeps = { rates: opts.rates || (async () => ({ rates: {} })), settings: () => crm2.vedSettings(), local: code => tnved.get(code) };
+  const tnvedLimiter = rateLimit ? rateLimit({ windowMs: 10 * 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много проверок. Подождите несколько минут.' } }) : (q, s, n) => n();
+  const tnvedOut = r => ({ ok: true, code: r.code, report: r.report, url: r.url, levels: r.levels, duty: r.duty, dutyAmount: r.dutyCalc.amount == null ? null : Math.round(r.dutyCalc.amount),
+    dutyDetail: r.dutyCalc.detail, missing: r.dutyCalc.missing, vat: r.vat, excise: r.excise, value: r.value, fee: r.fee, feeSource: r.feeSource, radio: r.radio, ratesDate: r.ratesDate });
+  app.post('/api/tnved/check', admin, tnvedLimiter, async (req, res) => {
+    const b = req.body || {};
+    try { res.json(tnvedOut(await TNV.check({ code: b.code, value: b.value, weight: b.weight, qty: b.qty }, tnvedDeps))); }
+    catch (e) {
+      if (e instanceof TNV.TnvedError) return res.status(e.status).json({ ok: false, error: e.message, kind: e.kind });
+      console.error('tnved check', e.message); res.status(500).json({ ok: false, error: 'Не удалось проверить код. Попробуйте позже.' });
+    }
+  });
+  const tnvedBotHits = new Map(); // не больше 10 проверок в минуту из одного чата
+  const tnvedBotBusy = chat => { const t = Date.now(), a = (tnvedBotHits.get(chat) || []).filter(x => t - x < 60000); a.push(t); tnvedBotHits.set(chat, a); if (tnvedBotHits.size > 2000) tnvedBotHits.delete(tnvedBotHits.keys().next().value); return a.length > 10; };
   // агенты и запросы ставок из сделки (перенос модуля RQ West Asia)
   const crm3 = require('./crm3').setup(app, { store, admin, upload, str, newId, ai: opts.ai, rates: opts.rates || (async () => ({ rates: {} })),
     mail: { enabled: () => mail.enabled(), kind: () => mail.kind(), send: (...a) => mail.send(...a) }, who: req => roleOf(req).name || 'Менеджер', publicAgents: opts.agents || null });
@@ -504,9 +521,20 @@ function setup(app, opts) {
         u.tgChatId = chat; delete u.tgLink; store.save(db);
         return tg.send(chat, `Готово, ${u.name}! Сюда будут приходить ваши КП, статусы грузов и документы.\nОтключить: /stop`);
       }
+      const tnCmd = TNV.parseCommand(text);
+      if (tnCmd) {
+        const acc = crm2.telegramAccess(m); if (!acc) return;
+        if (tnCmd.code.length !== 10) return tg.send(chat, TNV.HELP);
+        if (tnvedBotBusy(chat)) return tg.send(chat, 'Слишком много проверок подряд — подождите минуту.');
+        const t0 = Date.now(); let ans;
+        try { ans = (await TNV.check(tnCmd, tnvedDeps)).report + '\n\nСправочно: ставки зависят от страны происхождения и условий поставки.'; }
+        catch (e) { ans = '❌ ' + (e instanceof TNV.TnvedError ? e.message : 'Не удалось проверить код. Попробуйте позже.'); if (!(e instanceof TNV.TnvedError)) console.error('bot tnved', e.message); }
+        try { crm2.botLog({ channel: 'telegram', user_id: acc.uid, username: acc.u.display_name || acc.u.username, q: text, a: ans, ms: Date.now() - t0 }); } catch {}
+        return tg.send(chat, ans);
+      }
       if (!/^\//.test(text)) { try { const ans = await crm2.telegramMessage(m); if (ans) return tg.send(chat, ans); } catch (e) { console.error('bot', e.message); } }
       if (/^\/stop/.test(text)) { const u = db.users.find(x => x.tgChatId === chat); if (u) { delete u.tgChatId; store.save(db); } return tg.send(chat, 'Уведомления отключены.'); }
-      return tg.send(chat, `Это бот iomastavka. Чтобы получать КП и статусы грузов, войдите на сайте ${SITE} → «Аккаунт» → «Подключить Telegram».`);
+      return tg.send(chat, `Это бот iomastavka. Чтобы получать КП и статусы грузов, войдите на сайте ${SITE} → «Аккаунт» → «Подключить Telegram».\n\n${TNV.HELP}`);
     } catch (e) { console.error('telegram webhook', e.message); }
   });
 

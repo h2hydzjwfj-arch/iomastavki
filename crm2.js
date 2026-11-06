@@ -484,13 +484,19 @@ function setup(app, ctx) {
     return out;
   }
   function botLog(e) { const d = db(); d.botLog.unshift({ id: newId(5), at: now(), ...e, q: str(e.q, 4000), a: String(e.a || '').slice(0, 8000) }); d.botLog = d.botLog.slice(0, 3000); store.save(d); }
-  async function telegramMessage(m) {
-    // ответ бота в Telegram: белый список, блокировка, база знаний и ИИ. Возвращает текст или '' (не отвечать особо).
+  function telegramAccess(m) {
+    // учёт пользователя бота и доступ: бот включён, пользователь не заблокирован и есть в белом списке (если он задан).
     const d = db(); const b = bot(d); const uid = String(m.from && m.from.id || m.chat.id);
     const u = d.botUsers[uid] = d.botUsers[uid] || { user_id: uid, username: (m.from && (m.from.username || m.from.first_name)) || uid, display_name: [m.from && m.from.first_name, m.from && m.from.last_name].filter(Boolean).join(' '), msg_count: 0 };
     u.msg_count++; u.last_active = now(); store.save(d);
-    if (!b.enabled || u.blocked) return '';
-    if ((b.whitelist || []).length && !b.whitelist.some(w => String(w.user_id) === uid)) return '';
+    if (!b.enabled || u.blocked) return null;
+    if ((b.whitelist || []).length && !b.whitelist.some(w => String(w.user_id) === uid)) return null;
+    return { uid, u };
+  }
+  async function telegramMessage(m) {
+    // ответ бота в Telegram: белый список, блокировка, база знаний и ИИ. Возвращает текст или '' (не отвечать особо).
+    const acc = telegramAccess(m); if (!acc) return '';
+    const { uid, u } = acc;
     const text = String(m.text || '').trim(); const t0 = Date.now(); let a = '';
     const kb = kbFor(text, 4);
     if (ctx.ai && ctx.ai.enabled()) {
@@ -563,7 +569,7 @@ function setup(app, ctx) {
     }
     return out;
   }
-  return { tnvedAffected, botContext, botLog, telegramMessage, vedSettings, mailAdd, classify, offOn: (name, date) => offOn(db(), name, date), siteBotEnabled: () => bot(db()).answerSite !== false };
+  return { tnvedAffected, botContext, botLog, telegramMessage, telegramAccess, vedSettings, mailAdd, classify, offOn: (name, date) => offOn(db(), name, date), siteBotEnabled: () => bot(db()).answerSite !== false };
 }
 
 module.exports = { setup, HOLIDAYS, expandCn, classify, SECRETS };

@@ -185,6 +185,37 @@ test('Telegram: привязка через /start, проверка секре�
   delete process.env.TELEGRAM_WEBHOOK_SECRET;
 });
 
+test('ТН ВЭД: /api/tnved/check только администратору, бот отвечает на /tnved', async () => {
+  process.env.TELEGRAM_WEBHOOK_SECRET = 'whsec';
+  const realFetch = global.fetch; const urls = [];
+  global.fetch = async (url) => {
+    urls.push(String(url));
+    const m = String(url).match(/alta\.ru\/tnved\/code\/(\d+)\//);
+    const f = m && path.join(__dirname, '..', 'tools', 'tnved_fixtures', `alta_${m[1]}.html`);
+    if (f && fs.existsSync(f)) return new Response(fs.readFileSync(f), { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+    return new Response('', { status: 404 });
+  };
+  try {
+    require('../tnved-check')._cache.clear();
+    const { app, admin, tgSent } = make();
+    assert.strictEqual((await app.call('POST', '/api/tnved/check', { body: { code: '0401101000', value: '1 250 000' } })).code, 401);
+    const r = await app.call('POST', '/api/tnved/check', { cookie: admin, body: { code: '0401 10 100 0', value: '1 250 000' } });
+    assert.strictEqual(r.out.ok, true); assert.strictEqual(r.out.fee, 13541); assert.strictEqual(r.out.dutyAmount, 187500);
+    assert.match(r.out.report, /^📋 Код: 0401101000\n🔧 I\. Живые животные/);
+    assert.match(r.out.report, /💰 Пошлина: 15% ≈ 187 500 ₽/);
+    assert.strictEqual((await app.call('POST', '/api/tnved/check', { cookie: admin, body: { code: '12345' } })).code, 400);
+    const hook = text => app.call('POST', '/api/telegram/webhook', { body: { message: { chat: { id: 77 }, from: { id: 77, first_name: 'Иван' }, text } }, headers: { 'x-telegram-bot-api-secret-token': 'whsec' } });
+    await hook('/tnved 0401101000 1 250 000'); await new Promise(ok => setTimeout(ok, 30));
+    const ans = tgSent.find(([c]) => c === 77);
+    assert.ok(ans, 'бот ответил'); assert.match(ans[1], /📋 Код: 0401101000/); assert.match(ans[1], /⚡ Сбор: 13 541 ₽ \(при стоимости груза 1 250 000 ₽\)/);
+    assert.strictEqual(urls.filter(u => u.includes('alta.ru')).length, 1); // вторая проверка — из кеша
+    await hook('/tnved'); await new Promise(ok => setTimeout(ok, 30));
+    assert.match(tgSent.at(-1)[1], /\/tnved <код> <стоимость/);
+    await hook('/tnved 0000000000 1000'); await new Promise(ok => setTimeout(ok, 30));
+    assert.match(tgSent.at(-1)[1], /^❌ Код 0000000000 не найден/);
+  } finally { global.fetch = realFetch; delete process.env.TELEGRAM_WEBHOOK_SECRET; }
+});
+
 test('почта через Resend: правильный запрос', async () => {
   const { mailer } = require('../portal');
   const calls = []; const realFetch = global.fetch;
