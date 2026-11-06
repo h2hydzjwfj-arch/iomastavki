@@ -48,6 +48,7 @@ function bestRate({ from, to, mode, distance }) {
   return m[0] || null;
 }
 const portal = require('./portal').setup(app, { verifySession, DATA_DIR, upload, rateLimit, cloud, engine: q => bestRate(q), rates: () => cbrRatesToday(),
+  agents: () => { try { const r = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'agents.json'), 'utf8')); return Array.isArray(r) && r.length ? r : BUILTIN_AGENTS; } catch { return BUILTIN_AGENTS; } },
   // ИИ для разбора инвойсов и упаковочных листов (если задан OPENAI_API_KEY)
   ai: { enabled: () => !!process.env.OPENAI_API_KEY, run: async input => { const out = await responsesRequest({ key: process.env.OPENAI_API_KEY, preferred: process.env.OPENAI_MODEL, input, max_output_tokens: 8000 }); if (out.error) throw new Error(out.error.error || 'AI error'); return responseText(out.d); } } });
 app.use(['/api/agents', '/api/agents/import', '/api/rates/import', '/api/rates/import-text', '/api/rates/import-local',
@@ -158,7 +159,7 @@ app.get('/kb.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'
 app.get('/palettes.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'palettes.css'), { cacheControl: false }); });
 app.get('/theme-v3.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.css'), { cacheControl: false }); });
 // Новые модули главной и кабинета: карта-калькулятор, трекинг груза, динамика курса, экскурсия, журнал
-for (const f of ['journal-ui.js', 'geo-asia.js', 'map-calc.js', 'track.js', 'rates-dyn.js', 'tour.js', 'v4.css', 'ved.js', 'crm.css', 'crm-kit.js', 'crm-calc-ui.js', 'crm-tasks-ui.js', 'crm-clients-ui.js', 'crm-sys-ui.js', 'tnved-ui.js']) app.get('/' + f, (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, f), { cacheControl: false }); });
+for (const f of ['journal-ui.js', 'geo-asia.js', 'map-calc.js', 'track.js', 'rates-dyn.js', 'tour.js', 'v4.css', 'ved.js', 'crm.css', 'crm-kit.js', 'crm-calc-ui.js', 'crm-tasks-ui.js', 'crm-clients-ui.js', 'crm-sys-ui.js', 'tnved-ui.js', 'crm-rates-ui.js']) app.get('/' + f, (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, f), { cacheControl: false }); });
 const SITE_URL = process.env.SITE_URL || 'https://iomastavki.onrender.com';
 app.get('/robots.txt', (req,res) => { res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${SITE_URL}/sitemap.xml\n`); });
 app.get('/sitemap.xml', (req,res) => { const urls = ['/'].concat(seoPages ? seoPages.urls() : []); res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${SITE_URL}${u === '/' ? '/' : u}</loc><lastmod>2026-11-06</lastmod><changefreq>${u === '/novosti' || u === '/' ? 'daily' : 'monthly'}</changefreq><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('')}</urlset>`); });

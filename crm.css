@@ -428,10 +428,6 @@ html:root body #customsFind{width:100%;box-sizing:border-box;padding:13px 16px;b
   .cv-layout{grid-template-columns:1fr}.cv-aside{position:static}
   .cx-deal{grid-template-columns:1fr}
 }
-@media (max-width:1100px){
-  .cx-deals .cx-tr,.cx-clients .cx-tr,.cx-ttable .cx-tr,.cx-mails .cx-tr,.cx-mgrs .cx-tr,.cx-totable .cx-tr,.cx-dlg .cx-tr,.cx-tn .cx-tr,.cx-arch .cx-tr,.cx-logins .cx-tr,.cx-adeals .cx-tr{grid-template-columns:1fr 1fr;row-gap:4px}
-  .cx-table .cx-thd{display:none}
-  .cx-deals .cx-tr>:nth-child(1){display:none}.cx-deals .cx-tr>.cx-t{grid-column:1/-1;order:-1}
 }
 @media (max-width:900px){
   .cx-shell{grid-template-columns:1fr;gap:12px}
@@ -444,7 +440,6 @@ html:root body #customsFind{width:100%;box-sizing:border-box;padding:13px 16px;b
 }
 @media (max-width:640px){
   .cx-grid2{grid-template-columns:1fr}.cx-grid2 .wide{grid-column:auto}
-  .cx-deals .cx-tr,.cx-clients .cx-tr,.cx-ttable .cx-tr,.cx-mails .cx-tr,.cx-mgrs .cx-tr,.cx-totable .cx-tr,.cx-dlg .cx-tr,.cx-tn .cx-tr,.cx-arch .cx-tr,.cx-logins .cx-tr,.cx-adeals .cx-tr{grid-template-columns:1fr}
   .cx-cf{grid-template-columns:1fr;gap:4px}
   .cx-kcol{flex-basis:84vw}
   .cx-bar>.cx-btn{flex:1 1 auto}
@@ -465,3 +460,229 @@ html:root body #customsFind{width:100%;box-sizing:border-box;padding:13px 16px;b
 body.manual-dark .cx-dh{background:#1d4a37;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
 body.manual-dark .cx-dh .crm-src{background:rgba(255,255,255,.14);color:#fff}
 #workView .cx-dh small,#workView .cx-dh .cx-age-l{color:rgba(255,255,255,.82)!important}
+
+/* ======================================================================
+   v2 — лаконично и одинаково во всех браузерах (Safari, Chrome, Firefox)
+   ====================================================================== */
+#workView{--cx-chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23667570' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+body.manual-dark #workView,body.manual-dark .cx-ov{--cx-chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23A9B8B2' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.cx-ov{--cx-chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23667570' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+/* поля: одна высота, без системных стрелок и «крутилок» */
+html:root body #workView select,html:root body .cx-ov select{-webkit-appearance:none!important;-moz-appearance:none!important;appearance:none!important;background-image:var(--cx-chev)!important;background-repeat:no-repeat!important;background-position:right 12px center!important;background-size:12px 8px!important;padding-right:34px!important;min-height:40px;box-sizing:border-box;line-height:1.25;text-overflow:ellipsis;cursor:pointer}
+html:root body #workView select::-ms-expand{display:none}
+html:root body #workView input[type=number],html:root body .cx-ov input[type=number]{-moz-appearance:textfield;appearance:textfield}
+html:root body #workView input[type=number]::-webkit-inner-spin-button,html:root body #workView input[type=number]::-webkit-outer-spin-button,html:root body .cx-ov input[type=number]::-webkit-inner-spin-button,html:root body .cx-ov input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+html:root body #workView input[type=search]{-webkit-appearance:none;appearance:none}
+html:root body #workView input[type=search]::-webkit-search-decoration{-webkit-appearance:none}
+html:root body #workView input[type=date],html:root body #workView input[type=time],html:root body .cx-ov input[type=date],html:root body .cx-ov input[type=time]{-webkit-appearance:none;appearance:none;min-height:40px;box-sizing:border-box}
+html:root body #workView input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),html:root body #workView select{min-height:40px}
+html:root body #workView textarea{min-height:0}
+#workView input[type=checkbox]{accent-color:var(--v-acc);width:16px;height:16px}
+
+/* шапка раздела: заголовок и одна строка состояния */
+#workView .cx-head{margin-bottom:14px}
+#workView .cx-head h1{margin-bottom:0}
+#workView .cx-head .cx-off{font-size:13px!important;margin:0}
+html:root body #workView .cx-head .v3p-warn{flex-basis:100%;order:5;margin:6px 0 0!important;padding:8px 12px;border-radius:10px;font-size:13px!important;font-weight:600;line-height:1.35}
+
+/* меню: никогда не переносится во вторую колонку */
+.cx-shell{grid-template-columns:220px minmax(0,1fr)}
+.cx-nav.v3p-tabs{flex-wrap:nowrap!important;gap:10px;padding:12px 8px}
+.cx-grp{flex:none}
+.cx-grp>b{padding:4px 12px 4px}
+.cx-nav.v3p-tabs .chip.on::before{display:none}
+.cx-nav.v3p-tabs .chip{padding:9px 12px}
+.cx-grp-end{padding-top:10px;border-top:1px solid var(--v-bd)}
+.cx-sethid,.cx-sethid[hidden]{display:none!important}
+.cx-nav.v3p-tabs .chip.on{box-shadow:inset 3px 0 0 var(--v-acc)}
+
+/* вкладки «Настроек» */
+.cx-subnav{display:flex;gap:4px;padding:4px;margin:0 0 14px;border-radius:14px;background:var(--v-field);overflow-x:auto;scrollbar-width:none}
+.cx-subnav::-webkit-scrollbar{display:none}
+.cx-subnav[hidden]{display:none}
+.cx-subnav button{all:unset;flex:none;padding:8px 14px;border-radius:10px;font-weight:600;font-size:13.5px;line-height:1.1;color:var(--v-mut);cursor:pointer;white-space:nowrap}
+.cx-subnav button:hover{color:var(--v-ink)}
+.cx-subnav button.on{background:var(--v-card);color:var(--v-ink);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.cx-subnav button:focus-visible{outline:2px solid var(--v-amber)}
+/* в «Настройках» — без длинных пояснений под заголовками */
+#cxCompany section.k>h3+p.cx-mut,#cxSecurity section.k>h3+p.cx-mut,#cxHolidays section.k>h3+p.cx-mut,#cxBot section.k>h3+p.cx-mut{display:none}
+#workView .jrn-intro{display:none}
+
+/* панель над списком: всё одной высоты, ровно в линию */
+.cx-bar{gap:8px;align-items:center}
+.cx-bar>*{flex:none}
+.cx-bar .cx-search{flex:1 1 220px;min-width:180px}
+html:root body #workView .cx-bar .cx-search input{min-height:40px;padding:9px 14px;font-size:14.5px}
+.cx-bar .cx-seg{flex-wrap:nowrap;height:40px;box-sizing:border-box;align-items:center}
+.cx-bar .cx-seg button{padding:8px 12px}
+html:root body #workView .cx-bar select,html:root body #workView .cx-sel{height:40px;width:auto;max-width:220px;background-color:var(--v-card);border:1px solid var(--v-bd)}
+.cx-bar .cx-btn{height:40px}
+.cx-bar>.cx-funnels{flex:0 0 100%;gap:6px;margin-top:2px}
+
+/* таблицы: меньше колонок, ширина считается от области справа от меню */
+.cx-main{container-type:inline-size;container-name:cxmain}
+.cx-table{overflow-x:auto}
+.cx-tr{padding:12px 16px;gap:14px}
+.cx-thd{padding-top:10px;padding-bottom:10px}
+.cx-t small{display:block;color:var(--v-mut);font-size:12.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cx-tr.past .cx-t b{color:var(--v-mut)}
+.cx-stg{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cx-deals .cx-tr{grid-template-columns:24px minmax(0,2.4fr) minmax(150px,1fr) minmax(110px,.8fr) 92px}
+.cx-clients .cx-tr{grid-template-columns:minmax(0,2fr) minmax(0,1.3fr) minmax(110px,.9fr) 110px 96px}
+.cx-ttable .cx-tr{grid-template-columns:24px 128px minmax(0,2.2fr) minmax(0,1.3fr) minmax(110px,.8fr)}
+.cx-mails .cx-tr{grid-template-columns:118px minmax(0,1fr) minmax(0,2.2fr) 130px}
+.cx-tn .cx-tr{grid-template-columns:150px minmax(0,3fr) minmax(0,1.4fr) 70px}
+.cx-mgrs .cx-tr{min-width:860px}.cx-logins .cx-tr,.cx-dlg .cx-tr,.cx-adeals .cx-tr,.cx-totable .cx-tr,.cx-arch .cx-tr{min-width:640px}
+@container cxmain (max-width:760px){
+  .cx-table .lp{display:none}
+  .cx-deals .cx-tr{grid-template-columns:24px minmax(0,1fr) auto 84px}
+  .cx-clients .cx-tr{grid-template-columns:minmax(0,1fr) 92px 90px}
+  .cx-ttable .cx-tr{grid-template-columns:24px 110px minmax(0,1fr)}
+  .cx-mails .cx-tr{grid-template-columns:96px minmax(0,1fr) minmax(0,1.6fr)}
+  .cx-tn .cx-tr{grid-template-columns:118px minmax(0,1fr) minmax(0,.9fr)}
+}
+@container cxmain (max-width:520px){
+  .cx-deals .cx-tr{grid-template-columns:24px minmax(0,1fr)}.cx-deals .cx-tr>:nth-child(n+3){grid-column:2}.cx-deals .cx-thd>:nth-child(n+3){display:none}
+  .cx-mails .cx-tr{grid-template-columns:minmax(0,1fr)}.cx-mails .cx-thd{display:none}
+  .cx-tn .cx-tr{grid-template-columns:100px minmax(0,1fr)}.cx-tn .cx-tr>:nth-child(3){grid-column:2}.cx-tn .cx-thd>:nth-child(3){display:none}
+}
+
+/* канбан: короткие карточки */
+.cx-kc{gap:3px;padding:11px 12px}
+.cx-kcl{font-weight:500;color:var(--v-mut)}
+.cx-kbt{margin-top:4px}
+
+/* карточка сделки: главное сверху, остальное в «Подробнее» */
+.cx-more{border-top:1px solid var(--v-bd);padding-top:8px;margin-top:2px}
+.cx-more>summary{cursor:pointer;font-weight:600;font-size:13.5px;color:var(--v-acc);padding:4px 0;list-style:none}
+.cx-more>summary::-webkit-details-marker{display:none}
+.cx-more>summary::after{content:' ▾'}.cx-more[open]>summary::after{content:' ▴'}
+.cx-more[open]>summary{margin-bottom:8px}
+.cx-more .cx-cf{margin-bottom:8px}
+.cx-sub2{margin:10px 0 6px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--v-mut)}
+.cx-dtabs .chip small{font-size:11.5px;font-weight:700;opacity:.65;margin-left:2px}
+.cx-dtabs{gap:4px;padding:4px;border-radius:14px;background:var(--v-field);width:max-content;max-width:100%;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+.cx-dtabs::-webkit-scrollbar{display:none}
+.cx-dtabs .chip{background:transparent;border-radius:10px;padding:8px 13px;color:var(--v-mut)}
+.cx-dtabs .chip.on{background:var(--v-card);color:var(--v-ink);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+
+/* старые окна (Грузы, КП, доступ в кабинет, журнал) — те же поля и кнопки */
+#workView .v3p-form.k{padding:18px!important;border-radius:20px;gap:12px}
+#workView .v3p-form .v3c-title{font-size:17px;font-weight:700}
+#workView .v3p-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px 12px}
+#workView .v3p-f{background:transparent!important;padding:0!important;border-radius:0!important;box-shadow:none!important}
+#workView .v3p-f>span{font-size:12.5px;font-weight:600;color:var(--v-mut);margin:0 0 5px}
+html:root body #workView .v3p-f input,html:root body #workView .v3p-f select,html:root body #workView .v3p-f textarea{width:100%;box-sizing:border-box;background-color:var(--v-field)!important;border:1px solid var(--v-bd)!important;border-radius:12px!important;padding:9px 12px!important;min-height:40px!important;height:auto!important;font-size:14px!important;font-weight:500;color:var(--v-ink)!important}
+html:root body #workView .v3p-f select{padding-right:34px!important}
+html:root body #workView .v3p-f input:focus,html:root body #workView .v3p-f select:focus,html:root body #workView .v3p-f textarea:focus{border-color:var(--v-acc)!important;outline:none}
+html:root body #workView .calculate,html:root body.manual-dark #workView .calculate{background:var(--v-acc)!important;color:#fff!important;height:40px!important;min-height:40px!important;width:auto!important;padding:0 20px!important;margin:4px 0 0!important;border-radius:12px!important;font-size:14px!important;font-weight:600!important;letter-spacing:0!important;text-transform:none!important;box-shadow:none!important;align-self:flex-start;transform:none!important}
+html:root body #workView .calculate:hover{background:var(--v-accd)!important}
+#workView .v3p-list{gap:10px;margin-top:12px}
+#workView .v3p-ship{padding:16px!important;gap:12px;border-radius:20px}
+#workView .v3p-ship h3{font-size:18px;margin:4px 0 2px}
+#workView .v3p-qrow{padding:12px 16px!important;border-radius:16px}
+#workView .v3p-empty{padding:18px 20px!important;border-radius:20px}
+#workView .v3p-empty b{font-size:16px}
+#workView .crm-access{margin-top:14px}
+#workView .crm-access>summary{font-size:14px;padding:8px 2px}
+.cx-newbox{margin:0 0 12px}
+.cx-newbox>summary{list-style:none;width:max-content}
+.cx-newbox>summary::-webkit-details-marker{display:none}
+.cx-newbox[open]>summary{margin-bottom:10px;background:var(--v-field);color:var(--v-ink)}
+.cx-newbox[open]>summary::before{content:'× ';}
+#workView .jrn{font-size:13px}
+#workView .jrn th{background:var(--v-field);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--v-mut)}
+
+/* узкий экран */
+@media (max-width:900px){
+  .cx-shell{grid-template-columns:1fr}
+  .cx-nav.v3p-tabs{gap:4px;padding:6px}
+  .cx-grp-end{padding-top:0;border-top:0;padding-left:6px;border-left:1px solid var(--v-bd)}
+  .cx-nav.v3p-tabs .chip.on{box-shadow:none}
+  .cx-bar .cx-search{flex-basis:100%}
+}
+/* отслеживание груза по номеру контейнера / рейса */
+.trk-no{margin:-2px 0 0;font-size:14px;color:var(--v-mut)}
+.trk-no b{color:var(--v-ink);font-weight:700;letter-spacing:.02em}
+.trk-no .v3c-link{all:unset;cursor:pointer;color:var(--v-acc);font-weight:700;margin-left:6px}
+.trk-no .v3c-link:hover{text-decoration:underline}
+.cx-funnels{align-items:center}
+.cx-funnels .cx-imp{margin-left:auto;font-size:13px;padding:6px 2px}
+/* поля форм: одна высота 40px и одинаковая заливка (styles.css задаёт input 48px) */
+html:root body #workView input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),html:root body .cx-ov input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]){height:40px;min-height:40px;line-height:1.25}
+html:root body #workView select,html:root body .cx-ov select{height:40px;border:1px solid transparent;background-color:var(--v-field)}
+html:root body #workView input:focus,html:root body #workView select:focus,html:root body #workView textarea:focus,html:root body .cx-ov input:focus,html:root body .cx-ov select:focus,html:root body .cx-ov textarea:focus{border-color:var(--v-acc)!important;outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--v-acc) 18%,transparent)}
+html:root body #workView .cx-bar select,html:root body #workView .cx-sel{background-color:var(--v-card);border:1px solid var(--v-bd)}
+html:root body #workView .cx-search input{height:40px}
+/* узкая рабочая область: строка 1 — поиск и главная кнопка, строка 2 — фильтры */
+@container cxmain (max-width:900px){
+  .cx-bar:has(>.cx-search)::before{content:'';order:-1;flex:0 0 100%;height:0;margin-top:-8px}
+  .cx-bar>.cx-search{order:-3}
+  .cx-bar>.cx-btn.primary{order:-2}
+  .cx-bar>.cx-funnels{order:5}
+}
+/* вкладка «Ставки» */
+.cx-rates .cx-tr{grid-template-columns:minmax(0,2fr) minmax(120px,1fr) 96px 90px 116px}
+@container cxmain (max-width:760px){.cx-rates .cx-tr{grid-template-columns:minmax(0,1fr) auto 96px}}
+.cx-rt.best{background:color-mix(in srgb,var(--v-acc) 7%,transparent)}
+.cx-rt.rejected{opacity:.5}.cx-rt.rejected b{text-decoration:line-through}
+.cx-rt .cx-q{font-style:italic}
+.cx-racts{display:flex;gap:6px;justify-content:flex-end;align-items:center}
+.cx-ib{all:unset;cursor:pointer;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--v-field);color:var(--v-mut);font-weight:700}
+.cx-ib:hover{color:var(--v-ink)}.cx-ib.ok{background:color-mix(in srgb,var(--v-acc) 14%,transparent);color:var(--v-acc)}
+.cx-ib:focus-visible{outline:2px solid var(--v-amber)}
+.cx-tag.amb{background:color-mix(in srgb,var(--v-amber) 18%,transparent);color:#8a5a00}
+.cx-qbox{border-radius:14px;padding:10px 14px;background:color-mix(in srgb,var(--v-amber) 12%,transparent);display:grid;gap:6px;font-size:13.5px}
+.cx-qbox>div{display:flex;gap:10px;justify-content:space-between;align-items:baseline}
+.cx-refs{margin-top:4px}
+.cx-refs h4{margin:4px 0 8px;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--v-mut)}
+.cx-ref{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.2fr) 110px 56px;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--v-bd);font-size:13.5px}
+.cx-ref small{display:inline}
+.cx-small{font-size:12px!important;margin-top:6px}
+.cx-rqs{margin-top:6px}
+.cx-rqs>summary{cursor:pointer;font-weight:600;color:var(--v-mut);font-size:13.5px;padding:6px 0}
+.cx-rq{border-top:1px solid var(--v-bd);padding:10px 0;display:grid;gap:8px}
+.cx-rqh{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.cx-rqh .cx-ib{margin-left:auto;width:26px;height:26px}
+.cx-rqi{display:flex;gap:6px;flex-wrap:wrap}
+.cx-chip2{all:unset;cursor:pointer;padding:6px 10px;border-radius:10px;background:var(--v-field);font-size:13px;font-weight:600;color:var(--v-ink)}
+.cx-chip2 small{font-weight:500;color:var(--v-mut);margin-left:4px}
+.cx-chip2.green small{color:var(--v-acc)}.cx-chip2.red small{color:#c0392b}.cx-chip2.blue small{color:#2f6db5}
+.cx-asks{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px}
+.cx-asks input[type=search]{width:100%}
+.cx-aglist{max-height:360px;overflow:auto;margin-top:8px;display:grid;gap:2px}
+.cx-ag{display:flex;gap:10px;align-items:flex-start;padding:8px 6px;border-radius:10px;cursor:pointer}
+.cx-ag:hover{background:var(--v-field)}
+.cx-ag small{display:block;color:var(--v-mut);font-size:12px}
+.cx-agents .cx-tr{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) 40px}
+.cx-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+@media (max-width:640px){.cx-asks,.cx-grid2{grid-template-columns:1fr}.cx-ref{grid-template-columns:1fr auto}}
+/* справочник ТН ВЭД: одна строка состояния вместо карточек */
+.cx-tnstat{margin:-2px 0 10px;color:var(--v-mut);font-size:13.5px}
+.cx-tnstat b{color:var(--v-ink)}
+.cx-tnup{display:grid;gap:10px;padding:16px!important;margin-bottom:12px}
+.cx-tnup[hidden]{display:none}
+.cx-tnempty{font-size:16px}
+.cx-tdh{display:grid;gap:4px}
+.cx-tdr{all:unset;cursor:pointer;display:grid;grid-template-columns:130px minmax(0,1fr) auto;gap:10px;padding:10px 12px;border-radius:12px;align-items:center;font-size:13.5px}
+.cx-tdr:hover{background:var(--v-field)}
+.cx-tdl{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px;max-height:60vh;overflow:auto;font-size:13.5px}
+.cx-tdl li{padding:8px 10px;border-radius:10px;background:var(--v-field)}
+.cx-tdl code{font-weight:700}
+.cx-prices{padding:18px!important;margin-top:14px;display:grid;gap:12px}
+.cx-ptable .cx-tr{grid-template-columns:minmax(0,1.5fr) 96px minmax(0,1.4fr) minmax(0,1fr) 84px 104px 36px;padding:6px 10px;gap:8px}
+html:root body #workView .cx-ptable input,html:root body #workView .cx-ptable select{height:36px;min-height:36px;font-size:13.5px;padding:6px 10px}
+html:root body #workView .cx-ptable select{padding-right:28px!important}
+@container cxmain (max-width:760px){.cx-ptable .cx-tr{grid-template-columns:1fr 1fr 1fr;}.cx-ptable .cx-thd{display:none}}
+/* карточка сделки: все подписи над полями, ровно */
+.cx-cfs .cx-cf{grid-template-columns:1fr;gap:4px;margin-bottom:8px}
+/* флажки: обычного размера (styles.css растягивает input на всю ширину и 48px) */
+html:root body .cx-ov input[type=checkbox],html:root body #workView input[type=checkbox],html:root body .cx-ov input[type=radio],html:root body #workView input[type=radio]{width:16px!important;height:16px!important;min-height:0!important;flex:none;margin:2px 0 0;padding:0;accent-color:var(--v-acc);box-shadow:none}
+.cx-ag>span{min-width:0;flex:1}
+.cx-cbx{display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--v-ink)}
+.cx-prices .cx-h{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.cx-prices .cx-h .cx-link{margin-left:auto}
+.cx-pview .cx-tr{grid-template-columns:minmax(0,1.4fr) 70px minmax(0,1.6fr) minmax(0,1.2fr);padding:9px 14px}
+@container cxmain (max-width:620px){.cx-pview .cx-tr{grid-template-columns:minmax(0,1fr) auto}.cx-pview .cx-tr>:nth-child(2),.cx-pview .cx-tr>:nth-child(3){grid-column:1}}
+.cx-newbox[open]>summary{font-size:0!important}
+.cx-newbox[open]>summary::before{content:'Скрыть форму';font-size:14px}

@@ -76,11 +76,25 @@
     $$('#workView .v3p-tab').forEach(function (p) { p.hidden = p.dataset.pane !== tab; });
     if (!noLoad) load(tab);
   }
-  function load(tab) { current = tab; try { localStorage.setItem('iomaWorkTab', tab); } catch (e) {} if (loaders[tab]) loaders[tab](); var w = $('#workView'); if (w) w.dataset.cur = tab; }
+  // «Настройки»: компания, отгулы, праздники, почта, ИИ-бот, безопасность, журнал — одна строка меню и вкладки сверху
+  var SETTINGS = ['company', 'timeoff', 'holidays', 'mail', 'bot', 'security', 'journal'];
+  function lastSet() { try { var v = localStorage.getItem('iomaSetTab'); return SETTINGS.indexOf(v) >= 0 ? v : 'company'; } catch (e) { return 'company'; } }
+  function markSettings(tab) {
+    var isSet = SETTINGS.indexOf(tab) >= 0, chip = $('#workView .cx-nav [data-tab="settings"]'), bar = $('#cxSetBar');
+    if (chip) chip.classList.toggle('on', isSet);
+    if (bar) { bar.hidden = !isSet; $$('[data-sub]', bar).forEach(function (b) { b.classList.toggle('on', b.dataset.sub === tab); b.setAttribute('aria-selected', b.dataset.sub === tab ? 'true' : 'false'); }); }
+    if (isSet) { try { localStorage.setItem('iomaSetTab', tab); } catch (e) {} }
+  }
+  function load(tab) {
+    if (tab === 'settings') return show(lastSet());
+    current = tab; try { localStorage.setItem('iomaWorkTab', tab); } catch (e) {} markSettings(tab);
+    if (loaders[tab]) loaders[tab](); var w = $('#workView'); if (w) w.dataset.cur = tab;
+  }
   document.addEventListener('click', function (e) {
+    var sb = e.target.closest && e.target.closest('#cxSetBar [data-sub]'); if (sb) return show(sb.dataset.sub);
     var t = e.target.closest && e.target.closest('#workView .cx-nav [data-tab]'); if (!t) return;
-    load(t.dataset.tab); var nav = t.closest('.cx-nav'); if (nav) { nav.classList.remove('open'); if (nav.scrollWidth > nav.clientWidth && nav.scrollTo) nav.scrollTo({ left: Math.max(0, t.offsetLeft - nav.clientWidth / 2 + t.offsetWidth / 2), behavior: 'smooth' }); }
-    if (window.innerWidth < 900) { var pane = $('#workView [data-pane="' + t.dataset.tab + '"]'); if (pane) setTimeout(function () { pane.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 30); }
+    load(t.dataset.tab); var nav = t.closest('.cx-nav'); if (t.closest('.cx-sethid')) t = $('#workView .cx-nav [data-tab="settings"]') || t; if (nav) { nav.classList.remove('open'); if (nav.scrollWidth > nav.clientWidth && nav.scrollTo) nav.scrollTo({ left: Math.max(0, t.offsetLeft - nav.clientWidth / 2 + t.offsetWidth / 2), behavior: 'smooth' }); }
+    if (window.innerWidth < 900) { var pane = $('#workView [data-pane="' + (t.dataset.tab === 'settings' ? current : t.dataset.tab) + '"]'); if (pane) setTimeout(function () { pane.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 30); }
   });
   function lastTab() { try { return localStorage.getItem('iomaWorkTab'); } catch (e) { return null; } }
   // отдельная «страница» внутри рабочего места (карточка сделки): прячем вкладки, кнопка «Назад» возвращает

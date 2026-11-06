@@ -169,7 +169,8 @@
     });
 
     var taxPct = type === 'our_contract' ? n(S.taxOnExpensesPct) : 0;
-    var taxBase = freightRub + insuranceRub + extraTotal + T.duty + T.extra + T.excise + fee;
+    // как в рабочих таблицах (лист «Контракт»): налог = 2,2% от суммы всех строк — инвойс, комиссия, фрахт, страховка, таможенные платежи, сбор, декларант, доставка, прибыль
+    var taxBase = invoiceRub + freightRub + insuranceRub + extraTotal + T.duty + T.extra + T.excise + T.vat + fee;
     var tax = taxBase * taxPct / 100;
     var grand = type === 'our_contract' ? invoiceRub + freightRub + insuranceRub + T.duty + T.extra + T.excise + T.vat + fee + extraTotal + tax : freightRub + insuranceRub + extraTotal;
 

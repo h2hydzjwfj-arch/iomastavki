@@ -114,6 +114,9 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await A.p.click('#workView .cx-nav [data-tab=ved]'); await A.p.click('#cxVed [data-c=create][data-t=our_contract]'); await A.p.waitForSelector('#cxVed .cv-layout');
       await A.p.fill('#cxVed [data-k=invoice_amount]', '10000'); await A.p.waitForFunction(() => { const b = document.querySelector('#cxVed .cv-total b'); return b && /[1-9]/.test(b.textContent); }, null, { timeout: 6000 }); await shot(A.p, '06e_ved_calc');
       await A.p.click('#workView .cx-nav [data-tab=tnved]'); await A.p.waitForSelector('#cxTnved [data-tq]'); await shot(A.p, '06f_tnved');
+      // ставки агентов в сделке: ориентир по прайсу и окно запроса
+      await A.p.click('#workView .cx-nav [data-tab=inbox]'); await A.p.click('#crmInbox [data-x=open]:has-text("Документы UI")'); await A.p.waitForSelector('#crmDeal .cx-deal');
+      await A.p.click('#crmDeal [data-t=rates]'); await A.p.waitForSelector('#crmDeal [data-r=ask]'); await A.p.click('#crmDeal [data-r=ask]'); await A.p.waitForSelector('.cx-asks .cx-ag'); await shot(A.p, '06g_rates_ask'); await A.p.keyboard.press('Escape');
     });
     await step('Админ: база клиентов с сортировкой', async () => {
       await A.p.click('#workView .cx-nav [data-tab=clients]'); await A.p.waitForSelector('#crmClients [data-cli]'); await A.p.selectOption('#crmCliSort', 'frequency'); await A.p.waitForTimeout(400); await shot(A.p, '06d_clients');
@@ -123,7 +126,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await A.p.click('#v3clientForm [type=submit]'); await A.p.waitForSelector('#v3clientOk code'); clientPw = await A.p.textContent('#v3clientOk code');
     });
     await step('Админ: создаёт груз', async () => {
-      await A.p.click('#workView .cx-nav [data-tab=ships]'); await A.p.selectOption('#v3shipClient', { label: 'Клиент UI' });
+      await A.p.click('#workView .cx-nav [data-tab=ships]'); await A.p.click('#v3shipNew > summary'); await A.p.selectOption('#v3shipClient', { label: 'Клиент UI' });
       await A.p.fill('#v3shipForm [name=from]', 'Шанхай'); await A.p.fill('#v3shipForm [name=to]', 'Москва'); await A.p.fill('#v3shipForm [name=costs]', 'Фрахт; 2450; USD');
       await A.p.click('#v3shipForm [type=submit]'); await A.p.waitForSelector('#v3shipsList .v3p-ship'); await shot(A.p, '07_admin_ships');
     });
@@ -135,7 +138,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await A.p.waitForSelector('#v3shipsList .trk-stops li.cur:has-text("Новосибирск")'); await shot(A.p, '07b_admin_track');
     });
     await step('Админ: журнал — все расчёты и заявки отдельными строками', async () => {
-      await A.p.click('#workView .cx-nav [data-tab=journal]'); await A.p.waitForSelector('#jrnBox table.jrn tbody tr', { timeout: 8000 });
+      await A.p.click('#workView .cx-nav [data-tab=settings]'); await A.p.click('#cxSetBar [data-sub=journal]'); await A.p.waitForSelector('#jrnBox table.jrn tbody tr', { timeout: 8000 });
       const types = await A.p.$$eval('#jrnBox td.ty', els => els.map(e => e.textContent)); if (!types.some(t => /Расчёт/.test(t)) || !types.some(t => /Заявка/.test(t))) throw new Error('в журнале нет расчётов или заявок: ' + types.slice(0, 8).join(', '));
       await shot(A.p, '07c_admin_journal');
     });
