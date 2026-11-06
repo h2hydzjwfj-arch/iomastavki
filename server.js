@@ -47,7 +47,7 @@ function bestRate({ from, to, mode, distance }) {
     .sort((a, b) => b._score - a._score || new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
   return m[0] || null;
 }
-const portal = require('./portal').setup(app, { verifySession, DATA_DIR, upload, rateLimit, cloud, engine: q => bestRate(q),
+const portal = require('./portal').setup(app, { verifySession, DATA_DIR, upload, rateLimit, cloud, engine: q => bestRate(q), rates: () => cbrRatesToday(),
   // ИИ для разбора инвойсов и упаковочных листов (если задан OPENAI_API_KEY)
   ai: { enabled: () => !!process.env.OPENAI_API_KEY, run: async input => { const out = await responsesRequest({ key: process.env.OPENAI_API_KEY, preferred: process.env.OPENAI_MODEL, input, max_output_tokens: 8000 }); if (out.error) throw new Error(out.error.error || 'AI error'); return responseText(out.d); } } });
 app.use(['/api/agents', '/api/agents/import', '/api/rates/import', '/api/rates/import-text', '/api/rates/import-local',
@@ -158,7 +158,7 @@ app.get('/kb.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'
 app.get('/palettes.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'palettes.css'), { cacheControl: false }); });
 app.get('/theme-v3.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.css'), { cacheControl: false }); });
 // Новые модули главной и кабинета: карта-калькулятор, трекинг груза, динамика курса, экскурсия, журнал
-for (const f of ['journal-ui.js', 'geo-asia.js', 'map-calc.js', 'track.js', 'rates-dyn.js', 'tour.js', 'v4.css']) app.get('/' + f, (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, f), { cacheControl: false }); });
+for (const f of ['journal-ui.js', 'geo-asia.js', 'map-calc.js', 'track.js', 'rates-dyn.js', 'tour.js', 'v4.css', 'ved.js', 'crm.css', 'crm-kit.js', 'crm-calc-ui.js', 'crm-tasks-ui.js', 'crm-clients-ui.js', 'crm-sys-ui.js', 'tnved-ui.js']) app.get('/' + f, (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, f), { cacheControl: false }); });
 const SITE_URL = process.env.SITE_URL || 'https://iomastavki.onrender.com';
 app.get('/robots.txt', (req,res) => { res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${SITE_URL}/sitemap.xml\n`); });
 app.get('/sitemap.xml', (req,res) => { const urls = ['/'].concat(seoPages ? seoPages.urls() : []); res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${SITE_URL}${u === '/' ? '/' : u}</loc><lastmod>2026-11-06</lastmod><changefreq>${u === '/novosti' || u === '/' ? 'daily' : 'monthly'}</changefreq><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('')}</urlset>`); });
@@ -216,6 +216,17 @@ async function fetchText(url) {
   const r = await fetch(url, { headers: { 'User-Agent': 'iomastavka/2.0' }, signal: AbortSignal.timeout(8000) });
   if (!r.ok) throw new Error('upstream ' + r.status);
   return r.text();
+}
+// Курсы ЦБ на сегодня для калькулятора ВЭД и финансов сделки (кеш 30 минут). IOMA_FIXED_RATES — только для автотестов.
+let cbrToday = { at: 0, data: null };
+async function cbrRatesToday() {
+  if (process.env.IOMA_FIXED_RATES) { try { return { date: 'тест', rates: JSON.parse(process.env.IOMA_FIXED_RATES) }; } catch {} }
+  if (cbrToday.data && Date.now() - cbrToday.at < 30 * 60 * 1000) return cbrToday.data;
+  let data = null;
+  try { const p = parseCbrDaily(await fetchText('https://www.cbr.ru/scripts/XML_daily.asp')); if (p.items.USD) { const rates = {}; for (const k of Object.keys(p.items)) rates[k] = p.items[k].value; data = { date: p.date, rates }; } } catch {}
+  if (!data) { try { const j = JSON.parse(await fetchText('https://www.cbr-xml-daily.ru/daily_json.js')); const rates = {}; for (const k of Object.keys(CBR_IDS)) { const x = j.Valute && j.Valute[k]; if (x && x.Value) rates[k] = +(x.Value / (x.Nominal || 1)).toFixed(4); } if (rates.USD) { const d = new Date(j.Date); data = { date: `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`, rates }; } } catch {} }
+  if (data) cbrToday = { at: Date.now(), data };
+  return data || (cbrToday.data || { date: '', rates: {} });
 }
 app.get('/api/currency', async (req,res) => {
   const today = new Date(); today.setUTCHours(0, 0, 0, 0);
@@ -494,8 +505,8 @@ app.post('/api/login', loginLimiter, (req,res) => {
   let payload = null;
   // Администратор входит по логину «admin» или по почте из ADMIN_EMAIL (как в прежней версии сайта).
   const adminEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-  if (!login || login === 'admin' || (adminEmail && login === adminEmail)) { if (portal.adminPasswordOk(password)) payload = { role: 'admin', name: 'Администратор' }; }
-  else { const u = portal.findClient(login, password); if (u) payload = { role: 'client', uid: u.id, name: u.name }; }
+  if (!login || login === 'admin' || (adminEmail && login === adminEmail)) { if (portal.adminPasswordOk(password)) payload = { role: 'admin', name: 'Администратор', sv: (portal.store.load().settings || {}).adminSv || 0 }; }
+  else { const u = portal.findClient(login, password); if (u) payload = { role: 'client', uid: u.id, name: u.name, sv: u.sv || 0 }; }
   if (!payload) { portal.log(req, 'login_fail', { contact: login.slice(0, 120) }); return res.status(401).json({ ok:false, error:'Неверный логин или пароль' }); }
   { const u = payload.role === 'client' ? portal.store.load().users.find(x => x.id === payload.uid) : null;
     portal.log(req, 'login', { role: payload.role, uid: payload.uid, name: payload.name, email: u ? u.email : '', phone: u ? u.phone : '', company: u ? u.company : '', result: req.body?.remember ? 'с «Запомнить меня»' : '' }); }
@@ -640,9 +651,16 @@ app.post('/api/customs/check', async (req,res) => {
   const code=String(req.body?.code||'').replace(/\D/g,'').slice(0,10);
   if(code.length!==10) return res.status(400).json({ok:false,error:'Введите полный 10-значный код ТН ВЭД ЕАЭС'});
   const key=process.env.OPENAI_API_KEY;
+  // Сначала — собственный справочник ТН ВЭД (без внешних сервисов). Если код в нём есть, сторонние страницы не запрашиваем.
+  let local=null; try{ local=portal.tnved.get(code); }catch{}
+  const localFacts=local?`Собственный справочник компании${local.exact?'':' (ближайшая позиция '+local.code+')'}: наименование=${local.name||'—'}; пошлина=${local.duty||'—'}; НДС=${local.vat||'—'}; акциз=${local.excise||'—'}; разрешительные документы=${local.cert||'—'}; техрегламенты=${local.reglament||'—'}; маркировка «Честный знак»=${local.marking||'—'}; единица=${local.unit||'—'}${local.radio?'; товар из Приложения №1 к ПП №1637 — сбор 73 860 ₽':''}.`:'';
+  const localCard=local?{code:local.code,exact:local.exact,name:local.name||'',duty:local.duty||'',vat:local.vat||'',excise:local.excise||'',cert:local.cert||'',reglament:local.reglament||'',marking:local.marking||'',unit:local.unit||'',note:local.note||'',radio:!!local.radio}:null;
+  if(!key&&local){
+    return res.json({ok:true,code,title:local.name||`ТН ВЭД ЕАЭС ${code}`,local:localCard,analysis:`КОД: ${code}\nОПИСАНИЕ: ${local.name||'—'}${local.exact?'':' (ближайшая позиция '+local.code+')'}\nИМПОРТНАЯ ПОШЛИНА: ${local.duty||'нет в справочнике'}\nНДС: ${local.vat||'общая ставка 22%'}\nАКЦИЗ: ${local.excise||'—'}\nТАМОЖЕННЫЙ СБОР: ${local.radio?'73 860 ₽ (товар из Приложения №1 к ПП №1637)':'по шкале от таможенной стоимости декларации — посчитает «Калькулятор ВЭД»'}\nЧЕСТНЫЙ ЗНАК: ${local.marking||'нет данных в справочнике'}\nРАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: ${local.cert||'нет данных в справочнике'}${local.reglament?' ('+local.reglament+')':''}\nЕДИНИЦА ИЗМЕРЕНИЯ: ${local.unit||'—'}\nДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: ${local.note||'—'}\nИСТОЧНИКИ: собственный справочник ТН ВЭД\nПРИМЕЧАНИЕ: окончательная классификация и применяемые меры зависят от точных характеристик товара и документов.`});
+  }
   let alta=null;
-  try{ alta=await fetchAltaTnved(code); }catch{}
-  const baseFacts=alta?`Публичная справочная страница Альта-Софт для кода ${code}: название=${alta.title}; импортная пошлина=${alta.duty}; НДС=${alta.vat}; акциз=${alta.excise}; источник=${alta.url}.`:'Публичную страницу Альта-Софт получить не удалось.';
+  if(!(local&&local.exact)){ try{ alta=await fetchAltaTnved(code); }catch{} }
+  const baseFacts=(localFacts?localFacts+' ':'')+(alta?`Публичная справочная страница Альта-Софт для кода ${code}: название=${alta.title}; импортная пошлина=${alta.duty}; НДС=${alta.vat}; акциз=${alta.excise}; источник=${alta.url}.`:'Публичную страницу Альта-Софт получить не удалось.');
   if(!key){
     if(!alta) return res.status(503).json({ok:false,error:'OPENAI_API_KEY не настроен на сервере и справочная страница ТН ВЭД недоступна'});
     return res.json({ok:true,code,title:alta.title,analysis:`КОД: ${code}\nОПИСАНИЕ: ${alta.title}\nИМПОРТНАЯ ПОШЛИНА: ${alta.duty}\nНДС: ${alta.vat}\nАКЦИЗ: ${alta.excise}\nТАМОЖЕННЫЙ СБОР: требуется рассчитать по таможенной стоимости; ставка зависит от вида декларации и действующих правил\nЧЕСТНЫЙ ЗНАК: зависит от конкретного товара и его характеристик — требуется отдельная проверка\nРАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: зависят от товара\nЗАПРЕТЫ И ОГРАНИЧЕНИЯ: требуется отдельная проверка\nЕДИНИЦА ИЗМЕРЕНИЯ: требуется уточнение по полной тарифной позиции\nДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: ${baseFacts}\nИСТОЧНИКИ: ${alta.url}\nПРИМЕЧАНИЕ: окончательная классификация и применяемые меры зависят от точных характеристик товара и документов.`,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
@@ -682,7 +700,7 @@ ${baseFacts}
       return res.status(out.error.status||502).json({ok:false,error:out.error.error||'Не удалось проверить код ТН ВЭД'});
     }
     const text=responseText(out.d); if(!text) throw new Error('Пустой ответ от справочного сервиса');
-    res.json({ok:true,code,title:`ТН ВЭД ЕАЭС ${code}`,analysis:text,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
+    res.json({ok:true,code,title:local&&local.name?local.name:`ТН ВЭД ЕАЭС ${code}`,local:localCard,analysis:text,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
   }catch(e){
     if(alta) return res.json({ok:true,code,title:alta.title,analysis:`КОД: ${code}\nОПИСАНИЕ: ${alta.title}\nИМПОРТНАЯ ПОШЛИНА: ${alta.duty}\nНДС: ${alta.vat}\nАКЦИЗ: ${alta.excise}\nТАМОЖЕННЫЙ СБОР: требуется рассчитать по таможенной стоимости и виду декларации\nЧЕСТНЫЙ ЗНАК: требуется отдельная проверка по характеристикам товара\nРАЗРЕШИТЕЛЬНЫЕ ДОКУМЕНТЫ: требуется отдельная проверка\nЗАПРЕТЫ И ОГРАНИЧЕНИЯ: требуется отдельная проверка\nЕДИНИЦА ИЗМЕРЕНИЯ: уточнить по тарифной позиции\nДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ: ${baseFacts}\nИСТОЧНИКИ: ${alta.url}\nПРИМЕЧАНИЕ: ${e.message}`,apiCloudConfigured:Boolean(process.env.API_CLOUD_FTS_TOKEN)});
     res.status(502).json({ok:false,error:e.message||'Ошибка проверки ТН ВЭД'});
@@ -703,13 +721,16 @@ app.post('/api/ai', async (req,res) => {
   const volume=Number(context.lengthMm||0)*Number(context.widthMm||0)*Number(context.heightMm||0)/1e9*Number(context.pieces||1);
   const chargeableKg=Math.max(Number(context.weightKg||0),volume*factor);
   const system=`Ты AI-ассистент сайта iomastavka — специализированный помощник по международной логистике, ВЭД, Китай/Азия → Россия, ставкам, маршрутам, Incoterms, таможне, документам и анализу КП. Отвечай на языке интерфейса пользователя, если он не попросил другой язык. Для tr используй естественный турецкий язык. Не превращай короткие запросы вроде «курс» в случайный ответ: уточни, какой курс нужен. Для свежих фактов используй web search. Не выдумывай ставки и таможенные данные. Исторические ставки из базы ниже помечай как исторические/ориентировочные, если срок не подтверждён. Текущий расчётный вес: ${chargeableKg.toFixed(1)} кг. Фактор: ${factor} кг/м³. База ставок: ${JSON.stringify(relevantRates)}. Контекст калькулятора: ${JSON.stringify(context)}.`;
-  const input=[{role:'system',content:system},...history.map(x=>({role:x.role==='assistant'?'assistant':'user',content:String(x.content||'')})),{role:'user',content:message}];
+  let kbExtra=''; try{ if(portal.crm2.siteBotEnabled()) kbExtra=portal.crm2.botContext(message); }catch{}
+  const t0=Date.now();
+  const input=[{role:'system',content:system+kbExtra},...history.map(x=>({role:x.role==='assistant'?'assistant':'user',content:String(x.content||'')})),{role:'user',content:message}];
   try{
     let out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input,tools:[{type:'web_search',search_context_size:'medium'}],max_output_tokens:1200});
     if(out.error) out=await responsesRequest({key,preferred:process.env.OPENAI_MODEL,input,max_output_tokens:1200});
     if(out.error)return res.status(out.error.status||502).json({ok:false,error:out.error.error||'AI request failed'});
     const text=responseText(out.d);
     if(!text)return res.status(502).json({ok:false,error:'OpenAI returned an empty response'});
+    try{ portal.crm2.botLog({channel:'site',username:req.who?.name||'Администратор',visitor:String(req.get('x-ioma-visitor')||'').slice(0,40),q:message,a:text,ms:Date.now()-t0}); }catch{}
     res.json({ok:true,text});
   }catch(e){res.status(502).json({ok:false,error:e.message||'AI unavailable'});}
 });
@@ -727,6 +748,7 @@ app.use((req,res) => res.status(404).type('html').send('<!doctype html><meta cha
       setInterval(() => { cloud.get('state/portal.json').catch(() => {}); }, 12 * 60 * 60 * 1000).unref();
     } else console.warn('Хранилище: локальные файлы. На бесплатном Render они стираются при перезапуске — подключите Supabase.');
     await portal.store.init();
+    await portal.tnved.init();
     portal.setEnvAdminCheck(verifyPassword);
     // Telegram-бот: принимаем сообщения клиентов (привязка /start) через webhook.
     if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_WEBHOOK_SECRET) {
@@ -739,4 +761,4 @@ app.use((req,res) => res.status(404).type('html').send('<!doctype html><meta cha
   app.listen(PORT, () => console.log(`iomastavka listening on ${PORT}`));
 })();
 // Перед остановкой сохраняем несохранённое.
-process.on('SIGTERM', async () => { try { await portal.store.flush(); } catch {} try { await portal.journal.flush(); } catch {} process.exit(0); });
+process.on('SIGTERM', async () => { try { await portal.store.flush(); } catch {} try { await portal.journal.flush(); } catch {} try { await portal.tnved.flush(); } catch {} process.exit(0); });

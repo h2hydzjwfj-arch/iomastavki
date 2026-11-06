@@ -112,10 +112,10 @@ function setup(app, opts) {
   function roleOf(req) {
     const s = session(req);
     if (!s) return { role: 'guest' };
-    if (s.role === 'admin') return { role: 'admin', name: s.name || 'Администратор' };
+    if (s.role === 'admin') { const sv = (store.load().settings || {}).adminSv || 0; return (s.sv || 0) === sv ? { role: 'admin', name: s.name || 'Администратор' } : { role: 'guest' }; }
     if (s.role === 'client') {
       const u = store.load().users.find(x => x.id === s.uid && x.active !== false);
-      return u ? { role: 'client', uid: u.id, name: u.name } : { role: 'guest' };
+      return u && (s.sv || 0) === (u.sv || 0) ? { role: 'client', uid: u.id, name: u.name } : { role: 'guest' };
     }
     return { role: 'guest' };
   }
@@ -156,6 +156,12 @@ function setup(app, opts) {
   app.get('/api/me', (req, res) => { const r = roleOf(req); res.json({ ok: true, role: r.role, name: r.name || '', storage: r.role === 'admin' ? store.kind : undefined }); });
 
   const crm = require('./crm').setup(app, { store, admin, upload, str, num, newId });
+  // CRM, часть 2 (задачи, финансы, калькулятор ВЭД, аналитика, отгулы, компания, безопасность, почта, бот) и справочник ТН ВЭД.
+  // mail и tg объявлены ниже — передаём обёртки, которые обращаются к ним в момент вызова.
+  const crm2 = require('./crm2').setup(app, { store, admin, upload, str, num, newId, crm, journal, ai: opts.ai,
+    rates: opts.rates || (async () => ({ rates: {} })),
+    mail: { enabled: () => mail.enabled(), kind: () => mail.kind(), send: (...a) => mail.send(...a) }, tg: { ready: () => tg.ready() } });
+  const tnved = require('./tnved').setup(app, { admin, upload, DATA_DIR, cloud: opts.cloud || null, vedSettings: crm2.vedSettings });
   const splitContact = c => { c = String(c || '').trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c) ? { contactEmail: c } : { contactPhone: c }; };
   function dealFromLead(lead, extraText) {
     const text = ['Новая заявка с сайта', `Имя: ${lead.name}`, `Контакт: ${lead.contact}`, `Маршрут: ${lead.from || '—'} → ${lead.to || '—'}`, lead.cargo ? `Груз: ${lead.cargo}` : '', lead.weight != null ? `Вес: ${lead.weight} кг` : '', lead.volume != null ? `Объём: ${lead.volume} м³` : '', lead.estimate ? `Оценка с сайта: ${lead.estimate}` : '', lead.comment ? `Комментарий: ${lead.comment}` : '', extraText || ''].filter(Boolean).join('\n');
@@ -495,6 +501,7 @@ function setup(app, opts) {
         u.tgChatId = chat; delete u.tgLink; store.save(db);
         return tg.send(chat, `Готово, ${u.name}! Сюда будут приходить ваши КП, статусы грузов и документы.\nОтключить: /stop`);
       }
+      if (!/^\//.test(text)) { try { const ans = await crm2.telegramMessage(m); if (ans) return tg.send(chat, ans); } catch (e) { console.error('bot', e.message); } }
       if (/^\/stop/.test(text)) { const u = db.users.find(x => x.tgChatId === chat); if (u) { delete u.tgChatId; store.save(db); } return tg.send(chat, 'Уведомления отключены.'); }
       return tg.send(chat, `Это бот iomastavka. Чтобы получать КП и статусы грузов, войдите на сайте ${SITE} → «Аккаунт» → «Подключить Telegram».`);
     } catch (e) { console.error('telegram webhook', e.message); }
@@ -629,7 +636,7 @@ function setup(app, opts) {
     try { await notify(`Новый клиент зарегистрировался на сайте\n${name} · ${email}${company ? '\n' + company : ''}${phone ? '\n' + phone : ''}`); } catch {}
     return { user: u };
   }
-  return { roleOf, need, admin, findClient, registerClient, store, journal, log, adminPasswordOk: pw => adminPasswordOk(pw, envAdminCheck), setEnvAdminCheck: f => { envAdminCheck = f; }, tg, mail };
+  return { roleOf, need, admin, findClient, registerClient, store, journal, log, crm, crm2, tnved, adminPasswordOk: pw => adminPasswordOk(pw, envAdminCheck), setEnvAdminCheck: f => { envAdminCheck = f; }, tg, mail };
 }
 
 
