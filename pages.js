@@ -5,6 +5,8 @@
   'use strict';
   var PAGES = [
     ['/raschet', 'calculatorView', 'Расчёт ставки', 'calculator'],
+    ['/uslugi', 'servicesView', 'Услуги', ''],
+    ['/kejsy', 'casesView', 'Кейсы', ''],
     ['/tnved', 'customsView', 'Проверка кода ТН ВЭД', 'customsView'],
     ['/ekspeditory', 'forwardersView', 'Экспедиторы', 'forwarders'],
     ['/novosti', 'newsView', 'Новости ВЭД', 'news'],

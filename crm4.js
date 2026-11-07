@@ -112,6 +112,37 @@ function setup(app, ctx) {
     app.get('/api/my/kps', ctx.need('client'), (req, res) => { const d = db(); res.json({ ok: true, items: kps(d).filter(k => k.uid === req.who.uid).slice(0, 200).map(brief) }); });
     app.get('/api/my/kps/:id', ctx.need('client'), (req, res) => { const d = db(), k = kps(d).find(v => v.id === req.params.id && v.uid === req.who.uid); if (!k) return bad(res, 'Не найдено', 404); res.json({ ok: true, item: { ...brief(k), html: k.html, text: k.text } }); });
   }
-  return {};
+
+  // Кейсы для сайта: что и как привезли (без цены доставки клиенту). Смотрят все, добавляет и правит администратор (и робот-помощник).
+  const MODES = ['road', 'rail', 'air', 'sea', 'multi'];
+  const caseOf = c => ({ id: c.id, goods: c.goods, weight: c.weight, actualWeight: c.actualWeight, volume: c.volume, places: c.places, value: c.value, transport: c.transport, trucks: c.trucks, from: c.from, to: c.to, note: c.note, at: c.at });
+  function cleanCase(b, prev) {
+    const o = { ...(prev || {}) };
+    for (const [k, m] of [['goods', 120], ['from', 80], ['to', 80], ['note', 600]]) if (b[k] !== undefined) o[k] = str(b[k], m);
+    for (const k of ['weight', 'actualWeight', 'volume', 'places', 'value', 'trucks']) if (b[k] !== undefined) o[k] = b[k] === '' || b[k] == null ? null : Math.max(0, n(b[k]));
+    if (b.transport !== undefined) o.transport = MODES.includes(b.transport) ? b.transport : 'road';
+    return o;
+  }
+  const casesOf = d => (Array.isArray(d.settings.cases) ? d.settings.cases : DEFAULT_CASES);
+  app.get('/api/cases', (req, res) => { const d = db(); res.set('Cache-Control', 'no-store'); res.json({ ok: true, items: casesOf(d).map(caseOf), goods: d.settings.caseGoods || DEFAULT_GOODS }); });
+  app.post('/api/cases', admin, (req, res) => {
+    const d = db(), c = cleanCase(req.body || {}); if (!c.goods) return bad(res, 'Укажите груз');
+    c.id = newId(4); c.at = now(); d.settings.cases = [c].concat(casesOf(d)).slice(0, 200); store.save(d); res.json({ ok: true, item: caseOf(c) });
+  });
+  app.patch('/api/cases/:id', admin, (req, res) => {
+    const d = db(), list = casesOf(d).slice(), i = list.findIndex(c => c.id === req.params.id); if (i < 0) return bad(res, 'Кейс не найден', 404);
+    list[i] = cleanCase(req.body || {}, list[i]); d.settings.cases = list; store.save(d); res.json({ ok: true, item: caseOf(list[i]) });
+  });
+  app.delete('/api/cases/:id', admin, (req, res) => {
+    const d = db(), list = casesOf(d).filter(c => c.id !== req.params.id); if (list.length === casesOf(d).length) return bad(res, 'Кейс не найден', 404);
+    d.settings.cases = list; store.save(d); res.json({ ok: true });
+  });
+  return { cleanCase, casesOf };
 }
-module.exports = { setup };
+// Реальные перевозки владельца (без цены доставки клиенту)
+const DEFAULT_CASES = [
+  { id: 'c1', goods: 'Баллистическая ткань', weight: 15000, value: 27000000, transport: 'road', trucks: 5, from: 'Китай', to: 'Россия', note: 'Партия 15 т на 27 млн ₽ — пять фур.', at: '2026-11-07' },
+  { id: 'c2', goods: 'Сумки и рюкзаки', weight: 780, actualWeight: 580, transport: 'air', from: 'Синьчжоу', to: 'Москва', note: 'Расчётный вес 780 кг при фактическом 580 кг — груз объёмный, ставка считалась по объёмному весу.', at: '2026-11-07' },
+];
+const DEFAULT_GOODS = ['Бутылки', 'Арамидная верёвка', 'Гидравлический инструмент', 'Гидроцилиндры', 'Транспаки', 'Термомозаика', 'Инверторы', 'Камеры для банкоматов', 'Капсульный дом', 'Когтеточки', 'Конвейерная лента', 'Косметика', 'Регуляторы скорости', 'Кухонные мойки', 'Лампы', 'Образцы свитеров', 'Пищевое оборудование', 'Токарные пластины', 'Портативные анализаторы', 'Рюкзаки', 'Салфетки', 'Тара', 'Техническое оборудование', 'Баллистическая ткань'];
+module.exports = { setup, DEFAULT_CASES };

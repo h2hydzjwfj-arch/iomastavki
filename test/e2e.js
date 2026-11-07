@@ -25,7 +25,7 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
   try {
     // --- страницы и файлы
     await check('Главная открывается', async () => { const r = await fetch(B + '/'); ok(r.status === 200); ok((await r.text()).includes('iomastavka')); });
-    for (const f of ['/app.js', '/styles.css', '/theme-v3.css', '/night.css', '/night.js', '/theme-v3.js', '/portal-ui.js', '/palettes.css', '/routes-kb.js', '/i18n-v3.js', '/kb.js', '/v4.css', '/geo-asia.js', '/map-calc.js', '/track.js', '/rates-dyn.js', '/tour.js', '/journal-ui.js', '/ved.js', '/crm.css', '/crm-kit.js', '/crm-ui.js', '/crm-calc-ui.js', '/crm-tasks-ui.js', '/crm-clients-ui.js', '/crm-sys-ui.js', '/tnved-ui.js', '/crm-rates-ui.js', '/fact.js', '/crm-fact-ui.js'])
+    for (const f of ['/app.js', '/styles.css', '/theme-v3.css', '/night.css', '/night.js', '/theme-v3.js', '/portal-ui.js', '/palettes.css', '/routes-kb.js', '/i18n-v3.js', '/kb.js', '/v4.css', '/geo-asia.js', '/map-calc.js', '/track.js', '/rates-dyn.js', '/tour.js', '/journal-ui.js', '/ved.js', '/crm.css', '/crm-kit.js', '/crm-ui.js', '/crm-calc-ui.js', '/crm-tasks-ui.js', '/crm-clients-ui.js', '/crm-sys-ui.js', '/tnved-ui.js', '/crm-rates-ui.js', '/fact.js', '/crm-fact-ui.js', '/ui.js', '/ui.css', '/home.js', '/home.css', '/routes-map.js'])
       await check('Файл ' + f, async () => { const r = await fetch(B + f); ok(r.status === 200, 'код ' + r.status); });
     await check('robots.txt и sitemap.xml', async () => { ok((await fetch(B + '/robots.txt')).status === 200); ok((await (await fetch(B + '/sitemap.xml')).text()).includes('<urlset')); });
     await check('Несуществующая страница → 404', async () => { ok((await fetch(B + '/net-takoy')).status === 404); });
@@ -114,6 +114,13 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
     await check('Клиент: КП сохраняется в «Мои КП»', async () => {
       const j = await call('c', 'POST', '/api/quotes', { from: 'Shanghai', to: 'Москва', mode: 'rail', weight: 500 }); ok(j.ok); cq = j.quote;
       ok((await call('c', 'GET', '/api/my/quotes')).items.some(q => q.id === cq.id));
+    });
+    await check('Кейсы: видят все, добавляет только администратор', async () => {
+      const g = await call('g', 'GET', '/api/cases'); ok(g.ok && g.items.some(c => /Баллистическая ткань/.test(c.goods)), JSON.stringify(g).slice(0, 160));
+      ok((await call('g', 'POST', '/api/cases', { goods: 'Тест' }))._status === 401, 'гость добавил кейс');
+      const a = await call('a', 'POST', '/api/cases', { goods: 'Лампы CI', weight: 1200, transport: 'rail', from: 'Иу', to: 'Москва' }); ok(a.ok && a.item.id, JSON.stringify(a).slice(0, 160));
+      ok((await call('g', 'GET', '/api/cases')).items.some(c => c.goods === 'Лампы CI'), 'новый кейс не виден гостю');
+      ok((await call('a', 'DELETE', '/api/cases/' + a.item.id)).ok, 'кейс не удалился');
     });
     await check('КП от менеджера появляется в кабинете клиента, внутренние строки не уходят', async () => {
       const dl = await call('a', 'POST', '/api/deals', { title: 'КП в кабинет CI', clientId: cl.id }); ok(dl.ok, JSON.stringify(dl).slice(0, 160));

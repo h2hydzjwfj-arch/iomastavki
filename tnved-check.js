@@ -77,7 +77,7 @@ const UNITS = { 'кг': 'кг', kg: 'кг', 'т': 'т', 'тонну': 'т', 'т�
 const CURRENCIES = [['евро', 'EUR'], ['евр', 'EUR'], ['eur', 'EUR'], ['€', 'EUR'], ['доллар', 'USD'], ['долл', 'USD'], ['usd', 'USD'], ['$', 'USD'], ['руб', 'RUB'], ['rub', 'RUB'], ['₽', 'RUB']];
 const CUR_SIGN = { EUR: '€', USD: '$', RUB: '₽' };
 const NUM = '(\\d+(?:\\.\\d+)?)';
-const SPEC_RE = new RegExp(NUM + '\\s*(евро|евр|eur|€|доллар[а-яё]*|долл[а-яё]*|usd|\\$|руб[а-яё]*|rub|₽)\\.?\\s*(?:/|за)\\s*(?:1\\s*)?([а-яёa-z²³0-9.]+)');
+const SPEC_RE = new RegExp(NUM + '\\s*(евро|евр|eur|€|доллар[а-яё]*|долл[а-яё]*|usd|\\$|руб[а-яё]*|rub|₽)\\.?\\s*(?:/|за)\\s*(?:1\\s+(?=\\d)|1(?=[а-яёa-z]))?(?:(\\d+)\\s+)?([а-яёa-z²³0-9.]+)');
 
 /** «15%», «0», «Беспошлинно», «0.34 евр/пару», «10%, но не менее 2.25 евро/кг», «5% плюс 0.1 евро/кг». */
 function parseDuty(text, note) {
@@ -94,8 +94,8 @@ function parseDuty(text, note) {
   if (adv) duty.parts.push({ kind: 'ad_valorem', value: Number(adv[1]) });
   if (spec) {
     const cur = (CURRENCIES.find(([k]) => spec[2].startsWith(k)) || [, 'EUR'])[1];
-    const raw = spec[3].replace(/\.$/, '');
-    duty.parts.push({ kind: 'specific', value: Number(spec[1]), currency: cur, unit: UNITS[raw] || UNITS[raw.replace(/\.$/, '')] || raw });
+    const raw = spec[4].replace(/\.$/, ''), per = spec[3] ? Number(spec[3]) : 1; // «за 1 1000 шт» — за тысячу штук
+    duty.parts.push({ kind: 'specific', value: Number(spec[1]), currency: cur, unit: UNITS[raw] || UNITS[raw.replace(/\.$/, '')] || raw, per: per > 1 ? per : undefined });
   }
   if (!duty.parts.length) throw formatChanged(`Не удалось понять ставку пошлины: «${shown}»`);
   if (duty.parts.length === 2) duty.mode = (t.includes('плюс') || t.includes('+')) ? 'plus' : 'min';
@@ -127,9 +127,9 @@ function computeDuty(duty, value, weight, qty, rates) {
       rate = rates && Number(rates[p.currency]);
       if (!rate) throw unavailable('Нет курса ЦБ РФ для пересчёта специфической пошлины — попробуйте позже');
     }
-    const amt = p.value * q * rate;
+    const per = p.per || 1, amt = p.value * q / per * rate;
     const unitN = p.unit === 'пару' ? 'пар' : p.unit;
-    pieces.push([amt, `${fmtNum(p.value)} ${CUR_SIGN[p.currency] || p.currency} × ${fmtNum(q)} ${unitN}${p.currency === 'RUB' ? '' : ` × ${fmtMoney(rate, 2)} ₽`} = ${fmtMoney(amt)} ₽`]);
+    pieces.push([amt, `${fmtNum(p.value)} ${CUR_SIGN[p.currency] || p.currency} × ${fmtNum(q)}${per > 1 ? ' / ' + fmtNum(per) : ''} ${unitN}${p.currency === 'RUB' ? '' : ` × ${fmtMoney(rate, 2)} ₽`} = ${fmtMoney(amt)} ₽`]);
   }
   if (pieces.length === 1) return { amount: pieces[0][0], detail: duty.parts[0].kind === 'ad_valorem' ? '' : pieces[0][1], missing: '' };
   if (duty.mode === 'plus') return { amount: pieces[0][0] + pieces[1][0], detail: `${pieces[0][1]} + ${pieces[1][1]}`, missing: '' };
@@ -247,6 +247,34 @@ function loadBase(file) {
 }
 const fmtDate = iso => (/^\d{4}-\d{2}-\d{2}/.test(iso || '') ? iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.' + iso.slice(0, 4) : String(iso || ''));
 
+/*
+ * reference/tnved-full.json.gz — полный справочник ТН ВЭД ЕАЭС владельца сайта (13 293 десятизначных кода: наименование и пошлина).
+ * Собирается из его таблицы скриптом tools/build-tnved-full.js. Подстраховка, если alta.ru недоступен, и поиск по всем кодам.
+ */
+const FULL_FILE = path.join(__dirname, 'reference', 'tnved-full.json.gz');
+let full, fullFile = FULL_FILE;
+function loadFull(file) {
+  if (file) { fullFile = file; full = undefined; }
+  if (full !== undefined) return full;
+  try { const j = JSON.parse(require('zlib').gunzipSync(fs.readFileSync(fullFile)).toString('utf8')); const map = new Map(); for (const c of j.codes || []) map.set(c[0], c); full = { meta: j, map, list: j.codes || [] }; }
+  catch { full = null; }
+  return full;
+}
+function fullInfo(code) {
+  const f = loadFull(), e = f && f.map.get(code); if (!e) return null;
+  return { code, url: ALTA_URL(code), levels: [{ code: '', text: fullName(e[1]) }], duty: parseDuty(e[2]), vat: [], excise: '', category: '', source: 'local', baseDate: f.meta.builtAt || '', full: true };
+}
+// название из пути «группа → подгруппа → строка»: короткие и «прочие» строки — вместе с родителями
+function fullName(path) {
+  const parts = String(path || '').split(' → ').map(t => t.replace(/[:\s]+$/, '')).filter(Boolean), last = parts[parts.length - 1] || '';
+  const vague = last.length < 40 || /^[–—-]*\s*(прочи|с \d|для |массой|в |из |не более|более|шириной|длиной)/i.test(last);
+  const name = parts.length > 1 && vague ? parts.slice(-3).join(' → ') : last || String(path || '');
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+const localInfo = code => baseInfo(code) || fullInfo(code);
+const plural = (n, one, few, many) => { const a = Math.abs(n) % 100, b = a % 10; return a > 10 && a < 20 ? many : b === 1 ? one : b >= 2 && b <= 4 ? few : many; };
+const fullStats = () => { const f = loadFull(); return f ? { count: f.list.length, builtAt: f.meta.builtAt || '' } : { count: 0, builtAt: '' }; };
+
 /** Запись локального справочника в том же виде, что разбор страницы alta.ru. */
 function baseInfo(code) {
   const b = loadBase(); const e = b && b.codes[code]; if (!e) return null;
@@ -280,7 +308,7 @@ const SYN = [
 
 /** Поиск по локальному справочнику: цифры кода, слова из названия или бытовое название («ноутбук», «кроссовки»). */
 function searchBase(q, limit) {
-  const b = loadBase(); if (!b) return [];
+  const b = loadBase() || { codes: {}, nodes: [] };
   limit = Math.min(Number(limit) || 20, 100);
   const s = String(q || '').toLowerCase().replace(/ё/g, 'е'), d = s.replace(/\D/g, '');
   const words = s.replace(/[\d.\s-]+/g, ' ').trim().split(' ').filter(w => w.length > 1).map(w => (w.length > 5 ? w.slice(0, w.length - 2) : w));
@@ -297,15 +325,30 @@ function searchBase(q, limit) {
     const score = (d ? 50 : 0) + (bySyn ? 40 : 0) + words.reduce((a, w) => a + (name.toLowerCase().includes(w) ? 20 : 5), 0);
     out.push([score, { code, name, duty: e.duty, vat: (e.vat || []).map(v => v[0] + '%').filter((v, i, a) => a.indexOf(v) === i).join(' / '), cat: e.cat || '', source: 'base' }]);
   }
+  // полный справочник: те же правила, кроме уже найденных
+  const f = loadFull();
+  if (f && out.length < limit * 3) {
+    const seen = new Set(out.map(x => x[1].code));
+    for (const [code, name, duty] of f.list) {
+      if (seen.has(code) || (d && !code.startsWith(d))) continue;
+      const bySyn = syn.some(p => code.startsWith(p)), hay = name.toLowerCase().replace(/ё/g, 'е');
+      if (syn.length && !d ? !bySyn : (words.length && !bySyn && !words.every(w => hay.includes(w)))) continue;
+      const parts = name.split(' → '), last = parts[parts.length - 1] || name, short = fullName(name);
+      const score = (d ? 45 : 0) + (bySyn ? 35 : 0) + words.reduce((a, w) => a + (last.toLowerCase().includes(w) ? 18 : 4), 0);
+      out.push([score, { code, name: short, duty, vat: '', cat: '', source: 'full' }]);
+      if (out.length > 600) break;
+    }
+  }
   return out.sort((a, b2) => b2[0] - a[0] || a[1].code.localeCompare(b2[1].code)).slice(0, limit).map(x => x[1]);
 }
 
 /** Ближайшие по цифрам коды локального справочника — подсказка, если точного кода нет. */
 function nearestBase(code, n) {
-  const b = loadBase(); if (!b) return [];
+  const b = loadBase() || { codes: {}, nodes: [] };
   let best = [];
-  for (let len = Math.min(8, code.length - 1); len >= 4 && !best.length; len -= 2) best = Object.keys(b.codes).filter(c => c.startsWith(code.slice(0, len)));
-  return best.slice(0, n || 3).map(c => ({ code: c, name: baseName(b.codes[c]) }));
+  const f = loadFull(), all = Object.keys(b.codes).concat(f ? f.list.map(x => x[0]).filter(c => !b.codes[c]) : []);
+  for (let len = Math.min(8, code.length - 1); len >= 4 && !best.length; len -= 2) best = all.filter(c => c.startsWith(code.slice(0, len)));
+  return best.slice(0, n || 3).map(c => ({ code: c, name: b.codes[c] ? baseName(b.codes[c]) : (f.map.get(c)[1].split(' → ').pop()) }));
 }
 
 function withHint(err, code) {
@@ -327,14 +370,14 @@ async function fetchTnved(code, get) {
   let r;
   try { r = await (get || httpGet)(url); }
   catch (e) {
-    const local = baseInfo(code); if (local) return local;
+    const local = localInfo(code); if (local) return local;
     throw withHint(e instanceof TnvedError ? e : unavailable(`Справочник alta.ru недоступен (${e.message}).`), code);
   }
   if (r.status === 404) throw notFound(`Код ${code} не найден в справочнике ТН ВЭД ЕАЭС`);
   let info;
   try { info = parseAltaPage(r.text, code, url); }
   catch (e) {
-    if (e.kind === 'format_changed') { const local = baseInfo(code); if (local) return local; throw withHint(e, code); }
+    if (e.kind === 'format_changed') { const local = localInfo(code); if (local) return local; throw withHint(e, code); }
     throw e;
   }
   cache.set(code, { at: Date.now(), info });
@@ -481,7 +524,7 @@ function formatReport(res) {
   if (res.freight) L.push(`   В ТС учтён фрахт ${fmtMoney(res.freight)} ₽ (ТС ${fmtMoney(res.cv)} ₽)`);
   if (res.value == null) L.push('   Стоимость не указана — показаны только ставки. Укажите стоимость (в любой валюте), чтобы посчитать суммы и сбор.');
   if (res.forClient) L.push('ℹ️ Данные примерные. Точно — по запросу в ФТС или у нашего декларанта.');
-  if (res.source === 'local') L.push(`ℹ️ alta.ru недоступен — ставки из локального справочника на ${fmtDate(res.baseDate)}; перед декларированием сверьте с действующими.`);
+  if (res.source === 'local') L.push(`ℹ️ alta.ru недоступен — ставки из ${res.full ? 'справочника сайта (' + fullStats().count.toLocaleString('ru-RU') + ' ' + plural(fullStats().count, 'код', 'кода', 'кодов') + ')' : 'локального справочника'} на ${fmtDate(res.baseDate)}; перед декларированием сверьте с действующими.`);
   return L.join('\n');
 }
 
@@ -512,4 +555,4 @@ function parseCommand(msg) {
 
 const HELP = 'Проверка кода ТН ВЭД:\n/tnved <код> [стоимость в любой валюте] [вес кг] [кол-во пар/шт]\nБез стоимости — только ставки; со стоимостью — суммы и сбор.\nНапример:\n/tnved 9021101000\n/tnved 6201400000 800 USD 300кг\n/tnved 6403190000 150 000 ₽ 200 пар';
 
-module.exports = { parseMoney, permitsFor, certPriceFor, itemName, loadBase, baseInfo, searchBase, nearestBase, check, parseAltaPage, parseDuty, computeDuty, customsFee, cleanCode, parseAmount, fmtMoney, fmtNum, fmtCode, vatLines, formatReport, parseCommand, fetchTnved, httpGet, TnvedError, HELP, _cache: cache };
+module.exports = { FULL_FILE, BASE_FILE, parseMoney, permitsFor, certPriceFor, itemName, loadBase, baseInfo, loadFull, fullInfo, fullStats, searchBase, nearestBase, check, parseAltaPage, parseDuty, computeDuty, customsFee, cleanCode, parseAmount, fmtMoney, fmtNum, fmtCode, vatLines, formatReport, parseCommand, fetchTnved, httpGet, TnvedError, HELP, _cache: cache };

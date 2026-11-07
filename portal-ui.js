@@ -297,7 +297,7 @@
   function leaving(t){if(!t||!t.closest)return false;if(t.closest('#v3ask'))return false;
     if(t.closest('[data-close-view],.view-close,[data-nav],#logoutButton'))return true;
     var o=t.closest('[data-open-view]');if(o){var cur=openId();var map={calculator:'calculatorView',news:'newsView',assistant:'assistantView',forwarders:'forwardersView',customsView:'customsView'};var n=o.getAttribute('data-open-view');return (map[n]||n)!==cur}
-    return t.classList&&t.classList.contains('view-layer')&&t.classList.contains('open')&&window.__iomaDownOn===t}
+    return false}
   function showAsk(info,go){pending={info:info,go:go};$('#v3askP').textContent=info.p;$('[data-ask=save]',ask).textContent=info.saveText||'Сохранить';ask.hidden=false;setTimeout(function(){$('[data-ask=save]',ask).focus()},30)}
   window.addEventListener('click',function(e){if(bypass||!ask)return;if(!leaving(e.target))return;var info=dirtyInfo();if(!info)return;
     e.preventDefault();e.stopImmediatePropagation();var t=e.target;showAsk(info,function(){bypass=true;try{t.click()}finally{bypass=false}})},true);

@@ -58,7 +58,9 @@ function setup(app, ctx) {
   const n = v => { const x = Number(String(v == null ? '' : v).replace(/\s/g, '').replace(',', '.')); return Number.isFinite(x) ? x : 0; };
   const db = () => { const d = store.load(); for (const k of ['deals', 'tasks', 'timeoff', 'calcDocs', 'mailLog', 'botKb', 'botLog']) d[k] = d[k] || []; d.settings = d.settings || {}; d.botUsers = d.botUsers || {}; return d; };
   const now = () => new Date().toISOString();
-  const today = () => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; };
+  const ymd = t => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+  const today = () => ymd(new Date());
+  const dayOf = iso => { const t = new Date(iso); return isNaN(t) ? String(iso || '').slice(0, 10) : ymd(t); }; // время в базе — UTC, а «сегодня» — по местному (московскому) времени
   const who = req => (req && req.who && req.who.name) || 'Администратор';
   const dealOf = (d, id) => d.deals.find(x => x.id === id);
   const bad = (res, msg, code) => res.status(code || 400).json({ ok: false, error: msg });
@@ -538,7 +540,7 @@ function setup(app, ctx) {
   app.get('/api/mail/stats', admin, (req, res) => {
     const d = db(); const td = today(); const st = { today: {}, total: {} };
     for (const c of MAIL_CATS) { st.today[c] = 0; st.total[c] = 0; }
-    for (const m of d.mailLog) if (m.dir === 'in') { st.total[m.category] = (st.total[m.category] || 0) + 1; if (String(m.at).slice(0, 10) === td) st.today[m.category] = (st.today[m.category] || 0) + 1; }
+    for (const m of d.mailLog) if (m.dir === 'in') { st.total[m.category] = (st.total[m.category] || 0) + 1; if (dayOf(m.at) === td) st.today[m.category] = (st.today[m.category] || 0) + 1; }
     res.json({ ok: true, ...st, all: d.mailLog.length, sent: d.mailLog.filter(m => m.dir === 'out').length, last_check: d.settings.mailLastCheck || '—', out: ctx.mail ? { enabled: ctx.mail.enabled(), kind: ctx.mail.kind() } : { enabled: false }, inbound: { configured: !!(process.env.IMAP_HOST && process.env.IMAP_USER && process.env.IMAP_PASSWORD) } });
   });
   app.get('/api/mail/entries', admin, (req, res) => {
@@ -625,10 +627,10 @@ function setup(app, ctx) {
     return a;
   }
   app.get('/api/bot/stats', admin, (req, res) => {
-    const d = db(); const td = today(); const yd = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
-    const t = d.botLog.filter(v => String(v.at).slice(0, 10) === td).length, y = d.botLog.filter(v => String(v.at).slice(0, 10) === yd).length;
+    const d = db(); const td = today(); const yd = ymd(new Date(Date.now() - 864e5));
+    const t = d.botLog.filter(v => dayOf(v.at) === td).length, y = d.botLog.filter(v => dayOf(v.at) === yd).length;
     const users = Object.values(d.botUsers);
-    res.json({ ok: true, msgs_today: t, msgs_delta: y ? Math.round((t - y) / y * 100) : (t ? 100 : 0), active_users: new Set(d.botLog.filter(v => String(v.at).slice(0, 10) === td).map(v => v.user_id || v.visitor || v.username)).size, total_users: users.length, site_today: d.botLog.filter(v => v.channel === 'site' && String(v.at).slice(0, 10) === td).length, kb_count: d.botKb.length, enabled: bot(d).enabled !== false, aiReady: !!(ctx.ai && ctx.ai.enabled()), tgReady: !!(ctx.tg && ctx.tg.ready()), feedback_bad: d.botLog.filter(v => v.rating === 'bad').length });
+    res.json({ ok: true, msgs_today: t, msgs_delta: y ? Math.round((t - y) / y * 100) : (t ? 100 : 0), active_users: new Set(d.botLog.filter(v => dayOf(v.at) === td).map(v => v.user_id || v.visitor || v.username)).size, total_users: users.length, site_today: d.botLog.filter(v => v.channel === 'site' && dayOf(v.at) === td).length, kb_count: d.botKb.length, enabled: bot(d).enabled !== false, aiReady: !!(ctx.ai && ctx.ai.enabled()), tgReady: !!(ctx.tg && ctx.tg.ready()), feedback_bad: d.botLog.filter(v => v.rating === 'bad').length });
   });
   app.get('/api/bot/dialogs', admin, (req, res) => {
     const d = db(); let items = d.botLog; if (req.query.channel) items = items.filter(v => v.channel === req.query.channel); if (req.query.rating) items = items.filter(v => v.rating === req.query.rating);

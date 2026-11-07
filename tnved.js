@@ -34,6 +34,7 @@ function clean(rec) {
   const o = {};
   o.code = digits(rec.code).slice(0, 10);
   for (const f of FIELDS) if (f !== 'code' && f !== 'radio' && rec[f] != null && String(rec[f]).trim() !== '') o[f] = String(rec[f]).replace(/\s+/g, ' ').trim().slice(0, f === 'name' || f === 'note' ? 2000 : 400);
+  if (o.name) o.name = o.name.replace(/\s*🠺\s*/g, ' → ').replace(/:\s*→/g, ' →'); // выгрузки из старых справочников: «группа: 🠺 строка» → «группа → строка»
   if (rec.radio === true || /^(да|yes|1|true|\+|x|✓)$/i.test(String(rec.radio || '').trim())) o.radio = true;
   return o;
 }
@@ -181,7 +182,7 @@ function setup(app, ctx) {
   const vatDefault = () => (ctx.vedSettings ? ctx.vedSettings().vatDefault : 22);
   app.get('/api/tnved/diffs', admin, (req, res) => res.json({ ok: true, items: db.diffList() }));
   app.get('/api/tnved/diffs/:id', admin, (req, res) => { const d = db.diffGet(req.params.id); if (!d) return res.status(404).json({ ok: false, error: 'Не найдено' }); res.json({ ok: true, item: d }); });
-  app.get('/api/tnved/stats', admin, (req, res) => res.json({ ok: true, ...db.stats() }));
+  app.get('/api/tnved/stats', admin, (req, res) => res.json({ ok: true, ...db.stats(), builtin: require('./tnved-check').fullStats() }));
   app.get('/api/tnved/search', admin, (req, res) => { const r = db.search(req.query.q, req.query.limit); res.json({ ok: true, ...r }); });
   // Данные для расчёта: свой справочник → alta.ru → встроенный справочник (reference/tnved-base.json).
   // Ставку пошлины и НДС в расчёте нельзя поменять руками — она идёт отсюда.
