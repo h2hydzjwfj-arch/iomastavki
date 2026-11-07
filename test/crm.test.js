@@ -18,6 +18,7 @@ function setupAll() {
   const crm2 = require('../crm2').setup(app, { store, admin, upload, str, num, newId, crm, rates: async () => ({ date: '06.11.2026', rates: { USD: 80, EUR: 92, CNY: 11 } }), mail: { enabled: () => true, kind: () => 'SMTP', send: async (...a) => { sent.push(a); } }, tg: { ready: () => false } });
   const tn = require('../tnved').setup(app, { admin, upload, DATA_DIR: dir, cloud: null, vedSettings: crm2.vedSettings, affected: crm2.tnvedAffected });
   const crm3 = require('../crm3').setup(app, { store, admin, upload, str, newId, rates: async () => ({ date: '06.11.2026', rates: { USD: 80, EUR: 92, CNY: 11 } }), mail: { enabled: () => true, kind: () => 'test', send: async (to, subject, text) => { sent.push({ to, subject, text }); } }, publicAgents: () => [{ id: 1, company: 'Multiwell', contact: 'Kane', email: 'kane@example.com', modes: ['rail', 'road', 'sea'] }], newCalcDoc: (d, o) => crm2.newCalcDoc(d, o) });
+  require('../crm4').setup(app, { store, admin, str, newId, contractFor: id => crm2.contractFor(id) });
   return { app, store, crm, crm2, crm3, tn, sent, call: (m, u, b, x) => app.call(m, u, b, x) };
 }
 
@@ -254,4 +255,44 @@ test('агенты: импорт базы, запрос ставок, ответ
   assert.equal(refs[0].agent, 'QT Avia (ГК АТС)'); assert.equal(refs[0].est, 20500);
   const road = (await call('POST', '/api/deals', { title: 'Одежда', from: 'Гуанчжоу', to: 'Новосибирск', mode: 'auto', weight: 1000, funnel: 'Контракт West Asia' })).body.item;
   const rr = (await call('GET', '/api/deals/' + road.id + '/rq')).body.refs; assert.equal(rr[0].perKg, 65); assert.equal(rr[0].est, 65000);
+});
+
+test('«Факт» по листу «Бонус»: долг клиента, прибыль компании, мои 5%', () => {
+  const F = require('../fact');
+  // пример из рабочего Excel: контракт 147 820,44 ¥, инвойс 70 296 ¥, курс оплаты поставщику 10,8975, курс ДТ 11,9677, фрахт 16 958 ¥ по 12,6128
+  const f = { currency: 'CNY', contractTotal: 147820.44, invoice: 70296, rateSupplier: 10.8975, rateDt: 11.9677,
+    expenses: [{ label: 'Фрахт', currency: 'CNY', amount: 16958, rate: 12.6128, plan: 200000 }, { label: 'Таможенные платежи по ДТ', currency: 'RUB', amount: 393899.16 }, { label: 'Декларант', currency: 'RUB', amount: 10000 }, { label: 'Вывоз', currency: 'RUB', amount: 15000 }, { label: 'Терминальные расходы', currency: 'RUB', amount: 33040.82 }, { label: 'Страхование', currency: 'RUB', amount: '', plan: 1219.67 }],
+    incomes: [{ label: 'Оплата инвойса', amount: 767956.39 }, { label: 'Доплата', amount: 7000 }], extraBilled: [{ label: 'Взвешивание', amount: 7000 }] };
+  const r = F.calc(f);
+  assert.equal(r.invoiceRub, 766050.66); assert.equal(r.services, 77524.44); assert.equal(r.servicesRub, 927789.24);
+  assert.equal(r.due, 1700839.9); assert.equal(r.paid, 774956.39); assert.equal(r.debt, 925883.51);
+  assert.equal(r.spent, 1431878.5); assert.equal(r.profit, 268961.4); assert.equal(r.bonus, 13448.07); assert.equal(r.cash, -656922.11);
+  assert.equal(r.expenses[1].rub, 213887.86); assert.equal(r.expenses[1].diff, 13887.86); assert.ok(r.ok);
+  assert.ok(r.warnings.some(w => /Страхование/.test(w)));
+  assert.deepEqual(F.calc({ currency: 'CNY', contractTotal: 1000, invoice: 600, expenses: [{ label: 'Фрахт', currency: 'USD', amount: 10 }] }).missing, ['курс оплаты поставщику', 'курс ЦБ на дату ДТ', 'курс для «Фрахт»']);
+  assert.equal(F.calc({ contractTotal: 100, invoice: 0, rateDt: 10, expenses: [{ amount: 2000 }] }).bonus, 0); // убыток — без бонуса
+  assert.equal(F.calc(f, { bonusPct: 10 }).bonus, 26896.14);
+});
+
+test('«Факт» в сделке: черновик из расчёта, сохранение, мои средства, ЭТрН', async () => {
+  const { call } = setupAll();
+  const x = (await call('POST', '/api/deals', { title: 'Сумки', from: 'Гуанчжоу', to: 'Москва', mode: 'auto', weight: 1000, cargo: 'Сумки' })).body.item;
+  const c = await call('POST', '/api/calc', { dealId: x.id, calc_type: 'our_contract' });
+  await call('PATCH', '/api/calc/' + c.body.id, { freight_total: 25800, freight_currency: 'CNY', items: [{ name: 'Сумки', tnved_code: '4202929100', invoice_currency: 'CNY', invoice_amount: 70296, weight: 1000, duty_type: 'percent', duty_rate: 12.5, vat_rate: 22, auto_lookup: false }] });
+  const dr = (await call('GET', '/api/deals/' + x.id + '/fact')).body;
+  assert.equal(dr.saved, false); assert.equal(dr.won, false); assert.equal(dr.fact.invoice, 70296); assert.ok(dr.fact.contractTotal > 70296);
+  assert.ok(dr.fact.expenses.some(e => /Фрахт/.test(e.label) && e.currency === 'CNY' && e.plan > 0)); assert.ok(dr.fact.expenses.some(e => /ДТ/.test(e.label) && e.plan > 0));
+  const f = { ...dr.fact, contractTotal: 147821, rateSupplier: 10.8975, rateDt: 11.9677, incomes: [{ label: 'Оплата', amount: 1000000, date: '2026-10-01' }], expenses: dr.fact.expenses.map(e => ({ ...e, amount: /Фрахт/.test(e.label) ? 16958 : '', rate: /Фрахт/.test(e.label) ? 12.6128 : '' })) };
+  const sv = await call('PUT', '/api/deals/' + x.id + '/fact', f); assert.ok(sv.body.ok); assert.equal(sv.body.result.invoiceRub, 766050.66);
+  let w = (await call('GET', '/api/wallet')).body; assert.equal(w.items.length, 0); // сделка ещё не успешная
+  await call('PATCH', '/api/deals/' + x.id, { status: 'won' });
+  w = (await call('GET', '/api/wallet')).body; assert.equal(w.items.length, 1); assert.equal(w.bonusPct, 5);
+  assert.equal(w.items[0].bonus, Math.round(sv.body.result.profit * 5) / 100); assert.equal(w.pending, w.items[0].bonus); assert.equal(w.received, 0);
+  await call('POST', '/api/deals/' + x.id + '/fact/paid', { paid: true });
+  w = (await call('GET', '/api/wallet')).body; assert.equal(w.received, w.items[0].bonus); assert.ok(w.items[0].paid);
+  assert.equal((await call('PUT', '/api/wallet/settings', { bonusPct: 150 })).status, 400);
+  await call('PUT', '/api/wallet/settings', { bonusPct: 7 }); assert.equal((await call('GET', '/api/wallet')).body.bonusPct, 7);
+  const e = await call('PUT', '/api/deals/' + x.id + '/etrn', { contract: 'our', dest: 'tk', tk: 'ПЭК', done: ['s0', 's2'] });
+  assert.deepEqual(e.body.etrn.done, ['s0', 's2']); assert.equal(e.body.etrn.tk, 'ПЭК');
+  const deal = (await call('GET', '/api/deals/' + x.id)).body.item; assert.equal(deal.etrn.contract, 'our'); assert.ok(deal.fact.bonusPaid);
 });

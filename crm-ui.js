@@ -171,7 +171,7 @@
     var x = r.item, c = r.client, st = r.stages || m.pipelines[x.funnel] || [], closed = x.status !== 'active';
     var tel = String(x.contactPhone || ''), telHref = /^@/.test(tel) ? 'https://t.me/' + encodeURIComponent(tel.slice(1)) : tel.replace(/[^\d+]/g, '').length >= 7 ? 'tel:' + tel.replace(/[^\d+]/g, '') : '';
     var stageOpts = st.concat(closed ? [x.stage] : []); var modes = [['', '—']].concat(Object.keys(m.modes).map(function (k) { return [k, m.modes[k]]; }));
-    var side = '<button type="button" class="cx-back" data-y="back">← Назад ' + (back === 'inbox' ? 'к входящим' : back === 'tasks' ? 'к задачам' : back === 'clients' ? 'к клиентам' : 'к сделкам') + '</button>'
+    var side = '<button type="button" class="cx-back" data-y="back">← Назад ' + (back === 'inbox' ? 'к входящим' : back === 'tasks' ? 'к задачам' : back === 'clients' ? 'к клиентам' : back === 'wallet' ? 'к моим средствам' : 'к сделкам') + '</button>'
       + '<div class="cx-dh"><input class="cx-dname" name="title" form="cxDealForm" value="' + esc(x.title || '') + '" placeholder="Название сделки…" aria-label="Название сделки">'
       + '<small>№ ' + esc(x.number) + ' · создана ' + K.dt(x.createdAt) + (x.source ? ' · <em class="crm-src">' + esc(x.source) + '</em>' : '') + catBadge(x.category) + '</small>'
       + (closed ? '<div class="cx-closed ' + x.status + '"><b>' + ({ won: '✓ Сделка завершена успешно', closed: 'Сделка закрыта', deleted: 'Сделка в архиве' }[x.status]) + '</b>' + (x.closeReason ? '<span>Причина: ' + esc(x.closeReason) + (x.closeComment ? ' — ' + esc(x.closeComment) : '') + '</span>' : '') + '<button type="button" class="cx-btn sm" data-y="' + (x.status === 'deleted' ? 'restore' : 'reopen') + '">' + (x.status === 'deleted' ? 'Восстановить' : 'Вернуть в работу') + '</button></div>'
@@ -198,8 +198,8 @@
       + '<div class="cx-dacts">' + (closed ? '' : '<button type="button" class="cx-btn danger" data-y="close">Закрыть сделку</button><button type="button" class="cx-btn ok" data-y="won">✓ Успешно</button>') + '<button type="submit" class="cx-btn primary">Сохранить</button></div>'
       + (x.status !== 'deleted' ? '<button type="button" class="cx-link danger" data-y="archive">🗑 Перенести в архив</button>' : '') + '</form>';
     var acts = x.activity || [], tasks = r.tasks || [];
-    var main = '<div class="cx-dtabs" role="tablist">' + [['act', 'Активность (' + acts.filter(function (a) { return !a.internal; }).length + ')'], ['tasks', 'Задачи (' + tasks.length + ')'], ['rates', 'Ставки'], ['files', 'Файлы (' + (x.files || []).length + ')'], ['calc', 'Калькулятор ВЭД' + (r.calcs.length ? ' (' + r.calcs.length + ')' : '')], ['kp', 'КП (' + r.quotes.length + ')'], ['fin', 'Финансы']].map(function (t) { return '<button type="button" class="chip' + (lastTab === t[0] ? ' on' : '') + '" data-y="tab" data-t="' + t[0] + '">' + t[1].replace(/ \((\d+)\)$/, function (_, n) { return n === '0' ? '' : ' <small>' + n + '</small>'; }) + '</button>'; }).join('') + '</div>'
-      + '<div class="cx-dpane" data-dp="act"></div><div class="cx-dpane" data-dp="tasks" hidden></div><div class="cx-dpane" data-dp="rates" hidden></div><div class="cx-dpane" data-dp="files" hidden></div><div class="cx-dpane" data-dp="calc" hidden></div><div class="cx-dpane" data-dp="kp" hidden></div><div class="cx-dpane" data-dp="fin" hidden></div>';
+    var main = '<div class="cx-dtabs" role="tablist">' + [['act', 'Активность (' + acts.filter(function (a) { return !a.internal; }).length + ')'], ['tasks', 'Задачи (' + tasks.length + ')'], ['rates', 'Ставки'], ['files', 'Файлы (' + (x.files || []).length + ')'], ['calc', 'Калькулятор ВЭД' + (r.calcs.length ? ' (' + r.calcs.length + ')' : '')], ['kp', 'КП (' + r.quotes.length + ')'], ['fin', 'Финансы']].concat(x.status === 'won' || x.fact ? [['fact', 'Факт']] : [], [['etrn', 'ЭТрН']]).map(function (t) { return '<button type="button" class="chip' + (lastTab === t[0] ? ' on' : '') + '" data-y="tab" data-t="' + t[0] + '">' + t[1].replace(/ \((\d+)\)$/, function (_, n) { return n === '0' ? '' : ' <small>' + n + '</small>'; }) + '</button>'; }).join('') + '</div>'
+      + '<div class="cx-dpane" data-dp="act"></div><div class="cx-dpane" data-dp="tasks" hidden></div><div class="cx-dpane" data-dp="rates" hidden></div><div class="cx-dpane" data-dp="files" hidden></div><div class="cx-dpane" data-dp="calc" hidden></div><div class="cx-dpane" data-dp="kp" hidden></div><div class="cx-dpane" data-dp="fin" hidden></div><div class="cx-dpane" data-dp="fact" hidden></div><div class="cx-dpane" data-dp="etrn" hidden></div>';
     box.innerHTML = '<div class="cx-deal"><aside class="cx-dside k">' + side + '</aside><div class="cx-dmain k">' + main + '</div></div>';
     bindDeal(box);
     showTab(lastTab);
@@ -211,6 +211,8 @@
     var p = $('.cx-dpane[data-dp="' + t + '"]', box);
     if (t === 'act') actPane(p); if (t === 'tasks') tasksPane(p); if (t === 'files') filesPane(p); if (t === 'kp') kpPane(p); if (t === 'fin') finPane(p); if (t === 'rates' && window.IOMA_RATES) window.IOMA_RATES.mount(p, cur.item);
     if (t === 'calc' && window.IOMA_CALC) window.IOMA_CALC.mount(p, { dealId: cur.item.id, onChange: function () {}, openId: openId || '' });
+    if (t === 'fact' && window.IOMA_FACT_UI) window.IOMA_FACT_UI.mount(p, cur.item);
+    if (t === 'etrn' && window.IOMA_ETRN) window.IOMA_ETRN.mount(p, cur.item);
   }
   function bindDeal(box) {
     var form = $('#cxDealForm', box);
@@ -225,7 +227,7 @@
       if (y === 'back') { K.show(back); return; }
       if (y === 'tab') return showTab(t.dataset.t);
       if (y === 'close') return closeDeal();
-      if (y === 'won') return K.confirm('Отметить сделку успешной?', 'Да, успешно').then(function (ok) { if (ok) patch({ status: 'won' }).then(maybeCloseTasks); });
+      if (y === 'won') return K.confirm('Отметить сделку успешной? Откроется «Факт» — внесите приходы и расходы, чтобы посчитать прибыль и ваши средства.', 'Да, успешно').then(function (ok) { if (ok) patch({ status: 'won' }).then(function () { lastTab = 'fact'; if ($('#crmDeal .cx-dtabs [data-t=fact]')) showTab('fact'); return maybeCloseTasks(); }); });
       if (y === 'reopen') return patch({ status: 'active' });
       if (y === 'restore') return api('/api/deals/' + id + '/restore', { method: 'POST' }).then(reload);
       if (y === 'archive') return K.confirm('Перенести сделку в архив? Её можно будет восстановить.', 'В архив', true).then(function (ok) { if (ok) api('/api/deals/' + id, { method: 'DELETE' }).then(function () { K.badges(); K.show(back); }); });

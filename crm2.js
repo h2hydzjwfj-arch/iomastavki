@@ -625,7 +625,12 @@ function setup(app, ctx) {
     }
     return out;
   }
-  return { tnvedAffected, botContext, botLog, telegramMessage, telegramAccess, botFallback, vedSettings, certPrices, mailAdd, classify, newCalcDoc, offOn: (name, date) => offOn(db(), name, date), siteBotEnabled: () => bot(db()).answerSite !== false };
+  // последний расчёт «Наш контракт» по сделке — для «Факта» (план) и КП
+  async function contractFor(dealId) {
+    const docs = db().calcDocs.filter(c => c.dealId === dealId && c.calc_type === 'our_contract').sort((a, b) => String(b.updatedAt || b.createdAt).localeCompare(String(a.updatedAt || a.createdAt)));
+    if (!docs.length) return null; const o = await docOut(docs[0]); return { doc: docs[0], contract: o.contract };
+  }
+  return { tnvedAffected, botContext, botLog, telegramMessage, telegramAccess, botFallback, vedSettings, certPrices, mailAdd, classify, newCalcDoc, contractFor, offOn: (name, date) => offOn(db(), name, date), siteBotEnabled: () => bot(db()).answerSite !== false };
 }
 
 module.exports = { setup, HOLIDAYS, expandCn, classify, SECRETS };
