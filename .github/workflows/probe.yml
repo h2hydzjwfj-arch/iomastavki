@@ -11,16 +11,13 @@ jobs:
           python3 - <<'PY'
           import urllib.request, re
           UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36'
-          for url in ['https://www.alta.ru/tnved/code/8471300000/', 'https://www.alta.ru/tnved/']:
-              try:
-                  r = urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': UA, 'Accept-Language': 'ru'}), timeout=30)
-                  b = r.read().decode('utf-8', 'replace'); print('=====', url, r.status, len(b))
-              except Exception as e:
-                  print('=====', url, 'ERROR', e); continue
-              print('LINKS', sorted(set(re.findall(r'href="(/tnved/[^"#?]*)', b)))[:120])
-              print('AJAX', sorted(set(re.findall(r'["\'](/[a-z_/]*(?:tnved|tree|ajax|api)[a-z_/.]*[^"\'\s]{0,60})["\']', b)))[:80])
-              for m in re.finditer(r'<script[^>]*src="([^"]+)"', b): print('SCRIPT', m.group(1))
-              i = b.find('pTnved_body'); j = b.find('Таможенные платежи')
-              t = re.sub(r'\s+', ' ', b[i:j])
-              print('TREE', t[:3000])
+          def get(url):
+              r = urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': UA, 'Accept-Language': 'ru', 'X-Requested-With': 'XMLHttpRequest'}), timeout=30)
+              return r.read().decode('utf-8', 'replace')
+          js = get('https://www.alta.ru/tnved/design/js/tnved.js?773')
+          for m in re.finditer(r'.{0,160}(url|ajax|\.get\(|\.post\(|getJSON).{0,220}', js): print('JS', m.group(0).replace('\n', ' ')[:380])
+          for url in ['https://www.alta.ru/tnved/?tnved=8471', 'https://www.alta.ru/tnved/?tnved=8471300000']:
+              try: b = get(url)
+              except Exception as e: print('=====', url, 'ERROR', e); continue
+              print('=====', url, len(b)); print('CODES', sorted(set(re.findall(r'(?:code/|tnved=|data-code="|id=")(\d{10})', b)))[:200])
           PY
