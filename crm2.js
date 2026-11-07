@@ -194,7 +194,7 @@ function setup(app, ctx) {
     const rt = await currentRates();
     const result = VED.calcDoc(doc, { rates: rt.rates, rateDate: rt.date, settings: vedSettings() });
     const contract = doc.calc_type === 'cargo' ? null : CONTRACT.calc(CONTRACT.fromVedDoc(doc, rt.rates), { rates: rt.rates, rateDate: rt.date, settings: contractSettings() });
-    return { ok: true, doc, result, contract, rates: rt.rates, rateDate: rt.date || '' };
+    return { ok: true, doc, result, contract, rates: rt.rates, rateDate: rt.date || '', cset: db().settings.contract || {} };
   }
   app.get('/api/ved/settings', admin, (req, res) => res.json({ ok: true, settings: vedSettings(), defaults: VED.DEFAULTS, types: VED.TYPES, transport: VED.TRANSPORT }));
   app.put('/api/ved/settings', admin, (req, res) => {
@@ -208,6 +208,40 @@ function setup(app, ctx) {
     if (b.reset) { delete d.settings.ved; store.save(d); return res.json({ ok: true, settings: vedSettings() }); }
     d.settings.ved = s; store.save(d); res.json({ ok: true, settings: vedSettings() });
   });
+  // «Изменить данные»: заблокированные в расчёте значения (ТД, проценты оплаты, страховка, маржа, тариф декларанта…) меняет только администратор,
+  // с причиной; каждое изменение — в истории (кто, когда, что было, что стало). Старые расчёты пересчитываются по новым значениям при открытии.
+  const LOCKED = [
+    ['tdPct', 'Торговый дом, % к инвойсу', 0, 20], ['payPct.cbr', 'Оплата инвойса по курсу ЦБ, +%', 0, 20], ['payPct.bank', 'Оплата по внутреннему курсу банка, +%', 0, 20],
+    ['insurancePct', 'Страхование, % инвойса', 0, 5], ['marginFactor', 'Маржа = налоги ×', 0, 10], ['rubCushion', 'Рублёвые строки: курс ЦБ − ₽', 0, 10],
+    ['declarant.ecp', 'Декларант под ЭЦП клиента, ₽', 0, 1e6], ['declarant.broker', 'Декларант под печать брокера, ₽', 0, 1e6], ['declarant.codesIncluded', 'Кодов ТН ВЭД включено', 0, 100],
+    ['declarant.perCode', 'Каждый следующий код, ₽', 0, 1e5], ['declarant.chzBase', 'Честный знак: база, ₽', 0, 1e5], ['declarant.chzIncluded', 'Честный знак: кодов в базе', 0, 100], ['declarant.chzPerCode', 'Честный знак: следующий код, ₽', 0, 1e5],
+    ['clientMarkupsUSD.exw', 'Контракт клиента: наценка EXW, $', 0, 1e5], ['clientMarkupsUSD.sea', 'Контракт клиента: наценка море, $', 0, 1e5], ['clientMarkupsUSD.rail', 'Контракт клиента: наценка ЖД, $', 0, 1e5], ['clientMarkupsUSD.auto', 'Контракт клиента: наценка авто, $', 0, 1e5], ['clientMarkupsUSD.air', 'Контракт клиента: наценка авиа, $', 0, 1e5],
+  ];
+  const getPath = (o, p) => p.split('.').reduce((a, k) => (a == null ? undefined : a[k]), o);
+  const setPath = (o, p, v) => { const ks = p.split('.'); let a = o; for (const k of ks.slice(0, -1)) { a[k] = a[k] && typeof a[k] === 'object' ? a[k] : {}; a = a[k]; } a[ks[ks.length - 1]] = v; };
+  app.get('/api/contract/settings', admin, (req, res) => {
+    const d = db(), cur = d.settings.contract || {};
+    res.json({ ok: true, fields: LOCKED.map(([key, label, min, max]) => ({ key, label, min, max, value: getPath(cur, key) ?? getPath(CONTRACT.DEFAULTS, key), def: getPath(CONTRACT.DEFAULTS, key), changed: getPath(cur, key) != null && getPath(cur, key) !== getPath(CONTRACT.DEFAULTS, key) })),
+      feeBase: cur.feeBase || CONTRACT.DEFAULTS.feeBase, history: (d.settings.contractHistory || []).slice(0, 100) });
+  });
+  app.put('/api/contract/settings', admin, (req, res) => {
+    const d = db(), b = req.body || {}, reason = str(b.reason, 300);
+    if (reason.length < 3) return bad(res, 'Напишите причину изменения — она попадёт в историю');
+    const next = JSON.parse(JSON.stringify(d.settings.contract || {})), changes = [];
+    for (const [key, label, min, max] of LOCKED) {
+      if (!b.values || b.values[key] === undefined) continue;
+      const raw = b.values[key], was = getPath(next, key) ?? getPath(CONTRACT.DEFAULTS, key);
+      const v = raw === null || raw === '' ? getPath(CONTRACT.DEFAULTS, key) : n(raw);
+      if (!(v >= min && v <= max)) return bad(res, `«${label}»: от ${min} до ${max}`);
+      if (v !== was) { setPath(next, key, v); changes.push({ key, label, from: was, to: v }); }
+    }
+    if (b.feeBase && ['invoice', 'cv'].includes(b.feeBase) && b.feeBase !== (next.feeBase || CONTRACT.DEFAULTS.feeBase)) { changes.push({ key: 'feeBase', label: 'Таможенный сбор считается от', from: next.feeBase || CONTRACT.DEFAULTS.feeBase, to: b.feeBase }); next.feeBase = b.feeBase; }
+    if (!changes.length) return bad(res, 'Ничего не изменилось');
+    d.settings.contract = next;
+    d.settings.contractHistory = [{ at: now(), by: who(req), reason, changes }].concat(d.settings.contractHistory || []).slice(0, 500);
+    store.save(d); res.json({ ok: true, changes });
+  });
+
   // Таблица цен сертификации владельца (Наименование · Код ТН ВЭД (группа) · ТР ТС / документ · Стоимость Киргизия · Стоимость РФ · Образцы · Примечания)
   const certPrices = () => db().settings.certPrices || [];
   app.get('/api/cert-prices', admin, (req, res) => { const d = db(); res.json({ ok: true, items: certPrices(), at: d.settings.certPricesAt || '' }); });
