@@ -1,0 +1,35 @@
+/* IOMASTAVKA — сайт из отдельных страниц.
+   Раньше: главная прокручивалась внутри своего блока, а сама страница была выше экрана — в Safari прокрутка
+   сначала уводила шапку вверх и обратно её было не вернуть, а снизу оставалась тёмная полоса.
+   Теперь: одна прокрутка у страницы, шапка закреплена сверху, разделы — отдельные страницы в общем потоке,
+   блоки растягиваются по содержимому вместо собственных полос прокрутки. Подключается последним. */
+html:root{height:auto!important;overflow-x:clip!important;overflow-y:auto!important;scroll-padding-top:calc(var(--hdr,76px) + 12px)}
+html:root body,html:root body.night,html:root body.manual-dark{height:auto!important;min-height:100%;overflow:visible!important;overscroll-behavior-y:auto!important}
+html:root body .topbar{position:sticky!important;top:0!important;z-index:1500!important}
+html:root body .app-shell{height:auto!important;min-height:calc(100svh - var(--hdr,76px));overflow:visible!important}
+html:root body .home-view{height:auto!important;max-height:none!important;overflow:visible!important}
+html:root body.view-open .home-view{display:none!important}
+
+/* разделы: страница в общем потоке вместо окна поверх главной */
+html:root body .view-layer:not(.open){display:none!important}
+html:root body .view-layer.open{position:relative!important;inset:auto!important;transform:none!important;opacity:1!important;visibility:visible!important;
+  height:auto!important;max-height:none!important;min-height:calc(100svh - var(--hdr,76px));overflow:visible!important;z-index:auto!important;animation:pgIn .3s cubic-bezier(.22,1,.36,1) both}
+@keyframes pgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){html:root body .view-layer.open{animation:none}}
+html:root body .view-layer.open>:is(.card,.calculator-card,.directory-panel,.assistant-shell,.article-shell,.customs-shell,.v3p-narrow,.v3p-wide,.agent-import-shell,.news-shell,.kb-shell){
+  position:relative!important;left:auto!important;top:auto!important;right:auto!important;bottom:auto!important;inset:auto!important;transform:none!important;
+  height:auto!important;max-height:none!important;overflow:visible!important;margin-left:auto;margin-right:auto}
+html:root body #articleView.open .article-shell{position:relative!important;width:min(1050px,100%)!important;height:auto!important;border-radius:24px}
+
+/* бывшие внутренние прокрутки: список растёт по содержимому, широкие таблицы листаются только вбок */
+html:root body .view-layer.open :is(.directory-table-wrap,.news-list,.news-grid,.kb-list,.cx-list,.cx-lc,.cx-tbl,.cx-table-wrap,.v3c-advice,.chat-messages,#chatMessages,.agents-list,.v3p-list,.cx-kanban){max-height:none!important}
+html:root body .view-layer.open :is(.directory-table-wrap,.cx-tbl,.cx-table-wrap){overflow-x:auto!important;overflow-y:visible!important}
+html:root body .view-layer.open #chatMessages{max-height:min(60vh,640px)!important}
+
+/* закрыть = вернуться на главную; на странице кнопка «×» остаётся в углу блока */
+html:root body .view-layer.open .view-close,html:root body .view-layer.open>.close-button{position:absolute!important}
+/* поиск по экспедиторам */
+html:root body .directory-search{display:flex;align-items:center;gap:10px;margin:14px 0 6px;padding:0 16px;height:48px;border-radius:14px;border:1px solid rgba(246,241,234,.14);background:rgba(6,12,34,.35)}
+html:root body .directory-search span{font-size:20px;opacity:.6}
+html:root body .directory-search input{flex:1;min-width:0;height:100%;border:0!important;background:transparent!important;color:inherit;font:inherit;font-size:15px;outline:none;box-shadow:none!important}
+body:not(.manual-dark):not(.night) .directory-search{border-color:rgba(10,18,48,.15);background:#fff}

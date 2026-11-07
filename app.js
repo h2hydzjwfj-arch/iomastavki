@@ -108,7 +108,7 @@ const I18N = {
 
 const modes={air:{ru:'Авиа',en:'Air',zh:'空运',factor:167},road:{ru:'Авто',en:'Road',zh:'公路',factor:400},rail:{ru:'ЖД',en:'Rail',zh:'铁路',factor:500},sea:{ru:'Море',en:'Sea',zh:'海运',factor:1000},multimodal:{ru:'Море + ЖД',en:'Sea + Rail',zh:'海运+铁路',factor:1000}};
 const modeGroups=[['rail','transportRail'],['road','transportRoad'],['air','transportAir'],['sea','transportSea'],['multimodal','transportMulti']];
-let lang=localStorage.getItem('iomastavka_lang')||'ru';
+let lang=localStorage.getItem('iomastavka_lang')||'ru'; if(lang==='tr')lang='ru'; // турецкий убран с сайта — у кого был выбран, показываем русский
 let rates={}; let currentArticleNews=null; let selectedForwarder=''; let selectedMode=''; let selectedFactor=167;
 let selectedCities={from:null,to:null};
 let dimensionUnit='mm';
@@ -543,11 +543,15 @@ function renderDirectory(){
  }
  filters.innerHTML=''; const allModes=[['all',tr('all')],...modeGroups.map(([k,key])=>[k,tr(key)])];
  allModes.forEach(([key,label])=>{const b=document.createElement('button');b.className='directory-filter'+(key==='all'?' active':'');b.textContent=label;b.onclick=()=>{filters.querySelectorAll('.directory-filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderDirectoryItems(key)};filters.appendChild(b)});
+ // поиск по справочнику («лупа»): компания, контакт, почта, телефон, направления
+ let dirMode='all', dirQ=(document.getElementById('directorySearch')||{}).value||'';
+ if(!document.getElementById('directorySearch')){const w=document.createElement('label');w.className='directory-search';w.innerHTML='<span aria-hidden="true">⌕</span><input id="directorySearch" type="search" autocomplete="off" placeholder="Найти: компания, контакт, почта, направление…" aria-label="Поиск по экспедиторам">';filters.parentNode.insertBefore(w,filters.nextSibling);w.querySelector('input').addEventListener('input',e=>{dirQ=e.target.value;renderDirectoryItems(dirMode)});}
  renderDirectoryItems('all');
  function renderDirectoryItems(mode){
+  dirMode=mode; const q=String(dirQ||'').trim().toLowerCase();
   grid.innerHTML='';
   const groups=new Map();
-  agentDirectory.filter(a=>mode==='all'||(a.modes||[]).includes(mode)||(mode==='rail'&&(a.modes||[]).includes('multimodal'))||(mode==='sea'&&(a.modes||[]).includes('multimodal'))).forEach(a=>{
+  agentDirectory.filter(a=>mode==='all'||(a.modes||[]).includes(mode)||(mode==='rail'&&(a.modes||[]).includes('multimodal'))||(mode==='sea'&&(a.modes||[]).includes('multimodal'))).filter(a=>!q||[a.company,a.contact,a.email,a.phone,a.site,a.notes,(a.transport||[]).join(' ')].join(' ').toLowerCase().includes(q)).forEach(a=>{
    const key=normalizeTextCompany(a.company||''); if(!groups.has(key))groups.set(key,{company:a.company,contacts:new Set(),phones:new Set(),emails:new Set(),sites:new Set(),modes:new Set(),transport:new Set(),notes:new Set()});
    const g=groups.get(key);if(a.contact)g.contacts.add(a.contact);if(a.phone)g.phones.add(a.phone);if(a.email)a.email.split(/[,;]+/).map(x=>x.trim()).filter(Boolean).forEach(x=>g.emails.add(x));if(a.site)g.sites.add(a.site);(a.modes||[]).forEach(x=>g.modes.add(x));(a.transport||[]).forEach(x=>g.transport.add(x));if(a.notes)g.notes.add(a.notes);
   });
