@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * Сборка локального справочника ТН ВЭД (data/tnved-base.json) — запасной источник, когда alta.ru недоступен.
+ * Сборка локального справочника ТН ВЭД (reference/tnved-base.json) — запасной источник, когда alta.ru недоступен.
  *
  * Берёт реальные данные: обходит дерево ТН ВЭД на alta.ru по выбранным позициям (электроника, одежда,
  * оборудование, станки и т. д. — то, что чаще всего везут из Китая), затем открывает страницу каждого
@@ -75,23 +75,28 @@ function nodes(html) {
 }
 const children = uin => get(`${BASE}get_tree/?uin=${uin}`).then(nodes);
 
+const memo = new Map();
+const kids = async uin => { if (!memo.has(uin)) { await sleep(PAUSE / 2); memo.set(uin, await children(uin)); } return memo.get(uin); };
+const inRange = (raw, two) => { const m = String(raw).match(/^(\d{2})(?:-(\d{2}))?$/); if (!m) return false; const g = +two; return g >= +m[1] && g <= +(m[2] || m[1]); };
+
+/** Спуск по дереву: раздел → группа (2 цифры) → товарная позиция (4 цифры). Возвращает узел позиции. */
+async function heading(code4) {
+  if (!memo.has('root')) memo.set('root', nodes(await get(`${BASE}get_tree/`)));
+  const sec = memo.get('root').find(n => inRange(n.raw, code4.slice(0, 2))); if (!sec) return null;
+  const grp = (await kids(sec.uin)).find(n => n.code === code4.slice(0, 2)); if (!grp) return null;
+  return (await kids(grp.uin)).find(n => n.code === code4) || null;
+}
+
 /** 10-значные коды под позицией target (4 или 6 цифр), не больше limit. */
 async function leavesUnder(target, limit) {
-  const path0 = nodes(await get(`${BASE}get_tree/?tncode=${target}`));
-  let start = path0.find(n => n.code === target);
-  if (!start) { // позиция может быть «составной»: берём ближайшего предка из раскрытого пути
-    const cands = path0.filter(n => n.code && target.startsWith(n.code)).sort((a, b) => b.code.length - a.code.length);
-    start = cands[0];
-  }
+  const start = await heading(target.slice(0, 4));
   if (!start) return [];
-  if (start.code.length === 10) return [start.code];
   const found = []; const queue = [start.uin]; let visits = 0;
-  while (queue.length && found.length < limit && visits < 60) {
+  while (queue.length && found.length < limit && visits < 80) {
     const uin = queue.shift(); visits++;
-    await sleep(PAUSE / 2);
-    for (const n of await children(uin)) {
+    for (const n of await kids(uin)) {
       if (n.code && !n.code.startsWith(target.slice(0, Math.min(target.length, n.code.length)))) continue;
-      if (n.code.length === 10 && n.code.startsWith(target)) { if (!found.includes(n.code)) found.push(n.code); if (found.length >= limit) break; }
+      if (n.code.length === 10) { if (n.code.startsWith(target) && !found.includes(n.code)) found.push(n.code); if (found.length >= limit) break; }
       else if (n.closed || !n.code) queue.push(n.uin);
     }
   }
@@ -100,7 +105,7 @@ async function leavesUnder(target, limit) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const out = args.find(a => !a.startsWith('--')) || path.join(__dirname, '..', 'data', 'tnved-base.json');
+  const out = args.find(a => !a.startsWith('--')) || path.join(__dirname, '..', 'reference', 'tnved-base.json');
   const li = args.indexOf('--limit'); const LIMIT = li >= 0 ? Number(args[li + 1]) : 300;
   const plan = [];
   for (const [cat, list] of Object.entries(PLAN)) for (const [code, n] of list) plan.push({ cat, code, n });
