@@ -32,6 +32,11 @@ async function navTo(p, view) {
     }
     await p.waitForTimeout(500);                               // страница ещё перестраивается после входа
   }
+  // не вышло — печатаем состояние меню, чтобы по журналу CI было видно причину
+  const st = await p.evaluate(v => ({ body: document.body.className, open: [...document.querySelectorAll('.view-layer.open')].map(x => x.id),
+    groups: [...document.querySelectorAll('.v3-nav [data-sg]')].map(g => ({ cls: g.className, hidden: g.hidden, btn: getComputedStyle(g.querySelector('.sg-btn')).display,
+      items: [...g.querySelectorAll('.sg-menu button')].map(b => (b.dataset.openView || b.dataset.proxy) + ':' + getComputedStyle(b).display + '/' + getComputedStyle(b).visibility) })) }), view).catch(e => e.message);
+  console.log('navTo(' + view + ') — меню:', JSON.stringify(st));
   await p.click(sel);
 }
 
