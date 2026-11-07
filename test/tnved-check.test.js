@@ -175,3 +175,11 @@ test('ТН ВЭД: встроенный справочник reference/tnved-bas
   assert.strictEqual(info.source, 'local'); assert.ok(info.levels.length >= 3);
   assert.ok(T.searchBase('станки').length > 0 || T.searchBase('машины').length > 0);
 });
+
+test('ТН ВЭД: поиск по бытовым названиям во встроенном справочнике', () => {
+  T.loadBase(path.join(__dirname, '..', 'reference', 'tnved-base.json'));
+  assert.deepStrictEqual(T.searchBase('ноутбук').map(x => x.code), ['8471300000']);
+  assert.ok(T.searchBase('шины').every(x => x.code.startsWith('4011')));
+  assert.ok(!T.searchBase('машины вычислительные').some(x => x.code.startsWith('4011')), '«машины» — не «шины»');
+  assert.ok(T.searchBase('станок ЧПУ').every(x => /^84(5[6-9]|6[0-5])/.test(x.code)));
+});
