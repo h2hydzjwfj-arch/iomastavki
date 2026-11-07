@@ -637,7 +637,7 @@ initVoice();
 // News panel: обновляется с серверного RSS-кэша.
 function formatToday(){const p=new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Moscow',day:'2-digit',month:'2-digit',year:'numeric'}).formatToParts(new Date());const d=Object.fromEntries(p.map(x=>[x.type,x.value]));return `${d.day}.${d.month}.${d.year} г.`}
 async function loadCurrency(){
-  const paint=(items)=>{const fmt=x=>x==null?'—':fmtNum(x);const dated=!!document.getElementById('v3curDate')?.value;if(items?.USD?.value!=null){$('#usdRate').textContent=fmt(items.USD.value);if(!dated)$('#homeUsd').textContent=fmt(items.USD.value)}if(items?.EUR?.value!=null){$('#eurRate').textContent=fmt(items.EUR.value);if(!dated)$('#homeEur').textContent=fmt(items.EUR.value)}if(items?.CNY?.value!=null){$('#cnyRate').textContent=fmt(items.CNY.value);if(!dated)$('#homeCny').textContent=fmt(items.CNY.value)}};
+  const paint=(items)=>{const fmt=x=>x==null?'—':fmtNum(x);const dated=!!document.getElementById('v3curDate')?.value;if(items?.USD?.value!=null){$('#usdRate').textContent=fmt(items.USD.value);if(!dated)($('#homeUsd')||{}).textContent=fmt(items.USD.value)}if(items?.EUR?.value!=null){$('#eurRate').textContent=fmt(items.EUR.value);if(!dated)($('#homeEur')||{}).textContent=fmt(items.EUR.value)}if(items?.CNY?.value!=null){$('#cnyRate').textContent=fmt(items.CNY.value);if(!dated)($('#homeCny')||{}).textContent=fmt(items.CNY.value)}};
   try{
     const r=await fetch('/api/currency',{credentials:'same-origin',cache:'no-store'});
     if(!r.ok) throw new Error('currency');

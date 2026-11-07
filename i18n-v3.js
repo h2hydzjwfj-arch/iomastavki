@@ -256,6 +256,8 @@
     if (ru.indexOf(' · ') > 0) { var parts = ru.split(' · '), any = false; var outp = parts.map(function (x) { var t2 = tr(x.trim(), l); if (t2) { any = true; return t2; } return x; }); if (any) return outp.join(' · '); }
     return null;
   }
+  // новые разделы добавляют свои переводы: { 'Русский текст': ['English', '中文'] }
+  window.IOMA_T_ADD = function (obj) { Object.keys(obj || {}).forEach(function (k) { var v = obj[k]; D[k] = [v[0], v[1], v[0]]; }); if (typeof later === 'function') later(); };
   window.IOMA_T = function (ru) { var l = lang(); if (l === 'ru' || !IDX.hasOwnProperty(l)) return ru; return tr(ru, l) || ru; };
   var busy = false;
   function apply(root) {

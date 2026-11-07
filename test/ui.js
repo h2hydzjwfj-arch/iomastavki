@@ -45,39 +45,39 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
     await step('Гость: ввод калькулятора не теряется после перезагрузки', async () => {
       await p.reload(); await p.waitForFunction(() => document.getElementById('fromCity').value === 'Shanghai', null, { timeout: 5000 });
     });
-    await step('Гость: карта-калькулятор — города кликом, цена прямо в карточке', async () => {
-      await p.evaluate(() => window.__iomaCloseViews()); await p.waitForSelector('#mcStage .mc-pin', { state: 'attached' }); await p.waitForFunction(() => window.IOMA_MAP && document.querySelector('#v3Hero.mc-on'));
-      await p.evaluate(() => { window.IOMA_MAP.pick('from', 'qd'); window.IOMA_MAP.pick('to', 'nsk'); });
-      await p.fill('#mcW', '800'); await p.click('#mcGo'); await p.waitForSelector('#mcRes .mc-o', { timeout: 8000 });
-      await p.waitForFunction(() => document.getElementById('fromCity').value === 'Циндао' && document.getElementById('toCity').value === 'Новосибирск' && document.getElementById('weight').value === '800');
-      await p.waitForSelector('#mcRoute .mc-r-line'); await shot(p, '03b_home_map');
-      // клик по городу на самой карте
-      await p.click('#mcEdit');
-      await p.evaluate(() => { const el = document.querySelector('.mc-pin[data-id="sel"]'); const r = el.getBoundingClientRect(); ['pointerdown', 'pointerup'].forEach(t => el.dispatchEvent(new PointerEvent(t, { bubbles: true, clientX: r.left, clientY: r.top, pointerId: 7, pointerType: 'mouse', button: 0 }))); });
-      await p.waitForFunction(() => /Сеул/.test(document.querySelector('#mcFrom b').textContent));
-      // масштаб кнопкой
-      const s0 = await p.evaluate(() => window.IOMA_MAP.view().s); await p.click('.mc-zoom [data-z=in]'); await p.waitForTimeout(500);
-      if (!((await p.evaluate(() => window.IOMA_MAP.view().s)) > s0)) throw new Error('карта не приблизилась');
+    await step('Гость: главная — один экран, «Под ключ» / «Только доставка», карта маршрутов до Москвы', async () => {
+      await p.evaluate(() => window.__iomaCloseViews()); await p.waitForSelector('#hxMap .rmap-svg .rm-msk');
+      const h = await p.evaluate(() => { const r = document.querySelector('.hx').getBoundingClientRect(); return { top: r.top, h: r.height, vh: innerHeight }; });
+      if (Math.abs(h.top + h.h - h.vh) > 2) throw new Error('первый экран не до низа окна: ' + JSON.stringify(h));
+      await p.click('.hx-pick [data-hx="cargo"]'); await p.waitForSelector('.hx-card.on[data-hxc="cargo"]');
+      for (const m of ['road', 'air', 'sea', 'rail']) { await p.click('.rmap-tabs [data-m="' + m + '"]'); await p.waitForFunction(mm => document.querySelector('#hxMap').dataset.mode === mm, m); }
+      await p.evaluate(() => document.querySelector('.rm-o[data-o="yw"]').dispatchEvent(new MouseEvent('click', { bubbles: true })));
+      await p.waitForSelector('.rmap-tip:not([hidden])'); const tip = await p.textContent('.rmap-tip');
+      if (!/Иу → Москва/.test(tip) || !/км/.test(tip)) throw new Error('подсказка маршрута: ' + tip);
+      await shot(p, '03b_home_map');
+      await p.click('.rmap-go'); await p.waitForSelector('#calculatorView.open');
+      await p.evaluate(() => window.__iomaCloseViews());
+      await p.click('[data-call-open].hx-num'); await p.waitForSelector('#hxCallActs:not([hidden])');
     });
-    await step('Гость: динамика курса ЦБ открывается', async () => {
-      await p.click('.rd-open-btn'); await p.waitForSelector('.rd-ov:not([hidden])');
-      await p.waitForFunction(() => document.querySelector('.rd-stats div') || !document.querySelector('.rd-load').hidden && !/Загружаю/.test(document.querySelector('.rd-load').textContent), null, { timeout: 15000 });
-      await p.click('.rd-per [data-rp="365"]'); await p.waitForTimeout(1500); await shot(p, '03c_rates_dynamics');
-      await p.keyboard.press('Escape'); await p.waitForSelector('.rd-ov', { state: 'hidden' });
+    await step('Гость: «Услуги» и «Кейсы» — отдельные страницы, кейс открывается по клику', async () => {
+      await p.goto(B + '/uslugi'); await p.waitForSelector('#servicesView.open .sv-c');
+      await p.goto(B + '/kejsy'); await p.waitForSelector('#casesView.open [data-case]'); await p.click('[data-case]'); await p.waitForSelector('.cx-ov .cs-m');
+      await shot(p, '03c_case'); await p.click('.cx-ov .cx-x'); await p.goto(B + '/'); await p.waitForFunction(() => /role-/.test(document.body.className));
     });
-    await step('Гость: экскурсия по сайту открывается и пропускается', async () => {
-      await p.evaluate(() => window.IOMA_TOUR.guest()); await p.waitForSelector('.tour .tour-card'); await shot(p, '03d_tour');
-      await p.click('.tour-next'); await p.waitForTimeout(500); await shot(p, '03e_tour_map'); await p.click('.tour-skip'); await p.waitForSelector('.tour', { state: 'detached' });
+    await step('Гость: язык одной кнопкой — весь первый экран на английском', async () => {
+      await p.click('.lx-btn'); await p.click('.lx-menu [data-lang="en"]'); await p.waitForFunction(() => /We buy in China/.test(document.querySelector('.hx-h1').textContent));
+      await p.waitForFunction(() => /Rail/.test(document.querySelector('.rmap-tabs').textContent));
+      await p.click('.lx-btn'); await p.click('.lx-menu [data-lang="ru"]'); await p.waitForFunction(() => /Купим в Китае/.test(document.querySelector('.hx-h1').textContent));
     });
-    await step('Окно не закрывается, если мышь зажали внутри и отпустили снаружи', async () => {
+    await step('Окно закрывается только крестиком — ни протяжка мышью, ни щелчок мимо его не закрывают', async () => {
       await p.evaluate(() => window.__v3open('leadView'));
       const box = await (await p.$('#leadView .v3p-form')).boundingBox();
       await p.mouse.move(box.x + 30, box.y + 30); await p.mouse.down(); await p.mouse.move(8, box.y + 30); await p.mouse.up(); await p.waitForTimeout(200);
       if (!(await p.evaluate(() => document.getElementById('leadView').classList.contains('open')))) throw new Error('окно закрылось');
       await p.mouse.click(8, 300); await p.waitForTimeout(200);
-      if (await p.evaluate(() => document.getElementById('leadView').classList.contains('open'))) throw new Error('клик по фону не закрыл окно');
+      if (!(await p.evaluate(() => document.getElementById('leadView').classList.contains('open')))) throw new Error('щелчок мимо закрыл окно — закрывать можно только крестиком');
+      await p.click('#leadView .view-close'); await p.waitForFunction(() => !document.getElementById('leadView').classList.contains('open'));
     });
-    await step('Гость: курс ЦБ на выбранную дату', async () => { await p.evaluate(() => { const i = document.getElementById('v3curDate'); i.value = '2026-08-07'; i.dispatchEvent(new Event('change')); }); await p.waitForFunction(() => /07\.08\.2026|Нет курса|CBR/.test(document.getElementById('v3date').textContent), null, { timeout: 12000 }); });
     await step('Гость: заявка отправляется', async () => {
       await p.evaluate(() => window.__v3open('leadView'));
       await p.fill('#v3leadForm [name=name]', 'Тест UI'); await p.fill('#v3leadForm [name=contact]', '@ui_test');
