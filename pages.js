@@ -37,6 +37,8 @@
     if (location.pathname !== path) history[fromPop ? 'replaceState' : 'pushState']({ view: id }, '', path + (p ? '' : location.search) + location.hash);
     fromPop = false;
     window.scrollTo(0, 0);
+    // блоки, которые меряют себя (карта-калькулятор), открылись из скрытого состояния — пусть пересчитают размеры
+    setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 40);
   });
   function watch() { Array.prototype.forEach.call(document.querySelectorAll('.view-layer'), function (v) { mo.observe(v, { attributes: true, attributeFilter: ['class'] }); }); }
 

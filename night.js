@@ -135,7 +135,7 @@
   safe(function () {
     var els = $$('.rv'); if (!els.length) return;
     if (reduce || (window.CSS && CSS.supports && CSS.supports('animation-timeline: view()')) || !('IntersectionObserver' in window)) { els.forEach(function (x) { x.classList.add('in'); }); return; }
-    var io = new IntersectionObserver(function (ents) { ents.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } }); }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+    var io = new IntersectionObserver(function (ents) { ents.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } }); }, { rootMargin: '0px 0px 0px 0px', threshold: 0 });
     els.forEach(function (x) { io.observe(x); });
   });
 

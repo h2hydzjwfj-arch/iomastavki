@@ -265,7 +265,7 @@
   setTimeout(function(){var m=lsGet(CK,{});Object.keys(m).forEach(function(id){var e=document.getElementById(id);if(e&&!e.value&&m[id]){e.value=m[id];e.dispatchEvent(new Event('input',{bubbles:true}))}})},400);
 
   /* ---------- регистрация, показ пароля, вход сразу в кабинет ---------- */
-  function goIn(r){try{history.replaceState(null,'',location.pathname+(r==='admin'?'#work':'#cabinet'))}catch(e){}location.reload()}
+  function goIn(r){try{history.replaceState(null,'',r==='admin'?'/rabota':'/kabinet')}catch(e){}location.reload()} // после входа — сразу на страницу «Работа» или «Мои грузы»
   var rf2=$('#v3regForm');
   $('#v3regBtn')&&$('#v3regBtn').addEventListener('click',function(){lf.hidden=true;rf2.hidden=false;if(lf.login.value.indexOf('@')>0)rf2.email.value=lf.login.value;rf2.name.focus()});
   $('#v3regBack')&&$('#v3regBack').addEventListener('click',function(){rf2.hidden=true;lf.hidden=false;if(rf2.email.value)lf.login.value=rf2.email.value;lf.password.focus()});
