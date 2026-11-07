@@ -41,6 +41,12 @@ const PLAN = {
   'Косметика и медицина': [['330499', 3], ['330420', 2], ['330510', 2], ['901890', 4], ['901831', 3]],
 };
 
+// Сколько кодов взять из каждой категории (в сумме 300): справочник не должен состоять из одной электроники.
+const QUOTA = { 'Электроника': 70, 'Одежда и текстиль': 40, 'Оборудование': 40, 'Станки': 35, 'Бытовая техника и климат': 15, 'Обувь и сумки': 20,
+  'Мебель, свет, дом': 25, 'Игрушки и спорт': 15, 'Автозапчасти и инструмент': 25, 'Косметика и медицина': 15 };
+// Узкие случаи, которые из Китая почти не везут: в запасной справочник не берём
+const NICHE = /гражданских воздушных судов|промышленной сборки|шахтн|атомн|ядерн|военн|для морских судов|подводн/i;
+
 const sleep = ms => new Promise(ok => setTimeout(ok, ms));
 const digits = s => String(s || '').replace(/\D/g, '');
 const ENT = { nbsp: ' ', quot: '"', amp: '&', lt: '<', gt: '>', laquo: '«', raquo: '»', mdash: '—', ndash: '–' };
@@ -93,10 +99,11 @@ async function leavesUnder(target, limit) {
   const start = await heading(target.slice(0, 4));
   if (!start) return [];
   const found = []; const queue = [start.uin]; let visits = 0;
-  while (queue.length && found.length < limit && visits < 80) {
+  while (queue.length && found.length < limit && visits < 40) {
     const uin = queue.shift(); visits++;
     for (const n of await kids(uin)) {
       if (n.code && !n.code.startsWith(target.slice(0, Math.min(target.length, n.code.length)))) continue;
+      if (NICHE.test(n.title)) continue;
       if (n.code.length === 10) { if (n.code.startsWith(target) && !found.includes(n.code)) found.push(n.code); if (found.length >= limit) break; }
       else if (n.closed || !n.code) queue.push(n.uin);
     }
@@ -110,25 +117,41 @@ async function main() {
   const li = args.indexOf('--limit'); const LIMIT = li >= 0 ? Number(args[li + 1]) : 300;
   const plan = [];
   for (const [cat, list] of Object.entries(PLAN)) for (const [code, n] of list) plan.push({ cat, code, n });
+  // бюджет времени: GitHub Actions обрывает долгие задачи — дерево не дольше 55 % бюджета, итог пишется по ходу
+  const t0 = Date.now(), budget = Number(process.env.TNVED_BUDGET_MIN || 32) * 60000;
+  const over = share => Date.now() - t0 > budget * share;
 
   // 1) коды из дерева
-  const picked = []; const seen = new Set();
-  for (const p of plan) {
-    if (picked.length >= LIMIT * 1.15) break;
-    try {
-      const codes = await leavesUnder(p.code, p.n);
-      for (const c of codes) if (!seen.has(c)) { seen.add(c); picked.push({ code: c, cat: p.cat }); }
-      console.log(`${p.cat} · ${p.code}: ${codes.length}`);
-    } catch (e) { console.warn(`${p.code}: ${e.message}`); }
-    await sleep(PAUSE);
+  const picked = []; const seen = new Set(); const got = {};
+  const queues = {}; for (const p of plan) (queues[p.cat] = queues[p.cat] || []).push(p);
+  const scale = LIMIT / 300;
+  // по кругу: по одной позиции из каждой категории, пока не наберём квоту (с запасом на пустые страницы)
+  while (!over(0.55)) {
+    let moved = false;
+    for (const cat of Object.keys(queues)) {
+      const want = Math.round((QUOTA[cat] || 10) * scale * 1.1);
+      if ((got[cat] || 0) >= want || !queues[cat].length) continue;
+      const p = queues[cat].shift(); moved = true;
+      try {
+        const codes = await leavesUnder(p.code, Math.min(p.n, want - (got[cat] || 0)));
+        for (const c of codes) if (!seen.has(c)) { seen.add(c); picked.push({ code: c, cat }); got[cat] = (got[cat] || 0) + 1; }
+        console.log(`${cat} · ${p.code}: ${codes.length}`);
+      } catch (e) { console.warn(`${p.code}: ${e.message}`); }
+      await sleep(PAUSE);
+    }
+    if (!moved) break;
   }
-  console.log('Кодов из дерева:', picked.length);
+  console.log('Кодов из дерева:', picked.length, JSON.stringify(got));
+  { const by = {}; for (const x of picked) (by[x.cat] = by[x.cat] || []).push(x); picked.length = 0;
+    for (let i = 0; Object.values(by).some(a => a.length > i); i++) for (const a of Object.values(by)) if (a[i]) picked.push(a[i]); }
 
   // 2) ставки со страниц кодов — тем же разбором, что и сайт
   const nodeIdx = new Map(); const nodeList = []; const codes = {}; const failed = [];
   const nodeId = (code, text) => { const k = code + '|' + text; if (!nodeIdx.has(k)) { nodeIdx.set(k, nodeList.length); nodeList.push([code, text]); } return nodeIdx.get(k); };
+  const write = () => { fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, JSON.stringify({ version: 1, source: 'alta.ru — справочник ТН ВЭД ЕАЭС (страницы кодов)', fetchedAt: new Date().toISOString().slice(0, 10), note: 'Запасной справочник: ставки на дату сборки. Перед декларированием проверяйте действующие ставки.', nodes: nodeList, codes })); };
   for (const { code, cat } of picked) {
-    if (Object.keys(codes).length >= LIMIT) break;
+    if (Object.keys(codes).length >= LIMIT || over(0.97)) break;
+    if (Object.keys(codes).length % 25 === 24) write();
     try {
       const html = await get(`${BASE}code/${code}/`);
       if (!html) { failed.push(code + ' 404'); continue; }

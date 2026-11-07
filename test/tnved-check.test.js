@@ -157,3 +157,21 @@ test('ТН ВЭД: alta.ru недоступен — ставки из локал
     assert.strictEqual(T.searchBase('').length, 0);
   } finally { T.loadBase(path.join(__dirname, 'нет-такого-файла.json')); }
 });
+
+test('ТН ВЭД: встроенный справочник reference/tnved-base.json цел и разбирается', () => {
+  const file = path.join(__dirname, '..', 'reference', 'tnved-base.json');
+  const b = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const codes = Object.entries(b.codes);
+  assert.ok(codes.length >= 200 && codes.length <= 400, 'кодов: ' + codes.length);
+  assert.match(b.fetchedAt, /^\d{4}-\d{2}-\d{2}$/);
+  for (const [code, e] of codes) {
+    assert.match(code, /^\d{10}$/);
+    assert.ok(e.path.length >= 3 && e.path.every(i => Array.isArray(b.nodes[i])), code + ': путь');
+    assert.ok(T.parseDuty(e.duty, e.note).parts.length, code + ': ставка ' + e.duty);
+    assert.ok(e.vat.length && e.vat.every(v => typeof v[0] === 'number'), code + ': НДС');
+  }
+  T.loadBase(file);
+  const one = codes[0][0]; const info = T.baseInfo(one);
+  assert.strictEqual(info.source, 'local'); assert.ok(info.levels.length >= 3);
+  assert.ok(T.searchBase('станки').length > 0 || T.searchBase('машины').length > 0);
+});
