@@ -24,15 +24,15 @@ function match(pattern, url) {
   const a = pattern.split('/'), b = url.split('/'); if (a.length !== b.length) return null;
   const p = {}; for (let i = 0; i < a.length; i++) { if (a[i].startsWith(':')) p[a[i].slice(1)] = b[i]; else if (a[i] !== b[i]) return null; } return p;
 }
-function make() {
+function make(o = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'portal-'));
   const sent = [];
   const app = fakeApp();
   const tgSent = [], mailSent = [];
-  const tg = { ready: () => true, send: async (c, t) => tgSent.push([c, t]), username: async () => 'iomabot', setWebhook: async () => ({ ok: true }) };
+  const tg = { ready: () => true, send: o.tgSend || (async (c, t) => tgSent.push([c, t])), username: async () => 'iomabot', setWebhook: async () => ({ ok: true }) };
   const mail = { enabled: () => true, send: async (to, sub, t) => mailSent.push([to, sub, t]) };
   const engine = ({ from, to }) => (/шанхай/i.test(from) && /москв/i.test(to) ? { rate: 9600, currency: 'USD', company: 'Ruscargo', notes: 'внутреннее', mode: 'rail', transitDays: '30-35', basis: 'container' } : null);
-  const portal = setup(app, { verifySession, DATA_DIR: dir, upload: null, rateLimit: null, notify: async t => sent.push(t), tg, mail, engine });
+  const portal = setup(app, { verifySession, DATA_DIR: dir, upload: null, rateLimit: null, notify: async t => sent.push(t), tg, mail, engine, ai: o.ai });
   portal.setEnvAdminCheck(pw => pw === 'env-admin-pass');
   return { app, portal, sent, tgSent, mailSent, admin: signSession({ role: 'admin' }) };
 }
@@ -183,6 +183,25 @@ test('Telegram: привязка через /start, проверка секре�
   await new Promise(r => setTimeout(r, 20));
   assert.ok(tgSent.some(([chat, t]) => chat === 55 && /В пути/.test(t) && /Поезд вышел/.test(t)));
   delete process.env.TELEGRAM_WEBHOOK_SECRET;
+});
+
+test('бот: ИИ упал — вменяемый ответ; Telegram отказал — процесс жив', async () => {
+  process.env.TELEGRAM_WEBHOOK_SECRET = 'whsec';
+  const crashes = []; const onRej = r => crashes.push(r); process.on('unhandledRejection', onRej);
+  try {
+    const ai = { enabled: () => true, run: async () => { throw Object.assign(new Error('You exceeded your current quota'), { status: 429 }); } };
+    const { app, tgSent } = make({ ai });
+    const hook = (a, text) => a.call('POST', '/api/telegram/webhook', { body: { message: { chat: { id: 501 }, from: { id: 501, first_name: 'Анна' }, text } }, headers: { 'x-telegram-bot-api-secret-token': 'whsec' } });
+    await hook(app, 'Сколько идёт ЖД из Иу в Москву?'); await new Promise(ok => setTimeout(ok, 30));
+    const ans = tgSent.find(([c]) => c === 501);
+    assert.ok(ans, 'бот ответил, несмотря на ошибку ИИ');
+    assert.match(ans[1], /Сейчас не могу ответить подробно/); assert.match(ans[1], /\/tnved/);
+    // Telegram отвечает ошибкой (бот заблокирован пользователем) — вебхук не роняет процесс
+    const broken = make({ ai, tgSend: async () => { throw new Error('Forbidden: bot was blocked by the user'); } });
+    await hook(broken.app, 'привет'); await hook(broken.app, '/stop'); await hook(broken.app, '/tnved');
+    await new Promise(ok => setTimeout(ok, 50));
+    assert.deepStrictEqual(crashes, [], 'нет необработанных отклонённых промисов');
+  } finally { process.off('unhandledRejection', onRej); delete process.env.TELEGRAM_WEBHOOK_SECRET; }
 });
 
 test('ТН ВЭД: /api/tnved/check только администратору, бот отвечает на /tnved', async () => {

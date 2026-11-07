@@ -2,7 +2,7 @@
 // Проверка в настоящем браузере: гость → расчёт → КП → заявка; админ → клиент и груз; клиент → кабинет.
 const fs = require('fs'); const path = require('path');
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
-const { startServer, ADMIN_PASS } = require('./helpers');
+const { startServer, ADMIN_PASS, navTo } = require('./helpers');
 const OUT = path.join(__dirname, '..', 'test-output'); fs.mkdirSync(OUT, { recursive: true });
 const results = []; let failed = 0;
 async function step(name, fn) { try { await fn(); results.push('✅ ' + name); } catch (e) { failed++; results.push('❌ ' + name + ' — ' + String(e.message).split('\n').slice(0, 3).join(' | ')); try { for (const pg of (global.__pages || [])) await pg.screenshot({ path: require('path').join('test-output', 'FAIL_' + (++global.__fc || (global.__fc = 1)) + '.png') }); } catch {} } }
@@ -26,7 +26,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       if (await p.isVisible('.v3-nav [data-open-view=forwarders]')) throw new Error('видно «Экспедиторы»');
     });
     await step('Гость: расчёт ставки', async () => {
-      await p.click('.v3-nav [data-open-view=calculator]');
+      await navTo(p, 'calculator');
       await p.fill('#fromCity', 'Shanghai'); await p.fill('#toCity', 'Москва'); await p.fill('#weight', '1200');
       await p.waitForTimeout(1200); await p.click('.v3c-params .v3c-title'); await p.click('.v3c-chips [data-m=rail]'); await p.click('#calculate');
       await p.waitForSelector('#result .result-price:not(.muted)', { timeout: 8000 }); await shot(p, '02_guest_calc');
@@ -100,7 +100,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await A.p.click('#v3loginForm [type=submit]'); await A.p.waitForFunction(() => document.body.classList.contains('role-admin'), null, { timeout: 8000 });
     });
     await step('Админ: раздел «Работа» — заявки гостя стали сделками', async () => {
-      await A.p.click('.v3-nav [data-open-view=workView]'); await A.p.waitForSelector('#crmInbox [data-x=open]'); await shot(A.p, '06_admin_inbox');
+      await navTo(A.p, 'workView'); await A.p.waitForSelector('#crmInbox [data-x=open]'); await shot(A.p, '06_admin_inbox');
     });
     await step('Админ: карточка сделки — файл из заявки, заметка, этап', async () => {
       await A.p.fill('#crmInbox [data-x=q]', 'Документы UI'); await A.p.waitForSelector('#crmInbox [data-x=open]:has-text("Документы UI")', { timeout: 8000 });
@@ -149,7 +149,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await C.p.click('.v3-loginbtn'); await C.p.fill('#v3loginForm [name=login]', 'ui@ci.test'); await C.p.fill('#v3loginForm [name=password]', clientPw);
       await C.p.click('#v3loginForm [type=submit]'); await C.p.waitForFunction(() => document.body.classList.contains('role-client'), null, { timeout: 8000 });
     });
-    await step('Клиент: «Мои грузы»', async () => { await C.p.click('.v3-nav [data-open-view=cabinetView]'); await C.p.waitForSelector('#v3cabList .v3p-ship'); await shot(C.p, '09_client_cabinet'); });
+    await step('Клиент: «Мои грузы»', async () => { await navTo(C.p, 'cabinetView'); await C.p.waitForSelector('#v3cabList .v3p-ship'); await shot(C.p, '09_client_cabinet'); });
     await step('Клиент: расчёт сохраняется как КП автоматически', async () => {
       await C.p.evaluate(() => window.__iomaOpenView('calculator')); await C.p.fill('#fromCity', 'Shanghai'); await C.p.fill('#toCity', 'Москва'); await C.p.fill('#weight', '300');
       await C.p.waitForTimeout(1200); await C.p.click('.v3c-params .v3c-title'); await C.p.click('#calculate'); await C.p.waitForSelector('.v3p-saved', { timeout: 8000 }); await shot(C.p, '10_client_calc_saved');

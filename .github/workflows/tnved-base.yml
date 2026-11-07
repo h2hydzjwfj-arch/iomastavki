@@ -1,0 +1,32 @@
+name: tnved-base
+# Пересборка запасного справочника ТН ВЭД (reference/tnved-base.json) с alta.ru.
+# Раз в месяц и по кнопке «Run workflow». Результат кладётся в ветку tnved-base-data —
+# его забирают в main отдельным PR после просмотра (ставки меняются, слепо не подменяем).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 2 * *'
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Собрать справочник с alta.ru
+        run: node tools/build-tnved-base.js reference/tnved-base.json --limit 300
+      - name: Сохранить в ветку tnved-base-data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cp reference/tnved-base.json /tmp/tnved-base.json
+          git checkout --orphan tnved-base-data
+          git rm -rq --cached .
+          mkdir -p reference && cp /tmp/tnved-base.json reference/tnved-base.json
+          git add -f reference/tnved-base.json
+          git commit -q -m "Справочник ТН ВЭД $(date -u +%F)"
+          git push -f origin tnved-base-data
