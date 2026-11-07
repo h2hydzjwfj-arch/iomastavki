@@ -161,7 +161,7 @@ function setup(app, opts) {
   const crm2 = require('./crm2').setup(app, { store, admin, upload, str, num, newId, crm, journal, ai: opts.ai,
     rates: opts.rates || (async () => ({ rates: {} })),
     mail: { enabled: () => mail.enabled(), kind: () => mail.kind(), send: (...a) => mail.send(...a) }, tg: { ready: () => tg.ready() } });
-  const tnved = require('./tnved').setup(app, { admin, upload, DATA_DIR, cloud: opts.cloud || null, vedSettings: crm2.vedSettings, affected: crm2.tnvedAffected, who: req => roleOf(req).name || 'Администратор' });
+  const tnved = require('./tnved').setup(app, { admin, upload, DATA_DIR, cloud: opts.cloud || null, vedSettings: crm2.vedSettings, affected: crm2.tnvedAffected, who: req => roleOf(req).name || 'Администратор', fetchTnved: opts.fetchTnved || null });
   // Проверка кода ТН ВЭД по справочнику alta.ru: дерево позиции, пошлина с суммой в ₽, НДС и таможенный сбор.
   // Тот же расчёт, что в tools/tnved_check.py; на сайте — раздел «ТН ВЭД», в Telegram — команда /tnved.
   const TNV = require('./tnved-check');

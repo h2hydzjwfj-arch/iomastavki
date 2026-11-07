@@ -5,7 +5,8 @@
   'use strict';
   var K = window.CX, V = window.IOMA_VED; if (!K || !V) return;
   var $ = K.$, $$ = K.$$, esc = K.esc, api = K.api, toast = K.toast;
-  var CURS = V.CURRENCIES;
+  var CURS = V.CURRENCIES, KC = window.IOMA_CONTRACT;
+  var CUR_WORD = { CNY: 'юаней', USD: 'долларов США', EUR: 'евро', RUB: 'рублей' };
 
   function Calc(root, opts) { this.root = root; this.opts = opts || {}; this.docs = []; this.curId = null; this.doc = null; this.rates = {}; this.rateDate = ''; this.settings = null; this.busy = null; this.again = false; this.dirty = false; }
   Calc.prototype.listUrl = function () { return this.opts.dealId ? '/api/calc?deal=' + encodeURIComponent(this.opts.dealId) : '/api/calc?standalone=1'; };
@@ -35,9 +36,20 @@
   };
   Calc.prototype.open = function (id) {
     var self = this; self.curId = id;
-    return api('/api/calc/' + id).then(function (r) { self.doc = r.doc; self.rates = r.rates || {}; self.rateDate = r.rateDate; self.result = r.result; self.render(); });
+    return api('/api/calc/' + id).then(function (r) {
+      self.doc = r.doc; self.rates = r.rates || {}; self.rateDate = r.rateDate; self.result = r.result;
+      var d = self.doc, pr = (d.extra_costs || []).filter(function (e) { return e.is_percent_of_invoice; })[0];
+      if (self.isContract() && pr) { if (!d.payment) d.payment = +pr.amount === 3 ? 'bank' : 'cbr'; d.extra_costs = d.extra_costs.filter(function (e) { return !e.is_percent_of_invoice; }); self.dirty = true; }
+      self.render(); if (self.dirty) self.persist();
+    });
   };
-  Calc.prototype.calc = function () { this.result = V.calcDoc(this.doc, { rates: this.rates, rateDate: this.rateDate, settings: this.settings }); return this.result; };
+  Calc.prototype.isContract = function () { return !!KC && this.doc && this.doc.calc_type !== 'cargo'; };
+  Calc.prototype.calc = function () {
+    this.result = V.calcDoc(this.doc, { rates: this.rates, rateDate: this.rateDate, settings: this.settings });
+    var s = this.settings || {};
+    this.contract = this.isContract() ? KC.calc(KC.fromVedDoc(this.doc, this.rates), { rates: this.rates, rateDate: this.rateDate, settings: { feeScale: s.feeScale, radioFee: s.radioFee, taxPct: s.taxOnExpensesPct } }) : null;
+    return this.result;
+  };
   function cur(sel, attr) { return '<select class="cv-cur" ' + attr + '>' + CURS.map(function (c) { return '<option' + (c === sel ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select>'; }
   function numIn(attr, val, ph, w) { return '<input type="number" step="any" inputmode="decimal" class="cv-num" ' + attr + ' value="' + (val === 0 || val == null || val === '' ? '' : esc(val)) + '" placeholder="' + (ph || '0') + '"' + (w ? ' style="width:' + w + '"' : '') + '>'; }
   function fld(label, inner, cls) { return '<div class="cv-fld' + (cls ? ' ' + cls : '') + '"><span>' + label + '</span>' + inner + '</div>'; }
@@ -48,12 +60,13 @@
       + (self.opts.standalone ? '<button type="button" class="cx-link" data-c="attach">' + (d.dealId ? 'Сделка привязана ✓' : 'Привязать к сделке') + '</button>' : '') + '</div>';
     var body = '';
     if (cargo) body += '<div class="cv-card" data-part="cargo">' + self.cargoHtml() + '</div>';
-    else if (cc) body += '<div class="cv-card" data-part="simple">' + self.simpleHtml() + '</div>';
+    else if (cc && !KC) body += '<div class="cv-card" data-part="simple">' + self.simpleHtml() + '</div>';
     else body += '<div class="cv-card"><div class="cv-ct">Позиции <button type="button" class="cx-btn primary sm" data-c="additem">+ Позиция</button></div><div data-part="items">' + self.itemsHtml() + '</div>'
       + '<label class="cv-check"><input type="checkbox" data-d="radio_fee"' + (d.radio_fee ? ' checked' : '') + '> Товар из Приложения № 1 к ПП № 1637 — таможенный сбор ' + K.money(self.settings.radioFee, 'RUB') + ' вместо шкалы</label></div>';
-    if (!no) body += '<div class="cv-card"><div class="cv-row">' + fld('Фрахт', '<span class="cv-combo">' + numIn('data-d="freight_total"', d.freight_total, '0', '120px') + cur(d.freight_currency, 'data-d="freight_currency"') + '</span>') + fld('Страховка', '<span class="cv-combo">' + numIn('data-d="insurance_amount"', d.insurance_amount, '0', '120px') + cur(d.insurance_currency, 'data-d="insurance_currency"') + '</span>') + '</div>'
+    if (!no || (cc && KC)) body += '<div class="cv-card"><div class="cv-row">' + fld('Фрахт (ставка агента)', '<span class="cv-combo">' + numIn('data-d="freight_total"', d.freight_total, '0', '120px') + cur(d.freight_currency, 'data-d="freight_currency"') + '</span>') + (KC ? fld('Надбавка агента к курсу, %', numIn('data-d="freight_fx" data-null="1"', d.freight_fx, '0', '80px')) : fld('Страховка', '<span class="cv-combo">' + numIn('data-d="insurance_amount"', d.insurance_amount, '0', '120px') + cur(d.insurance_currency, 'data-d="insurance_currency"') + '</span>')) + '</div>'
       + '<div class="cv-split"' + (d.transport_mode === 'auto' || d.transport_mode === 'rail' ? '' : ' hidden') + '><label class="cv-check"><input type="checkbox" data-d="border_split_enabled"' + (d.border_split_enabled ? ' checked' : '') + '> Делить фрахт до/после границы</label>' + fld('% до границы (в тамож. базу)', numIn('data-d="border_split_percent"', d.border_split_percent, String(self.settings.borderSplitPercent), '80px')) + '<small>При авто и прямом ЖД в таможенную стоимость по закону идёт только участок до границы ЕАЭС — остальное реальный расход, пошлиной и НДС не облагается.</small></div>'
-      + '<small class="cv-hint">Фрахт делится между позициями по весу. Для своей доли впишите сумму в «Фрахт вручную» у позиции.</small></div>';
+      + '<small class="cv-hint">' + (KC ? 'Фрахт — как дал агент, с локальными расходами в Китае. Делится между позициями по весу брутто; «фрахт за кг» считается сам. Терминал, если агент его не включил, — строкой в «Доп. расходы».' : 'Фрахт делится между позициями по весу. Для своей доли впишите сумму в «Фрахт вручную» у позиции.') + '</small></div>'
+      + (KC ? '<div class="cv-card" data-part="cond">' + self.condHtml() + '</div>' : '');
     body += '<div class="cv-card"><div class="cv-ct">Доп. расходы' + (cargo ? ' <small>терминал в РФ и пр. — по факту</small>' : '') + '</div><div data-part="extras">' + self.extrasHtml() + '</div><div class="cv-extot" data-r="extot"></div><div class="cv-add"><input data-c2="newextra" placeholder="Название новой статьи расхода…"><button type="button" class="cx-btn sm" data-c="addextra">+ Добавить</button></div></div>';
     if (no && self.opts.dealId) body += '<div class="cv-card"><div class="cv-ct">Комментарий к расчёту</div><div data-part="notes"></div><div class="cv-add"><input data-c2="note" placeholder="Комментарий к расчёту…"><button type="button" class="cx-btn sm" data-c="addnote">Отправить</button></div></div>';
     self.root.innerHTML = '<div class="cv-tabs">' + tabs + '<span class="cv-addb">' + self.addButtons() + '</span></div><div class="cv-layout"><div class="cv-main">' + head + body + '</div><aside class="cv-aside"><div class="cv-card cv-res"><div class="cv-ct">Итого</div><div data-r="result"></div>'
@@ -85,12 +98,13 @@
         + (it.excise_type && it.excise_type !== 'none' || it._exc ? fld('Акциз', '<span class="cv-combo">' + numIn('data-i="' + i + '" data-k="excise_rate"', it.excise_rate, '0', '72px') + '<select class="cv-cur" data-i="' + i + '" data-k="excise_type"><option value="percent"' + (it.excise_type === 'percent' ? ' selected' : '') + '>% от ТС</option><option value="rub_per_unit"' + (it.excise_type === 'rub_per_unit' ? ' selected' : '') + '>₽ за ед.</option></select></span>') : '')
         + fld('НДС, %', numIn('data-i="' + i + '" data-k="vat_rate"' + ro, it.vat_rate, String(self.settings.vatDefault), '64px'))
         + fld('Инвойс', '<span class="cv-combo">' + numIn('data-i="' + i + '" data-k="invoice_amount"', it.invoice_amount, '0', '100px') + cur(it.invoice_currency, 'data-i="' + i + '" data-k="invoice_currency"') + '</span>')
-        + fld('Вес, кг', numIn('data-i="' + i + '" data-k="weight"', it.weight, '0', '80px'))
+        + fld(KC ? 'Брутто, кг' : 'Вес, кг', numIn('data-i="' + i + '" data-k="weight"', it.weight, '0', '80px'))
+        + (KC ? fld('Нетто, кг', numIn('data-i="' + i + '" data-k="net"', it.net, it.weight ? String(it.weight) : '= брутто', '80px')) : '')
         + (unit !== 'кг' || it.excise_type === 'rub_per_unit' ? fld('Кол-во, ' + (unit !== 'кг' ? unit : 'ед.'), numIn('data-i="' + i + '" data-k="unit_qty"', it.unit_qty, '0', '80px')) : '')
         + fld('Фрахт (авто)', '<b class="cv-auto-v" data-r="fr' + i + '">—</b>')
-        + fld('Фрахт вручную', numIn('data-i="' + i + '" data-k="freight_override"', it.freight_override, '—', '86px'))
+        + (KC ? '' : fld('Фрахт вручную', numIn('data-i="' + i + '" data-k="freight_override"', it.freight_override, '—', '86px')))
         + fld('Итого', '<b class="cv-itot" data-r="it' + i + '">—</b>', 'cv-right') + '</div>'
-        + '<div class="cv-more">' + (it.duty_extra_rate || it._dump ? '' : '<button type="button" class="cx-link" data-c="dump" data-i="' + i + '">+ антидемпинг</button>') + (it.excise_type && it.excise_type !== 'none' || it._exc ? '' : '<button type="button" class="cx-link" data-c="exc" data-i="' + i + '">+ акциз</button>') + '<span class="cv-explain" data-r="ex' + i + '"></span></div></div>';
+        + '<div class="cv-more">' + (KC ? '<label class="cv-check"><input type="checkbox" data-i="' + i + '" data-k="chz"' + (it.chz ? ' checked' : '') + '> Честный знак</label>' : '') + (KC || it.duty_extra_rate || it._dump ? '' : '<button type="button" class="cx-link" data-c="dump" data-i="' + i + '">+ антидемпинг</button>') + (KC || it.excise_type && it.excise_type !== 'none' || it._exc ? '' : '<button type="button" class="cx-link" data-c="exc" data-i="' + i + '">+ акциз</button>') + '<span class="cv-explain" data-r="ex' + i + '"></span></div></div>';
     }).join('') + '<datalist id="cvCodes"></datalist>';
   };
   Calc.prototype.extrasHtml = function () {
@@ -103,8 +117,83 @@
         + '<b class="cv-exres" data-r="ex_' + i + '"></b><button type="button" class="cx-ib danger" data-c="delextra" data-i="' + i + '" title="Удалить">✕</button></div>';
     }).join('');
   };
+  Calc.prototype.rerenderCond = function () { var box = $('[data-part=cond]', this.root); if (box) box.innerHTML = this.condHtml(); this.paint(); };
+  Calc.prototype.condHtml = function () {
+    var d = this.doc, our = d.calc_type === 'our_contract', cc = String((d.items[0] && d.items[0].invoice_currency) || d.freight_currency || 'CNY');
+    var sel = function (key, opts) { return '<select class="cv-sel" data-d="' + key + '">' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (String(d[key] || opts[0][0]) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>'; };
+    var txt = function (key, ph, w) { return '<input class="cv-txt" data-d="' + key + '" value="' + esc(d[key] || '') + '" placeholder="' + esc(ph) + '" style="width:' + (w || '180px') + '">'; };
+    var h = '<div class="cv-ct">Условия расчёта</div><div class="cv-row">';
+    if (our) h += fld('Оплата инвойса', sel('payment', [['cbr', 'по курсу ЦБ + 6%'], ['bank', 'по внутреннему курсу банка + 3%']]))
+      + fld('Торговый дом', '<label class="cv-check"><input type="checkbox" data-d="td"' + (d.td ? ' checked' : '') + '> +4% к инвойсу</label>');
+    h += fld('Страхование, % инвойса', numIn('data-d="insurance_pct" data-null="1"', d.insurance_pct, our ? '0.15' : '0', '80px'))
+      + fld('Декларант', sel('declarant', our ? [['ecp', 'с ЭЦП клиента'], ['broker', 'под печать брокера'], ['none', 'без декларанта']] : [['none', 'без декларанта'], ['ecp', 'с ЭЦП клиента'], ['broker', 'под печать брокера']]))
+      + fld('Декларант, ₽', numIn('data-d="declarant_rub" data-null="1"', d.declarant_rub, 'авто', '110px'));
+    if (our) h += fld('Маржа, ' + cc, numIn('data-d="margin" data-null="1"', d.margin, 'авто', '110px'));
+    h += '</div>';
+    if (!our) h += '<div class="cv-ct">Наценки к ставке агента <small>в КП клиент видит их внутри фрахта</small></div>'
+      + ((d.markups || []).map(function (m, i) { return '<div class="cv-ex"><input class="cv-exl" data-m="' + i + '" data-k="label" value="' + esc(m.label || '') + '" placeholder="Например: море">' + numIn('data-m="' + i + '" data-k="amount"', m.amount, '0', '90px') + cur(m.currency || 'USD', 'data-m="' + i + '" data-k="currency"') + '<button type="button" class="cx-ib danger" data-c="delmk" data-i="' + i + '" title="Удалить">✕</button></div>'; }).join('') || '<p class="cx-empty">Наценок нет</p>')
+      + '<div class="cv-more">' + [['Забор EXW по Китаю', 150], ['Море', 200], ['ЖД', 150], ['Авто', 150], ['Авиа', 100]].map(function (x) { return '<button type="button" class="cx-link" data-c="addmk" data-l="Наценка: ' + x[0].toLowerCase() + '" data-a="' + x[1] + '">+ ' + x[0] + ' ' + x[1] + ' $</button>'; }).join(' ') + '</div>';
+    h += '<div class="cv-row">' + fld('Срок доставки (для КП)', txt('kp_transit', 'например: 20–25 дней')) + fld('Ставка действительна до', txt('kp_valid', 'например: 15.11.2026', '150px')) + '</div>'
+      + '<small class="cv-hint">Пошлина и НДС берутся из справочника по коду и руками не правятся — снимите «авто» у позиции, только если декларант дал другую ставку. ' + (our ? 'Маржа по умолчанию — 2 × «на налоги». ' : '') + 'Декларант: 25 000 ₽ с ЭЦП / 30 000 ₽ под печать брокера, до 3 кодов, +350 ₽ за код; Честный знак — 2 500 ₽ за 2 кода, +500 ₽ за код.</small>';
+    return h;
+  };
+  Calc.prototype.paintContract = function (k) {
+    var self = this, d = self.doc, cc = k.currency, f = function (v) { return K.money(v, cc); }, R = self.root;
+    var set = function (key, h) { var el = $('[data-r="' + key + '"]', R); if (el) el.innerHTML = h; };
+    k.items.forEach(function (o, i) {
+      set('fr' + i, K.money(o.freightShare, cc));
+      set('it' + i, o.dutyRub == null ? '<span class="cv-warn">нужно: ' + esc(o.need) + '</span>' : 'ТС ' + K.money(o.cvRub, 'RUB'));
+      set('ex' + i, o.dutyRub == null ? '' : 'Пошлина ' + esc(o.dutyText) + ' → ' + K.money(o.dutyRub, 'RUB') + ' · НДС ' + K.num(o.vatRate) + '% → ' + K.money(o.vatRub, 'RUB'));
+    });
+    (d.extra_costs || []).forEach(function (ec, i) { var el = $('[data-r="ex_' + i + '"]', R); if (!el) return; var c = String(ec.currency || 'RUB'), rt = c === 'RUB' ? 1 : +self.rates[c] || 0; var amt = ec.rate_mode === 'manual' && c !== 'RUB' ? +ec.amount * +ec.manual_rate : +ec.amount * rt; el.innerHTML = rt || ec.rate_mode === 'manual' ? f(amt / (c === 'RUB' || ec.rate_mode === 'manual' ? k.rubRate : k.rate)) : '<span class="cv-warn">⚠ нет курса</span>'; });
+    set('extot', '');
+    var mi = $('[data-d=margin]', R); if (mi) mi.placeholder = 'авто: ' + K.num(k.marginAuto);
+    var di = $('[data-d=declarant_rub]', R); if (di) di.placeholder = d.declarant === 'none' ? '—' : 'авто: ' + K.num(k.declarant.rub);
+    var row = function (l, v, cls) { return '<div class="cv-rr' + (cls ? ' ' + cls : '') + '"><span>' + l + '</span><b>' + v + '</b></div>'; };
+    var lock = ' <i class="cv-lock" title="Клиент этого не видит">🔒</i>';
+    var h = (k.missing.length ? '<div class="cv-miss"><b>КП не формируется:</b>' + k.missing.map(function (w) { return '<p>' + esc(w) + '</p>'; }).join('') + '</div>' : '')
+      + (k.warnings.length ? '<div class="cv-warns">' + k.warnings.map(function (w) { return '<p>⚠ ' + esc(w) + '</p>'; }).join('') + '</div>' : '')
+      + k.lines.map(function (l) { var rub = l.rub != null && cc !== 'RUB' && !/^freight|^insurance/.test(l.key) ? '<small>' + K.money(l.rub, 'RUB') + '</small>' : ''; return row(esc(l.label) + (l.secret ? lock : ''), f(l.amount) + rub); }).join('')
+      + '<div class="cv-total"><span>ИТОГО</span><b>' + f(k.total) + '</b>' + (k.totalRub ? '<small>≈ ' + K.money(k.totalRub, 'RUB') + ' по ЦБ</small>' : '') + '</div>'
+      + (k.paymentNote ? '<small class="cv-sub">Оплата инвойса ' + esc(k.paymentNote) + (k.tdPct ? ', через торговый дом +' + K.num(k.tdPct) + '%' : '') + '</small>' : '')
+      + (cc !== 'RUB' ? '<small class="cv-sub">ЦБ' + (k.rateDate ? ' на ' + esc(k.rateDate) : '') + ': 1 ' + cc + ' = ' + K.num(k.rate) + ' ₽; рублёвые строки — по ' + K.num(k.rubRate) + ' ₽</small>' : '')
+      + (k.items.length > 1 && k.freightPerKg != null ? '<small class="cv-sub">Фрахт за кг брутто: ' + K.num(k.freightPerKg) + ' ' + cc + ' (' + K.num(k.totalGross) + ' кг)</small>' : '')
+      + '<small class="cv-sub">' + (k.customs.inTotal ? 'На таможне' : 'Таможня справочно (платит клиент)') + ': ТС ' + K.money(k.customs.cvRub, 'RUB') + ' · пошлина ' + K.money(k.customs.dutyRub, 'RUB') + ' · НДС ' + K.money(k.customs.vatRub, 'RUB') + ' · сбор ' + K.money(k.customs.feeRub, 'RUB') + ' = <b>' + K.money(k.customs.paymentsRub, 'RUB') + '</b></small>'
+      + '<small class="cv-sub">Прибыль' + lock + ': ' + f(k.profit) + (k.ratio != null ? ' · сверх инвойса ' + K.num(Math.round(k.ratio * 1000) / 10) + '%' : '') + '</small>'
+      + '<button type="button" class="cx-btn primary sm" data-c="kp"' + (k.ok ? '' : ' disabled title="Сначала заполните то, чего не хватает"') + '>Текст КП для клиента</button>';
+    var box = $('[data-r=result]', R); if (box) box.innerHTML = h;
+  };
+  function fmtInt(v) { return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+  Calc.prototype.kpText = function (k) {
+    var d = this.doc, w = CUR_WORD[k.currency] || k.currency, names = d.items.map(function (it) { return it.name; }).filter(Boolean).join(', ');
+    var inc = [], has = function (key) { return k.lines.some(function (l) { return l.key === key || l.key.indexOf(key) === 0; }); };
+    var L = ['iomastavka — расчёт' + (names ? ': ' + names : '') + (V.TRANSPORT[d.transport_mode] ? ' (' + V.TRANSPORT[d.transport_mode].toLowerCase() + ')' : ''), ''];
+    if (k.mode === 'our') {
+      L.push('Стоимость контракта: ' + fmtInt(k.total) + ' ' + w + (k.totalRub ? ' (≈ ' + fmtInt(k.totalRub) + ' ₽ по курсу ЦБ' + (k.rateDate ? ' на ' + k.rateDate : '') + ')' : '') + '.');
+      inc.push('стоимость товара по инвойсу и его оплата поставщику ' + k.paymentNote);
+    } else L.push('Стоимость доставки: ' + fmtInt(k.total) + ' ' + w + '.');
+    if (has('freight')) inc.push('фрахт и локальные расходы в Китае');
+    if (has('insurance')) inc.push('страхование груза');
+    if (k.customs.inTotal && has('customs')) inc.push('таможенные платежи: пошлина, НДС, таможенный сбор');
+    if (has('declarant')) inc.push('таможенное оформление (услуги декларанта)');
+    k.lines.forEach(function (l) { if (/^permit|^extra/.test(l.key)) inc.push(String(l.label).replace(/^[А-ЯЁA-Z](?=[а-яёa-z ])/, function (c) { return c.toLowerCase(); })); });
+    if (inc.length) { L.push('', 'В стоимость включено:'); inc.forEach(function (x, i) { L.push('— ' + x + (i === inc.length - 1 ? '.' : ';')); }); }
+    if (!k.customs.inTotal && k.customs.paymentsRub) L.push('', 'Таможенные платежи оплачиваются отдельно (справочно): пошлина ' + fmtInt(k.customs.dutyRub) + ' ₽, НДС ' + fmtInt(k.customs.vatRub) + ' ₽, сбор ' + fmtInt(k.customs.feeRub) + ' ₽.');
+    if (d.kp_transit) L.push('', 'Срок доставки: ' + d.kp_transit + '.');
+    if (d.kp_valid) L.push((d.kp_transit ? '' : '\n') + 'Ставка действительна до ' + d.kp_valid + '.');
+    L.push('', 'Дополнительные расходы (оплачиваются по факту возникновения): досмотр, ИДК, ПРР, хранение, использование контейнера, простои, штрафы (отмена/перенос брони), документальное оформление, индексация тарифа.');
+    return L.join('\n');
+  };
+  Calc.prototype.kpModal = function () {
+    var k = this.calc() && this.contract; if (!k || !k.ok) return toast('Расчёт не готов: ' + (k ? k.missing.join('; ') : ''), 'err');
+    var text = this.kpText(k);
+    var md = K.modal('Текст КП для клиента', '<p class="cx-mut">Без маржи, налогов и комиссий — только итог и что в него входит.</p><textarea class="cv-kp" rows="16" readonly>' + esc(text) + '</textarea><div class="cv-setb"><button type="button" class="cx-btn primary" data-copy>Скопировать</button></div>', false);
+    $('[data-copy]', md.el).addEventListener('click', function () { var ta = $('textarea', md.el); (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).catch(function () { ta.select(); document.execCommand('copy'); }).then(function () { toast('Текст КП скопирован'); }); });
+  };
   Calc.prototype.paint = function () {
-    var self = this, r = self.calc(), d = self.doc, cc = r.display_currency, f = function (v) { return v == null ? '—' : K.money(v, cc); }, no = r.calc_type !== 'our_contract';
+    var self = this, r = self.calc();
+    if (self.contract) return self.paintContract(self.contract);
+    var d = self.doc, cc = r.display_currency, f = function (v) { return v == null ? '—' : K.money(v, cc); }, no = r.calc_type !== 'our_contract';
     (r.items || []).forEach(function (o, i) {
       var it = d.items[i], ic = (it && it.invoice_currency) || cc, set = function (k, h) { var el = $('[data-r="' + k + i + '"]', self.root); if (el) el.innerHTML = h; };
       set('fr', o.freight_share_display == null ? '—' : K.money(o.freight_share_display, ic));
@@ -138,8 +227,9 @@
   Calc.prototype.flush = function () { return this.dirty ? this.persist() : Promise.resolve(); };
   Calc.prototype.setVal = function (el) {
     var d = this.doc, k = el.dataset.k, v = el.type === 'checkbox' ? el.checked : el.value, isNum = el.type === 'number';
-    if (isNum) v = v === '' ? (k === 'freight_override' ? null : k === 'vat_rate' ? '' : 0) : Number(v);
-    if (el.dataset.d) { d[el.dataset.d] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? (el.value === '' ? 0 : Number(el.value)) : el.value; return el.dataset.d; }
+    if (isNum) v = v === '' ? (k === 'freight_override' || k === 'net' ? null : k === 'vat_rate' ? '' : 0) : Number(v);
+    if (el.dataset.d) { d[el.dataset.d] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? (el.value === '' ? (el.dataset.null ? null : 0) : Number(el.value)) : el.value; return el.dataset.d; }
+    if (el.dataset.m != null && k) { var mk = (d.markups || [])[+el.dataset.m]; if (mk) mk[k] = isNum ? (v || 0) : v; return 'mk-' + k; }
     if (el.dataset.i != null && k) { var it = d.items[+el.dataset.i]; if (!it) return; if (k === 'tnved_code') v = String(v).replace(/\D/g, ''); if (k === 'name') it.name_is_auto = false; if (k === 'duty_extra_unit') v = +v; it[k] = v; return k; }
     if (el.dataset.e != null && k) { var ec = d.extra_costs[+el.dataset.e]; if (ec) ec[k] = isNum ? (v || 0) : v; return 'ex-' + k; }
   };
@@ -171,6 +261,9 @@
     if (c === 'addnote') { var ni = $('[data-c2=note]', self.root), v = ni.value.trim(); if (!v) return ni.focus(); return api('/api/deals/' + self.opts.dealId + '/notes', { method: 'POST', body: { type: 'calc', section: 'calc', text: v } }).then(function () { ni.value = ''; self.notes(); }); }
     if (c === 'tofin') return K.guard(b, function () { return self.flush().then(function () { return api('/api/calc/' + self.curId + '/to-finance', { method: 'POST' }); }).then(function (r) { toast('В финансы добавлено статей: ' + r.added); if (self.opts.onFinance) self.opts.onFinance(); }); });
     if (c === 'attach') return self.attach();
+    if (c === 'addmk') { d.markups = d.markups || []; d.markups.push({ label: b.dataset.l || 'Наценка', amount: +b.dataset.a || 0, currency: 'USD' }); self.rerenderCond(); return self.persist(); }
+    if (c === 'delmk') { d.markups.splice(i, 1); self.rerenderCond(); return self.persist(); }
+    if (c === 'kp') return self.flush().then(function () { self.kpModal(); });
   };
   Calc.prototype.notes = function () {
     var self = this, box = $('[data-part=notes]', self.root); if (!box) return;
@@ -187,6 +280,9 @@
     return api('/api/tnved/lookup?code=' + encodeURIComponent(it.tnved_code)).then(function (r) {
       it.duty_type = r.duty_type; it.duty_rate = r.duty_value; it.eur_per_kg = r.eur_per_kg; it.eur_per_l = r.eur_per_l; it.eur_per_pcs = r.eur_per_pcs; it.eur_per_m2 = r.eur_per_m2; it.eur_unit = r.eur_unit; it.vat_rate = r.vat_rate;
       if (it.name_is_auto !== false || !it.name) { it.name = r.name ? String(r.name).slice(0, 300) : it.name; it.name_is_auto = true; }
+      it.duty_text = r.duty_text || '';
+      if (r.source === 'alta') toast('Ставки по коду ' + r.code + ' взяты с alta.ru'); else if (r.source === 'base') toast('alta.ru недоступен — ставки из встроенного справочника' + (r.baseDate ? ' на ' + String(r.baseDate).slice(0, 10) : ''));
+      if (r.vat_options && r.vat_options.some(function (v) { return v.rate !== r.vat_rate; })) toast('По коду бывает льготный НДС: ' + r.vat_options.map(function (v) { return v.rate + '%' + (v.condition ? ' — ' + v.condition : ''); }).join('; ') + '. Если подходит — снимите «авто» и поменяйте НДС.');
       if (r.radio && !self.doc.radio_fee) toast('Код из Приложения № 1 к ПП № 1637 — включите сбор 73 860 ₽, если товар подпадает');
       if (!r.exact) toast('Точного кода нет в справочнике — взяты ставки позиции ' + r.code);
     }).catch(function (e) { toast(e.status === 404 ? 'Кода ' + it.tnved_code + ' нет в справочнике ТН ВЭД — заполните ставки вручную или загрузите справочник' : e.message, 'err'); it.auto_lookup = false; })
@@ -195,7 +291,7 @@
   Calc.prototype.cert = function (i) {
     var self = this, it = self.doc.items[i]; if (!it || !it.tnved_code) return;
     var el = $('[data-cert="' + i + '"]', self.root); if (el) el.innerHTML = '<span class="cv-certl">⏳</span>';
-    api('/api/tnved/cert?code=' + encodeURIComponent(it.tnved_code)).then(function (r) { it._certData = r; self.certPaint(i); }).catch(function () { if (el) el.innerHTML = ''; });
+    api('/api/tnved/cert?code=' + encodeURIComponent(it.tnved_code)).then(function (r) { it._certData = r; if (KC && it.chz == null && r.honest_sign && r.honest_sign.required) { it.chz = true; self.rerenderItems(); self.persist(); } self.certPaint(i); }).catch(function () { if (el) el.innerHTML = ''; });
   };
   Calc.prototype.certPaint = function (i) {
     var it = this.doc.items[i], r = it && it._certData, el = $('[data-cert="' + i + '"]', this.root); if (!el || !r) return;

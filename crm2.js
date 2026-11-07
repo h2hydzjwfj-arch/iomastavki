@@ -4,6 +4,7 @@
 // Перенос логики CRM West Asia: tasks.js, activity.js (финансы), calc.js, analytics.js, time_off.js,
 // company_settings.js, security_panel.js, mail.js, bot_panel.js.
 const VED = require('./ved');
+const CONTRACT = require('./contract');
 
 // Производственный календарь РФ на 2026 год и праздники КНР 2026 (распоряжение Госсовета КНР).
 const HOLIDAYS = {
@@ -158,6 +159,8 @@ function setup(app, ctx) {
 
   // ================= КАЛЬКУЛЯТОР ВЭД =================
   const vedSettings = () => { const s = db().settings.ved || {}; return { ...VED.DEFAULTS, ...s }; };
+  // расчёт контракта: шкала сбора и налог — из настроек калькулятора, остальное — из settings.contract (тариф декларанта, проценты)
+  const contractSettings = () => { const v = vedSettings(); return { ...(db().settings.contract || {}), feeScale: v.feeScale, radioFee: v.radioFee, taxPct: v.taxOnExpensesPct }; };
   const NUMF = ['freight_total', 'insurance_amount', 'border_split_percent', 'cargo_rate_value', 'cargo_qty', 'cargo_goods_value', 'cargo_insurance_percent'];
   const ITEM_NUM = ['invoice_amount', 'weight', 'duty_rate', 'duty_extra_rate', 'duty_extra_unit', 'eur_per_kg', 'eur_per_l', 'eur_per_pcs', 'eur_per_m2', 'unit_qty', 'excise_rate', 'excise_qty'];
   const curOk = c => (VED.CURRENCIES.includes(String(c || '').toUpperCase()) ? String(c).toUpperCase() : 'CNY');
@@ -168,20 +171,29 @@ function setup(app, ctx) {
     for (const f of ['freight_currency', 'insurance_currency', 'cargo_rate_currency', 'cargo_goods_currency']) if (b[f] != null) doc[f] = curOk(b[f]);
     if (b.cargo_rate_basis != null) doc.cargo_rate_basis = b.cargo_rate_basis === 'm3' ? 'm3' : 'kg';
     for (const f of ['border_split_enabled', 'radio_fee']) if (b[f] !== undefined) doc[f] = !!b[f];
+    if (b.payment !== undefined) doc.payment = b.payment === 'bank' ? 'bank' : 'cbr';
+    if (b.declarant !== undefined) doc.declarant = ['ecp', 'broker', 'none'].includes(b.declarant) ? b.declarant : 'ecp';
+    if (b.td !== undefined) doc.td = !!b.td;
+    for (const f of ['declarant_rub', 'margin', 'insurance_pct', 'freight_fx']) if (b[f] !== undefined) doc[f] = b[f] === '' || b[f] == null ? null : n(b[f]);
+    for (const f of ['kp_transit', 'kp_valid', 'kp_note']) if (b[f] !== undefined) doc[f] = str(b[f], 300);
+    if (Array.isArray(b.markups)) doc.markups = b.markups.slice(0, 20).map(m => ({ label: str(m.label, 120), amount: n(m.amount), currency: curOk(m.currency || 'USD') }));
     if (Array.isArray(b.extra_costs)) doc.extra_costs = b.extra_costs.slice(0, 60).map(ec => ({ label: str(ec.label, 120), amount: n(ec.amount), is_percent_of_invoice: !!ec.is_percent_of_invoice, currency: curOk(ec.currency || 'RUB'), rate_mode: ec.rate_mode === 'manual' ? 'manual' : 'cbr', manual_rate: n(ec.manual_rate) }));
     if (Array.isArray(b.items)) doc.items = b.items.slice(0, 200).map(it => {
       const o = { name: str(it.name, 300), name_is_auto: it.name_is_auto !== false, tnved_code: String(it.tnved_code || '').replace(/\D/g, '').slice(0, 10), invoice_currency: curOk(it.invoice_currency), auto_lookup: it.auto_lookup !== false,
-        duty_type: ['percent', 'min', 'plus', 'fixed_eur'].includes(it.duty_type) ? it.duty_type : 'percent', eur_unit: VED.unitOf(it.eur_unit), excise_type: ['none', 'percent', 'rub_per_unit'].includes(it.excise_type) ? it.excise_type : 'none', radio: !!it.radio };
+        duty_type: ['percent', 'min', 'plus', 'fixed_eur'].includes(it.duty_type) ? it.duty_type : 'percent', duty_text: str(it.duty_text, 160), chz: !!it.chz, eur_unit: VED.unitOf(it.eur_unit), excise_type: ['none', 'percent', 'rub_per_unit'].includes(it.excise_type) ? it.excise_type : 'none', radio: !!it.radio };
       for (const f of ITEM_NUM) o[f] = n(it[f]);
       o.vat_rate = it.vat_rate === '' || it.vat_rate == null ? '' : n(it.vat_rate);
       o.freight_override = it.freight_override === '' || it.freight_override == null ? null : n(it.freight_override);
+      o.net = it.net === '' || it.net == null ? null : n(it.net);
       return o;
     });
     return doc;
   }
   async function docOut(doc) {
     const rt = await currentRates();
-    return { ok: true, doc, result: VED.calcDoc(doc, { rates: rt.rates, rateDate: rt.date, settings: vedSettings() }), rates: rt.rates, rateDate: rt.date || '' };
+    const result = VED.calcDoc(doc, { rates: rt.rates, rateDate: rt.date, settings: vedSettings() });
+    const contract = doc.calc_type === 'cargo' ? null : CONTRACT.calc(CONTRACT.fromVedDoc(doc, rt.rates), { rates: rt.rates, rateDate: rt.date, settings: contractSettings() });
+    return { ok: true, doc, result, contract, rates: rt.rates, rateDate: rt.date || '' };
   }
   app.get('/api/ved/settings', admin, (req, res) => res.json({ ok: true, settings: vedSettings(), defaults: VED.DEFAULTS, types: VED.TYPES, transport: VED.TRANSPORT }));
   app.put('/api/ved/settings', admin, (req, res) => {
@@ -208,6 +220,7 @@ function setup(app, ctx) {
     const type = VED.CREATABLE.includes(b.calc_type) ? b.calc_type : 'our_contract';
     const cur = (d.settings.company && d.settings.company.defaultCurrency) || 'CNY';
     const doc = Object.assign(VED.newDoc(type, cur), { id: newId(5), dealId: b.dealId || '', createdAt: now(), updatedAt: now(), createdBy: who(req) });
+    doc.extra_costs = doc.extra_costs.filter(e => !e.is_percent_of_invoice); doc.payment = 'cbr'; doc.td = false; doc.declarant = type === 'our_contract' ? 'ecp' : 'none'; doc.insurance_pct = type === 'our_contract' ? 0.15 : 0; doc.margin = null; doc.freight_fx = 0; doc.markups = [];
     if (b.name) doc.name = str(b.name, 160);
     const x = b.dealId && dealOf(d, b.dealId); if (x) { if (x.weight && doc.items[0]) doc.items[0].weight = x.weight; if (x.cargo && doc.items[0]) doc.items[0].name = x.cargo; doc.transport_mode = { auto: 'auto', rail: 'rail', sea: 'sea', air: 'avia', multimodal: 'multimodal' }[x.mode] || 'sea'; }
     d.calcDocs.unshift(doc); d.calcDocs = d.calcDocs.slice(0, 5000); store.save(d);
@@ -217,7 +230,7 @@ function setup(app, ctx) {
   app.patch('/api/calc/:id', admin, async (req, res) => {
     const d = db(); const doc = d.calcDocs.find(v => v.id === req.params.id); if (!doc) return bad(res, 'Расчёт не найден', 404);
     docBody(req.body || {}, doc); if (req.body && req.body.dealId !== undefined) { if (req.body.dealId && !dealOf(d, req.body.dealId)) return bad(res, 'Сделка не найдена'); doc.dealId = req.body.dealId || ''; }
-    doc.updatedAt = now(); const out = await docOut(doc); doc.lastTotal = { rub: out.result.grand_total_rub, display: out.result.grand_total_display, currency: out.result.display_currency };
+    doc.updatedAt = now(); const out = await docOut(doc); doc.lastTotal = out.contract && out.contract.ok ? { rub: out.contract.totalRub || Math.round(out.contract.total * out.contract.rate), display: out.contract.total, currency: out.contract.currency } : { rub: out.result.grand_total_rub, display: out.result.grand_total_display, currency: out.result.display_currency };
     store.save(d); res.json(out);
   });
   app.delete('/api/calc/:id', admin, (req, res) => { const d = db(); const i = d.calcDocs.findIndex(v => v.id === req.params.id); if (i < 0) return bad(res, 'Расчёт не найден', 404); d.calcDocs.splice(i, 1); store.save(d); res.json({ ok: true }); });
@@ -228,9 +241,18 @@ function setup(app, ctx) {
     const d = db(); const x = dealOf(d, doc.dealId); if (!x) return bad(res, 'Сделка не найдена', 404);
     const tag = doc.name ? ` (${doc.name})` : ''; const rows = [];
     const add = (label, rub) => { if (rub > 0) rows.push({ id: newId(4), kind: 'expense', label: label + tag, currency: 'RUB', amount: Math.round(rub * 100) / 100 }); };
-    add('Фрахт', r.freight_total_rub); add('Страховка', r.insurance_total_rub);
-    if (r.calc_type === 'our_contract') { add('Пошлина', r.duty_sum_rub); add('Акциз', r.excise_sum_rub); add('НДС на ввоз', r.vat_sum_rub); add(r.customs_fee_radio ? 'Таможенный сбор (Прил. №1 к ПП №1637)' : 'Таможенный сбор', r.customs_fee_rub); add('Налог на расходы', r.tax_on_expenses_rub); }
-    for (const ec of r.extra_costs) add(ec.label || 'Доп. расход', ec.amount_rub);
+    const k = out.contract;
+    if (k) {
+      for (const l of k.lines) {
+        if (l.key === 'invoice' || l.key === 'margin' || l.markup) continue;           // инвойс и наша маржа — не расходы сделки
+        if (l.key === 'customs') { add('Пошлина', k.customs.dutyRub); add('НДС на ввоз', k.customs.vatRub); continue; }
+        if (l.key === 'fee') { add(k.customs.feeRadio ? 'Таможенный сбор (Прил. №1 к ПП №1637)' : 'Таможенный сбор', k.customs.feeRub); continue; }
+        add(l.label, l.rub != null ? l.rub : l.amount * k.rate);
+      }
+    } else {
+      add('Фрахт', r.freight_total_rub); add('Страховка', r.insurance_total_rub);
+      for (const ec of r.extra_costs) add(ec.label || 'Доп. расход', ec.amount_rub);
+    }
     x.finance = (x.finance || []).concat(rows); const t = VED.finance(x.finance); x.financeTotals = { income: t.income, expense: t.expense, margin: t.margin, percent: t.percent }; x.financeAt = now();
     x.activity = x.activity || []; x.activity.push({ id: newId(4), at: now(), type: 'calc', by: who(req), text: `Расчёт «${doc.name || VED.TYPES[doc.calc_type]}» перенесён в финансы: ${rows.length} статей, ${Math.round(rows.reduce((s, v) => s + v.amount, 0)).toLocaleString('ru-RU')} ₽` });
     store.save(d); res.json({ ok: true, added: rows.length });
