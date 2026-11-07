@@ -82,18 +82,38 @@ test('ТН ВЭД: страницы alta.ru — дерево, ставки, НД
   assert.throws(() => T.parseAltaPage('<html><body>Сервис временно недоступен</body></html>', '6403190000'), e => e.kind === 'format_changed');
 });
 
-test('ТН ВЭД: отчёт в формате ТЗ — комбинированная пошлина по весу', async () => {
+test('ТН ВЭД: короткий отчёт — код и название, группа и позиция, пошлина, НДС, сбор, разрешительные', async () => {
   const res = await T.check({ code: '6201 40 000 0', value: '500 000', weight: '300' }, deps());
   const lines = res.report.split('\n');
-  assert.equal(lines[0], '📋 Код: 6201400000');
-  assert.ok(lines[1].startsWith('🔧 XI. Текстильные материалы'));
-  assert.ok(res.report.includes('   ↳ 6201 40 000 0 — из химических нитей'));
+  assert.equal(lines[0], '📋 Код: 6201 40 000 0 — Из химических нитей');
+  assert.ok(lines[1].startsWith('   Группа 62: Предметы одежды'));
+  assert.ok(lines[2].startsWith('   Позиция 6201: Пальто, полупальто'));
+  assert.ok(!/XI\. Текстильные/.test(res.report), 'раздел ТН ВЭД — лишнее');
   assert.ok(res.report.includes('💰 Пошлина: 10%, но не менее 2.25 евро/кг ≈ 61 831 ₽'));
   assert.ok(res.report.includes('(курс ЦБ на 07.11.2026)'));
-  assert.ok(res.report.includes('🧾 НДС: 22% (базовая)'));
+  assert.ok(res.report.includes('🧾 НДС: 22% (базовая) ≈ 123 603 ₽'));   // (500 000 + 61 831) × 22%
   assert.ok(res.report.includes('   10% — для мальчиков'));
-  assert.ok(res.report.endsWith('⚡ Сбор: 4 924 ₽ (при стоимости груза 500 000 ₽)'));
+  assert.ok(res.report.includes('⚡ Сбор: 4 924 ₽ (от стоимости товара 500 000 ₽)'));
+  assert.ok(res.report.includes('📄 Разрешительные: ДС ТР ТС 017'));
+  assert.ok(res.report.includes('🏷 Честный знак:'));
   assert.equal(res.fee, 4924);
+});
+
+test('ТН ВЭД: стоимость в любой валюте и фрахт в ТС; сбор — от стоимости товара', async () => {
+  const res = await T.check({ code: '6201400000', value: '800 USD', weight: '300' }, deps({ rates: async () => ({ date: '07.11.2026', rates: { EUR: 91.601, USD: 81.67 } }) }));
+  assert.equal(res.value, 65336); assert.match(res.report, /💱 800 USD = 65 336 ₽ по курсу ЦБ на 07\.11\.2026/);
+  assert.equal(res.fee, 1231);
+  const f = await T.check({ code: '6201400000', value: '500000', freight: '100000', weight: '1' }, deps());
+  assert.equal(f.cv, 600000); assert.equal(f.dutyCalc.amount, 60000); assert.equal(f.fee, 4924, 'сбор от 500 000 ₽ товара, не от ТС');
+  assert.deepEqual(T.parseMoney('5 000 юаней'), { amount: 5000, currency: 'CNY' });
+  assert.deepEqual(T.parseMoney('€300'), { amount: 300, currency: 'EUR' });
+  assert.deepEqual(T.parseMoney('1200', 'USD'), { amount: 1200, currency: 'USD' });
+  assert.equal(T.parseMoney(''), null);
+  await assert.rejects(T.check({ code: '6201400000', value: '800 USD' }, deps({ rates: async () => ({ rates: {} }) })), e => e.status === 503 && /Нет курса ЦБ для USD/.test(e.message));
+  // разрешительные: свой справочник важнее ориентира по группе; медизделия — РУ
+  assert.equal(T.permitsFor('9021101000', null).docs.startsWith('РУ Росздравнадзора'), true);
+  assert.equal(T.permitsFor('6201400000', { exact: true, cert: 'СС ТР ТС 017', marking: 'обязательна' }).docs, 'СС ТР ТС 017');
+  assert.equal(T.certPriceFor('4202229000', [{ codes: ['42'], priceRu: 1 }, { codes: ['4202'], priceRu: 25000 }]).priceRu, 25000);
 });
 
 test('ТН ВЭД: специфическая пошлина — без количества курс не запрашивается', async () => {
@@ -102,7 +122,7 @@ test('ТН ВЭД: специфическая пошлина — без коли
   let res = await T.check({ code: '6403190000', value: '150000' }, d);
   assert.equal(rateCalls, 0);
   assert.ok(res.report.includes('💰 Пошлина: 0.34 евр/пару\n   Для расчёта суммы укажите количество пар'));
-  assert.ok(res.report.includes('⚡ Сбор: 1 231 ₽ (при стоимости груза 150 000 ₽)'));
+  assert.ok(res.report.includes('⚡ Сбор: 1 231 ₽ (от стоимости товара 150 000 ₽)'));
   res = await T.check({ code: '6403190000', value: '150000', qty: '200' }, d);
   assert.equal(rateCalls, 1);
   assert.ok(res.report.includes('≈ 6 229 ₽')); assert.ok(res.report.includes('0.34 € × 200 пар × 91.60 ₽'));
@@ -112,10 +132,13 @@ test('ТН ВЭД: без стоимости, радиоэлектроника, 
   T.loadBase(path.join(__dirname, 'нет-такого-файла.json')); // проверяем ошибки без запасного справочника
   const calls = [];
   let res = await T.check({ code: '8471300000' }, deps({ get: fakeGet(calls) }));
-  assert.ok(res.report.includes('💰 Пошлина: 0%\n🧾 НДС')); assert.ok(res.report.endsWith('⚡ Сбор: укажите стоимость груза, ₽'));
-  assert.match((await T.check({ code: '0401101000' }, deps())).report, /💰 Пошлина: 15%\n   Для расчёта суммы укажите стоимость груза в ₽/);
+  assert.ok(res.report.includes('💰 Пошлина: 0%\n🧾 НДС')); assert.ok(!res.report.includes('⚡ Сбор'), 'без стоимости сбор не показываем');
+  assert.match(res.report, /Стоимость не указана — показаны только ставки/);
+  assert.match((await T.check({ code: '0401101000' }, deps())).report, /💰 Пошлина: 15%\n🧾 НДС: 22%/);
   res = await T.check({ code: '8471300000', value: '900000' }, deps({ get: fakeGet(calls), local: () => ({ exact: true, radio: true }) }));
-  assert.equal(res.fee, 73860); assert.match(res.report, /73 860 ₽ \(при стоимости груза 900 000 ₽\) — товар из Приложения № 1/);
+  assert.equal(res.fee, 73860); assert.match(res.report, /73 860 ₽ \(от стоимости товара 900 000 ₽\) — товар из Приложения № 1/);
+  assert.match(res.report, /нотификация ФСБ/);
+  assert.match((await T.check({ code: '8471300000' }, deps({ get: fakeGet(calls), forClient: true }))).report, /Данные примерные/);
   assert.equal(calls.length, 1); // вторая проверка того же кода — из кеша
   await assert.rejects(T.check({ code: '0000000000', value: '1000' }, deps()), e => e.status === 404);
   await assert.rejects(T.check({ code: '123', value: '1000' }, deps()), e => e.status === 400);
@@ -124,10 +147,11 @@ test('ТН ВЭД: без стоимости, радиоэлектроника, 
 
 test('ТН ВЭД: команда бота', () => {
   assert.equal(T.parseCommand('привет'), null);
-  assert.deepEqual(T.parseCommand('/tnved 6201 40 000 0 500 000 300кг'), { code: '6201400000', value: '500 000', weight: '300', qty: '' });
-  assert.deepEqual(T.parseCommand('тн вэд 6403190000 150 000 200 пар'), { code: '6403190000', value: '150 000', weight: '', qty: '200' });
-  assert.deepEqual(T.parseCommand('/tnved@iomabot 6201400000 1 250 000 вес 300 кол 120'), { code: '6201400000', value: '1 250 000', weight: '300', qty: '120' });
-  assert.deepEqual(T.parseCommand('/tnved 6201.40.000.0 750000,50 ₽ 12.5 кг'), { code: '6201400000', value: '750000,50', weight: '12.5', qty: '' });
+  assert.deepEqual(T.parseCommand('/tnved 6201 40 000 0 500 000 300кг'), { code: '6201400000', value: '500 000', weight: '300', qty: '', currency: '' });
+  assert.deepEqual(T.parseCommand('тн вэд 6403190000 150 000 200 пар'), { code: '6403190000', value: '150 000', weight: '', qty: '200', currency: '' });
+  assert.deepEqual(T.parseCommand('/tnved@iomabot 6201400000 1 250 000 вес 300 кол 120'), { code: '6201400000', value: '1 250 000', weight: '300', qty: '120', currency: '' });
+  assert.deepEqual(T.parseCommand('/tnved 6201.40.000.0 750000,50 ₽ 12.5 кг'), { code: '6201400000', value: '750000,50', weight: '12.5', qty: '', currency: 'RUB' });
+  assert.deepEqual(T.parseCommand('/tnved 6201400000 800 USD 300кг'), { code: '6201400000', value: '800', weight: '300', qty: '', currency: 'USD' });
   assert.equal(T.parseCommand('/tnved').code, '');
 });
 

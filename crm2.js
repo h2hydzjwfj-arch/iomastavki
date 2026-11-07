@@ -207,6 +207,24 @@ function setup(app, ctx) {
     if (b.reset) { delete d.settings.ved; store.save(d); return res.json({ ok: true, settings: vedSettings() }); }
     d.settings.ved = s; store.save(d); res.json({ ok: true, settings: vedSettings() });
   });
+  // Таблица цен сертификации владельца (Наименование · Код ТН ВЭД (группа) · ТР ТС / документ · Стоимость Киргизия · Стоимость РФ · Образцы · Примечания)
+  const certPrices = () => db().settings.certPrices || [];
+  app.get('/api/cert-prices', admin, (req, res) => { const d = db(); res.json({ ok: true, items: certPrices(), at: d.settings.certPricesAt || '' }); });
+  if (upload) app.post('/api/cert-prices/import', admin, upload.single('file'), (req, res) => {
+    const f = req.file; if (!f) return bad(res, 'Выберите файл Excel (.xlsx)');
+    let rows; try { rows = require('./docparse').xlsxRows(f.buffer); } catch (e) { return bad(res, 'Не удалось прочитать Excel: ' + e.message); }
+    const head = (rows[0] || []).map(v => String(v || '').toLowerCase());
+    const col = (re, def) => { const i = head.findIndex(h => re.test(h)); return i >= 0 ? i : def; };
+    const ci = { name: col(/наимен/, 0), code: col(/код/, 1), doc: col(/тр\s*тс|документ/, 2), kg: col(/киргиз/, 3), ru: col(/рф|росси/, 4), samples: col(/образц/, 5), note: col(/примеч/, 6) };
+    const items = rows.slice(1).map(r => {
+      const g = k => str(r[ci[k]] == null ? '' : String(r[ci[k]]), 400).replace(/^—$/, '');
+      const codes = (g('code').match(/\d{2,10}/g) || []);
+      return { name: g('name'), codes, doc: g('doc'), priceKg: g('kg'), priceRu: g('ru'), samples: g('samples'), note: g('note') };
+    }).filter(x => x.name && x.codes.length);
+    if (!items.length) return bad(res, 'В таблице не нашлось строк с кодами ТН ВЭД (колонка «Код ТН ВЭД (группа)»)');
+    const d = db(); d.settings.certPrices = items.slice(0, 500); d.settings.certPricesAt = now(); store.save(d);
+    res.json({ ok: true, count: items.length, skipped: rows.length - 1 - items.length });
+  });
   app.get('/api/ved/rates', admin, async (req, res) => { const rt = await currentRates(); res.json({ ok: true, rates: rt.rates, date: rt.date || '' }); });
   app.post('/api/ved/quick', admin, async (req, res) => { const doc = docBody(req.body || {}, VED.newDoc((req.body || {}).calc_type || 'our_contract')); res.json(await docOut(doc)); });
   app.get('/api/calc', admin, (req, res) => {
@@ -600,7 +618,7 @@ function setup(app, ctx) {
     }
     return out;
   }
-  return { tnvedAffected, botContext, botLog, telegramMessage, telegramAccess, botFallback, vedSettings, mailAdd, classify, offOn: (name, date) => offOn(db(), name, date), siteBotEnabled: () => bot(db()).answerSite !== false };
+  return { tnvedAffected, botContext, botLog, telegramMessage, telegramAccess, botFallback, vedSettings, certPrices, mailAdd, classify, offOn: (name, date) => offOn(db(), name, date), siteBotEnabled: () => bot(db()).answerSite !== false };
 }
 
 module.exports = { setup, HOLIDAYS, expandCn, classify, SECRETS };

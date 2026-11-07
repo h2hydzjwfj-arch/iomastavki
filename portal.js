@@ -165,13 +165,17 @@ function setup(app, opts) {
   // Проверка кода ТН ВЭД по справочнику alta.ru: дерево позиции, пошлина с суммой в ₽, НДС и таможенный сбор.
   // Тот же расчёт, что в tools/tnved_check.py; на сайте — раздел «ТН ВЭД», в Telegram — команда /tnved.
   const TNV = require('./tnved-check');
-  const tnvedDeps = { rates: opts.rates || (async () => ({ rates: {} })), settings: () => crm2.vedSettings(), local: code => tnved.get(code) };
+  const tnvedDeps = { rates: opts.rates || (async () => ({ rates: {} })), settings: () => crm2.vedSettings(), local: code => tnved.get(code), certPrices: () => crm2.certPrices() };
+  // Проверка кода открыта всем (решение владельца): администратору — полный ответ с ценами сертификации,
+  // клиентам и гостям — с пометкой «данные примерные» и строже лимит
   const tnvedLimiter = rateLimit ? rateLimit({ windowMs: 10 * 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много проверок. Подождите несколько минут.' } }) : (q, s, n) => n();
+  const tnvedGuestLimiter = rateLimit ? rateLimit({ windowMs: 10 * 60 * 1000, max: 15, standardHeaders: true, legacyHeaders: false, skip: req => roleOf(req).role === 'admin', message: { ok: false, error: 'Слишком много проверок. Подождите несколько минут или войдите в кабинет.' } }) : (q, s, n) => n();
   const tnvedOut = r => ({ ok: true, code: r.code, report: r.report, url: r.url, levels: r.levels, duty: r.duty, dutyAmount: r.dutyCalc.amount == null ? null : Math.round(r.dutyCalc.amount),
-    dutyDetail: r.dutyCalc.detail, missing: r.dutyCalc.missing, vat: r.vat, excise: r.excise, value: r.value, fee: r.fee, feeSource: r.feeSource, radio: r.radio, ratesDate: r.ratesDate });
-  app.post('/api/tnved/check', admin, tnvedLimiter, async (req, res) => {
-    const b = req.body || {};
-    try { res.json(tnvedOut(await TNV.check({ code: b.code, value: b.value, weight: b.weight, qty: b.qty }, tnvedDeps))); }
+    dutyDetail: r.dutyCalc.detail, missing: r.dutyCalc.missing, vat: r.vat, vatRate: r.vatRate, vatAmount: r.vatAmount, excise: r.excise, value: r.value, fee: r.fee, feeSource: r.feeSource, radio: r.radio,
+    permits: r.permits, ratesDate: r.ratesDate });
+  app.post('/api/tnved/check', tnvedLimiter, tnvedGuestLimiter, async (req, res) => {
+    const b = req.body || {}; const isAdmin = roleOf(req).role === 'admin';
+    try { res.json(tnvedOut(await TNV.check({ code: b.code, value: b.value, currency: b.currency, freight: b.freight, weight: b.weight, qty: b.qty }, { ...tnvedDeps, forClient: !isAdmin }))); }
     catch (e) {
       if (e instanceof TNV.TnvedError) return res.status(e.status).json({ ok: false, error: e.message, kind: e.kind });
       console.error('tnved check', e.message); res.status(500).json({ ok: false, error: 'Не удалось проверить код. Попробуйте позже.' });
