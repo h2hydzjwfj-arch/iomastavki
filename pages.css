@@ -33,3 +33,7 @@ html:root body .directory-search{display:flex;align-items:center;gap:10px;margin
 html:root body .directory-search span{font-size:20px;opacity:.6}
 html:root body .directory-search input{flex:1;min-width:0;height:100%;border:0!important;background:transparent!important;color:inherit;font:inherit;font-size:15px;outline:none;box-shadow:none!important}
 body:not(.manual-dark):not(.night) .directory-search{border-color:rgba(10,18,48,.15);background:#fff}
+/* свой курсор — только на главной; на рабочих страницах обычный (решение владельца) */
+html:root body.view-open .ccur{display:none!important}
+html.has-ccur body.night.view-open{cursor:auto}
+html.has-ccur body.night.view-open :is(a,button,[role=button],label,summary,.k,.ncard-a){cursor:pointer}

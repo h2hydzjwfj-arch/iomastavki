@@ -402,7 +402,17 @@
     measure(); view.s = view.home.s; view.ox = view.home.ox; view.oy = view.home.oy; clamp(view);
     restore(); stepText(); drawRoute(); apply(); host.classList.add('mc-on');
   }
-  var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { var z = view.s / (view.home ? view.home.s : 1); measure(); var cx = (cw / 2 - view.ox) / view.s, cy = (area / 2 - view.oy) / view.s; var s = view.home.s * Math.max(1, z); setView({ s: s, ox: cw / 2 - cx * s, oy: area / 2 - cy * s }); }, 120); });
+  // Пересчёт размеров. Если карта была скрыта (страница открылась на другом разделе), её размер был 0 —
+  // тогда начинаем с исходного вида и заново рисуем маршрут, иначе сохраняем масштаб и центр.
+  function remeasure() {
+    var was = cw, z = view.s && view.home && view.home.s ? view.s / view.home.s : 1;
+    measure(); if (!cw) return;
+    if (!was || !isFinite(z) || !isFinite(view.ox) || !isFinite(view.oy)) { view.s = view.home.s; view.ox = view.home.ox; view.oy = view.home.oy; clamp(view); apply(); drawRoute(); return; }
+    var cx = (cw / 2 - view.ox) / view.s, cy = (area / 2 - view.oy) / view.s; var s = view.home.s * Math.max(1, z); setView({ s: s, ox: cw / 2 - cx * s, oy: area / 2 - cy * s }); drawRoute();
+  }
+  var rt, later = function () { clearTimeout(rt); rt = setTimeout(remeasure, 120); };
+  window.addEventListener('resize', later);
+  if (window.ResizeObserver) new ResizeObserver(later).observe(stage);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { apply(); });
   document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.lang')) setTimeout(function () { relabel(); stepText(); drawRoute(); if (last) drawRes(); }, 80); });
   if (document.readyState === 'complete') boot(); else window.addEventListener('load', boot);
