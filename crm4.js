@@ -90,6 +90,28 @@ function setup(app, ctx) {
       done: Array.isArray(b.done) ? b.done.map(v => str(v, 40)).filter(Boolean).slice(0, 60) : (prev.done || []), at: now() };
     store.save(d); res.json({ ok: true, etrn: x.etrn });
   });
+
+  // КП в кабинет клиента: менеджер отправляет готовый лист КП (без маржи и налогов) — клиент видит его в «Мои КП»
+  const kps = d => (d.clientKps = d.clientKps || []);
+  const brief = k => ({ id: k.id, dealId: k.dealId, number: k.number, title: k.title, createdAt: k.createdAt, total: k.total, currency: k.currency, rub: k.rub, route: k.route, cargo: k.cargo, valid: k.valid });
+  app.post('/api/deals/:id/kp-share', admin, (req, res) => {
+    const d = db(), x = dealOf(d, req.params.id); if (!x) return bad(res, 'Сделка не найдена', 404);
+    const uid = x.clientId; if (!uid || !(d.users || []).some(u => u.id === uid && u.role !== 'admin')) return bad(res, 'У сделки нет кабинета клиента — выберите клиента в поле «Кабинет клиента»');
+    const b = req.body || {}, html = String(b.html || '');
+    if (!/^<div class="kp">/.test(html) || html.length > 200000 || /<script|javascript:|\son\w+=/i.test(html)) return bad(res, 'Лист КП не распознан');
+    if (/Маржа|На налоги|marginFactor/i.test(html + String(b.text || ''))) return bad(res, 'В КП попали внутренние строки — отправка остановлена');
+    const k = { id: newId(5), dealId: x.id, uid, number: str(b.number, 40) || x.number || '', title: str(b.title, 80) || 'Коммерческое предложение', createdAt: now(), by: who(req),
+      total: n(b.total), currency: cur(b.currency || 'CNY'), rub: b.rub == null || b.rub === '' ? null : n(b.rub), route: str(b.route, 200), cargo: str(b.cargo, 200), valid: str(b.valid, 40), html, text: str(b.text, 8000) };
+    kps(d).unshift(k); d.clientKps = d.clientKps.slice(0, 5000);
+    x.activity = x.activity || []; x.activity.push({ id: newId(4), at: now(), type: 'kp', section: 'kp', by: who(req), text: 'КП отправлено в кабинет клиента: ' + Math.round(k.total).toLocaleString('ru-RU') + ' ' + k.currency });
+    store.save(d); res.json({ ok: true, item: brief(k) });
+  });
+  app.get('/api/deals/:id/kp-shared', admin, (req, res) => { const d = db(); res.json({ ok: true, items: kps(d).filter(k => k.dealId === req.params.id).map(brief) }); });
+  app.delete('/api/kp-shared/:id', admin, (req, res) => { const d = db(), i = kps(d).findIndex(k => k.id === req.params.id); if (i < 0) return bad(res, 'Не найдено', 404); d.clientKps.splice(i, 1); store.save(d); res.json({ ok: true }); });
+  if (ctx.need) {
+    app.get('/api/my/kps', ctx.need('client'), (req, res) => { const d = db(); res.json({ ok: true, items: kps(d).filter(k => k.uid === req.who.uid).slice(0, 200).map(brief) }); });
+    app.get('/api/my/kps/:id', ctx.need('client'), (req, res) => { const d = db(), k = kps(d).find(v => v.id === req.params.id && v.uid === req.who.uid); if (!k) return bad(res, 'Не найдено', 404); res.json({ ok: true, item: { ...brief(k), html: k.html, text: k.text } }); });
+  }
   return {};
 }
 module.exports = { setup };

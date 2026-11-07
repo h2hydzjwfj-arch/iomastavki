@@ -51,7 +51,7 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       const q = await call('g', 'POST', '/api/quotes', { from: 'Иу', to: 'Москва', weight: 400, kind: 'ltl_auto' }); ok(q.ok && q.quote.price === j.options.find(o => o.kind === 'ltl_auto').price, 'цена КП не совпала с расчётом');
       const big = await call('g', 'POST', '/api/estimate', { from: 'Shanghai', to: 'Москва', weight: 20000, volume: 60 }); ok(big.options.some(o => o.kind === 'fcl_rail'), 'нет контейнера для 20 т');
     });
-    await check('Статьи для поисковиков и sitemap', async () => { const r = await fetch(B + '/stati/sbornyj-gruz-iz-kitaya'); ok(r.status === 200); ok((await r.text()).includes('<h1>')); const sm = await (await fetch(B + '/sitemap.xml')).text(); ok(sm.includes('/stati/dostavka-cherez-zabaikalsk') && sm.includes('/novosti'), 'нет статей в sitemap'); });
+    await check('Статьи для поисковиков и sitemap', async () => { const r = await fetch(B + '/stati/sbornyj-gruz-iz-kitaya'); ok(r.status === 200); ok((await r.text()).includes('<h1>')); const sm = await (await fetch(B + '/sitemap.xml')).text(); ok(sm.includes('/stati/dostavka-cherez-zabaikalsk') && sm.includes('/novosti') && sm.includes('/raschet</loc>') && sm.includes('/tnved</loc>'), 'нет статей или разделов в sitemap'); ok(!sm.includes('/rabota') && !sm.includes('/kabinet'), 'закрытые разделы в sitemap'); });
     await check('Гость: заявка без контактов отклоняется', async () => ok((await call('g', 'POST', '/api/leads', { name: 'Тест' }))._status === 400));
     await check('Гость: заявка принимается', async () => ok((await call('g', 'POST', '/api/leads', { name: 'Тест CI', contact: '@test', from: 'Шанхай', to: 'Москва', consent: true })).ok));
     await check('Новости: /api/news отвечает', async () => { const j = await call('g', 'GET', '/api/news'); ok(j._status === 200, 'код ' + j._status); ok(Array.isArray(j.items), 'нет списка'); });
@@ -114,6 +114,17 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
     await check('Клиент: КП сохраняется в «Мои КП»', async () => {
       const j = await call('c', 'POST', '/api/quotes', { from: 'Shanghai', to: 'Москва', mode: 'rail', weight: 500 }); ok(j.ok); cq = j.quote;
       ok((await call('c', 'GET', '/api/my/quotes')).items.some(q => q.id === cq.id));
+    });
+    await check('КП от менеджера появляется в кабинете клиента, внутренние строки не уходят', async () => {
+      const dl = await call('a', 'POST', '/api/deals', { title: 'КП в кабинет CI', clientId: cl.id }); ok(dl.ok, JSON.stringify(dl).slice(0, 160));
+      const html = '<div class="kp"><div class="kp-hero"><div class="kp-sum">151 652 <small>¥</small></div></div></div>';
+      ok((await call('a', 'POST', '/api/deals/' + dl.item.id + '/kp-share', { html: html + '<p>Маржа</p>', total: 151652, currency: 'CNY' }))._status === 400, 'маржа ушла клиенту');
+      ok((await call('a', 'POST', '/api/deals/' + dl.item.id + '/kp-share', { html: '<div class="kp"><img src=x onerror=alert(1)></div>', total: 1, currency: 'CNY' }))._status === 400, 'принят лист со скриптом');
+      const sh = await call('a', 'POST', '/api/deals/' + dl.item.id + '/kp-share', { html, text: 'КП', total: 151652, currency: 'CNY', rub: 1754000, route: 'Гуанчжоу → Москва' }); ok(sh.ok, JSON.stringify(sh).slice(0, 160));
+      const mine = await call('c', 'GET', '/api/my/kps'); ok(mine.items.length === 1 && mine.items[0].total === 151652, JSON.stringify(mine).slice(0, 200));
+      const one = await call('c', 'GET', '/api/my/kps/' + mine.items[0].id); ok(one.item.html === html);
+      ok((await call('g', 'GET', '/api/my/kps'))._status === 401, 'гостю открыты КП клиентов');
+      ok((await call('c', 'POST', '/api/deals/' + dl.item.id + '/kp-share', { html, total: 1 }))._status === 403, 'клиент отправляет КП');
     });
     await check('Админ: видит КП клиента с агентом', async () => { const j = await call('a', 'GET', '/api/quotes'); const q = j.items.find(x => x.id === cq.id); ok(q && q.ownerName === 'Клиент CI' && q.company); });
     await check('Клиент: смена пароля', async () => {
