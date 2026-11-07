@@ -307,3 +307,19 @@ test('прежнее название воронки заменяется на �
   assert.ok(!m.body.funnels.includes(old)); assert.ok(m.body.funnels.includes('Наш контракт')); assert.deepEqual(m.body.pipelines['Наш контракт'], ['Расчёт', 'КП', 'Успешно']);
   assert.equal((await app.call('GET', '/api/deals/a1')).body.item.funnel, 'Наш контракт');
 });
+
+test('«Изменить данные»: только с причиной, в пределах, с историей; расчёт берёт новые значения', async () => {
+  const { call } = setupAll();
+  const g = (await call('GET', '/api/contract/settings')).body; assert.equal(g.fields.find(f => f.key === 'tdPct').value, 4); assert.equal(g.fields.find(f => f.key === 'declarant.ecp').def, 25000);
+  assert.equal((await call('PUT', '/api/contract/settings', { values: { 'declarant.ecp': 27000 } })).status, 400); // без причины
+  assert.equal((await call('PUT', '/api/contract/settings', { values: { tdPct: 50 }, reason: 'тест' })).status, 400); // вне пределов
+  const p = await call('PUT', '/api/contract/settings', { values: { 'declarant.ecp': 27000, 'payPct.cbr': 5.5, tdPct: 4 }, reason: 'Новый тариф декларанта' });
+  assert.ok(p.body.ok); assert.equal(p.body.changes.length, 2);
+  const g2 = (await call('GET', '/api/contract/settings')).body; assert.equal(g2.history[0].reason, 'Новый тариф декларанта'); assert.ok(g2.fields.find(f => f.key === 'declarant.ecp').changed);
+  const x = (await call('POST', '/api/deals', { title: 'Тест' })).body.item; const c = (await call('POST', '/api/calc', { dealId: x.id, calc_type: 'our_contract' })).body;
+  await call('PATCH', '/api/calc/' + c.id, { items: [{ name: 'Товар', tnved_code: '8458110000', invoice_currency: 'CNY', invoice_amount: 10000, weight: 100, duty_type: 'percent', duty_rate: 0, vat_rate: 22, auto_lookup: false }] });
+  const o = (await call('GET', '/api/calc/' + c.id)).body;
+  assert.equal(o.contract.declarant.rub, 27000); assert.equal(o.contract.payPct, 5.5); assert.equal(o.contract.paymentNote, 'по курсу ЦБ + 5,5%'); assert.equal(o.cset.declarant.ecp, 27000);
+  assert.equal((await call('PUT', '/api/contract/settings', { values: { 'declarant.ecp': 27000 }, reason: 'то же' })).status, 400); // ничего не изменилось
+  await call('PUT', '/api/contract/settings', { values: { 'declarant.ecp': '' }, reason: 'вернуть' }); assert.equal((await call('GET', '/api/calc/' + c.id)).body.contract.declarant.rub, 25000);
+});

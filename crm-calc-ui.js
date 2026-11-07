@@ -37,7 +37,7 @@
   Calc.prototype.open = function (id) {
     var self = this; self.curId = id;
     return api('/api/calc/' + id).then(function (r) {
-      self.doc = r.doc; self.rates = r.rates || {}; self.rateDate = r.rateDate; self.result = r.result;
+      self.doc = r.doc; self.rates = r.rates || {}; self.rateDate = r.rateDate; self.result = r.result; self.cset = r.cset || {};
       var d = self.doc, pr = (d.extra_costs || []).filter(function (e) { return e.is_percent_of_invoice; })[0];
       if (self.isContract() && pr) { if (!d.payment) d.payment = +pr.amount === 3 ? 'bank' : 'cbr'; d.extra_costs = d.extra_costs.filter(function (e) { return !e.is_percent_of_invoice; }); self.dirty = true; }
       self.render(); if (self.dirty) self.persist();
@@ -48,7 +48,7 @@
   Calc.prototype.calc = function () {
     this.result = V.calcDoc(this.doc, { rates: this.rates, rateDate: this.rateDate, settings: this.settings });
     var s = this.settings || {};
-    this.contract = this.isContract() ? KC.calc(KC.fromVedDoc(this.doc, this.rates), { rates: this.rates, rateDate: this.rateDate, settings: { feeScale: s.feeScale, radioFee: s.radioFee, taxPct: s.taxOnExpensesPct } }) : null;
+    this.contract = this.isContract() ? KC.calc(KC.fromVedDoc(this.doc, this.rates), { rates: this.rates, rateDate: this.rateDate, settings: Object.assign({}, this.cset || {}, { feeScale: s.feeScale, radioFee: s.radioFee, taxPct: s.taxOnExpensesPct }) }) : null;
     return this.result;
   };
   function cur(sel, attr) { return '<select class="cv-cur" ' + attr + '>' + CURS.map(function (c) { return '<option' + (c === sel ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select>'; }
@@ -125,8 +125,9 @@
     var sel = function (key, opts) { return '<select class="cv-sel" data-d="' + key + '">' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (String(d[key] || opts[0][0]) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>'; };
     var txt = function (key, ph, w) { return '<input class="cv-txt" data-d="' + key + '" value="' + esc(d[key] || '') + '" placeholder="' + esc(ph) + '" style="width:' + (w || '180px') + '">'; };
     var h = '<div class="cv-ct">Условия расчёта</div><div class="cv-row">';
-    if (our) h += fld('Оплата инвойса', sel('payment', [['cbr', 'по курсу ЦБ + 6%'], ['bank', 'по внутреннему курсу банка + 3%']]))
-      + fld('Оплата поставщику', '<select class="cv-sel" data-d="td"><option value=""' + (d.td ? '' : ' selected') + '>напрямую, ВТБ Шанхай</option><option value="1"' + (d.td ? ' selected' : '') + '>через торговый дом (+4%)</option></select>');
+    var cs = this.cset || {}, pp = Object.assign({}, KC ? KC.DEFAULTS.payPct : { cbr: 6, bank: 3 }, cs.payPct || {}), tdp = cs.tdPct != null ? cs.tdPct : (KC ? KC.DEFAULTS.tdPct : 4), pc = function (v) { return String(v).replace('.', ','); };
+    if (our) h += fld('Оплата инвойса', sel('payment', [['cbr', 'по курсу ЦБ + ' + pc(pp.cbr) + '%'], ['bank', 'по внутреннему курсу банка + ' + pc(pp.bank) + '%']]))
+      + fld('Оплата поставщику', '<select class="cv-sel" data-d="td"><option value=""' + (d.td ? '' : ' selected') + '>напрямую, ВТБ Шанхай</option><option value="1"' + (d.td ? ' selected' : '') + '>через торговый дом (+' + pc(tdp) + '%)</option></select>');
     h += fld('Страхование, % инвойса', numIn('data-d="insurance_pct" data-null="1"', d.insurance_pct, our ? '0.15' : '0', '80px'))
       + fld('Декларант', sel('declarant', our ? [['ecp', 'с ЭЦП клиента'], ['broker', 'под печать брокера'], ['none', 'без декларанта']] : [['none', 'без декларанта'], ['ecp', 'с ЭЦП клиента'], ['broker', 'под печать брокера']]))
       + fld('Декларант, ₽', numIn('data-d="declarant_rub" data-null="1"', d.declarant_rub, 'авто', '110px'));

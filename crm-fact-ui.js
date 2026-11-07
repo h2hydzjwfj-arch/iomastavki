@@ -188,6 +188,30 @@
   });
   K.on('wallet', wallet);
 
+  /* ================= «Изменить данные» (Настройки) ================= */
+  // значения, заблокированные в расчёте контракта: меняет только администратор, с причиной; всё пишется в историю
+  function locked() {
+    var box = $('#cxLocked'); if (!box) return; box.innerHTML = '<p class="cx-load">Загружаю…</p>';
+    api('/api/contract/settings').then(function (r) {
+      var grp = function (t, keys) { return '<section class="fx-card"><h4>' + t + '</h4><div class="fx-grid">' + r.fields.filter(function (f) { return keys.test(f.key); }).map(function (f) {
+        return '<label class="cx-f"><span>' + esc(f.label) + (f.changed ? ' <em class="cx-tag amb">изменено</em>' : '') + '</span><input data-lk="' + esc(f.key) + '" inputmode="decimal" value="' + esc(f.value) + '" placeholder="' + esc(f.def) + '"><small class="cx-mut">по умолчанию ' + esc(String(f.def).replace('.', ',')) + '</small></label>'; }).join('') + '</div></section>'; };
+      box.innerHTML = '<div class="fx"><div class="cx-ph"><div><h2>Изменить данные</h2><p class="cx-mut">Значения, которые в расчёте контракта заблокированы для правки. Меняет только администратор, с причиной — каждое изменение остаётся в истории. Пошлина и НДС берутся по коду ТН ВЭД, курсы — ЦБ; шкала сборов, особый сбор и налог на расходы — в «Калькулятор ВЭД» → «Настройки расчёта».</p></div></div>'
+        + '<div class="fx-main">' + grp('Оплата и проценты', /^(tdPct|payPct|insurancePct|marginFactor|rubCushion)/) + grp('Декларант и Честный знак', /^declarant/) + grp('Контракт клиента: наценки', /^clientMarkups/)
+        + '<section class="fx-card"><h4>Таможенный сбор</h4><div class="cx-seg" data-fb><button type="button" data-v="invoice"' + (r.feeBase === 'invoice' ? ' class="on"' : '') + '>от стоимости товара</button><button type="button" data-v="cv"' + (r.feeBase === 'cv' ? ' class="on"' : '') + '>от таможенной стоимости</button></div></section>'
+        + '<section class="fx-card"><label class="cx-f"><span>Причина изменения (обязательно)</span><input data-reason placeholder="Например: банк поднял комиссию до 3,5%"></label><div class="fx-hb"><button type="button" class="cx-btn primary" data-lsave>Сохранить изменения</button></div></section>'
+        + (r.history.length ? '<section class="fx-card"><h4>История изменений</h4>' + r.history.map(function (h) { return '<div class="lk-h"><small class="cx-mut">' + K.dt(h.at) + ' · ' + esc(h.by || '') + '</small><b>' + esc(h.reason) + '</b><ul>' + h.changes.map(function (c) { return '<li>' + esc(c.label) + ': ' + esc(String(c.from)) + ' → <b>' + esc(String(c.to)) + '</b></li>'; }).join('') + '</ul></div>'; }).join('') + '</section>' : '')
+        + '</div></div>';
+      var fb = r.feeBase;
+      box.onclick = function (e) {
+        var b = e.target.closest('[data-fb] [data-v]'); if (b) { fb = b.dataset.v; $$('[data-fb] button', box).forEach(function (x) { x.classList.toggle('on', x === b); }); return; }
+        var sv = e.target.closest('[data-lsave]'); if (!sv) return;
+        var values = {}; $$('[data-lk]', box).forEach(function (i) { values[i.dataset.lk] = i.value.trim().replace(',', '.'); });
+        K.guard(sv, function () { return api('/api/contract/settings', { method: 'PUT', body: { values: values, feeBase: fb, reason: $('[data-reason]', box).value } }).then(function (o) { toast('Сохранено: изменений ' + o.changes.length + '. Новые значения — в расчётах при открытии; отправленные КП не меняются.'); locked(); }); });
+      };
+    }).catch(function (e) { box.innerHTML = '<p class="v3p-err">' + esc(e.message) + '</p>'; });
+  }
+  K.on('locked', locked);
+
   var facts = new WeakMap();
   window.IOMA_FACT_UI = { mount: function (el, deal) { var f = facts.get(el); if (!f || f.deal.id !== deal.id) { f = new Fact(el, deal); facts.set(el, f); } f.deal = deal; return f.load(); } };
   var etrns = new WeakMap();

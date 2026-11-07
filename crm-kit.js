@@ -77,7 +77,7 @@
     if (!noLoad) load(tab);
   }
   // «Настройки»: компания, отгулы, праздники, почта, ИИ-бот, безопасность, журнал — одна строка меню и вкладки сверху
-  var SETTINGS = ['company', 'timeoff', 'holidays', 'mail', 'bot', 'security', 'journal'];
+  var SETTINGS = ['company', 'locked', 'timeoff', 'holidays', 'mail', 'bot', 'security', 'journal'];
   function lastSet() { try { var v = localStorage.getItem('iomaSetTab'); return SETTINGS.indexOf(v) >= 0 ? v : 'company'; } catch (e) { return 'company'; } }
   function markSettings(tab) {
     var isSet = SETTINGS.indexOf(tab) >= 0, chip = $('#workView .cx-nav [data-tab="settings"]'), bar = $('#cxSetBar');

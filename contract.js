@@ -253,7 +253,7 @@
       ok: !missing.length, mode: mode, currency: cur, sign: CUR_SIGN[cur] || cur, rate: rate, rubRate: rubRate, rateDate: ctx.rateDate || '',
       lines: lines, items: outItems, sum: sum, total: total,
       totalRub: pay === 'cbr' && mode === 'our' && cur !== 'RUB' ? Math.round(total * rate) : null,
-      payment: pay, paymentNote: mode === 'our' ? PAY_NOTE[pay] : '', tdPct: tdPct, payPct: payPct,
+      payment: pay, paymentNote: mode === 'our' ? PAY_NOTE[pay].replace(/\d+(?:[.,]\d+)?%$/, String(payPct).replace('.', ',') + '%') : '', tdPct: tdPct, payPct: payPct,
       margin: margin, marginAuto: marginAuto, profit: r2(margin + markupSum), taxes: taxes, taxPct: taxPct,
       invoice: r2(invoice), freight: r2(freightCur), freightInCVRub: r2(freightInCV), borderShare: share,
       totalGross: totalGross, freightPerKg: totalGross ? round(freightCur / totalGross, 4) : null,
