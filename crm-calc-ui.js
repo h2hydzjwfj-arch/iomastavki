@@ -255,8 +255,13 @@
       var k = self.calc() && self.contract; if (!k || !k.ok) return toast('Расчёт не готов: ' + (k ? k.missing.join('; ') : ''), 'err');
       var text = self.kpText(k), html = self.kpHtml(k);
       var md = K.modal('КП для клиента', '<p class="cx-mut">Без маржи, налогов и комиссий — итог, груз, маршрут, сроки и что входит в стоимость.</p><div class="kp-wrap">' + html + '</div>'
-        + '<div class="cv-setb"><button type="button" class="cx-btn" data-copy>Скопировать текстом</button><button type="button" class="cx-btn primary" data-pdf>Скачать PDF</button></div>', false, { wide: true });
+        + '<div class="cv-setb"><button type="button" class="cx-btn" data-copy>Скопировать текстом</button>' + (self.deal && self.deal.clientId ? '<button type="button" class="cx-btn" data-share title="Клиент увидит этот лист в личном кабинете, в «Мои КП»">В кабинет клиента</button>' : '') + '<button type="button" class="cx-btn primary" data-pdf>Скачать PDF</button></div>'
+        + (self.deal && !self.deal.clientId ? '<p class="cx-mut cx-small">Чтобы КП появилось в личном кабинете клиента, выберите клиента в поле «Кабинет клиента» в карточке сделки.</p>' : ''), false, { wide: true });
       $('[data-pdf]', md.el).addEventListener('click', function () { printKp(html); });
+      var sh = $('[data-share]', md.el); if (sh) sh.addEventListener('click', function () {
+        var D = self.kpData(k);
+        K.guard(sh, function () { return api('/api/deals/' + encodeURIComponent(self.opts.dealId) + '/kp-share', { method: 'POST', body: { html: html, text: text, number: D.number, title: D.title, total: D.total, currency: D.currency, rub: D.rub, route: [D.from, D.to].filter(Boolean).join(' → '), cargo: D.cargo, valid: D.valid } }).then(function () { toast('КП отправлено в кабинет клиента'); sh.textContent = 'Отправлено ✓'; }); });
+      });
       $('[data-copy]', md.el).addEventListener('click', function () { (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).catch(function () { var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }).then(function () { toast('Текст КП скопирован'); }); });
     });
   };
@@ -405,6 +410,7 @@
   K.on('ved', loadPage);
 
   var mounted = new WeakMap();
+  window.IOMA_KP_PRINT = printKp;
   window.IOMA_CALC = {
     mount: function (el, opts) { var c = mounted.get(el); if (!c || c.opts.dealId !== opts.dealId) { c = new Calc(el, opts); mounted.set(el, c); } c.opts = opts; c.settings = null; if (opts.openId) c.curId = opts.openId; return c.load(opts.openId); },
     Calc: Calc,

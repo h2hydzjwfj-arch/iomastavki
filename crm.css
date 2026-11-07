@@ -815,3 +815,9 @@ html:root body .cx-ov input[type=checkbox],html:root body #workView input[type=c
 @container cxmain (max-width:760px){.wl-t .cx-tr{grid-template-columns:minmax(0,1fr) auto auto}.wl-t .cx-tr>span:nth-child(3){display:none}}
 .wl-months{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-top:8px}
 .wl-months>div{display:flex;justify-content:space-between;padding:10px 14px;border-radius:12px;background:var(--v-field);font-size:14px}
+
+/* КП от менеджера в кабинете клиента */
+.v3p-kph{margin:6px 0 4px;font-size:15px;font-weight:700}
+.v3p-kprow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center}
+.v3p-kpsum{text-align:right}.v3p-kpsum b{display:block;font-size:17px}.v3p-kpsum small{color:var(--v-mut);font-size:12.5px}
+@media (max-width:560px){.v3p-kprow{grid-template-columns:1fr auto}.v3p-kprow>button{grid-column:1/-1}}
