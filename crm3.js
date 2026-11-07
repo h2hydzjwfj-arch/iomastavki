@@ -265,8 +265,19 @@ function setup(app, ctx) {
     const j = JSON.parse(String(out).replace(/^```(?:json)?|```$/g, '').trim());
     return { rates: Array.isArray(j.rates) ? j.rates : [], questions: Array.isArray(j.questions) ? j.questions.map(q => str(q, 300)).filter(Boolean).slice(0, 8) : [] };
   }
-  app.post('/api/rq/:rid/replies', admin, async (req, res) => {
-    const b = req.body || {}, text = String(b.text || '').trim().slice(0, 20000); if (!text) return bad(res, 'Вставьте текст ответа агента');
+  // текст КП агента из файла: Excel, Word, текст (PDF и картинки — только через ИИ, поэтому просим вставить текст)
+  function fileText(f) {
+    if (!f || !f.buffer) return '';
+    const name = Buffer.from(f.originalname || '', 'latin1').toString('utf8').toLowerCase(), dp = require('./docparse');
+    if (/\.(xlsx|xlsm)$/.test(name)) return dp.xlsxText(f.buffer);
+    if (/\.docx$/.test(name)) return dp.docxText(f.buffer);
+    if (/\.(txt|csv|eml)$/.test(name)) return f.buffer.toString('utf8');
+    const e = new Error('Этот файл пока не читается: загрузите Excel, Word или текст — или скопируйте текст КП в поле'); e.status = 400; throw e;
+  }
+  app.post('/api/rq/:rid/replies', admin, upload ? upload.single('file') : (q, r, nx) => nx(), async (req, res) => {
+    const b = req.body || {}; let fromFile = '';
+    try { fromFile = fileText(req.file); } catch (e) { return bad(res, e.message); }
+    const text = [String(b.text || '').trim(), String(fromFile || '').trim()].filter(Boolean).join('\n\n').slice(0, 20000); if (!text) return bad(res, 'Вставьте текст ответа агента или загрузите файл');
     const d0 = db(), r0 = d0.rq.find(r => r.id === req.params.rid); if (!r0) return bad(res, 'Запрос не найден', 404);
     const item = r0.items.find(i => i.id === b.itemId); const agent = item ? item.agent : str(b.agent, 160) || senderOf(text).company || 'Агент';
     let parsed = null, ai = 'none';

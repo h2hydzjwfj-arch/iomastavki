@@ -77,12 +77,13 @@
   function replyModal(rqId, itemId) {
     var reqs = V.requests, opts = [];
     reqs.forEach(function (q) { q.items.forEach(function (it) { opts.push('<option value="' + q.id + '|' + it.id + '"' + (it.id === itemId ? ' selected' : '') + '>' + esc(it.agent) + ' — ' + esc(q.id) + '</option>'); }); });
-    var md = K.modal('Ответ агента', '<label class="cx-f"><span>Агент</span><select data-w>' + opts.join('') + '</select></label><label class="cx-f"><span>Текст ответа (из почты, WeChat, Telegram)</span><textarea data-t rows="10" placeholder="Вставьте ответ целиком — ставки и вопросы найдутся сами"></textarea></label>', '<button type="button" class="cx-btn ghost" data-cx="close">Отмена</button><button type="button" class="cx-btn primary" data-go>Разобрать ответ</button>');
+    var md = K.modal('Ответ агента', '<label class="cx-f"><span>Агент</span><select data-w>' + opts.join('') + '</select></label><label class="cx-f"><span>Текст ответа (из почты, WeChat, Telegram)</span><textarea data-t rows="10" placeholder="Вставьте ответ целиком — ставки, срок действия, кто прислал и вопросы найдутся сами"></textarea></label><label class="cx-f"><span>или файл КП агента — Excel, Word, текст</span><input type="file" data-f accept=".xlsx,.xlsm,.docx,.txt,.csv,.eml"></label>', '<button type="button" class="cx-btn ghost" data-cx="close">Отмена</button><button type="button" class="cx-btn primary" data-go>Разобрать ответ</button>');
     var el = md.el;
     $('[data-go]', el).addEventListener('click', function () {
-      var w = $('[data-w]', el).value.split('|'), t = $('[data-t]', el).value.trim(); if (!t) return toast('Вставьте текст ответа', 'err');
+      var w = $('[data-w]', el).value.split('|'), t = $('[data-t]', el).value.trim(), f = $('[data-f]', el).files[0]; if (!t && !f) return toast('Вставьте текст ответа или выберите файл', 'err');
       var b = this; b.disabled = true; b.textContent = 'Разбираю…';
-      api('/api/rq/' + w[0] + '/replies', { method: 'POST', body: { itemId: w[1], text: t } }).then(function (r) { md.close(); toast(r.rates.length ? 'Найдено ставок: ' + r.rates.length + ' — проверьте и подтвердите' : 'Ставок в ответе не нашлось — добавьте вручную', r.rates.length ? '' : 'err'); load(); })
+      var body = { itemId: w[1], text: t }; if (f) { body = new FormData(); body.append('itemId', w[1]); body.append('text', t); body.append('file', f); }
+      api('/api/rq/' + w[0] + '/replies', { method: 'POST', body: body }).then(function (r) { md.close(); toast(r.rates.length ? 'Найдено ставок: ' + r.rates.length + ' — проверьте и подтвердите' : 'Ставок в ответе не нашлось — добавьте вручную', r.rates.length ? '' : 'err'); load(); })
         .catch(function (e) { b.disabled = false; b.textContent = 'Разобрать ответ'; toast(e.message, 'err'); });
     });
   }

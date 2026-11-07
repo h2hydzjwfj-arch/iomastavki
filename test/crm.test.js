@@ -338,3 +338,15 @@ test('история расчёта: кто, когда, что было и чт
   const h2 = (await call('GET', '/api/calc/' + c.id + '/history')).body; assert.ok(!h2.items[0].changes.some(x => x.key === 'freight_total'));
   await call('PATCH', '/api/calc/' + c.id, { name: 'Только название' }); assert.equal((await call('GET', '/api/calc/' + c.id + '/history')).body.items[0].changes.length, h2.items[0].changes.length);
 });
+
+test('КП агента файлом: текст из файла разбирается так же, PDF просим текстом', async () => {
+  const { call } = setupAll();
+  const deal = (await call('POST', '/api/deals', { title: 'Файл', from: 'Нинбо', to: 'Москва', mode: 'sea', weight: 5000 })).body.item;
+  const ag = (await call('GET', '/api/crm/agents')).body.items.filter(a => a.company === 'Multiwell').map(a => a.id);
+  const rq = (await call('POST', '/api/deals/' + deal.id + '/rq', { agentIds: ag, subject: 'Ставка', text: 'Просим' })).body.request;
+  const txt = 'Sea Ningbo - Moscow: USD 3 650 / 40HQ, transit 40 days, valid till 30.12.2099.\nBest regards,\nAnna Chen\nOcean Star Logistics Co., Ltd\nanna@oceanstar.example';
+  const r = await call('POST', '/api/rq/' + rq.id + '/replies', { itemId: rq.items[0].id }, { file: { originalname: 'kp.txt', buffer: Buffer.from(txt) } });
+  assert.ok(r.body.ok); assert.equal(r.body.rates[0].amount, 3650); assert.equal(r.body.rates[0].validUntil, '2099-12-30'); assert.match(r.body.rates[0].contact, /Anna Chen · anna@oceanstar.example/);
+  const p = await call('POST', '/api/rq/' + rq.id + '/replies', { itemId: rq.items[0].id }, { file: { originalname: 'kp.pdf', buffer: Buffer.from('%PDF-1.4') } });
+  assert.equal(p.status, 400); assert.match(p.body.error, /скопируйте текст/);
+});
