@@ -92,3 +92,15 @@ html:root body .am-form input:focus{border-color:var(--ui-o2);box-shadow:0 0 0 3
 .am-pw{margin-top:16px;padding-top:14px;border-top:1px solid var(--v-bd,rgba(10,18,48,.08))}
 .am-pw summary{cursor:pointer;font-weight:600;margin-bottom:12px;width:max-content}
 @media (max-width:560px){.am-two{grid-template-columns:1fr}}
+
+/* ---------- единый вид: загрузка файлов, главные кнопки, ТН ВЭД ---------- */
+html:root body .view-layer .v3-drop.v3p-drop{background:var(--v-field,#F2ECE5)!important;border:2px dashed color-mix(in srgb,var(--ui-o2) 42%,transparent)!important;color:var(--v-ink)!important;box-shadow:none!important;border-radius:18px!important}
+html:root body .view-layer .v3-drop.v3p-drop:hover{border-color:var(--ui-o2)!important;transform:none}
+html:root body .view-layer .v3-drop.v3p-drop b{color:var(--v-ink)!important}
+html:root body .view-layer .v3-drop.v3p-drop small{color:var(--v-mut)!important}
+html:root body .view-layer .v3-drop.v3p-drop .ic{stroke:var(--ui-o2)!important}
+body.manual-dark .view-layer .v3-drop.v3p-drop{background:rgba(246,241,234,.04)!important}
+html:root body .view-layer button.calculate:not(.v3p-sm),html:root body .view-layer .customs-shell button[type=submit]{font-size:16px!important;font-weight:600!important;letter-spacing:0!important}
+html:root body .customs-head .eyebrow{color:#F2A26B!important;letter-spacing:.14em}
+html:root body .customs-shell .ui-sel{background:rgba(246,241,234,.06);color:#F6F1EA;border-color:rgba(246,241,234,.16)}
+html:root body .customs-shell .ui-sel .ui-sel-v{color:#F6F1EA}
