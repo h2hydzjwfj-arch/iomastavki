@@ -70,6 +70,7 @@
     body += '<div class="cv-card"><div class="cv-ct">Доп. расходы' + (cargo ? ' <small>терминал в РФ и пр. — по факту</small>' : '') + '</div><div data-part="extras">' + self.extrasHtml() + '</div><div class="cv-extot" data-r="extot"></div><div class="cv-add"><input data-c2="newextra" placeholder="Название новой статьи расхода…"><button type="button" class="cx-btn sm" data-c="addextra">+ Добавить</button></div></div>';
     if (no && self.opts.dealId) body += '<div class="cv-card"><div class="cv-ct">Комментарий к расчёту</div><div data-part="notes"></div><div class="cv-add"><input data-c2="note" placeholder="Комментарий к расчёту…"><button type="button" class="cx-btn sm" data-c="addnote">Отправить</button></div></div>';
     self.root.innerHTML = '<div class="cv-tabs">' + tabs + '<span class="cv-addb">' + self.addButtons() + '</span></div><div class="cv-layout"><div class="cv-main">' + head + body + '</div><aside class="cv-aside"><div class="cv-card cv-res"><div class="cv-ct">Итого</div><div data-r="result"></div>'
+      + (self.isContract() ? '<button type="button" class="cx-btn primary sm cv-kpb" data-c="kp">Текст КП для клиента</button>' : '')
       + (self.opts.dealId ? '<button type="button" class="cx-btn sm" data-c="tofin" title="Добавит статьи расходов во вкладку «Финансы»">→ В финансы сделки</button>' : '') + '<small class="cv-rates">' + self.ratesLine() + '</small></div></aside></div>';
     self.bindTop(); self.bind(); self.paint();
     if (no && self.opts.dealId) self.notes();
@@ -159,9 +160,10 @@
       + (cc !== 'RUB' ? '<small class="cv-sub">ЦБ' + (k.rateDate ? ' на ' + esc(k.rateDate) : '') + ': 1 ' + cc + ' = ' + K.num(k.rate) + ' ₽; рублёвые строки — по ' + K.num(k.rubRate) + ' ₽</small>' : '')
       + (k.items.length > 1 && k.freightPerKg != null ? '<small class="cv-sub">Фрахт за кг брутто: ' + K.num(k.freightPerKg) + ' ' + cc + ' (' + K.num(k.totalGross) + ' кг)</small>' : '')
       + '<small class="cv-sub">' + (k.customs.inTotal ? 'На таможне' : 'Таможня справочно (платит клиент)') + ': ТС ' + K.money(k.customs.cvRub, 'RUB') + ' · пошлина ' + K.money(k.customs.dutyRub, 'RUB') + ' · НДС ' + K.money(k.customs.vatRub, 'RUB') + ' · сбор ' + K.money(k.customs.feeRub, 'RUB') + ' = <b>' + K.money(k.customs.paymentsRub, 'RUB') + '</b></small>'
-      + '<small class="cv-sub">Прибыль' + lock + ': ' + f(k.profit) + (k.ratio != null ? ' · сверх инвойса ' + K.num(Math.round(k.ratio * 1000) / 10) + '%' : '') + '</small>'
-      + '<button type="button" class="cx-btn primary sm" data-c="kp"' + (k.ok ? '' : ' disabled title="Сначала заполните то, чего не хватает"') + '>Текст КП для клиента</button>';
+      + '<small class="cv-sub">Прибыль' + lock + ': ' + f(k.profit) + (k.ratio != null ? ' · сверх инвойса ' + K.num(Math.round(k.ratio * 1000) / 10) + '%' : '') + '</small>';
     var box = $('[data-r=result]', R); if (box) box.innerHTML = h;
+    // кнопка КП живёт вне перерисовываемого итога: иначе клик после ввода суммы терялся (поле теряет фокус → итог перерисован → кнопка заменена)
+    var kb = $('[data-c=kp]', R); if (kb) { kb.disabled = !k.ok; kb.title = k.ok ? '' : 'Сначала заполните то, чего не хватает'; }
   };
   function fmtInt(v) { return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
   Calc.prototype.kpText = function (k) {
