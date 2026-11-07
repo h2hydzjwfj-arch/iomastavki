@@ -693,3 +693,10 @@ html:root body .cx-ov input[type=checkbox],html:root body #workView input[type=c
 /* отгулы: на узкой области — сотрудник, период, статус, действия */
 @container cxmain (max-width:760px){.cx-totable .cx-tr{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr) auto;min-width:0}}
 #cxVed .cx-intro{display:none}
+/* расчёт контракта */
+.cv-miss{margin:0 0 10px;padding:10px 12px;border-radius:12px;background:rgba(201,107,64,.14);border:1px solid rgba(201,107,64,.45);font-size:12.5px}.cv-miss b{display:block;margin-bottom:4px;color:var(--c-clayd,#B4562F)}.cv-miss p{margin:2px 0}
+.cv-lock{font-style:normal;font-size:11px;opacity:.7}
+.cv-rr b small{display:block;font-weight:400;font-size:11px;color:var(--v-mut);text-align:right}
+.cv-res [data-c=kp]{margin-top:12px;width:100%}
+.cv-txt{font:inherit;padding:7px 10px;border:1px solid var(--v-line,#d9d4cc);border-radius:10px;background:var(--v-in,#fff);color:inherit;max-width:100%}
+.cv-kp{width:100%;min-height:300px;font:13px/1.5 'Inter',system-ui,sans-serif;padding:12px;border-radius:12px;border:1px solid var(--v-line,#d9d4cc);background:var(--v-in,#fff);color:inherit;resize:vertical}

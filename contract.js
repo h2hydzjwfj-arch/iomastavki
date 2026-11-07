@@ -226,9 +226,9 @@
       var td = tdPct ? line('td', 'ТД (платёжный агент), ' + tdPct + '%', inv.amount * tdPct / 100, { secret: true }) : null;
       line('payment', 'Оплата инвойса, ' + payPct + '% (' + PAY_NOTE[pay].replace(/ \+ \d+%$/, '') + ')', (inv.amount + (td ? td.amount : 0)) * payPct / 100, { secret: true });
     }
-    freightLines.forEach(function (f, i) { line('freight' + (i ? i : ''), f.label, f.cur, { currencyIn: f.currency, amountIn: f.amount, fx: f.fx, inCV: f.inCV }); });
+    freightLines.forEach(function (f, i) { line('freight' + (i ? i : ''), f.label, f.cur, { rub: r2(f.rub), currencyIn: f.currency, amountIn: f.amount, fx: f.fx, inCV: f.inCV }); });
     (inp.markups || []).forEach(function (m, i) { var c = conv(m.amount, m.currency || 'USD', 0, m.label); line('markup' + i, m.label || 'Наценка', c.cur, { secret: true, markup: true }); });
-    if (insurance.cur) line('insurance', has(inp.insuranceFixedRub) ? 'Страхование' : 'Страхование, ' + insPct + '% от инвойса', insurance.cur, { inCV: insuranceInCV });
+    if (insurance.cur) line('insurance', has(inp.insuranceFixedRub) ? 'Страхование' : 'Страхование, ' + insPct + '% от инвойса', insurance.cur, { rub: r2(insurance.rub), inCV: insuranceInCV });
     var customsInTotal = mode === 'our' || !!inp.includeCustoms;
     if (items.length && customsInTotal) {
       line('customs', 'Таможенные платежи (пошлина + НДС)', customsCur, { rub: r2(C.dutyRub + C.vatRub) });
@@ -265,11 +265,61 @@
     };
   }
 
+  /* Документ «Калькулятора ВЭД» сделки (ved.js) → вход расчёта контракта.
+     Старые документы: строка «Комиссия за перевод, % от инвойса» превращается в способ оплаты (6% — по ЦБ, 3% — по курсу банка). */
+  var UNIT_OF = { 'кг': 'кг', 'л': 'л', 'шт': 'шт', 'пар': 'пар', 'м²': 'м²' };
+  function dutyFromVed(it) {
+    var u = UNIT_OF[String(it.eur_unit || 'кг')] || 'кг';
+    var eur = num(u === 'м²' ? it.eur_per_m2 : u === 'л' ? it.eur_per_l : (u === 'шт' || u === 'пар') ? it.eur_per_pcs : it.eur_per_kg);
+    var t = it.duty_type || 'percent', rate = num(it.duty_rate), parts = [];
+    if (t !== 'fixed_eur') parts.push({ kind: 'ad_valorem', value: rate });
+    if (t !== 'percent' && eur) parts.push({ kind: 'specific', value: eur, currency: 'EUR', unit: u });
+    if (!parts.length) parts.push({ kind: 'ad_valorem', value: 0 });
+    var text = (t !== 'fixed_eur' ? rate + '%' : '') + (t !== 'percent' && eur ? (t === 'min' ? ', но не менее ' : t === 'plus' ? ' плюс ' : '') + eur + ' €/' + u : '');
+    return { text: text, parts: parts, mode: parts.length === 2 ? (t === 'plus' ? 'plus' : 'min') : 'single' };
+  }
+  function fromVedDoc(doc, rates) {
+    doc = doc || {}; rates = rates || {};
+    var mode = doc.calc_type === 'client_contract' ? 'client' : 'our';
+    var items = doc.items || [];
+    var cur = String((items[0] && items[0].invoice_currency) || doc.freight_currency || 'CNY').toUpperCase();
+    var rc = cur === 'RUB' ? 1 : num(rates[cur]);
+    var pctRow = (doc.extra_costs || []).filter(function (e) { return e.is_percent_of_invoice; })[0];
+    var payment = doc.payment === 'bank' || doc.payment === 'cbr' ? doc.payment : pctRow && num(pctRow.amount) === 3 ? 'bank' : 'cbr';
+    var inp = {
+      mode: mode, currency: cur, payment: payment, td: !!doc.td, declarant: doc.declarant || (mode === 'our' ? 'ecp' : 'none'),
+      declarantRub: has(doc.declarant_rub) ? num(doc.declarant_rub) : null, margin: has(doc.margin) ? num(doc.margin) : null,
+      insurancePct: has(doc.insurance_pct) ? num(doc.insurance_pct) : null, radio: !!doc.radio_fee,
+      borderShare: doc.border_split_enabled ? (has(doc.border_split_percent) ? num(doc.border_split_percent) : 30) : null,
+      items: items.map(function (it) {
+        var ic = String(it.invoice_currency || cur).toUpperCase(), ri = ic === 'RUB' ? 1 : num(rates[ic]);
+        var value = ic === cur ? num(it.invoice_amount) : (ri && rc ? num(it.invoice_amount) * ri / rc : 0);
+        var u = UNIT_OF[String(it.eur_unit || 'кг')] || 'кг', q = has(it.unit_qty) && num(it.unit_qty) ? num(it.unit_qty) : null;
+        return { name: it.name || '', code: it.tnved_code || '', value: value, gross: num(it.weight), net: has(it.net) && num(it.net) ? num(it.net) : (num(it.weight) || null),
+          qty: (u === 'шт' || u === 'пар') ? q : null, area: u === 'м²' ? q : null, liters: u === 'л' ? q : null,
+          duty: it.auto_lookup && it.tnved_code && it.duty_text ? (parseDuty(it.duty_text) || dutyFromVed(it)) : dutyFromVed(it),
+          vat: has(it.vat_rate) ? num(it.vat_rate) : 22, radio: !!it.radio, chz: !!it.chz };
+      }),
+      freight: num(doc.freight_total) ? [{ label: 'Фрахт + локальные расходы КНР', amount: num(doc.freight_total), currency: doc.freight_currency || cur, fx: num(doc.freight_fx) }] : [],
+      extras: (doc.extra_costs || []).filter(function (e) { return !e.is_percent_of_invoice && num(e.amount); }).map(function (e) {
+        var c = String(e.currency || 'RUB').toUpperCase();
+        return e.rate_mode === 'manual' && c !== 'RUB' ? { label: e.label, amount: num(e.amount) * num(e.manual_rate), currency: 'RUB' } : { label: e.label, amount: num(e.amount), currency: c };
+      }),
+      markups: (doc.markups || []).filter(function (m) { return num(m.amount); }).map(function (m) { return { label: m.label || 'Наценка', amount: num(m.amount), currency: m.currency || 'USD' }; }),
+    };
+    if (num(doc.insurance_amount) && !has(doc.insurance_pct)) { // старый документ: страховка суммой
+      var ic2 = String(doc.insurance_currency || 'RUB').toUpperCase();
+      if (ic2 === 'RUB') inp.insuranceFixedRub = num(doc.insurance_amount); else inp.extras.push({ label: 'Страхование', amount: num(doc.insurance_amount), currency: ic2 });
+      inp.insurancePct = 0;
+    }
+    return inp;
+  }
+
   function newInput(mode, cur) {
     return { mode: mode === 'client' ? 'client' : 'our', currency: cur || 'CNY', payment: 'cbr', td: false, declarant: 'ecp', borderShare: null,
       items: [{ name: '', code: '', value: 0, gross: 0, net: null, qty: null, area: null, duty: '', vat: 22, radio: false, chz: false }],
       freight: [{ label: 'Фрахт + локальные расходы КНР', amount: 0, currency: cur || 'CNY', fx: 0 }], permits: [], extras: [], markups: [], margin: null };
   }
 
-  return { DEFAULTS: DEFAULTS, PAY_NOTE: PAY_NOTE, calc: calc, newInput: newInput, parseDuty: parseDuty, customsFee: customsFee, split: split, round: round };
+  return { DEFAULTS: DEFAULTS, PAY_NOTE: PAY_NOTE, calc: calc, newInput: newInput, fromVedDoc: fromVedDoc, parseDuty: parseDuty, customsFee: customsFee, split: split, round: round };
 });
