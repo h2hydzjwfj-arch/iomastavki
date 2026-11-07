@@ -21,7 +21,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
   try {
     const { p } = await ctx();
     await step('Гость: главная и меню без закрытых разделов', async () => {
-      await p.waitForSelector('.v3-hero'); await shot(p, '01_guest_home');
+      await p.waitForSelector('.hx'); await shot(p, '01_guest_home');
       if (await p.isVisible('.v3-nav [data-open-view=workView]')) throw new Error('видно «Работа»');
       if (await p.isVisible('.v3-nav [data-open-view=forwarders]')) throw new Error('видно «Экспедиторы»');
     });
@@ -172,7 +172,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await Rg.p.waitForSelector('#cabinetView.open', { timeout: 6000 }); await shot(Rg.p, '12c_new_cabinet');
     });
     const M = await ctx({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-    await step('Телефон: главная', async () => { await M.p.waitForSelector('.v3-hero'); await shot(M.p, '13_mobile_home'); });
+    await step('Телефон: главная', async () => { await M.p.waitForSelector('.hx'); await shot(M.p, '13_mobile_home'); });
     await step('Телефон: новости и гид', async () => { await M.p.evaluate(() => window.__iomaOpenView('news')); await M.p.waitForTimeout(1200); await shot(M.p, '14_mobile_news'); await M.p.evaluate(() => window.__v3open('kbView')); await M.p.waitForSelector('#kbBody .kb-pulse'); await shot(M.p, '15_mobile_kb'); });
     await step('Нет ошибок JavaScript на страницах', async () => { if (errors.length) throw new Error(errors.slice(0, 3).join(' | ')); });
   } finally {

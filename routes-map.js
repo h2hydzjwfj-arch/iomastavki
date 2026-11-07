@@ -25,9 +25,19 @@
     zz: ['Чжэнчжоу', 'Zhengzhou', '郑州', 113.62, 34.75], xa: ['Сиань', "Xi'an", '西安', 108.94, 34.34], cd: ['Чэнду', 'Chengdu', '成都', 104.07, 30.67], cq: ['Чунцин', 'Chongqing', '重庆', 106.55, 29.56],
     gz: ['Гуанчжоу', 'Guangzhou', '广州', 113.26, 23.13], sz: ['Шэньчжэнь', 'Shenzhen', '深圳', 114.06, 22.54], qz: ['Циньчжоу', 'Qinzhou', '钦州', 108.62, 21.95], urc: ['Урумчи', 'Urumqi', '乌鲁木齐', 87.62, 43.83],
     pus: ['Пусан', 'Busan', '釜山', 129.08, 35.18],
+    // ещё города для расчёта ставки (на карте главной не рисуются): Китай, Тайвань, Япония, Корея и города России
+    xz: ['Синьчжоу', 'Xinzhou', '忻州', 112.73, 38.42], ty: ['Тайюань', 'Taiyuan', '太原', 112.55, 37.87], hz: ['Ханчжоу', 'Hangzhou', '杭州', 120.16, 30.27], suz: ['Сучжоу', 'Suzhou', '苏州', 120.62, 31.3],
+    nj: ['Нанкин', 'Nanjing', '南京', 118.8, 32.06], wh: ['Ухань', 'Wuhan', '武汉', 114.3, 30.59], cs: ['Чанша', 'Changsha', '长沙', 112.94, 28.23], xm: ['Сямэнь', 'Xiamen', '厦门', 118.09, 24.48],
+    fs: ['Фошань', 'Foshan', '佛山', 113.12, 23.02], dg: ['Дунгуань', 'Dongguan', '东莞', 113.75, 23.02], dl: ['Далянь', 'Dalian', '大连', 121.61, 38.91],
+    tpe: ['Тайбэй', 'Taipei', '台北', 121.56, 25.03], khh: ['Гаосюн', 'Kaohsiung', '高雄', 120.31, 22.62], tyo: ['Токио', 'Tokyo', '东京', 139.69, 35.69], osa: ['Осака', 'Osaka', '大阪', 135.5, 34.69],
+    sel: ['Сеул', 'Seoul', '首尔', 126.98, 37.57], icn: ['Инчхон', 'Incheon', '仁川', 126.7, 37.46],
+    perm: ['Пермь', 'Perm', '彼尔姆', 56.23, 58.01], ufa: ['Уфа', 'Ufa', '乌法', 55.96, 54.74], tmn: ['Тюмень', 'Tyumen', '秋明', 65.53, 57.15], vrn: ['Воронеж', 'Voronezh', '沃罗涅日', 39.2, 51.66], minsk: ['Минск', 'Minsk', '明斯克', 27.56, 53.9],
   };
+  // из Тайваня, Японии и Кореи по суше не возят: ЖД и авто считаем как море до Владивостока + ЖД
+  var OVERSEA = { tpe: 1, khh: 1, tyo: 1, osa: 1, sel: 1, icn: 1, pus: 1 };
   // точки в море (для пути судна)
-  var SEA = { s1: [123.6, 30.6], s2: [126.2, 32.9], s3: [129.4, 34.2], s4: [131.0, 38.6], c1: [114.6, 21.8], c2: [117.6, 22.9], c3: [120.2, 25.0], c4: [122.6, 28.2], q1: [109.2, 20.9], q2: [110.6, 19.9], q3: [112.6, 21.2], d1: [122.8, 35.4] };
+  var SEA = { s1: [123.6, 30.6], s2: [126.2, 32.9], s3: [129.4, 34.2], s4: [131.0, 38.6], c1: [114.6, 21.8], c2: [117.6, 22.9], c3: [120.2, 25.0], c4: [122.6, 28.2], q1: [109.2, 20.9], q2: [110.6, 19.9], q3: [112.6, 21.2], d1: [122.8, 35.4],
+    j1: [141.3, 37.4], j2: [141.0, 41.5], j3: [137.0, 42.3], j4: [132.2, 33.9], k1: [125.6, 36.4], k2: [126.2, 34.0], t1: [122.3, 25.7] };
   var ORIGINS = ['bj', 'sy', 'hrb', 'qd', 'sh', 'nb', 'yw', 'zz', 'xa', 'cd', 'cq', 'gz', 'sz', 'qz', 'urc', 'pus'];
   var RU_MINOR = ['spb', 'nnov', 'kzn', 'ekb', 'nsk', 'khb', 'vvo', 'krd'];
   var TS_RU = ['chita', 'ulu', 'irk', 'krs', 'nsk', 'omsk', 'ekb', 'kzn', 'msk']; // Транссиб от Читы до Москвы
@@ -50,7 +60,8 @@
     ],
     sea: [
       { id: 'vvo', gw: ['vvo'], ru: ['vvo', 'uss', 'khb', 'bel', 'chita'].concat(TS_RU.slice(1)), sea: true,
-        cn: { sh: ['sh', 's1', 's2', 's3', 's4', 'vvo'], nb: ['nb', 's1'], qd: ['qd', 'd1', 's2'], pus: ['pus', 's3'], gz: ['gz', 'c1', 'c2', 'c3', 'c4', 's1'], sz: ['sz', 'c1'], qz: ['qz', 'q1', 'q2', 'q3', 'c1'] } },
+        cn: { sh: ['sh', 's1', 's2', 's3', 's4', 'vvo'], nb: ['nb', 's1'], qd: ['qd', 'd1', 's2'], pus: ['pus', 's3'], gz: ['gz', 'c1', 'c2', 'c3', 'c4', 's1'], sz: ['sz', 'c1'], qz: ['qz', 'q1', 'q2', 'q3', 'c1'],
+          tyo: ['tyo', 'j1', 'j2', 'j3', 'vvo'], osa: ['osa', 'j4', 's3'], sel: ['sel', 'icn'], icn: ['icn', 'k1', 'k2', 's3'], tpe: ['tpe', 't1', 'c4'], khh: ['khh', 'c3'] } },
     ],
     air: [{ id: 'air', gw: [], ru: ['msk'], air: ['bj', 'sh', 'gz', 'sz', 'cd', 'zz', 'xa', 'urc', 'hrb', 'qd', 'yw', 'cq'] }],
   };
@@ -98,12 +109,43 @@
       if (cor.sea) { legs.push({ kind: 'sea', km: km(china, 1.08) }); legs.push({ kind: 'rail', km: ruKm }); }
       else { legs.push({ kind: 'china', km: km(china, 1.25) }); if (mid) legs.push({ kind: 'transit', km: km(mid, 1.25) }); legs.push({ kind: 'ru', km: ruKm }); }
       var path = china.concat(mid ? mid.slice(1) : []).concat(cor.ru.slice(cor.sea ? 1 : (mid ? 1 : 0)));
+      path = path.filter(function (k, i) { return !i || k !== path[i - 1]; });
       return { mode: mode, path: path, legs: legs, km: legs.reduce(function (s, l) { return s + l.km; }, 0), gw: cor.id };
     }
     return null;
   }
+  // маршрут до любого города России: по Китаю — как до Москвы, от перехода (или Владивостока) — к городу назначения
+  function routeTo(fromKey, toKey, mode) {
+    mode = MODES[mode] ? mode : 'rail';
+    if (OVERSEA[fromKey] && (mode === 'rail' || mode === 'road')) mode = 'sea';
+    if (!toKey || toKey === 'msk') { var r0 = routeFor(fromKey, mode); if (r0 || !C[fromKey]) return r0; toKey = 'msk'; }
+    if (!C[fromKey] || !C[toKey]) return routeFor(fromKey, mode);
+    if (mode === 'air') { var d0 = Math.round(hav(ll(fromKey), ll(toKey)) / 10) * 10; return { mode: mode, path: [fromKey, toKey], legs: [{ kind: 'air', km: d0 }], km: d0, gw: null, to: toKey }; }
+    // для городов не в Москве выбираем переход, через который ближе всего (Иркутск — через Забайкальск, а не через Казахстан)
+    var best = null, far = false;
+    function each(cor) {
+      var p = chain(cor, fromKey);
+      // город не на коридоре: подъезд к ближайшему городу коридора (не дальше 1500 км, иначе коридор не подходит)
+      if (p.length < 2) { var starts = Object.keys(cor.cn || {}).map(function (k) { return cor.cn[k][0]; }); if (!starts.length) return; var k0 = starts.sort(function (a, b) { return hav(ll(fromKey), ll(a)) - hav(ll(fromKey), ll(b)); })[0]; if (!far && hav(ll(fromKey), ll(k0)) > 1500) return; p = [fromKey].concat(chain(cor, k0)); if (p.length < 2) return; }
+      var mid = cor.mid ? cor.mid.slice() : null, entry = cor.ru[0], legs = [];
+      if (cor.sea) legs.push({ kind: 'sea', km: km(p, 1.08) }); else { legs.push({ kind: 'china', km: km(p, 1.25) }); if (mid) legs.push({ kind: 'transit', km: km(mid, 1.25) }); }
+      // по России: город на магистрали — режем путь на нём; запад (Петербург, юг) — через Москву; Сибирь и Дальний Восток — от перехода напрямую
+      // по России: город на магистрали — режем путь на нём; иначе — по магистрали до ближайшего к нему города и дальше к нему
+      var ru = cor.ru, at = ru.indexOf(toKey), ruPath, ruKm, trunk = function (j) { return j === ru.length - 1 && mode !== 'road' && TRUNK_KM[cor.id] ? TRUNK_KM[cor.id] : km(ru.slice(0, j + 1), 1.25); };
+      if (at >= 0) { ruPath = ru.slice(0, at + 1); ruKm = at ? trunk(at) : 0; }
+      else { var j = 0; ru.forEach(function (k, i) { if (hav(ll(k), ll(toKey)) < hav(ll(ru[j]), ll(toKey))) j = i; }); if (!far && hav(ll(ru[j]), ll(toKey)) > 1200) return; ruPath = ru.slice(0, j + 1).concat([toKey]); ruKm = (j ? trunk(j) : 0) + km([ru[j], toKey], 1.25); }
+      legs.push({ kind: cor.sea ? 'rail' : 'ru', km: ruKm });
+      var total = legs.reduce(function (s, l) { return s + l.km; }, 0);
+      var path = p.concat(mid ? mid.slice(1) : []).concat(ruPath.slice(cor.sea || mid ? 1 : 0));
+      path = path.filter(function (k, i) { return !i || k !== path[i - 1]; });
+      if (!best || total < best.km) best = { mode: mode, path: path, legs: legs, km: total, gw: cor.id, to: toKey };
+    }
+    MODES[mode].forEach(each);
+    if (!best) { far = true; MODES[mode].forEach(each); }
+    return best || routeFor(fromKey, mode);
+  }
   // поиск города по названию на любом языке
-  var ALIAS = { yw: ['yiwu', 'иу', 'iwu'], sh: ['shanghai', 'шанхай'], sz: ['shenzhen', 'шэньчжэнь', 'шеньчжень', 'шэньжэнь'], gz: ['guangzhou', 'гуанчжоу', 'кантон', 'canton'], xa: ['xian', "xi'an", 'сиань'], qz: ['qinzhou', 'циньчжоу'], pus: ['busan', 'pusan', 'пусан'] };
+  var ALIAS = { yw: ['yiwu', 'иу', 'iwu'], tpe: ['taibei', 'тайпей'], tyo: ['токио', 'tokio', 'yokohama', 'йокогама'], sel: ['seoul', 'сеул'], icn: ['incheon', 'инчон'], spb: ['спб', 'питер', 'saint petersburg', 'санкт петербург'], msk: ['мск'], sh: ['shanghai', 'шанхай'], sz: ['shenzhen', 'шэньчжэнь', 'шеньчжень', 'шэньжэнь'], gz: ['guangzhou', 'гуанчжоу', 'кантон', 'canton'], xa: ['xian', "xi'an", 'сиань'], qz: ['qinzhou', 'циньчжоу'], pus: ['busan', 'pusan', 'пусан'] };
   function find(q) {
     q = String(q || '').trim().toLowerCase().replace(/ё/g, 'е'); if (!q) return null;
     var keys = Object.keys(C);
@@ -210,7 +252,7 @@
     }
     tip.addEventListener('click', function (e) { var b = e.target.closest('[data-go]'); if (b && opts.onPick) opts.onPick(b.dataset.go, state.mode, nm(b.dataset.go, 'ru')); });
     el.addEventListener('mouseleave', function () { if (state.pick) hideTip(); });
-    new MutationObserver(function () { drawTabs(); draw(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+    var drawnLang = lang(); new MutationObserver(function () { if (lang() === drawnLang) return; drawnLang = lang(); drawTabs(); draw(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
     window.addEventListener('resize', function () { scale(); moveInd(); });
     if (window.ResizeObserver) new ResizeObserver(function () { scale(); moveInd(); }).observe(svg);
     drawTabs(); U = W / (svg.getBoundingClientRect().width || W) || 1; draw(); scale();
@@ -219,18 +261,22 @@
   }
 
   // путь для маленькой карты маршрута (расчёт ставки): только выбранный маршрут
-  function routeSvg(r, l) {
-    l = l || lang(); if (!r) return '';
-    var keys = r.path, xs = keys.map(xy), minx = Math.min.apply(null, xs.map(function (p) { return p[0]; })) - 40, maxx = Math.max.apply(null, xs.map(function (p) { return p[0]; })) + 40,
-      miny = Math.min.apply(null, xs.map(function (p) { return p[1]; })) - 40, maxy = Math.max.apply(null, xs.map(function (p) { return p[1]; })) + 40, w = maxx - minx, hh = Math.max(maxy - miny, w * .32);
-    var dd = r.mode === 'air' ? arc(keys[0], 'msk') : smooth(keys), first = xy(keys[0]), last = xy('msk');
-    var gw = r.gw && GW_NAME[r.gw] ? GW_NAME[r.gw] : null, g = gw ? xy(gw[0]) : null;
-    return '<svg class="rmini" viewBox="' + minx.toFixed(0) + ' ' + (miny - (hh - (maxy - miny)) / 2).toFixed(0) + ' ' + w.toFixed(0) + ' ' + hh.toFixed(0) + '" style="--u:' + (w / 600).toFixed(3) + '" aria-hidden="true">'
-      + '' + land() + '<path class="rmini-r" d="' + dd + '" pathLength="1"/>'
-      + '<circle class="rmini-a" cx="' + first[0].toFixed(1) + '" cy="' + first[1].toFixed(1) + '" r="' + (6 * w / 600).toFixed(1) + '"/><text class="rmini-t" x="' + first[0].toFixed(1) + '" y="' + (first[1] + 22 * w / 600).toFixed(1) + '" text-anchor="middle">' + nm(keys[0], l) + '</text>'
-      + (g ? '<rect class="rmini-g" x="' + (g[0] - 5 * w / 600).toFixed(1) + '" y="' + (g[1] - 5 * w / 600).toFixed(1) + '" width="' + (10 * w / 600).toFixed(1) + '" height="' + (10 * w / 600).toFixed(1) + '" transform="rotate(45 ' + g[0].toFixed(1) + ' ' + g[1].toFixed(1) + ')"/><text class="rmini-t gw" x="' + g[0].toFixed(1) + '" y="' + (g[1] - 14 * w / 600).toFixed(1) + '" text-anchor="middle">' + gw.map(function (k) { return nm(k, l); }).join(' · ') + '</text>' : '')
-      + '<circle class="rmini-b" cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="' + (7 * w / 600).toFixed(1) + '"/><text class="rmini-t msk" x="' + last[0].toFixed(1) + '" y="' + (last[1] - 14 * w / 600).toFixed(1) + '" text-anchor="middle">' + nm('msk', l) + '</text></svg>';
+  // o.aspect — пропорции рамки (ширина/высота), o.px — ширина на экране: подписи и точки одного размера на любой карте
+  function routeSvg(r, l, o) {
+    l = l || lang(); o = o || {}; if (!r) return '';
+    var A = o.aspect || 1.9, px = o.px > 60 ? o.px : 600, keys = r.path, xs = keys.map(xy);
+    var x0 = Math.min.apply(null, xs.map(function (p) { return p[0]; })), x1 = Math.max.apply(null, xs.map(function (p) { return p[0]; })),
+      y0 = Math.min.apply(null, xs.map(function (p) { return p[1]; })), y1 = Math.max.apply(null, xs.map(function (p) { return p[1]; }));
+    function fit(pad) { var w = x1 - x0 + 2 * pad, h = y1 - y0 + 2 * pad; if (w / h < A) w = h * A; else h = w / A; return { x: (x0 + x1 - w) / 2, y: (y0 + y1 - h) / 2, w: w, h: h }; }
+    var b = fit(10), k = b.w / px; b = fit(Math.max(78 * k, 16)); k = b.w / px; // поля под подписи: ~78 пикселей экрана
+    var dest = keys[keys.length - 1], dd = r.mode === 'air' ? arc(keys[0], dest) : smooth(keys), first = xy(keys[0]), last = xy(dest);
+    var gw = r.gw && GW_NAME[r.gw] ? GW_NAME[r.gw] : null, g = gw ? xy(gw[0]) : null, f = function (n) { return n.toFixed(1); }, ge = g && g[0] > b.x + b.w * .58;
+    return '<svg class="rmini" viewBox="' + f(b.x) + ' ' + f(b.y) + ' ' + f(b.w) + ' ' + f(b.h) + '" style="--u:' + k.toFixed(3) + '" aria-hidden="true">'
+      + land() + '<path class="rmini-r" d="' + dd + '" pathLength="1"/>'
+      + (g ? '<rect class="rmini-g" x="' + f(g[0] - 4.5 * k) + '" y="' + f(g[1] - 4.5 * k) + '" width="' + f(9 * k) + '" height="' + f(9 * k) + '" transform="rotate(45 ' + f(g[0]) + ' ' + f(g[1]) + ')"/><text class="rmini-t gw" x="' + f(g[0] + (ge ? -11 : 11) * k) + '" y="' + f(g[1] + 4 * k) + '" text-anchor="' + (ge ? 'end' : 'start') + '">' + gw.map(function (x) { return nm(x, l); }).join(' · ') + '</text>' : '')
+      + '<circle class="rmini-a" cx="' + f(first[0]) + '" cy="' + f(first[1]) + '" r="' + f(5.5 * k) + '"/><text class="rmini-t" x="' + f(first[0]) + '" y="' + f(first[1] + 21 * k) + '" text-anchor="middle">' + nm(keys[0], l) + '</text>'
+      + '<circle class="rmini-b" cx="' + f(last[0]) + '" cy="' + f(last[1]) + '" r="' + f(6.5 * k) + '"/><text class="rmini-t msk" x="' + f(last[0]) + '" y="' + f(last[1] - 14 * k) + '" text-anchor="middle">' + nm(dest, l) + '</text></svg>';
   }
 
-  window.IOMA_RMAP = { mount: mount, routeFor: routeFor, find: find, name: nm, cities: C, origins: ORIGINS, routeSvg: routeSvg, modeName: function (m, l) { return MODE_NAME[m] ? MODE_NAME[m][LI[l || lang()]] : m; }, ui: ui };
+  window.IOMA_RMAP = { mount: mount, routeFor: routeFor, routeTo: routeTo, find: find, name: nm, cities: C, origins: ORIGINS, routeSvg: routeSvg, gwNames: function (id, l) { return (GW_NAME[id] || []).map(function (k) { return nm(k, l); }); }, gwKeys: function (id) { return (GW_NAME[id] || []).slice(); }, modeName: function (m, l) { return MODE_NAME[m] ? MODE_NAME[m][LI[l || lang()]] : m; }, ui: ui };
 })();
