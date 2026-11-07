@@ -62,12 +62,13 @@ async function get(url, tries = 3) {
 
 /** Узлы дерева из ответа get_tree: код, название, uin, есть ли дети. Вложенные списки тоже. */
 function nodes(html) {
-  const out = []; const re = /<li\b([^>]*)>/gi; let m;
+  // код берём из видимой подписи узла («8471 ...», «8471 30 000 0»): data-source у позиций дополнен нулём («84710»)
+  const out = []; const re = /<li\b([^>]*)>\s*(?:<span[^>]*pTnved_code[^>]*>([^<]*)<\/span>)?/gi; let m;
   while ((m = re.exec(html))) {
     const a = m[1];
     const uin = (a.match(/data-uin="(\d+)"/) || [])[1];
     if (!uin) continue;
-    const src = (a.match(/data-source="([^"]*)"/) || [])[1] || '';
+    const src = m[2] != null ? m[2].replace(/\.\.\.|…/g, '').trim() : ((a.match(/data-source="([^"]*)"/) || [])[1] || '');
     const title = txt((a.match(/title="([^"]*)"/) || [])[1] || '');
     out.push({ uin, code: digits(src), raw: src, title, closed: /jstree-closed|jstree-open/.test(a) });
   }
