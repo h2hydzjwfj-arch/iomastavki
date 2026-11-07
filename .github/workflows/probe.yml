@@ -7,14 +7,14 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 44
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
       - name: Собрать справочник ТН ВЭД с alta.ru
-        run: node tools/build-tnved-base.js data/tnved-base.json --limit 300
+        run: TNVED_BUDGET_MIN=36 TNVED_PAUSE_MS=500 node tools/build-tnved-base.js data/tnved-base.json --limit 300
       - name: Сохранить в ветку tnved-base-data
         if: always()
         run: |
