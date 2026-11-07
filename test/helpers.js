@@ -18,4 +18,17 @@ async function startServer(port, extraEnv = {}) {
   }
   proc.kill(); throw new Error('Сервер не запустился:\n' + log);
 }
-module.exports = { startServer, ADMIN_PASS };
+// Переход в раздел через меню: пункт может лежать в группе («Управление грузом», «Инструменты ВЭД») —
+// тогда сначала раскрываем группу; если в группе для этой роли один пункт, кнопка группы выполняет его сама.
+async function navTo(p, view) {
+  const sel = `.v3-nav [data-open-view=${view}]`;
+  const inGroup = await p.$eval(sel, el => { const g = el.closest('[data-sg]'); return g ? (g.classList.contains('sg-solo') ? 'solo' : 'menu') : ''; }).catch(() => '');
+  if (inGroup) {
+    await p.click(`.v3-nav [data-sg]:has([data-open-view=${view}]) .sg-btn`);
+    if (inGroup === 'solo') return;
+    await p.waitForSelector(sel, { state: 'visible' });
+  }
+  await p.click(sel);
+}
+
+module.exports = { startServer, ADMIN_PASS, navTo };

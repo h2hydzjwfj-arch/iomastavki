@@ -11,11 +11,13 @@
 
   /* 2. nav pill */
   var nav=$('.v3-nav'),pill=$('.v3-pill');
-  function movePill(){safe(function(){var b=$('.v3-nav button.on');if(!b||!pill)return;pill.style.left=b.offsetLeft+'px';pill.style.width=b.offsetWidth+'px'})}
+  function movePill(){safe(function(){var b=$('.v3-nav > button.on, .v3-nav .sg-btn.on');if(!b||!pill)return;pill.style.left=b.offsetLeft+'px';pill.style.width=b.offsetWidth+'px'})}
   function syncNav(){
     var open=$('.view-layer.open'),map={kbView:'kbView',calculatorView:'calculator',assistantView:'assistant',newsView:'news',forwardersView:'forwarders',customsView:'customsView',loginView:'loginView',leadView:'leadView',cabinetView:'cabinetView',workView:'workView'};
     var key=open?map[open.id]:null;
-    $$('.v3-nav button').forEach(function(b){b.classList.toggle('on',key?b.getAttribute('data-open-view')===key:b.dataset.nav==='home')});
+    // верхний уровень: обычные кнопки и кнопки групп; группа «горит», если открыт один из её пунктов
+    $$('.v3-nav > button, .v3-nav .sg-btn').forEach(function(b){var on;if(b.classList.contains('sg-btn')){on=!!key&&!!b.parentNode.querySelector('[data-open-view="'+key+'"]')}else on=key?b.getAttribute('data-open-view')===key:b.dataset.nav==='home';b.classList.toggle('on',on)});
+    $$('.v3-nav .sg-menu button').forEach(function(b){b.classList.toggle('on',!!key&&b.getAttribute('data-open-view')===key)});
     movePill();
   }
   safe(function(){

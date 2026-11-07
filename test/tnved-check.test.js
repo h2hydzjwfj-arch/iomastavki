@@ -109,6 +109,7 @@ test('ТН ВЭД: специфическая пошлина — без коли
 });
 
 test('ТН ВЭД: без стоимости, радиоэлектроника, кеш, ошибки', async () => {
+  T.loadBase(path.join(__dirname, 'нет-такого-файла.json')); // проверяем ошибки без запасного справочника
   const calls = [];
   let res = await T.check({ code: '8471300000' }, deps({ get: fakeGet(calls) }));
   assert.ok(res.report.includes('💰 Пошлина: 0%\n🧾 НДС')); assert.ok(res.report.endsWith('⚡ Сбор: укажите стоимость груза, ₽'));
@@ -128,4 +129,31 @@ test('ТН ВЭД: команда бота', () => {
   assert.deepEqual(T.parseCommand('/tnved@iomabot 6201400000 1 250 000 вес 300 кол 120'), { code: '6201400000', value: '1 250 000', weight: '300', qty: '120' });
   assert.deepEqual(T.parseCommand('/tnved 6201.40.000.0 750000,50 ₽ 12.5 кг'), { code: '6201400000', value: '750000,50', weight: '12.5', qty: '' });
   assert.equal(T.parseCommand('/tnved').code, '');
+});
+
+test('ТН ВЭД: alta.ru недоступен — ставки из локального справочника с пометкой; нет кода — подсказка', async () => {
+  // мини-справочник в формате reference/tnved-base.json из сохранённых страниц
+  const nodes = [], idx = new Map(), codes = {};
+  for (const c of ['6201400000', '6403190000', '8471300000', '0401101000']) {
+    const info = T.parseAltaPage(page(c), c);
+    codes[c] = { cat: 'тест', path: info.levels.map(l => { const k = l.code + '|' + l.text; if (!idx.has(k)) { idx.set(k, nodes.length); nodes.push([l.code, l.text]); } return idx.get(k); }),
+      duty: info.duty.text, ...(info.duty.note ? { note: info.duty.note } : {}), vat: info.vat.map(v => (v.condition ? [v.rate, v.condition] : [v.rate])) };
+  }
+  const file = path.join(require('os').tmpdir(), 'tnved-base-test.json');
+  fs.writeFileSync(file, JSON.stringify({ version: 1, fetchedAt: '2026-11-07', nodes, codes }));
+  T.loadBase(file);
+  try {
+    const offline = { get: async () => { throw new T.TnvedError('Справочник alta.ru недоступен (нет ответа).', 503, 'source_unavailable'); }, rates: async () => RATES };
+    const res = await T.check({ code: '6201400000', value: '500000', weight: '300' }, offline);
+    assert.strictEqual(res.source, 'local');
+    assert.ok(res.report.includes('💰 Пошлина: 10%, но не менее 2.25 евро/кг ≈ 61 831 ₽'));
+    assert.ok(res.report.includes('ℹ️ alta.ru недоступен — ставки из локального справочника на 07.11.2026'));
+    assert.strictEqual(T._cache.has('6201400000'), false, 'запасной ответ не кешируется');
+    await assert.rejects(T.check({ code: '8471300001', value: '1000' }, offline), e => e.status === 503 && /похожие: 8471300000/.test(e.message));
+    const changed = { get: async () => ({ status: 200, text: '<html>заглушка</html>' }) };
+    assert.strictEqual((await T.check({ code: '6403190000', value: '150000' }, changed)).source, 'local');
+    assert.deepStrictEqual(T.searchBase('вычислительные портативные').map(x => x.code), ['8471300000']);
+    assert.deepStrictEqual(T.searchBase('6403').map(x => x.code), ['6403190000']);
+    assert.strictEqual(T.searchBase('').length, 0);
+  } finally { T.loadBase(path.join(__dirname, 'нет-такого-файла.json')); }
 });

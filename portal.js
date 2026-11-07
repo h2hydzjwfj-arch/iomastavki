@@ -510,6 +510,8 @@ function setup(app, opts) {
     const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
     if (!secret || req.get('x-telegram-bot-api-secret-token') !== secret) return res.status(401).end();
     res.json({ ok: true }); // Telegram ждёт быстрый ответ
+    // Отправка без исключений: заблокированный бот, сбой сети или 5xx Telegram не роняют процесс.
+    const send = (chat, text) => tg.send(chat, text).catch(e => console.warn('telegram send:', String(e.message || e).slice(0, 200)));
     try {
       const m = req.body && req.body.message; if (!m || !m.chat || typeof m.text !== 'string') return;
       const chat = m.chat.id, text = m.text.trim();
@@ -517,24 +519,29 @@ function setup(app, opts) {
       const start = text.match(/^\/start\s+([a-f0-9]{24})$/i);
       if (start) {
         const u = db.users.find(x => x.tgLink && x.tgLink.h === sha(start[1].toLowerCase()) && x.tgLink.exp > Date.now());
-        if (!u) return tg.send(chat, 'Ссылка устарела. Откройте «Аккаунт» на сайте и нажмите «Подключить Telegram» ещё раз.');
+        if (!u) return send(chat, 'Ссылка устарела. Откройте «Аккаунт» на сайте и нажмите «Подключить Telegram» ещё раз.');
         u.tgChatId = chat; delete u.tgLink; store.save(db);
-        return tg.send(chat, `Готово, ${u.name}! Сюда будут приходить ваши КП, статусы грузов и документы.\nОтключить: /stop`);
+        return send(chat, `Готово, ${u.name}! Сюда будут приходить ваши КП, статусы грузов и документы.\nОтключить: /stop`);
       }
       const tnCmd = TNV.parseCommand(text);
       if (tnCmd) {
         const acc = crm2.telegramAccess(m); if (!acc) return;
-        if (tnCmd.code.length !== 10) return tg.send(chat, TNV.HELP);
-        if (tnvedBotBusy(chat)) return tg.send(chat, 'Слишком много проверок подряд — подождите минуту.');
+        if (tnCmd.code.length !== 10) return send(chat, TNV.HELP);
+        if (tnvedBotBusy(chat)) return send(chat, 'Слишком много проверок подряд — подождите минуту.');
         const t0 = Date.now(); let ans;
         try { ans = (await TNV.check(tnCmd, tnvedDeps)).report + '\n\nСправочно: ставки зависят от страны происхождения и условий поставки.'; }
         catch (e) { ans = '❌ ' + (e instanceof TNV.TnvedError ? e.message : 'Не удалось проверить код. Попробуйте позже.'); if (!(e instanceof TNV.TnvedError)) console.error('bot tnved', e.message); }
         try { crm2.botLog({ channel: 'telegram', user_id: acc.uid, username: acc.u.display_name || acc.u.username, q: text, a: ans, ms: Date.now() - t0 }); } catch {}
-        return tg.send(chat, ans);
+        return send(chat, ans);
       }
-      if (!/^\//.test(text)) { try { const ans = await crm2.telegramMessage(m); if (ans) return tg.send(chat, ans); } catch (e) { console.error('bot', e.message); } }
-      if (/^\/stop/.test(text)) { const u = db.users.find(x => x.tgChatId === chat); if (u) { delete u.tgChatId; store.save(db); } return tg.send(chat, 'Уведомления отключены.'); }
-      return tg.send(chat, `Это бот iomastavka. Чтобы получать КП и статусы грузов, войдите на сайте ${SITE} → «Аккаунт» → «Подключить Telegram».\n\n${TNV.HELP}`);
+      if (!/^\//.test(text)) {
+        let ans = null;
+        try { ans = await crm2.telegramMessage(m); } catch (e) { console.error('bot', e.message); ans = crm2.botFallback(); }
+        if (ans === null) return; // бот выключен, пользователь заблокирован или не в белом списке
+        if (ans) return send(chat, ans);
+      }
+      if (/^\/stop/.test(text)) { const u = db.users.find(x => x.tgChatId === chat); if (u) { delete u.tgChatId; store.save(db); } return send(chat, 'Уведомления отключены.'); }
+      return send(chat, `Это бот iomastavka. Чтобы получать КП и статусы грузов, войдите на сайте ${SITE} → «Аккаунт» → «Подключить Telegram».\n\n${TNV.HELP}`);
     } catch (e) { console.error('telegram webhook', e.message); }
   });
 

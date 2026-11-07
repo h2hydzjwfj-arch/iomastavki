@@ -8,6 +8,8 @@
  *   по действующей шкале (настройки калькулятора ВЭД, по умолчанию — 2026 год); 5) отчёт с эмодзи.
  * Без внешних зависимостей: разметка alta.ru разбирается по известным классам (pTnved_*).
  */
+const fs = require('fs');
+const path = require('path');
 const VED = require('./ved');
 
 const ALTA_URL = code => `https://www.alta.ru/tnved/code/${code}/`;
@@ -217,15 +219,92 @@ async function httpGet(url, opts) {
   throw unavailable(`Справочник alta.ru недоступен (${last}). Попробуйте позже.`);
 }
 
+// ---------------------------------------------------------------- локальный справочник (запасной источник)
+
+/*
+ * reference/tnved-base.json — 200–300 ходовых для Китая кодов (электроника, одежда, оборудование, станки…)
+ * с реальными ставками, собранными с alta.ru скриптом tools/build-tnved-base.js. Используется, когда alta.ru
+ * недоступен или сменил вёрстку; в отчёте всегда помечено, что данные из локальной базы и на какую дату.
+ */
+const BASE_FILE = path.join(__dirname, 'reference', 'tnved-base.json');
+let base;
+function loadBase(file) {
+  if (file) { base = undefined; }
+  if (base !== undefined) return base;
+  try { const b = JSON.parse(fs.readFileSync(file || BASE_FILE, 'utf8')); base = b && b.codes && Array.isArray(b.nodes) ? b : null; }
+  catch { base = null; }
+  return base;
+}
+const fmtDate = iso => (/^\d{4}-\d{2}-\d{2}/.test(iso || '') ? iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.' + iso.slice(0, 4) : String(iso || ''));
+
+/** Запись локального справочника в том же виде, что разбор страницы alta.ru. */
+function baseInfo(code) {
+  const b = loadBase(); const e = b && b.codes[code]; if (!e) return null;
+  const levels = (e.path || []).map(i => b.nodes[i]).filter(Boolean).map(([c, t]) => ({ code: c, text: t }));
+  return { code, url: ALTA_URL(code), levels, duty: parseDuty(e.duty, e.note), vat: (e.vat || []).map(([rate, condition]) => ({ rate, condition: condition || '' })),
+    excise: e.excise || '', category: e.cat || '', source: 'local', baseDate: b.fetchedAt || '' };
+}
+const baseName = e => { const b = loadBase(); const p = (e.path || []).map(i => b.nodes[i]).filter(Boolean); const last = p[p.length - 1]; let n = last ? last[1] : '';
+  // «прочие» и «– – прочая» без родителя непонятны: добавляем ближайший осмысленный уровень
+  if (/^[–—-]*\s*прочи[ейяхм]/i.test(n) || n.length < 14) { const up = p.slice(0, -1).reverse().find(x => x[1] && !/^[–—-]*\s*прочи/i.test(x[1])); if (up) n = up[1].replace(/\s*:$/, '') + ' — ' + n.replace(/^[–—-\s]+/, ''); }
+  return n; };
+
+/** Поиск по локальному справочнику: цифры кода или слова из названия. */
+function searchBase(q, limit) {
+  const b = loadBase(); if (!b) return [];
+  limit = Math.min(Number(limit) || 20, 100);
+  const s = String(q || '').toLowerCase().replace(/ё/g, 'е'), d = s.replace(/\D/g, '');
+  const words = s.replace(/[\d.\s-]+/g, ' ').trim().split(' ').filter(w => w.length > 1).map(w => (w.length > 5 ? w.slice(0, w.length - 2) : w));
+  if (!d && !words.length) return [];
+  const out = [];
+  for (const [code, e] of Object.entries(b.codes)) {
+    if (d && !code.startsWith(d)) continue;
+    const name = baseName(e);
+    const hay = ((e.path || []).map(i => (b.nodes[i] || [])[1]).join(' ') + ' ' + (e.cat || '')).toLowerCase().replace(/ё/g, 'е');
+    if (words.length && !words.every(w => hay.includes(w))) continue;
+    const score = (d ? 50 : 0) + words.reduce((a, w) => a + (name.toLowerCase().includes(w) ? 20 : 5), 0);
+    out.push([score, { code, name, duty: e.duty, vat: (e.vat || []).map(v => v[0] + '%').filter((v, i, a) => a.indexOf(v) === i).join(' / '), cat: e.cat || '', source: 'base' }]);
+  }
+  return out.sort((a, b2) => b2[0] - a[0] || a[1].code.localeCompare(b2[1].code)).slice(0, limit).map(x => x[1]);
+}
+
+/** Ближайшие по цифрам коды локального справочника — подсказка, если точного кода нет. */
+function nearestBase(code, n) {
+  const b = loadBase(); if (!b) return [];
+  let best = [];
+  for (let len = Math.min(8, code.length - 1); len >= 4 && !best.length; len -= 2) best = Object.keys(b.codes).filter(c => c.startsWith(code.slice(0, len)));
+  return best.slice(0, n || 3).map(c => ({ code: c, name: baseName(b.codes[c]) }));
+}
+
+function withHint(err, code) {
+  const near = nearestBase(code, 3);
+  if (near.length) err.message += ` В локальном справочнике такого кода нет; похожие: ${near.map(x => `${x.code} (${x.name.slice(0, 60)})`).join(', ')}.`;
+  err.near = near;
+  return err;
+}
+
 const cache = new Map();
-/** Страница кода с кешем на 6 часов. get(url) — загрузчик (подменяется в тестах). */
+/**
+ * Страница кода с кешем на 6 часов. get(url) — загрузчик (подменяется в тестах).
+ * alta.ru недоступен или сменил вёрстку → запись из локального справочника (не кешируется: в следующий раз снова alta.ru).
+ */
 async function fetchTnved(code, get) {
   const hit = cache.get(code);
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.info;
   const url = ALTA_URL(code);
-  const r = await (get || httpGet)(url);
+  let r;
+  try { r = await (get || httpGet)(url); }
+  catch (e) {
+    const local = baseInfo(code); if (local) return local;
+    throw withHint(e instanceof TnvedError ? e : unavailable(`Справочник alta.ru недоступен (${e.message}).`), code);
+  }
   if (r.status === 404) throw notFound(`Код ${code} не найден в справочнике ТН ВЭД ЕАЭС`);
-  const info = parseAltaPage(r.text, code, url);
+  let info;
+  try { info = parseAltaPage(r.text, code, url); }
+  catch (e) {
+    if (e.kind === 'format_changed') { const local = baseInfo(code); if (local) return local; throw withHint(e, code); }
+    throw e;
+  }
   cache.set(code, { at: Date.now(), info });
   if (cache.size > 500) cache.delete(cache.keys().next().value);
   return info;
@@ -297,6 +376,7 @@ function formatReport(res) {
   for (const x of extra) L.push(`   ${x}`);
   if (res.fee == null) L.push('⚡ Сбор: укажите стоимость груза, ₽');
   else L.push(`⚡ Сбор: ${fmtMoney(res.fee)} ₽ (при стоимости груза ${fmtMoney(res.value)} ₽)${res.radio ? ' — товар из Приложения № 1 к ПП № 1637' : ''}`);
+  if (res.source === 'local') L.push(`ℹ️ alta.ru недоступен — ставки из локального справочника на ${fmtDate(res.baseDate)}; перед декларированием сверьте с действующими.`);
   return L.join('\n');
 }
 
@@ -326,4 +406,4 @@ function parseCommand(msg) {
 
 const HELP = 'Проверка кода ТН ВЭД:\n/tnved <код> <стоимость, ₽> [вес кг] [кол-во пар/шт]\nНапример:\n/tnved 6201400000 500000 300кг\n/tnved 6403190000 150 000 200 пар';
 
-module.exports = { check, parseAltaPage, parseDuty, computeDuty, customsFee, cleanCode, parseAmount, fmtMoney, fmtNum, fmtCode, vatLines, formatReport, parseCommand, fetchTnved, httpGet, TnvedError, HELP, _cache: cache };
+module.exports = { loadBase, baseInfo, searchBase, nearestBase, check, parseAltaPage, parseDuty, computeDuty, customsFee, cleanCode, parseAmount, fmtMoney, fmtNum, fmtCode, vatLines, formatReport, parseCommand, fetchTnved, httpGet, TnvedError, HELP, _cache: cache };
