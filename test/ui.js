@@ -147,6 +147,15 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       const types = await A.p.$$eval('#jrnBox td.ty', els => els.map(e => e.textContent)); if (!types.some(t => /Расчёт/.test(t)) || !types.some(t => /Заявка/.test(t))) throw new Error('в журнале нет расчётов или заявок: ' + types.slice(0, 8).join(', '));
       await shot(A.p, '07c_admin_journal');
     });
+    await step('Админ: робот-помощник — правка текста сайта видна гостю и отменяется', async () => {
+      await A.p.waitForSelector('.rb-btn:not([hidden])'); await A.p.click('.rb-btn'); await A.p.waitForSelector('.rb-panel:not([hidden])');
+      await A.p.fill('.rb-in textarea', 'Замени «Купим в Китае.» на «Найдём и купим в Китае.»'); await A.p.click('.rb-send');
+      await A.p.waitForSelector('.rb-card[data-kind=text] [data-go]', { timeout: 8000 }); await A.p.click('.rb-card[data-kind=text] [data-go]'); await A.p.waitForSelector('.rb-card[data-kind=text].done', { timeout: 8000 }); await shot(A.p, '08b_admin_robot');
+      await p.goto(B + '/', { waitUntil: 'domcontentloaded' }); await p.waitForFunction(() => /Найдём и купим в Китае/.test(document.querySelector('.hx-h1').innerText), null, { timeout: 8000 });
+      if (await p.isVisible('.rb-btn')) throw new Error('гость видит робота');
+      const t = await A.p.evaluate(() => fetch('/api/robot').then(r => r.json())); for (const x of t.texts) await A.p.evaluate(id => fetch('/api/robot/texts/' + id, { method: 'DELETE' }), x.id);
+      await A.p.click('.rb-x');
+    });
     await step('Админ: аккаунт и состояние сайта', async () => { await A.p.click('.v3-acc'); await A.p.waitForSelector('#v3accBody .v3p-notif'); await shot(A.p, '08_admin_account'); });
 
     const C = await ctx();

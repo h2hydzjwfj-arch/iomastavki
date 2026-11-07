@@ -10,7 +10,6 @@
     ['/tnved', 'customsView', 'Проверка кода ТН ВЭД', 'customsView'],
     ['/ekspeditory', 'forwardersView', 'Экспедиторы', 'forwarders'],
     ['/novosti', 'newsView', 'Новости ВЭД', 'news'],
-    ['/assistent', 'assistantView', 'ИИ-ассистент', 'assistant'],
     ['/gid', 'kbView', 'Гид по доставке', ''],
     ['/zayavka', 'leadView', 'Оставить заявку', ''],
     ['/vhod', 'loginView', 'Вход', ''],

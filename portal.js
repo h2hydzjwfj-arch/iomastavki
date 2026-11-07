@@ -188,6 +188,8 @@ function setup(app, opts) {
     mail: { enabled: () => mail.enabled(), kind: () => mail.kind(), send: (...a) => mail.send(...a) }, who: req => roleOf(req).name || 'Менеджер', publicAgents: opts.agents || null, newCalcDoc: (d, o) => crm2.newCalcDoc(d, o) });
   // после сделки: «Факт», «Мои средства», ЭТрН
   require('./crm4').setup(app, { store, admin, need, str, newId, who: req => roleOf(req).name || 'Менеджер', contractFor: id => crm2.contractFor(id) });
+  // робот-помощник администратора: агенты, КП → ставки, груз → сделка, тексты и цвет сайта
+  require('./robot').setup(app, { store, admin, upload, str, newId, ai: opts.ai, crm, who: req => roleOf(req).name || 'Администратор', mergeRates: opts.mergeRates || null });
   const splitContact = c => { c = String(c || '').trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c) ? { contactEmail: c } : { contactPhone: c }; };
   function dealFromLead(lead, extraText) {
     const text = ['Новая заявка с сайта', `Имя: ${lead.name}`, `Контакт: ${lead.contact}`, `Маршрут: ${lead.from || '—'} → ${lead.to || '—'}`, lead.cargo ? `Груз: ${lead.cargo}` : '', lead.weight != null ? `Вес: ${lead.weight} кг` : '', lead.volume != null ? `Объём: ${lead.volume} м³` : '', lead.estimate ? `Оценка с сайта: ${lead.estimate}` : '', lead.comment ? `Комментарий: ${lead.comment}` : '', extraText || ''].filter(Boolean).join('\n');
