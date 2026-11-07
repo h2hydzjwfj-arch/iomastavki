@@ -21,11 +21,16 @@ async function startServer(port, extraEnv = {}) {
 // Переход в раздел через меню: пункт может лежать в группе («Управление грузом», «Инструменты ВЭД») —
 // тогда сначала раскрываем группу; если в группе для этой роли один пункт, он виден в меню как обычная кнопка.
 async function navTo(p, view) {
-  const sel = `.v3-nav [data-open-view=${view}]`;
-  const inGroup = await p.$eval(sel, el => { const g = el.closest('[data-sg]'); return g ? (g.classList.contains('sg-solo') ? 'solo' : 'menu') : ''; }).catch(() => '');
-  if (inGroup === 'menu') {
-    await p.click(`.v3-nav [data-sg]:has([data-open-view=${view}]) .sg-btn`);
-    await p.waitForSelector(sel, { state: 'visible' });
+  const sel = `.v3-nav [data-open-view=${view}]`, grp = `.v3-nav [data-sg]:has([data-open-view=${view}]) .sg-btn`;
+  await p.waitForSelector(sel, { state: 'attached' });
+  for (let i = 0; i < 4; i++) {
+    if (await p.isVisible(sel)) return p.click(sel);          // кнопка на виду (в т. ч. одиночная группа)
+    if (await p.isVisible(grp)) {                              // пункт в группе — раскрываем её
+      await p.click(grp);
+      try { await p.waitForSelector(sel, { state: 'visible', timeout: 3000 }); } catch {}
+      continue;
+    }
+    await p.waitForTimeout(500);                               // страница ещё перестраивается после входа
   }
   await p.click(sel);
 }
