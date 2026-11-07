@@ -1,21 +1,26 @@
-name: tnved-probe
+name: tnved-base-build
 on:
   push:
     branches: [tnved-probe]
+permissions:
+  contents: write
 jobs:
-  probe:
+  build:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
-      - name: Probe heading pages
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Собрать справочник ТН ВЭД с alta.ru
+        run: node tools/build-tnved-base.js data/tnved-base.json --limit 300
+      - name: Сохранить в ветку tnved-base-data
+        if: always()
         run: |
-          python3 - <<'PY'
-          import urllib.request, re
-          UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36'
-          def get(url):
-              r = urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': UA, 'Accept-Language': 'ru', 'X-Requested-With': 'XMLHttpRequest'}), timeout=30)
-              return r.read().decode('utf-8', 'replace')
-          for url in ['https://www.alta.ru/tnved/get_tree/?tncode=8471', 'https://www.alta.ru/tnved/get_tree/?tncode=8471300000', 'https://www.alta.ru/tnved/get_tree/']:
-              try: b = get(url)
-              except Exception as e: print('=====', url, 'ERROR', e); continue
-              print('=====', url, len(b)); print('BODY', re.sub(r'\s+', ' ', b)[:2500])
-          PY
+          test -f data/tnved-base.json || exit 0
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan tnved-base-data
+          git rm -rq --cached . ; git add -f data/tnved-base.json
+          git commit -q -m "Справочник ТН ВЭД $(date -u +%F)"
+          git push -f origin tnved-base-data
