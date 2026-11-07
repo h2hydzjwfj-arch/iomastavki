@@ -175,7 +175,7 @@ function setup(app, ctx) {
     if (b.declarant !== undefined) doc.declarant = ['ecp', 'broker', 'none'].includes(b.declarant) ? b.declarant : 'ecp';
     if (b.td !== undefined) doc.td = !!b.td;
     for (const f of ['declarant_rub', 'margin', 'insurance_pct', 'freight_fx']) if (b[f] !== undefined) doc[f] = b[f] === '' || b[f] == null ? null : n(b[f]);
-    for (const f of ['kp_transit', 'kp_valid', 'kp_note']) if (b[f] !== undefined) doc[f] = str(b[f], 300);
+    for (const f of ['kp_transit', 'kp_valid', 'kp_note', 'kp_from', 'kp_to', 'kp_terms', 'kp_cargo', 'kp_volume', 'kp_places', 'kp_supplier']) if (b[f] !== undefined) doc[f] = str(b[f], 300);
     if (Array.isArray(b.markups)) doc.markups = b.markups.slice(0, 20).map(m => ({ label: str(m.label, 120), amount: n(m.amount), currency: curOk(m.currency || 'USD') }));
     if (Array.isArray(b.extra_costs)) doc.extra_costs = b.extra_costs.slice(0, 60).map(ec => ({ label: str(ec.label, 120), amount: n(ec.amount), is_percent_of_invoice: !!ec.is_percent_of_invoice, currency: curOk(ec.currency || 'RUB'), rate_mode: ec.rate_mode === 'manual' ? 'manual' : 'cbr', manual_rate: n(ec.manual_rate) }));
     if (Array.isArray(b.items)) doc.items = b.items.slice(0, 200).map(it => {

@@ -115,8 +115,8 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await A.p.fill('#cxVed [data-k=invoice_amount]', '10000'); await A.p.waitForFunction(() => { const b = document.querySelector('#cxVed .cv-total b'); return b && /[1-9]/.test(b.textContent); }, null, { timeout: 6000 }); await shot(A.p, '06e_ved_calc');
       // расчёт контракта по рабочей таблице: условия, итог вверх до юаня, текст КП без маржи
       await A.p.selectOption('#cxVed [data-d=payment]', 'bank'); await A.p.waitForFunction(() => /по внутреннему курсу банка/.test(document.querySelector('#cxVed [data-r=result]').textContent), null, { timeout: 6000 });
-      await A.p.click('#cxVed [data-c=kp]'); await A.p.waitForSelector('.cv-kp'); const kp = await A.p.inputValue('.cv-kp');
-      if (!/Стоимость контракта: [\d ]+ /.test(kp) || /Маржа|налог/i.test(kp)) throw new Error('текст КП: ' + kp.slice(0, 200));
+      await A.p.click('#cxVed [data-c=kp]'); await A.p.waitForSelector('.cx-modal .kp'); const kp = await A.p.textContent('.cx-modal .kp');
+      if (!/Стоимость контракта/.test(kp) || !/по курсу ЦБ/.test(kp) || !/В стоимость включено/i.test(kp) || /Маржа|налог/i.test(kp)) throw new Error('КП: ' + kp.slice(0, 200));
       await shot(A.p, '06e2_kp'); await A.p.keyboard.press('Escape');
       await A.p.click('#workView .cx-nav [data-tab=tnved]'); await A.p.waitForSelector('#cxTnved [data-tq]'); await shot(A.p, '06f_tnved');
       // ставки агентов в сделке: ориентир по прайсу и окно запроса
