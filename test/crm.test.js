@@ -1,5 +1,5 @@
 'use strict';
-// CRM West Asia → iomastavka: сделки, задачи, финансы, калькулятор ВЭД, ТН ВЭД, аналитика, отгулы, компания, почта, бот.
+// CRM → iomastavka: сделки, задачи, финансы, калькулятор ВЭД, ТН ВЭД, аналитика (проверки на настоящих модулях).
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs'); const os = require('os'); const path = require('path');
@@ -42,7 +42,7 @@ test('калькулятор ВЭД: пошлина «но не менее», а
 
 test('сделки: воронки, этапы, закрытие с причиной, архив и восстановление', async () => {
   const { call } = setupAll();
-  const c = await call('POST', '/api/deals', { title: 'Станки', contactName: 'Иван', contactPhone: '+7 900 111-22-33', funnel: 'Контракт West Asia', manager: 'Анна' });
+  const c = await call('POST', '/api/deals', { title: 'Станки', contactName: 'Иван', contactPhone: '+7 900 111-22-33', funnel: 'Наш контракт', manager: 'Анна' });
   assert.ok(c.body.ok); const id = c.body.item.id; assert.equal(c.body.item.stage, 'Запрос');
   const p = await call('PATCH', '/api/deals/' + id, { stage: 'Расчёт' }); assert.equal(p.body.item.stage, 'Расчёт');
   let l = await call('GET', '/api/deals?notFunnel=Входящие'); assert.equal(l.body.items[0].status, 'active'); assert.equal(l.body.items[0].daysInStage, 0);
@@ -176,7 +176,7 @@ test('калькулятор ВЭД сходится с рабочей табл�
 
 test('ТН ВЭД: история обновлений — новые, нет в файле, изменённые ставки, задетые сделки', async () => {
   const { call, crm2 } = setupAll();
-  const id = (await call('POST', '/api/deals', { title: 'Куртки', funnel: 'Контракт West Asia' })).body.item.id;
+  const id = (await call('POST', '/api/deals', { title: 'Куртки', funnel: 'Наш контракт' })).body.item.id;
   const c = await call('POST', '/api/calc', { dealId: id, calc_type: 'our_contract' });
   await call('PATCH', '/api/calc/' + c.body.id, { items: [{ ...c.body.doc.items[0], tnved_code: '6201400000', invoice_amount: 1000 }] });
   const up = (csv, mode) => call('POST', '/api/tnved/import', mode ? { mode } : {}, { file: { originalname: 'tnved.csv', buffer: Buffer.from(csv) } });
@@ -236,7 +236,7 @@ test('агенты: импорт базы, запрос ставок, ответ
   const im = await call('POST', '/api/crm/agents/import', {}, { file: { originalname: 'agents.csv', buffer: Buffer.from(csv) } });
   assert.equal(im.body.added, 2); assert.equal(im.body.updated, 1);
   const all = await call('GET', '/api/crm/agents?mode=rail'); assert.ok(all.body.items.some(a => a.company === 'Rail Go') && all.body.items.some(a => a.company === 'Multiwell') && !all.body.items.some(a => a.company === 'Air Star'));
-  const deal = (await call('POST', '/api/deals', { title: 'Станки', from: 'Иу', to: 'Москва', mode: 'rail', weight: 8000, volume: 30, funnel: 'Контракт West Asia' })).body.item;
+  const deal = (await call('POST', '/api/deals', { title: 'Станки', from: 'Иу', to: 'Москва', mode: 'rail', weight: 8000, volume: 30, funnel: 'Наш контракт' })).body.item;
   const draft = await call('GET', '/api/deals/' + deal.id + '/rq/draft'); assert.match(draft.body.text, /Иу → Москва/);
   const ids = all.body.items.filter(a => ['Rail Go', 'Multiwell'].includes(a.company)).map(a => a.id);
   const rq = await call('POST', '/api/deals/' + deal.id + '/rq', { agentIds: ids, subject: draft.body.subject, text: draft.body.text });
@@ -250,10 +250,10 @@ test('агенты: импорт базы, запрос ставок, ответ
   assert.equal(v.body.questions.length, 1);
   const fin = await call('POST', '/api/rq/rates/' + best.id + '/finance', {}); assert.ok(fin.body.ok); assert.equal(fin.body.row.amount_orig, 28500); assert.equal(fin.body.row.rate, 11);
   const f = await call('GET', '/api/deals/' + deal.id + '/finance'); assert.equal(f.body.expense, 313500);
-  const air = (await call('POST', '/api/deals', { title: 'Образцы', from: 'Шанхай', to: 'Москва', mode: 'air', weight: 100, funnel: 'Контракт West Asia' })).body.item;
+  const air = (await call('POST', '/api/deals', { title: 'Образцы', from: 'Шанхай', to: 'Москва', mode: 'air', weight: 100, funnel: 'Наш контракт' })).body.item;
   const refs = (await call('GET', '/api/deals/' + air.id + '/rq')).body.refs;
   assert.equal(refs[0].agent, 'QT Avia (ГК АТС)'); assert.equal(refs[0].est, 20500);
-  const road = (await call('POST', '/api/deals', { title: 'Одежда', from: 'Гуанчжоу', to: 'Новосибирск', mode: 'auto', weight: 1000, funnel: 'Контракт West Asia' })).body.item;
+  const road = (await call('POST', '/api/deals', { title: 'Одежда', from: 'Гуанчжоу', to: 'Новосибирск', mode: 'auto', weight: 1000, funnel: 'Наш контракт' })).body.item;
   const rr = (await call('GET', '/api/deals/' + road.id + '/rq')).body.refs; assert.equal(rr[0].perKg, 65); assert.equal(rr[0].est, 65000);
 });
 
@@ -295,4 +295,15 @@ test('«Факт» в сделке: черновик из расчёта, сох
   const e = await call('PUT', '/api/deals/' + x.id + '/etrn', { contract: 'our', dest: 'tk', tk: 'ПЭК', done: ['s0', 's2'] });
   assert.deepEqual(e.body.etrn.done, ['s0', 's2']); assert.equal(e.body.etrn.tk, 'ПЭК');
   const deal = (await call('GET', '/api/deals/' + x.id)).body.item; assert.equal(deal.etrn.contract, 'our'); assert.ok(deal.fact.bonusPaid);
+});
+
+test('прежнее название воронки заменяется на «Наш контракт» вместе с этапами', async () => {
+  const fs2 = require('fs'), os2 = require('os'), path2 = require('path');
+  const dir = fs2.mkdtempSync(path2.join(os2.tmpdir(), 'ioma-mig-')); const store = createStore(dir, null);
+  const old = 'Контракт ' + 'West Asia', d0 = store.load(); d0.deals = [{ id: 'a1', title: 'Старая', funnel: old, stage: 'Расчёт' }]; d0.settings = { pipelines: { [old]: ['Расчёт', 'КП', 'Успешно'] } }; store.save(d0);
+  const app = fakeApp(); const str = v => String(v == null ? '' : v); const newId = () => require('crypto').randomBytes(4).toString('hex');
+  require('../crm').setup(app, { store, admin, upload, str, num: v => Number(v), newId });
+  const m = await app.call('GET', '/api/deals/meta');
+  assert.ok(!m.body.funnels.includes(old)); assert.ok(m.body.funnels.includes('Наш контракт')); assert.deepEqual(m.body.pipelines['Наш контракт'], ['Расчёт', 'КП', 'Успешно']);
+  assert.equal((await app.call('GET', '/api/deals/a1')).body.item.funnel, 'Наш контракт');
 });

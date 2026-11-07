@@ -1,6 +1,6 @@
 'use strict';
 // CRM: воронки и этапы, сделки (статусы, архив, история), лента активности, файлы с папками,
-// база клиентов (компании, контакты, юрлица, дубли). Перенос логики CRM West Asia (deals.js, activity.js, files.js, clients.js).
+// база клиентов (компании, контакты, юрлица, дубли). Логика перенесена из прежней CRM владельца (сделки, лента, файлы, клиенты).
 const crypto = require('crypto');
 
 const INCOMING = 'Входящие';
@@ -8,7 +8,8 @@ const WON = 'Успешно', LOST = 'Закрыта';
 const INCOMING_STAGES = ['Новая заявка', 'Запрос', 'Расчёт', 'Ставка отправлена', 'КП отправлено'];
 const DEAL_STAGES = ['Запрос', 'Расчёт', 'Ставка отправлена', 'КП отправлено', 'Клиент на рассмотрении', 'В работе', 'Груз в пути'];
 const STAGES = ['Новая заявка', ...DEAL_STAGES, WON, LOST];
-const FUNNELS = [INCOMING, 'Контракт West Asia', 'Контракт клиента', 'Карго'];
+const FUNNELS = [INCOMING, 'Наш контракт', 'Контракт клиента', 'Карго'];
+const OLD_FUNNELS = { ['Контракт ' + 'West Asia']: 'Наш контракт' }; // прежнее название воронки → новое (сделки и этапы переносятся сами)
 const SOURCES = ['Сайт', 'GW', 'Постоянный клиент', 'Рекомендация', 'Почта', 'Telegram', 'Звонок'];
 const MODES = { auto: 'Авто', rail: 'ЖД', sea: 'Море', air: 'Авиа', multimodal: 'Мультимодальная' };
 const CLOSE_REASONS = ['Дорого', 'Выбрали другого перевозчика', 'Не отвечает', 'Неактуально / отложили', 'Не можем перевезти', 'Дубль заявки', 'Спам', 'Другое'];
@@ -40,7 +41,14 @@ function zipStore(files) {
 function setup(app, ctx) {
   const { store, admin, upload, str, num, newId } = ctx;
   const hooks = { onCreate: [] };
-  const db = () => { const d = store.load(); d.deals = d.deals || []; d.tasks = d.tasks || []; d.settings = d.settings || {}; return d; };
+  let migrated = false;
+  function migrate(d) {
+    let ch = false;
+    for (const x of d.deals) if (OLD_FUNNELS[x.funnel]) { x.funnel = OLD_FUNNELS[x.funnel]; ch = true; }
+    const p = d.settings.pipelines; if (p) for (const k of Object.keys(OLD_FUNNELS)) if (p[k]) { if (!p[OLD_FUNNELS[k]]) p[OLD_FUNNELS[k]] = p[k]; delete p[k]; ch = true; }
+    return ch;
+  }
+  const db = () => { const d = store.load(); d.deals = d.deals || []; d.tasks = d.tasks || []; d.settings = d.settings || {}; if (!migrated) { migrated = true; if (migrate(d)) store.save(d); } return d; };
   const now = () => new Date().toISOString();
   const pad = n => String(n).padStart(2, '0');
   const pipelines = () => { const p = (db().settings.pipelines) || {}; const out = {}; for (const f of FUNNELS) out[f] = Array.isArray(p[f]) && p[f].length ? p[f] : (f === INCOMING ? INCOMING_STAGES : DEAL_STAGES); for (const k of Object.keys(p)) if (!out[k] && Array.isArray(p[k]) && p[k].length) out[k] = p[k]; return out; };
@@ -102,7 +110,7 @@ function setup(app, ctx) {
     const d = db(); const at = src.createdAt || now();
     const deal = { id: newId(), number: src.number ? str(src.number, 40) : nextNumber(d, at), createdAt: at, updatedAt: at, stageAt: at, activity: [], files: [], folders: [] };
     for (const f of FIELDS) if (src[f] != null && src[f] !== '') deal[f] = clean(f, src[f]);
-    deal.funnel = deal.funnel || INCOMING; deal.source = deal.source || 'Сайт';
+    deal.funnel = OLD_FUNNELS[deal.funnel] || deal.funnel || INCOMING; deal.source = deal.source || 'Сайт';
     const st = stagesOf(deal.funnel);
     deal.stage = deal.stage && (st.includes(deal.stage) || deal.stage === WON || deal.stage === LOST) ? deal.stage : (deal.stage || st[0]);
     if (deal.stage === WON || deal.stage === LOST) deal.closedAt = at;
@@ -175,6 +183,7 @@ function setup(app, ctx) {
     if (b.status === 'closed') { b.stage = LOST; x.closeReason = str(b.closeReason || b.close_reason, 120) || 'Другое'; x.closeComment = str(b.closeComment || b.close_comment, 1000); }
     if (b.status === 'won') b.stage = WON;
     if (b.status === 'active' && statusOf(x) !== 'active') b.stage = stagesOf(b.funnel || x.funnel)[0];
+    if (OLD_FUNNELS[b.funnel]) b.funnel = OLD_FUNNELS[b.funnel];
     if (b.funnel && b.funnel !== x.funnel) { const st = stagesOf(b.funnel); if (!b.stage || !st.includes(b.stage)) b.stage = st[0]; }
     if (b.crmClientId != null) { clientsDb(d); const c = d.crmClients.find(v => v.id === b.crmClientId); if (b.crmClientId && !c) return res.status(400).json({ ok: false, error: 'Клиент не найден' }); if (c) { for (const [k, v] of [['company', c.company], ['contactName', c.contact], ['contactPhone', c.phone], ['contactEmail', c.email]]) if (v && b[k] == null) b[k] = v; } }
     for (const f of FIELDS) if (Object.prototype.hasOwnProperty.call(b, f)) {

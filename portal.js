@@ -183,7 +183,7 @@ function setup(app, opts) {
   });
   const tnvedBotHits = new Map(); // не больше 10 проверок в минуту из одного чата
   const tnvedBotBusy = chat => { const t = Date.now(), a = (tnvedBotHits.get(chat) || []).filter(x => t - x < 60000); a.push(t); tnvedBotHits.set(chat, a); if (tnvedBotHits.size > 2000) tnvedBotHits.delete(tnvedBotHits.keys().next().value); return a.length > 10; };
-  // агенты и запросы ставок из сделки (перенос модуля RQ West Asia)
+  // агенты и запросы ставок из сделки (модуль запросов ставок)
   const crm3 = require('./crm3').setup(app, { store, admin, upload, str, newId, ai: opts.ai, rates: opts.rates || (async () => ({ rates: {} })),
     mail: { enabled: () => mail.enabled(), kind: () => mail.kind(), send: (...a) => mail.send(...a) }, who: req => roleOf(req).name || 'Менеджер', publicAgents: opts.agents || null, newCalcDoc: (d, o) => crm2.newCalcDoc(d, o) });
   // после сделки: «Факт», «Мои средства», ЭТрН

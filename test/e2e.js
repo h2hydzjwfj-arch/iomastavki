@@ -152,7 +152,7 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       ok((await call('g', 'GET', '/api/deals'))._status === 401, 'гостю видны сделки');
     });
     await check('CRM: задачи, финансы, калькулятор ВЭД по курсу ЦБ, коды ТН ВЭД', async () => {
-      const d = await call('a', 'POST', '/api/deals', { title: 'ВЭД CI', contactName: 'Олег', funnel: 'Контракт West Asia', weight: 500 }); ok(d.ok && d.item.funnel === 'Контракт West Asia', JSON.stringify(d).slice(0, 200));
+      const d = await call('a', 'POST', '/api/deals', { title: 'ВЭД CI', contactName: 'Олег', funnel: 'Наш контракт', weight: 500 }); ok(d.ok && d.item.funnel === 'Наш контракт', JSON.stringify(d).slice(0, 200));
       const y = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
       const t = await call('a', 'POST', '/api/tasks', { dealId: d.item.id, type: 'Звонок', desc: 'Перезвонить CI', deadline: y }); ok(t.ok && t.item.overdue, 'задача не просрочена');
       ok((await call('a', 'GET', '/api/crm/badges')).tasksOverdue >= 1, 'нет счётчика просроченных');
