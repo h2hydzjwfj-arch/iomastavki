@@ -1,0 +1,163 @@
+/* IOMASTAVKA — страница «Расчёт ставки» (calc-ux.js).
+   До расчёта: слева параметры, справа маршрут (строится по мере ввода). После — ставка появляется справа, маршрут уходит ниже.
+   Стиль — как оранжевый блок КП: тёмно-синий фон, мягкий оранжевый, без лишнего. */
+
+/* ---------- сетка: «до расчёта» и «после» ---------- */
+html:root body .v3-calc-grid.cx-pre{grid-template-columns:minmax(340px,1fr) 1.55fr;grid-template-areas:"params route" "more more" "cur cur"!important;align-items:stretch}
+html:root body .v3-calc-grid.cx-res{grid-template-columns:minmax(340px,1fr) 1.55fr;grid-template-areas:"params hero" "opts opts" "route route" "more more" "cur cur"!important;align-items:stretch}
+html:root body .v3-calc-grid.cx-pre .v3c-hero,html:root body .v3-calc-grid.cx-pre .v3c-opts{display:none!important}
+/* старое: «— $», «срок уточнить», «Из чего складывается», рисованная схема маршрута, ручное «Расстояние» */
+html:root body .v3-calc-grid .v3c-break,html:root body .v3-calc-grid .v3c-map,html:root body .v3-calc .v3c-empty,html:root body .v3-calc .v3c-dist{display:none!important}
+html:root body .v3c-morecard .auto-calc-strip{grid-column:1 / -1!important}
+@media(max-width:1100px){
+  html:root body .v3-calc-grid.cx-pre{grid-template-columns:minmax(300px,1fr) 1.2fr}
+  html:root body .v3-calc-grid.cx-res{grid-template-columns:1fr 1fr;grid-template-areas:"hero hero" "opts opts" "params params" "route route" "more more" "cur cur"!important}
+}
+@media(max-width:860px){
+  html:root body .v3-calc-grid.cx-pre{grid-template-columns:1fr;grid-template-areas:"params" "route" "more" "cur"!important}
+  html:root body .v3-calc-grid.cx-res{grid-template-columns:1fr;grid-template-areas:"params" "hero" "opts" "route" "more" "cur"!important}
+}
+
+/* ---------- ставка появляется плавно ---------- */
+@keyframes cxReveal{from{opacity:0;transform:translateY(18px) scale(.985);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
+@keyframes cxUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes cxRing{from{opacity:0;transform:scale(.8) rotate(-20deg)}to{opacity:1;transform:none}}
+html:root body .v3c-hero.cx-in{animation:cxReveal .75s var(--ui-ease,cubic-bezier(.22,1,.36,1)) both}
+html:root body .v3c-hero.cx-in .result-price-window>*{animation:cxUp .6s var(--ui-ease,ease) both}
+html:root body .v3c-hero.cx-in .result-price-window>:nth-child(2){animation-delay:.08s}
+html:root body .v3c-hero.cx-in .result-price-window>:nth-child(3){animation-delay:.16s}
+html:root body .v3c-hero.cx-in .result-price-window>:nth-child(4){animation-delay:.24s}
+html:root body .v3c-hero.cx-in .result-price-window>:nth-child(n+5){animation-delay:.32s}
+html:root body .v3c-hero.cx-in .v3c-ring{animation:cxRing .9s .15s var(--ui-ease,ease) both}
+html:root body .v3c-hero{position:relative}
+html:root body .v3c-hero .v3c-heroin{transition:opacity .3s,filter .3s}
+html:root body .v3c-hero.cx-stale .v3c-heroin{opacity:.42;filter:saturate(.5)}
+html:root body .v3c-hero.cx-stale::after{content:attr(data-stale);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:max-content;max-width:calc(100% - 40px);padding:12px 18px;border-radius:16px;
+  background:rgba(10,18,48,.86);border:1px solid rgba(242,138,58,.45);color:#F6F1EA;font-size:14px;font-weight:500;line-height:1.4;text-align:center;white-space:normal;box-shadow:0 18px 40px rgba(0,0,0,.35);animation:cxHint .35s both}
+
+/* ---------- «Рассчитать»: подсветка, когда всё заполнено ---------- */
+@keyframes cxGo{0%,100%{box-shadow:0 0 0 0 rgba(224,106,44,.0),0 10px 24px rgba(224,106,44,.22)}50%{box-shadow:0 0 0 7px rgba(224,106,44,.16),0 12px 28px rgba(224,106,44,.3)}}
+html:root body .v3-calc #calculate.cx-go{animation:cxGo 2.4s ease-in-out infinite}
+/* пустое обязательное поле при нажатии «Рассчитать» */
+@keyframes cxShake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(2px)}30%,50%,70%{transform:translateX(-4px)}40%,60%{transform:translateX(4px)}}
+html:root body .v3-calc .field.cx-need{animation:cxShake .5s both;box-shadow:0 0 0 2px var(--ui-o2,#E06A2C)!important}
+
+/* ---------- подсказки в пустых полях ---------- */
+html:root body .v3-calc .field.cx-phf{position:relative}
+.cx-ph{position:absolute;display:block;overflow:hidden;pointer-events:none;white-space:nowrap;color:var(--v-mut,#5B6278);font-weight:450;opacity:.78;transition:opacity .25s}
+.cx-ph.foc{opacity:.5}
+.cx-ph.off{opacity:0}
+.cx-ph-t{position:absolute;left:0;right:0;top:0;bottom:0;overflow:hidden;text-overflow:ellipsis}
+.cx-ph-t.in{animation:cxPhIn .7s .3s var(--ui-ease,ease) both}
+.cx-ph-t.out{animation:cxPhOut .3s ease-in both}
+@keyframes cxPhIn{from{opacity:0;transform:translateY(65%);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+@keyframes cxPhOut{to{opacity:0;transform:translateY(-65%);filter:blur(4px)}}
+
+/* ---------- маршрут ---------- */
+html:root body .cx-route{grid-area:route;position:relative;display:flex;flex-direction:column;gap:14px;min-width:0;padding:24px 26px!important;border-radius:28px!important;color:#F6F1EA!important;overflow:hidden;
+  background:radial-gradient(700px 380px at 88% -10%,rgba(242,138,58,.13),transparent 60%),linear-gradient(165deg,#18224C 0%,#0F1A42 45%,#0A1230 100%)!important;border:1px solid rgba(246,241,234,.08)!important;box-shadow:0 18px 50px rgba(10,18,48,.18)!important}
+html:root body .cx-route .v3c-title{color:#F6F1EA!important;margin:0}
+.cxr-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.cxr-tot{display:inline-flex;align-items:baseline;gap:10px;font-size:22px;font-weight:650;color:#F2A26B;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cxr-tot small{font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:rgba(246,241,234,.55)}
+.cxr-body{position:relative;display:flex;flex-direction:column;gap:12px;min-width:0}
+.cxr-body.cx-anim>:not(.cxr-hint){animation:cxUp .5s var(--ui-ease,ease) both}
+.cxr-body.cx-anim>.cxr-hint{animation:cxHint .5s .1s var(--ui-ease,ease) both}
+@keyframes cxHint{from{opacity:0;transform:translate(-50%,-38%)}to{opacity:1;transform:translate(-50%,-50%)}}
+.cxr-body.cx-anim>:nth-child(2){animation-delay:.05s}.cxr-body.cx-anim>:nth-child(3){animation-delay:.1s}.cxr-body.cx-anim>:nth-child(n+4){animation-delay:.16s}
+.cxr-od{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;font-size:clamp(20px,2vw,26px);letter-spacing:-.02em;line-height:1.15}
+.cxr-od b{font-weight:600}
+.cxr-od i{position:relative;width:34px;height:2px;border-radius:2px;background:linear-gradient(90deg,rgba(246,241,234,.3),#F28A3A)}
+.cxr-od i::after{content:"";position:absolute;right:-1px;top:-4px;width:8px;height:8px;border-top:2px solid #F28A3A;border-right:2px solid #F28A3A;transform:rotate(45deg)}
+.cxr-sub{margin-top:-6px;font-size:13.5px;color:rgba(246,241,234,.62)}
+.cxr-map{position:relative;border-radius:20px;background:rgba(246,241,234,.03);border:1px solid rgba(246,241,234,.08);overflow:hidden}
+.cxr-map svg{display:block;width:100%;height:auto}
+.cxr-ghost{opacity:.32;filter:saturate(.3)}
+.cxr-hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:max-content;max-width:min(380px,calc(100% - 32px));margin:0;padding:14px 18px;border-radius:16px;text-align:center;
+  font-size:14.5px;line-height:1.45;color:#F6F1EA;background:rgba(10,18,48,.74);border:1px solid rgba(246,241,234,.12);backdrop-filter:blur(6px)}
+.cxr-hint b{color:#F2A26B;font-weight:600}
+/* линия маршрута на карте */
+.rmini .rmini-r{fill:none;stroke:#F28A3A;stroke-width:calc(var(--u,1) * 3.2px);stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:0;filter:drop-shadow(0 0 calc(var(--u,1) * 4px) rgba(242,138,58,.45))}
+.cx-anim .rmini .rmini-r{animation:cxDraw 1.3s .1s var(--ui-ease,ease) both}
+@keyframes cxDraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+.rmini .rmini-a{fill:#F6F1EA;stroke:#F28A3A;stroke-width:calc(var(--u,1) * 2px)}
+.rmini .rmini-b{fill:#F28A3A;stroke:rgba(242,138,58,.35);stroke-width:calc(var(--u,1) * 6px)}
+.rmini .rmini-g{fill:#0A1230;stroke:#F2A26B;stroke-width:calc(var(--u,1) * 1.6px)}
+.rmini .rmini-t{fill:#F6F1EA;font-size:calc(var(--u,1) * 14px);font-weight:600;paint-order:stroke;stroke:#0A1230;stroke-width:calc(var(--u,1) * 4px);stroke-linejoin:round}
+.rmini .rmini-t.gw{fill:#F2C7A3;font-size:calc(var(--u,1) * 11.5px);font-weight:500}
+.rmini .rmini-t.msk{fill:#F2A26B}
+/* полоса участков */
+.cxr-bar{display:flex;gap:4px;height:8px}
+.cxr-bar i{flex-basis:0;min-width:10px;border-radius:99px;transform-origin:left center}
+.cx-anim .cxr-bar i{animation:cxGrow .9s var(--ui-ease,ease) both}
+.cx-anim .cxr-bar i:nth-child(2){animation-delay:.25s}.cx-anim .cxr-bar i:nth-child(3){animation-delay:.45s}
+@keyframes cxGrow{from{transform:scaleX(0)}to{transform:none}}
+.k-china,.k-sea{--k:#F2C7A3}.k-transit{--k:rgba(246,241,234,.38)}.k-ru,.k-rail{--k:#E06A2C}.k-air{--k:#F28A3A}
+.cxr-bar i{background:var(--k)}
+.cxr-legs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.cxr-legs li{display:grid;grid-template-columns:10px 1fr auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid rgba(246,241,234,.08)}
+.cxr-legs li:first-child{border-top:0;padding-top:2px}
+.cxr-legs li>i{width:10px;height:10px;border-radius:50%;background:var(--k)}
+.cxr-legs span{font-size:15px;font-weight:500;line-height:1.3;min-width:0}
+.cxr-legs em{display:block;font-style:normal;font-size:12.5px;font-weight:400;color:rgba(246,241,234,.58)}
+.cxr-legs b{font-size:15.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cxr-note{margin:0;font-size:12.5px;line-height:1.5;color:rgba(246,241,234,.58)}
+.cxr-note b{color:#F6F1EA;font-weight:600}
+/* до расчёта участки — плитками в ряд, чтобы блок был не выше параметров */
+.cx-pre .cxr-legs{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.cx-pre .cxr-legs li{grid-template-columns:10px 1fr;grid-template-rows:auto auto;row-gap:6px;align-items:start;padding:12px 14px;border:0;border-radius:16px;background:rgba(246,241,234,.05)}
+.cx-pre .cxr-legs li:first-child{padding-top:12px}
+.cx-pre .cxr-legs li>i{margin-top:5px}
+.cx-pre .cxr-legs li>b{grid-column:2;font-size:17px}
+.cx-pre .cxr-more{display:none}
+/* «Другие варианты и риски» — свёрнуто */
+.cxr-more{border-top:1px solid rgba(246,241,234,.1);padding-top:10px}
+.cxr-more summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;color:#F2A26B}
+.cxr-more summary::-webkit-details-marker{display:none}
+.cxr-more summary::after{content:"";width:7px;height:7px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .25s}
+.cxr-more[open] summary::after{transform:rotate(225deg) translateY(-2px)}
+.cxr-adv{margin-top:10px}
+html:root body .cxr-adv .v3c-advice{max-height:none!important;overflow:visible!important;padding:0!important}
+html:root body .cxr-adv .v3a-why{color:rgba(246,241,234,.78)!important;font-size:13.5px!important;margin:0 0 10px!important}
+html:root body .cxr-adv .v3a-item{background:rgba(246,241,234,.05)!important;border:1px solid rgba(246,241,234,.08)!important;border-left:3px solid rgba(242,138,58,.6)!important;color:#F6F1EA!important;border-radius:14px!important;padding:12px 14px!important;margin:0 0 8px!important}
+html:root body .cxr-adv .v3a-item b,html:root body .cxr-adv .v3a-h span{color:#F6F1EA!important}
+html:root body .cxr-adv .v3a-item .p{color:#F2C7A3!important}
+html:root body .cxr-adv .v3a-item .m{color:rgba(246,241,234,.62)!important}
+html:root body .cxr-adv .v3a-note{color:rgba(246,241,234,.55)!important}
+/* что уже заполнено */
+.cxr-steps{margin-top:auto;padding-top:6px;display:flex;flex-direction:column;gap:8px}
+.cx-res .cxr-steps{display:none}
+.cxr-pills{display:flex;flex-wrap:wrap;gap:8px}
+.cxr-pills span{display:inline-flex;align-items:center;gap:8px;padding:7px 13px 7px 9px;border-radius:999px;font-size:13px;font-weight:500;color:rgba(246,241,234,.6);border:1px solid rgba(246,241,234,.14);transition:background .35s,border-color .35s,color .35s}
+.cxr-pills i{position:relative;width:16px;height:16px;border-radius:50%;border:1.5px solid rgba(246,241,234,.35);transition:background .35s,border-color .35s}
+.cxr-pills .on{color:#F6F1EA;background:rgba(242,138,58,.14);border-color:rgba(242,138,58,.42)}
+.cxr-pills .on i{background:#E06A2C;border-color:#E06A2C}
+.cxr-pills .on i::after{content:"";position:absolute;left:4.5px;top:2px;width:4px;height:7px;border-right:1.6px solid #fff;border-bottom:1.6px solid #fff;transform:rotate(45deg)}
+.cxr-steps p{margin:0;font-size:13px;color:rgba(246,241,234,.6)}
+/* после расчёта, на всю ширину: карта слева, участки справа */
+@media(min-width:861px){
+  html:root body .cx-res .cxr-body{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);column-gap:30px;row-gap:12px;grid-template-areas:"map od" "map sub" "map bar" "map legs" "map note" "map more" "map x";grid-template-rows:auto auto auto auto auto auto 1fr;align-items:start}
+  .cx-res .cxr-od{grid-area:od}.cx-res .cxr-sub{grid-area:sub;margin-top:-4px}.cx-res .cxr-bar{grid-area:bar}.cx-res .cxr-legs{grid-area:legs}.cx-res .cxr-note{grid-area:note}.cx-res .cxr-more{grid-area:more}
+  .cx-res .cxr-body>.cxr-map{grid-area:map;align-self:stretch;display:flex;align-items:center}
+}
+@media(max-width:700px){
+  html:root body .cx-route{padding:18px!important;border-radius:22px!important;gap:12px}
+  .cxr-legs span{font-size:14px}.cxr-legs b{font-size:14.5px}
+  .cxr-hint{font-size:13.5px;padding:12px 14px}
+}
+
+/* ---------- «Габариты и условия поставки» — свёрнуто ---------- */
+html:root body .v3c-morecard>.v3c-title{display:none!important}
+html:root body .v3c-morecard:not(.cx-open)>:not(.cx-more-b){display:none!important}
+html:root body .v3c-morecard:not(.cx-open){padding:16px 24px!important}
+html:root body .cx-more-b{all:unset;box-sizing:border-box;grid-column:1 / -1;display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;cursor:pointer;border-radius:14px}
+.cx-more-b:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--ui-o2,#E06A2C) 30%,transparent)}
+.cx-more-b span{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px}
+.cx-more-b b{font-size:17px;font-weight:650;color:var(--v-ink)}
+.cx-more-b small{font-size:13px;color:var(--v-mut)}
+.cx-more-b svg{flex:none;width:20px;height:20px;fill:none;stroke:var(--v-ink);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.6;transition:transform .3s var(--ui-ease,ease)}
+.v3c-morecard.cx-open .cx-more-b svg{transform:rotate(180deg)}
+.v3c-morecard.cx-open>:not(.cx-more-b){animation:cxUp .4s var(--ui-ease,ease) both}
+
+@media (prefers-reduced-motion:reduce){.cx-ph-t.in,.cx-ph-t.out,html:root body .v3c-hero.cx-in,.cx-anim .rmini .rmini-r,.cx-anim .cxr-bar i,html:root body .v3-calc #calculate.cx-go{animation:none!important}}
+html:root body .v3-calc .field input:focus,html:root body .v3-calc .field input:focus-visible{outline:none!important;box-shadow:none!important}

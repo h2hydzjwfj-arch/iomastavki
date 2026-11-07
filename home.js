@@ -166,6 +166,6 @@
     e.preventDefault(); e.stopPropagation(); if (window.__v3open) window.__v3open(id);
   }, true);
   new MutationObserver(function () { Object.keys(PAGES).forEach(function (id) { var v = document.getElementById(id); if (v && v.classList.contains('open') && !v.dataset.ready) { v.dataset.ready = '1'; PAGES[id](); } else if (v && !v.classList.contains('open')) delete v.dataset.ready; }); }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
-  new MutationObserver(function () { var c = document.getElementById('casesView'); if (c && c.classList.contains('open')) renderCases(); var s = document.getElementById('servicesView'); if (s && s.classList.contains('open')) renderServices(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+  var pagesLang = document.documentElement.lang; new MutationObserver(function () { if (document.documentElement.lang === pagesLang) return; pagesLang = document.documentElement.lang; var c = document.getElementById('casesView'); if (c && c.classList.contains('open')) renderCases(); var s = document.getElementById('servicesView'); if (s && s.classList.contains('open')) renderServices(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
   window.IOMA_HOME = { pick: pick, renderCases: renderCases };
 })();

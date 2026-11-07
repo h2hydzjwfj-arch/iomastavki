@@ -262,12 +262,15 @@
   /* память калькулятора: ввод не теряется при перезагрузке */
   var CK='iomaCalc';
   var CF=['fromCity','toCity','weight','pieces','distance','length','width','height'];
-  function saveCalc(){var m={};CF.forEach(function(id){var e=document.getElementById(id);if(e&&e.value)m[id]=e.value});lsSet(CK,m)}
+  // ввод держим только в этой вкладке (sessionStorage): перезагрузка не теряет данные, а новый визит начинается с чистых полей с подсказками
+  function ssGet(k,d){try{return JSON.parse(sessionStorage.getItem(k))||d}catch(e){return d}}function ssSet(k,v){try{sessionStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+  try{localStorage.removeItem(CK)}catch(e){}
+  function saveCalc(){var m={};CF.forEach(function(id){var e=document.getElementById(id);if(e&&e.value)m[id]=e.value});ssSet(CK,m)}
   CF.forEach(function(id){var e=document.getElementById(id);if(!e)return;e.addEventListener('change',saveCalc);e.addEventListener('input',function(){clearTimeout(saveCalc.t);saveCalc.t=setTimeout(saveCalc,400)})});
   // выбор города из подсказки меняет поле без события — сохраняем и после клика по подсказке, и перед расчётом
   document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('.suggestions,.suggestion,[class*=suggest],#calculate,#v3go'))setTimeout(saveCalc,80)},true);
   window.addEventListener('pagehide',saveCalc);
-  setTimeout(function(){var m=lsGet(CK,{});Object.keys(m).forEach(function(id){var e=document.getElementById(id);if(e&&!e.value&&m[id]){e.value=m[id];e.dispatchEvent(new Event('input',{bubbles:true}))}})},400);
+  setTimeout(function(){var m=ssGet(CK,{});Object.keys(m).forEach(function(id){var e=document.getElementById(id);if(e&&!e.value&&m[id]){e.value=m[id];e.dispatchEvent(new Event('input',{bubbles:true}))}})},400);
 
   /* ---------- регистрация, показ пароля, вход сразу в кабинет ---------- */
   function goIn(r){try{history.replaceState(null,'',r==='admin'?'/rabota':'/kabinet')}catch(e){}location.reload()} // после входа — сразу на страницу «Работа» или «Мои грузы»

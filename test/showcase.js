@@ -43,7 +43,7 @@ const tgServer = http.createServer((req, res) => {
   try {
     // ---------- ГОСТЬ ----------
     const G = await ctx('1_guest');
-    await step('Гость открывает сайт', async () => { await G.p.waitForSelector('.v3-hero'); await slow(G.p); await shot(G.p, 'guest_home'); });
+    await step('Гость открывает сайт', async () => { await G.p.waitForSelector('.hx'); await slow(G.p); await shot(G.p, 'guest_home'); });
     await step('Гость считает ставку Шанхай → Москва', async () => {
       await navTo(G.p, 'calculator'); await slow(G.p);
       await G.p.fill('#fromCity', 'Shanghai'); await G.p.fill('#toCity', 'Москва'); await G.p.fill('#weight', '1200');

@@ -281,7 +281,7 @@
           if (t && cur !== t) e.setAttribute(a, t);
         });
       });
-      document.documentElement.lang = IDX.hasOwnProperty(l) ? l : 'ru';
+      var hl = IDX.hasOwnProperty(l) ? l : 'ru'; if (document.documentElement.lang !== hl) document.documentElement.lang = hl; // без лишних записей: на смену языка подписаны карта и разделы
     } finally { busy = false; }
   }
   var timer = null;
