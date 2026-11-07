@@ -160,4 +160,4 @@ async function main() {
 }
 
 if (require.main === module) main().catch(e => { console.error(e); process.exit(1); });
-module.exports = { nodes, PLAN };
+module.exports = { nodes, PLAN, heading, leavesUnder, get };

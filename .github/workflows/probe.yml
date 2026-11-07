@@ -14,7 +14,7 @@ jobs:
         with:
           node-version: '20'
       - name: Собрать справочник ТН ВЭД с alta.ru
-        run: node tools/build-tnved-base.js data/tnved-base.json --limit 300
+        run: node tools/probe-tree.js
       - name: Сохранить в ветку tnved-base-data
         if: always()
         run: |
