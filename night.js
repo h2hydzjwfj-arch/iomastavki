@@ -125,6 +125,7 @@
       menu.addEventListener('click', function (e) { if (e.target.closest('button') && !sg.classList.contains('sg-solo')) setTimeout(api.close, 0); });
     });
     document.addEventListener('click', function (e) { if (!e.target.closest || !e.target.closest('[data-sg]')) closeGroups(); });
+    window.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.sg-menu button')) setTimeout(closeGroups, 0); }, true);
     var follow = function () { groups.forEach(function (g) { g.follow(); }); };
     window.addEventListener('resize', follow);
     window.addEventListener('scroll', follow, { passive: true });
