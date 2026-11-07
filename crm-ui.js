@@ -204,13 +204,13 @@
     bindDeal(box);
     showTab(lastTab);
   }
-  function showTab(t) {
+  function showTab(t, openId) {
     var box = $('#crmDeal'); lastTab = t;
     $$('.cx-dtabs .chip', box).forEach(function (c) { c.classList.toggle('on', c.dataset.t === t); });
     $$('.cx-dpane', box).forEach(function (p) { p.hidden = p.dataset.dp !== t; });
     var p = $('.cx-dpane[data-dp="' + t + '"]', box);
     if (t === 'act') actPane(p); if (t === 'tasks') tasksPane(p); if (t === 'files') filesPane(p); if (t === 'kp') kpPane(p); if (t === 'fin') finPane(p); if (t === 'rates' && window.IOMA_RATES) window.IOMA_RATES.mount(p, cur.item);
-    if (t === 'calc' && window.IOMA_CALC) window.IOMA_CALC.mount(p, { dealId: cur.item.id, onChange: function () {} });
+    if (t === 'calc' && window.IOMA_CALC) window.IOMA_CALC.mount(p, { dealId: cur.item.id, onChange: function () {}, openId: openId || '' });
   }
   function bindDeal(box) {
     var form = $('#cxDealForm', box);
@@ -431,5 +431,5 @@
 
   K.on('inbox', function () { render('inbox'); });
   K.on('deals', function () { render('deals'); });
-  window.IOMA_CRM = { loadDeals: function () { render('deals'); }, loadInbox: function () { render('inbox'); }, openDeal: openDeal, reload: reload, render: render, newDeal: newDeal, get current() { return cur; } };
+  window.IOMA_CRM = { loadDeals: function () { render('deals'); }, loadInbox: function () { render('inbox'); }, openDeal: openDeal, reload: reload, render: render, newDeal: newDeal, showTab: function (t, openId) { if (cur && $('#crmDeal .cx-dtabs')) showTab(t, openId); }, get current() { return cur; } };
 })();

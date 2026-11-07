@@ -17,7 +17,7 @@ function setupAll() {
   const crm = require('../crm').setup(app, { store, admin, upload, str, num, newId });
   const crm2 = require('../crm2').setup(app, { store, admin, upload, str, num, newId, crm, rates: async () => ({ date: '06.11.2026', rates: { USD: 80, EUR: 92, CNY: 11 } }), mail: { enabled: () => true, kind: () => 'SMTP', send: async (...a) => { sent.push(a); } }, tg: { ready: () => false } });
   const tn = require('../tnved').setup(app, { admin, upload, DATA_DIR: dir, cloud: null, vedSettings: crm2.vedSettings, affected: crm2.tnvedAffected });
-  const crm3 = require('../crm3').setup(app, { store, admin, upload, str, newId, rates: async () => ({ date: '06.11.2026', rates: { USD: 80, EUR: 92, CNY: 11 } }), mail: { enabled: () => true, kind: () => 'test', send: async (to, subject, text) => { sent.push({ to, subject, text }); } }, publicAgents: () => [{ id: 1, company: 'Multiwell', contact: 'Kane', email: 'kane@example.com', modes: ['rail', 'road', 'sea'] }] });
+  const crm3 = require('../crm3').setup(app, { store, admin, upload, str, newId, rates: async () => ({ date: '06.11.2026', rates: { USD: 80, EUR: 92, CNY: 11 } }), mail: { enabled: () => true, kind: () => 'test', send: async (to, subject, text) => { sent.push({ to, subject, text }); } }, publicAgents: () => [{ id: 1, company: 'Multiwell', contact: 'Kane', email: 'kane@example.com', modes: ['rail', 'road', 'sea'] }], newCalcDoc: (d, o) => crm2.newCalcDoc(d, o) });
   return { app, store, crm, crm2, crm3, tn, sent, call: (m, u, b, x) => app.call(m, u, b, x) };
 }
 
@@ -185,6 +185,48 @@ test('ТН ВЭД: история обновлений — новые, нет в
   assert.equal(b.body.diff.added_n, 1); assert.equal(b.body.diff.removed_n, 1); assert.equal(b.body.diff.rate_n, 1); assert.equal(b.body.diff.affected_n, 1);
   const list = await call('GET', '/api/tnved/diffs'); assert.equal(list.body.items.length, 2);
   const full = await call('GET', '/api/tnved/diffs/' + b.body.diff.id); assert.equal(full.body.item.affected[0].dealId, id); assert.match(full.body.item.rate[0].new, /12%/);
+});
+
+test('ставки агентов: срок действия, надбавка к курсу, кто прислал', () => {
+  const C = require('../crm3'), T = '2026-11-07';
+  assert.equal(C.validDate('30.11', T), '2026-11-30'); assert.equal(C.validDate('05.01', T), '2027-01-05'); assert.equal(C.validDate('01.08', T), '2026-08-01');
+  assert.equal(C.validDate('28.12', '2027-01-10'), '2026-12-28'); assert.equal(C.validDate('30 ноября 2026', T), '2026-11-30'); assert.equal(C.validDate('Nov 30, 2026', T), '2026-11-30');
+  assert.equal(C.validDate('конца месяца', T), '2026-11-30'); assert.equal(C.validDate('31.02', T), ''); assert.equal(C.validDate('', T), '');
+  assert.equal(C.validOf('Ставка актуальна до конца месяца'), 'конца месяца'); assert.equal(C.validOf('Доставка до Москвы 25 дней'), '');
+  assert.equal(C.fxOf('оплата в рублях по курсу ЦБ на день оплаты + 2%'), 2); assert.equal(C.fxOf('CBR+1.5%'), 1.5); assert.equal(C.fxOf('тел. +7 953 550 56 54'), 0);
+  const txt = 'Ставка: USD 4 200 / 40HQ, транзит 25-30 дней.\nОплата по курсу ЦБ + 2%. Ставка действует до 30.11.2026.\n\nС уважением,\nЛиза Ван\nRail Go Logistics Co., Ltd\nTel: +86 138 0013 8000\nlisa@railgo.example';
+  const r = C.parseRatesPlain(txt)[0]; assert.equal(r.amount, 4200); assert.equal(r.valid, '30.11.2026'); assert.equal(r.fx, 2); assert.equal(r.transit, '25-30 дн.');
+  assert.deepEqual(C.senderOf(txt), { email: 'lisa@railgo.example', phone: '+86 138 0013 8000', name: 'Лиза Ван', company: 'Rail Go Logistics Co., Ltd' });
+  assert.equal(C.senderOf('Best regards, Tom Lee\nShenzhen Fast Cargo Ltd\nWeChat: tomlee88').wechat, 'tomlee88');
+});
+
+test('ставки агентов: архив просроченных, сравнение за партию, выбранная ставка уходит в расчёт контракта', async () => {
+  const { call } = setupAll();
+  const deal = (await call('POST', '/api/deals', { title: 'Станки', from: 'Иу', to: 'Москва', mode: 'rail', weight: 8000, volume: 30 })).body.item;
+  const ag = (await call('GET', '/api/crm/agents')).body.items.filter(a => a.company === 'Multiwell').map(a => a.id);
+  const rq = (await call('POST', '/api/deals/' + deal.id + '/rq', { agentIds: ag, subject: 'Ставка', text: 'Просим ставку' })).body.request;
+  const r1 = await call('POST', '/api/rq/' + rq.id + '/replies', { itemId: rq.items[0].id, text: 'Ставка USD 4 200 / 40HQ, транзит 25 дней. Оплата по курсу ЦБ + 2%. Действует до 31.12.2099.\n\nС уважением,\nКейн\nkane@example.com' });
+  assert.equal(r1.body.rates[0].fx, 2); assert.equal(r1.body.rates[0].validUntil, '2099-12-31'); assert.match(r1.body.rates[0].contact, /Кейн · kane@example.com/);
+  assert.equal(r1.body.reply.sender.name, 'Кейн');
+  await call('POST', '/api/rq/rates', { rqId: rq.id, agent: 'Old Cargo', amount: 3000, currency: 'USD', unit: 'контейнер', valid: '01.01.2020' });
+  await call('POST', '/api/rq/rates', { rqId: rq.id, agent: 'Kg Line', amount: 0.5, currency: 'USD', unit: 'кг', valid: '31.12.2099' });
+  const v = (await call('GET', '/api/deals/' + deal.id + '/rq')).body;
+  const old = v.rates.find(t => t.agent === 'Old Cargo'), kg = v.rates.find(t => t.agent === 'Kg Line'), mw = v.rates.find(t => /^Multiwell/.test(t.agent));
+  assert.ok(old.expired); assert.ok(!old.best); assert.equal(v.archived, 1);
+  // за партию: 4200 × 80 × 1,02 = 342 720 ₽; 0,5 × 8000 кг × 80 = 320 000 ₽ — лучшая за кг, хоть просроченная и дешевле
+  assert.equal(mw.totRub, 342720); assert.equal(kg.totRub, 320000); assert.equal(kg.qty, 8000); assert.ok(kg.best); assert.ok(!mw.best);
+  const exp = await call('POST', '/api/rq/rates/' + old.id + '/to-calc', {}); assert.ok(exp.body.ok); // архивную можно взять осознанно
+  const tc = await call('POST', '/api/rq/rates/' + mw.id + '/to-calc', {});
+  assert.ok(tc.body.ok); assert.equal(tc.body.freight, 4200); assert.equal(tc.body.currency, 'USD'); assert.equal(tc.body.fx, 2); assert.equal(tc.body.created, false);
+  const doc = (await call('GET', '/api/calc/' + tc.body.calcId)).body;
+  assert.equal(doc.doc.freight_total, 4200); assert.equal(doc.doc.freight_currency, 'USD'); assert.equal(doc.doc.freight_fx, 2); assert.equal(doc.doc.kp_transit, '25 дн.'); assert.equal(doc.doc.kp_valid, '31.12.2099');
+  assert.match(doc.doc.freight_src.agent, /^Multiwell/); assert.equal(doc.doc.calc_type, 'our_contract'); assert.equal(doc.doc.dealId, deal.id);
+  const fr = doc.contract.lines.find(l => l.key === 'freight0' || /^freight/.test(l.key)); assert.ok(fr, 'фрахт есть в расчёте контракта');
+  const v2 = (await call('GET', '/api/deals/' + deal.id + '/rq')).body; assert.equal(v2.rates.find(t => t.id === mw.id).inCalc, tc.body.calcId);
+  const tk = await call('POST', '/api/rq/rates/' + kg.id + '/to-calc', { calcId: tc.body.calcId }); assert.equal(tk.body.freight, 4000); assert.equal(tk.body.qty, 8000);
+  const d2 = (await call('GET', '/api/calc/' + tc.body.calcId)).body.doc; assert.equal(d2.freight_fx, 0); assert.equal(d2.freight_src.agent, 'Kg Line');
+  const p = await call('PATCH', '/api/calc/' + tc.body.calcId, { freight_total: 5000 }); assert.ok(p.body.ok); assert.equal((await call('GET', '/api/calc/' + tc.body.calcId)).body.doc.freight_src, undefined);
+  await call('PATCH', '/api/rq/rates/' + kg.id, { status: 'rejected' }); const rej = await call('POST', '/api/rq/rates/' + kg.id + '/to-calc', {}); assert.equal(rej.status, 400);
 });
 
 test('агенты: импорт базы, запрос ставок, ответ агента, лучшая ставка, перенос в финансы, прайсы', async () => {

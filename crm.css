@@ -621,8 +621,19 @@ html:root body #workView .cx-search input{height:40px}
   .cx-bar>.cx-funnels{order:5}
 }
 /* вкладка «Ставки» */
-.cx-rates .cx-tr{grid-template-columns:minmax(0,2fr) minmax(120px,1fr) 96px 90px 116px}
-@container cxmain (max-width:760px){.cx-rates .cx-tr{grid-template-columns:minmax(0,1fr) auto 96px}}
+.cx-rates .cx-tr{grid-template-columns:minmax(160px,1.5fr) minmax(104px,1fr) 100px 112px 172px;align-items:start}
+.cx-rates .cx-tr.cx-thd{align-items:center}
+.cx-rates .cx-t b .cx-tag{margin:3px 4px 0 0}
+.cx-rt .cx-t small{white-space:normal;overflow:visible}
+.cx-rates .cx-tr>span:nth-child(2) small{display:block}
+.cx-terms{display:flex;flex-direction:column;gap:2px;font-size:13px}
+@container cxmain (max-width:760px){.cx-rates .cx-tr{grid-template-columns:minmax(0,1fr) auto}.cx-rates .cx-thd>.lp{display:none}.cx-rates .cx-tr:not(.cx-thd)>.lp{display:flex;grid-column:1/-1;flex-wrap:wrap;gap:2px 12px;align-items:baseline}.cx-rates .cx-racts{grid-column:1/-1;justify-content:flex-start}}
+.cx-rt .cx-who{color:var(--v-ink);opacity:.8}
+.cx-valid{font-size:13px}.cx-valid.amb{color:var(--v-amber);font-weight:600}.cx-valid.red{color:#d4553a;font-weight:600}
+.cx-rt.expired{opacity:.62}
+.cx-cmp{margin:10px 0 8px;padding:10px 14px;border-radius:12px;background:color-mix(in srgb,var(--v-acc) 8%,transparent);font-size:14px;line-height:1.45}
+.cx-arch{margin-top:14px}
+.cv-src{margin:8px 0 0;font-size:13px;color:var(--v-mut)}.cv-src b{color:var(--v-ink)}
 .cx-rt.best{background:color-mix(in srgb,var(--v-acc) 7%,transparent)}
 .cx-rt.rejected{opacity:.5}.cx-rt.rejected b{text-decoration:line-through}
 .cx-rt .cx-q{font-style:italic}
