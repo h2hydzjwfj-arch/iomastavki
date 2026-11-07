@@ -129,7 +129,7 @@ test('ТН ВЭД: специфическая пошлина — без коли
 });
 
 test('ТН ВЭД: без стоимости, радиоэлектроника, кеш, ошибки', async () => {
-  T.loadBase(path.join(__dirname, 'нет-такого-файла.json')); // проверяем ошибки без запасного справочника
+  T.loadBase(path.join(__dirname, 'нет-такого-файла.json')); T.loadFull(path.join(__dirname, 'нет-такого-файла.json.gz')); // проверяем ошибки без запасных справочников
   const calls = [];
   let res = await T.check({ code: '8471300000' }, deps({ get: fakeGet(calls) }));
   assert.ok(res.report.includes('💰 Пошлина: 0%\n🧾 НДС')); assert.ok(!res.report.includes('⚡ Сбор'), 'без стоимости сбор не показываем');
@@ -165,7 +165,7 @@ test('ТН ВЭД: alta.ru недоступен — ставки из локал
   }
   const file = path.join(require('os').tmpdir(), 'tnved-base-test.json');
   fs.writeFileSync(file, JSON.stringify({ version: 1, fetchedAt: '2026-11-07', nodes, codes }));
-  T.loadBase(file);
+  T.loadBase(file); T.loadFull(path.join(__dirname, 'нет-такого-файла.json.gz'));
   try {
     const offline = { get: async () => { throw new T.TnvedError('Справочник alta.ru недоступен (нет ответа).', 503, 'source_unavailable'); }, rates: async () => RATES };
     const res = await T.check({ code: '6201400000', value: '500000', weight: '300' }, offline);
@@ -179,7 +179,32 @@ test('ТН ВЭД: alta.ru недоступен — ставки из локал
     assert.deepStrictEqual(T.searchBase('вычислительные портативные').map(x => x.code), ['8471300000']);
     assert.deepStrictEqual(T.searchBase('6403').map(x => x.code), ['6403190000']);
     assert.strictEqual(T.searchBase('').length, 0);
-  } finally { T.loadBase(path.join(__dirname, 'нет-такого-файла.json')); }
+  } finally { T.loadBase(path.join(__dirname, 'нет-такого-файла.json')); T.loadFull(T.FULL_FILE); }
+});
+
+test('ТН ВЭД: полный справочник сайта (13 293 кода) — подстраховка alta.ru, поиск, все виды ставок', async () => {
+  T.loadBase(path.join(__dirname, 'нет-такого-файла.json')); T.loadFull(T.FULL_FILE);
+  try {
+    assert.strictEqual(T.fullStats().count, 13293);
+    const offline = { get: async () => { throw new T.TnvedError('Справочник alta.ru недоступен (нет ответа).', 503, 'source_unavailable'); }, rates: async () => RATES };
+    // доллары за тонну: 250 $ × 20 т × курс
+    let r = await T.check({ code: '1701121001', value: '1000000', weight: '20000' }, offline);
+    assert.strictEqual(r.source, 'local'); assert.ok(r.full);
+    assert.strictEqual(r.dutyCalc.amount, 250 * 20 * RATES.rates.USD);
+    assert.match(r.report, /справочника сайта \(13\s293 кода\)/);
+    assert.match(r.report, /Свекловичный сахар → для рафинирования → с 1 января по 30 июня/);
+    // «но не менее 1,7 € за 1000 шт»: 50 000 шт → 50 × 1,7 €
+    r = await T.check({ code: '2402100000', value: '10000', qty: '50000' }, offline);
+    assert.strictEqual(Math.round(r.dutyCalc.amount * 100) / 100, Math.round(1.7 * 50 * RATES.rates.EUR * 100) / 100);
+    // см³ двигателя
+    r = await T.check({ code: '8701219011', value: '3000000', qty: '2000' }, offline);
+    assert.strictEqual(r.dutyCalc.amount, 1 * 2000 * RATES.rates.EUR);
+    // поиск по словам и по цифрам — по всем 13 тысячам кодов
+    assert.ok(T.searchBase('ткани из арамидов').some(x => x.code === '5407100010'));
+    assert.ok(T.searchBase('5407', 50).length >= 10);
+    // кода нет ни в одном справочнике — подсказка из полного списка
+    await assert.rejects(T.check({ code: '5407100099', value: '1000' }, offline), e => e.status === 503 && /похожие: 54071000/.test(e.message));
+  } finally { T.loadBase(T.BASE_FILE); T.loadFull(T.FULL_FILE); }
 });
 
 test('ТН ВЭД: встроенный справочник reference/tnved-base.json цел и разбирается', () => {

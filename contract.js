@@ -59,7 +59,7 @@
 
   // ------------------------------------------------------------------ пошлина
   // «12.5%», «0», «беспошлинно», «0,48 евро/м2», «10%, но не менее 2,25 евро/кг», «5% плюс 0,1 евро за 1 кг»
-  var UNITS = [[/^(кг|kg)/, 'кг'], [/^(т|тонн)/, 'т'], [/^(пар|pair)/, 'пар'], [/^(шт|штук|pcs|ед)/, 'шт'], [/^(м2|м²|кв\.?\s*м|m2)/, 'м²'], [/^(л|литр|l)(?![а-яё])/, 'л']];
+  var UNITS = [[/^(кг|kg)/, 'кг'], [/^(т|тонн)(?![а-яё])/, 'т'], [/^(пар|pair)/, 'пар'], [/^(шт|штук|pcs|ед)/, 'шт'], [/^(м2|м²|кв\.?\s*м|m2)/, 'м²'], [/^(см3|см³|куб\.?\s*см|cm3)/, 'см³'], [/^(л|литр|l)(?![а-яё])/, 'л']];
   function parseDuty(text) {
     if (text && typeof text === 'object' && text.parts) return text;
     var shown = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
@@ -68,12 +68,13 @@
     if (!t) return null;
     if (t.indexOf('беспошлин') >= 0 || /^0+(\.0+)?\s*%?$/.test(t)) { d.parts = [{ kind: 'ad_valorem', value: 0 }]; return d; }
     var adv = t.match(/(\d+(?:\.\d+)?)\s*%/);
-    var sp = t.match(/(\d+(?:\.\d+)?)\s*(евро|евр|eur|€|долл[а-яё]*|usd|\$)\.?\s*(?:\/|за)\s*(?:1\s*)?([а-яёa-z²0-9.]+(?:\s*м)?)/);
+    var sp = t.match(/(\d+(?:\.\d+)?)\s*(евро|евр|eur|€|долл[а-яё]*|usd|\$)\.?\s*(?:\/|за)\s*(?:1\s+(?=\d)|1(?=[а-яёa-z]))?(?:(\d+)\s+)?([а-яёa-z²³0-9.]+(?:\s*м)?)/);
     if (adv) d.parts.push({ kind: 'ad_valorem', value: Number(adv[1]) });
     if (sp) {
-      var cur = /^(евр|eur|€)/.test(sp[2]) ? 'EUR' : 'USD', unit = 'кг', raw = sp[3].replace(/\.$/, '');
+      var cur = /^(евр|eur|€)/.test(sp[2]) ? 'EUR' : 'USD', unit = 'кг', raw = sp[4].replace(/\.$/, ''), per = sp[3] ? Number(sp[3]) : 1;
       for (var i = 0; i < UNITS.length; i++) if (UNITS[i][0].test(raw)) { unit = UNITS[i][1]; break; }
-      d.parts.push({ kind: 'specific', value: Number(sp[1]), currency: cur, unit: unit });
+      // «за 1 1000 шт» — ставка за тысячу штук: переводим в ставку за штуку
+      d.parts.push({ kind: 'specific', value: per > 1 ? Number(sp[1]) / per : Number(sp[1]), currency: cur, unit: unit });
     }
     if (!d.parts.length) return null;
     if (d.parts.length === 2) d.mode = /плюс|\+/.test(t) ? 'plus' : 'min';
@@ -87,6 +88,7 @@
     }
     if (unit === 'м²') return { q: has(it.area) ? num(it.area) : null, need: 'площадь, м²' };
     if (unit === 'л') return { q: has(it.liters) ? num(it.liters) : null, need: 'объём, л' };
+    if (unit === 'см³') return { q: has(it.cm3) ? num(it.cm3) : null, need: 'объём двигателя, см³' };
     return { q: has(it.qty) ? num(it.qty) : null, need: unit === 'пар' ? 'количество пар' : 'количество, шт' };
   }
   function dutyRub(duty, cvRub, it, rates) {
@@ -267,10 +269,10 @@
 
   /* Документ «Калькулятора ВЭД» сделки (ved.js) → вход расчёта контракта.
      Старые документы: строка «Комиссия за перевод, % от инвойса» превращается в способ оплаты (6% — по ЦБ, 3% — по курсу банка). */
-  var UNIT_OF = { 'кг': 'кг', 'л': 'л', 'шт': 'шт', 'пар': 'пар', 'м²': 'м²' };
+  var UNIT_OF = { 'кг': 'кг', 'л': 'л', 'шт': 'шт', 'пар': 'пар', 'м²': 'м²', 'см³': 'см³', 'т': 'т' };
   function dutyFromVed(it) {
     var u = UNIT_OF[String(it.eur_unit || 'кг')] || 'кг';
-    var eur = num(u === 'м²' ? it.eur_per_m2 : u === 'л' ? it.eur_per_l : (u === 'шт' || u === 'пар') ? it.eur_per_pcs : it.eur_per_kg);
+    var eur = num(u === 'м²' ? it.eur_per_m2 : u === 'л' ? it.eur_per_l : (u === 'шт' || u === 'пар' || u === 'см³') ? it.eur_per_pcs : it.eur_per_kg);
     var t = it.duty_type || 'percent', rate = num(it.duty_rate), parts = [];
     if (t !== 'fixed_eur') parts.push({ kind: 'ad_valorem', value: rate });
     if (t !== 'percent' && eur) parts.push({ kind: 'specific', value: eur, currency: 'EUR', unit: u });
@@ -296,8 +298,9 @@
         var value = ic === cur ? num(it.invoice_amount) : (ri && rc ? num(it.invoice_amount) * ri / rc : 0);
         var u = UNIT_OF[String(it.eur_unit || 'кг')] || 'кг', q = has(it.unit_qty) && num(it.unit_qty) ? num(it.unit_qty) : null;
         return { name: it.name || '', code: it.tnved_code || '', value: value, gross: num(it.weight), net: has(it.net) && num(it.net) ? num(it.net) : (num(it.weight) || null),
-          qty: (u === 'шт' || u === 'пар') ? q : null, area: u === 'м²' ? q : null, liters: u === 'л' ? q : null,
-          duty: it.auto_lookup && it.tnved_code && it.duty_text ? (parseDuty(it.duty_text) || dutyFromVed(it)) : dutyFromVed(it),
+          qty: (u === 'шт' || u === 'пар') ? q : null, area: u === 'м²' ? q : null, liters: u === 'л' ? q : null, cm3: u === 'см³' ? q : null,
+          // ставка из справочника — как написана; доллары, тонны, см³ и «за 1000 шт» в полях калькулятора не выразить — тоже по тексту
+          duty: it.duty_text && ((it.auto_lookup && it.tnved_code) || /usd|долл|\$|за\s*1\s*т(?![а-яё])|см3|см³|1000\s*шт/i.test(it.duty_text)) ? (parseDuty(it.duty_text) || dutyFromVed(it)) : dutyFromVed(it),
           vat: has(it.vat_rate) ? num(it.vat_rate) : 22, radio: !!it.radio, chz: !!it.chz };
       }),
       freight: num(doc.freight_total) ? [{ label: 'Фрахт + локальные расходы КНР', amount: num(doc.freight_total), currency: doc.freight_currency || cur, fx: num(doc.freight_fx) }] : [],

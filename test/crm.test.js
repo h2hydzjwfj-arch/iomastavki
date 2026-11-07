@@ -127,7 +127,7 @@ test('ТН ВЭД: импорт CSV, поиск по названию и циф�
 test('аналитика, отгулы, очередь заявок, почта и бот', async () => {
   const { call, crm, sent } = setupAll();
   await call('POST', '/api/company/staff', { name: 'Анна' }); await call('POST', '/api/company/staff', { name: 'Олег' });
-  const td = new Date().toISOString().slice(0, 10);
+  const t0 = new Date(), td = `${t0.getFullYear()}-${String(t0.getMonth() + 1).padStart(2, '0')}-${String(t0.getDate()).padStart(2, '0')}`; // местная дата, как у сервера (после полуночи по Москве UTC ещё «вчера»)
   const off = await call('POST', '/api/timeoff', { manager: 'Олег', kind: 'vacation', date_from: td, date_to: td }); assert.equal(off.body.item.status, 'approved');
   await call('PATCH', '/api/mail/queue/managers', { managers: [{ name: 'Олег', active: true }, { name: 'Анна', active: true }] });
   await call('POST', '/api/mail/queue/toggle');
