@@ -267,8 +267,10 @@
   function actItem(a, dealId) {
     var L = K.META.labels || {}, T = K.META.actTypes || {};
     if (a.type === 'field') return '<div class="cx-hist" data-aid="' + esc(a.id) + '"><time>' + K.hm(a.at) + '</time> ' + esc(a.by || '') + ' · поле «<b>' + esc(L[a.field] || a.field) + '</b>»: ' + (a.from ? '<s>' + esc(a.from) + '</s> → ' : '') + '<b>' + esc(a.to || '—') + '</b><button type="button" class="cx-ib" data-z="del" title="Удалить запись истории">✕</button></div>';
-    var raw = String(a.text || ''), long = raw.length > CLAMP;
+    var raw = String(a.text || ''), F = window.IOMA_FMT, long = F ? raw.length > 700 || raw.split('\n').length > 14 : raw.length > CLAMP;
+    // заявки, письма, ответы агентов — читаемо: главное сверху, «поле: значение» таблицей, подпись мелко, старая переписка свёрнута
     var body = a.type === 'file' && a.fileId ? '📎 <a href="/api/deals/' + esc(dealId) + '/files/' + esc(a.fileId) + '" target="_blank" rel="noopener">' + esc(raw.replace(/^Добавлен файл:\s*/, '')) + '</a>'
+      : F ? '<div class="fm' + (long ? ' fm-clamp' : '') + '">' + F.rich(raw, { facts: /^(lead|mail|rate|tg|wa|call)$/.test(a.type) }) + '</div>'
       : long ? '<span class="cx-short">' + esc(raw.slice(0, CLAMP)) + '…</span><span class="cx-full" hidden>' + esc(raw) + '</span>' : esc(raw);
     return '<article class="cx-act t-' + esc(a.type) + (a.pinned ? ' pinned' : '') + '" data-aid="' + esc(a.id) + '"><span class="cx-ai">' + (K.ICON[a.type] || '📝') + '</span><div class="cx-ab"><header><b>' + esc(T[a.type] || 'Запись') + '</b><small>' + (a.pinned ? K.d(a.at) + ' ' : '') + K.hm(a.at) + ' · ' + esc(a.by || '') + (a.editedAt ? ' · изм.' : '') + '</small>'
       + (a.type !== 'file' ? '<button type="button" class="cx-ib" data-z="edit" title="Изменить">✎</button><button type="button" class="cx-ib' + (a.pinned ? ' on' : '') + '" data-z="pin" title="' + (a.pinned ? 'Открепить' : 'Закрепить') + '">📌</button>' : '') + '<button type="button" class="cx-ib danger" data-z="del" title="Удалить">✕</button></header>'
@@ -309,7 +311,7 @@
     K.dropzone(p, function (files) { toast('Загружаю файлы…'); K.upload('/api/deals/' + x.id + '/files', files).then(function (n) { if (n) toast('Добавлено файлов: ' + n); reload(); }); });
     p.onclick = function (e) {
       var b = e.target.closest('[data-z]'); if (!b) return; var z = b.dataset.z, art = b.closest('[data-aid]'), pin = b.closest('[data-tid]');
-      if (z === 'more') { var full = $('.cx-full', art), short = $('.cx-short', art), op = full.hidden; full.hidden = !op; short.hidden = op; b.textContent = op ? 'свернуть' : 'показать полностью'; return; }
+      if (z === 'more') { var fm = $('.fm', art); if (fm) { var cl = fm.classList.toggle('fm-clamp'); b.textContent = cl ? 'показать полностью' : 'свернуть'; return; } var full = $('.cx-full', art), short = $('.cx-short', art), op = full.hidden; full.hidden = !op; short.hidden = op; b.textContent = op ? 'свернуть' : 'показать полностью'; return; }
       if (art) { var aid = art.dataset.aid, a = (cur.item.activity || []).find(function (v) { return v.id === aid; }); var url = '/api/deals/' + x.id + '/notes/' + aid;
         if (z === 'pin') return api(url, { method: 'PATCH', body: { pinned: !a.pinned } }).then(reload);
         if (z === 'del') return K.confirm('Удалить запись?', 'Удалить', true).then(function (ok) { if (ok) api(url, { method: 'DELETE' }).then(reload); });

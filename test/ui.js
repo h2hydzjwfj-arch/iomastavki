@@ -156,7 +156,11 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       const t = await A.p.evaluate(() => fetch('/api/robot').then(r => r.json())); for (const x of t.texts) await A.p.evaluate(id => fetch('/api/robot/texts/' + id, { method: 'DELETE' }), x.id);
       await A.p.click('.rb-x');
     });
-    await step('Админ: аккаунт и состояние сайта', async () => { await A.p.click('.v3-acc'); await A.p.waitForSelector('#v3accBody .v3p-notif'); await shot(A.p, '08_admin_account'); });
+    await step('Админ: меню аккаунта — состояние сайта, профиль, меню закрывается после выбора', async () => {
+      await A.p.click('.v3-acc'); await A.p.waitForSelector('.am-menu:not([hidden]) [data-am=site]'); await shot(A.p, '08a_admin_menu');
+      await A.p.click('.am-menu [data-am=site]'); await A.p.waitForSelector('#v3accBody .v3p-notif'); if (await A.p.isVisible('.am-menu')) throw new Error('меню не закрылось'); await shot(A.p, '08_admin_account');
+      await A.p.click('.v3-acc'); await A.p.click('.am-menu [data-am=profile]'); await A.p.waitForSelector('.am-modal [data-f=pw]'); await A.p.click('.am-modal .cx-x'); await A.p.waitForSelector('.am-modal', { state: 'detached' });
+    });
 
     const C = await ctx();
     await step('Клиент: вход', async () => {
@@ -170,8 +174,10 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await C.p.evaluate(() => window.__v3open('cabinetView')); await C.p.click('#v3cabTabs [data-ctab=quotes]'); await C.p.waitForSelector('#v3cabQuotes .v3p-qrow'); await shot(C.p, '11_client_quotes');
     });
     await step('Клиент: смена пароля в аккаунте', async () => {
-      await C.p.click('.v3-acc'); await C.p.fill('#v3pwForm [name=current]', clientPw); await C.p.fill('#v3pwForm [name=next]', 'ui-new-pass-1');
-      await C.p.click('#v3pwForm [type=submit]'); await C.p.waitForSelector('#v3pwForm .v3p-ok:has-text("Пароль изменён")'); await shot(C.p, '12_client_account');
+      await C.p.click('.v3-acc'); await C.p.click('.am-menu [data-am=profile]'); await C.p.waitForSelector('.am-modal [data-f=prof] [name=name]');
+      await C.p.click('.am-modal .am-pw summary'); await C.p.fill('.am-modal [data-f=pw] [name=current]', clientPw); await C.p.fill('.am-modal [data-f=pw] [name=next]', 'ui-new-pass-1');
+      await C.p.click('.am-modal [data-f=pw] [type=submit]'); await C.p.waitForSelector('.am-modal .am-ok:has-text("Пароль изменён")'); await shot(C.p, '12_client_account');
+      await C.p.click('.am-modal .cx-x');
     });
     const Rg = await ctx();
     await step('Новый клиент сам создаёт кабинет и попадает в «Мои грузы»', async () => {

@@ -40,6 +40,8 @@ function zipStore(files) {
 
 function setup(app, ctx) {
   const { store, admin, upload, str, num, newId } = ctx;
+  // текст заявок, писем и заметок: переносы строк сохраняем (по ним видно поля «Имя: …», абзацы, подпись), остальные служебные символы — нет
+  const txt = (v, max) => String(v == null ? '' : v).replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, ' ').replace(/[ \t]+\n/g, '\n').replace(/\n{4,}/g, '\n\n\n').trim().slice(0, max);
   const hooks = { onCreate: [] };
   let migrated = false;
   function migrate(d) {
@@ -117,7 +119,7 @@ function setup(app, ctx) {
     if (!deal.title) { const t = new Date(at); deal.title = (deal.cargo || 'Заявка') + ' ' + String(t.getFullYear()).slice(2) + pad(t.getMonth() + 1) + pad(t.getDate()); }
     for (const k of ['leadId', 'quoteId', 'imported', 'createdVia']) if (src[k]) deal[k] = src[k];
     deal.createdVia = deal.createdVia || (src.leadId ? 'site' : src.imported ? 'import' : 'manual');
-    if (src.activityText) deal.activity.push({ id: newId(4), at, type: src.activityType || 'lead', by: by || 'Сайт', text: str(src.activityText, 8000) });
+    if (src.activityText) deal.activity.push({ id: newId(4), at, type: src.activityType || 'lead', by: by || 'Сайт', text: txt(src.activityText, 8000) });
     clientsDb(d); linkClient(d, deal);
     for (const h of hooks.onCreate) { try { h(deal, d); } catch (e) { console.error('deal hook', e.message); } }
     d.deals.unshift(deal); d.deals = d.deals.slice(0, 20000); store.save(d);
@@ -219,7 +221,7 @@ function setup(app, ctx) {
   // ---------- лента активности
   app.post('/api/deals/:id/notes', admin, (req, res) => {
     const d = db(); const x = dealFind(d, req.params.id); if (!x) return notFound(res);
-    const text = str(req.body && req.body.text, 8000); if (!text) return res.status(400).json({ ok: false, error: 'Пустая заметка' });
+    const text = txt(req.body && req.body.text, 8000); if (!text) return res.status(400).json({ ok: false, error: 'Пустая заметка' });
     const type = ACT_TYPES[req.body.type] && !['field', 'file', 'lead', 'quote', 'task'].includes(req.body.type) ? req.body.type : 'note';
     const a = { id: newId(4), at: now(), type, by: who(req), text };
     if (['finance', 'calc'].includes(req.body.section)) a.section = req.body.section;
@@ -230,7 +232,7 @@ function setup(app, ctx) {
     const d = db(); const x = dealFind(d, req.params.id); if (!x) return notFound(res);
     const a = (x.activity || []).find(v => v.id === req.params.aid); if (!a) return res.status(404).json({ ok: false, error: 'Запись не найдена' });
     const b = req.body || {};
-    if (b.text != null && a.type !== 'field') { const t = str(b.text, 8000); if (!t) return res.status(400).json({ ok: false, error: 'Пустой текст' }); a.text = t; a.editedAt = now(); }
+    if (b.text != null && a.type !== 'field') { const t = txt(b.text, 8000); if (!t) return res.status(400).json({ ok: false, error: 'Пустой текст' }); a.text = t; a.editedAt = now(); }
     if (b.pinned != null) a.pinned = !!b.pinned;
     store.save(d); res.json({ ok: true, activity: a });
   });
