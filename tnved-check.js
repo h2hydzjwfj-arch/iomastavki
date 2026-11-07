@@ -282,7 +282,7 @@ function searchBase(q, limit) {
     const name = baseName(e);
     const hay = ((e.path || []).map(i => (b.nodes[i] || [])[1]).join(' ') + ' ' + (e.cat || '')).toLowerCase().replace(/ё/g, 'е');
     const bySyn = syn.some(p => code.startsWith(p));
-    if (words.length && !bySyn && !words.every(w => hay.includes(w))) continue;
+    if (syn.length && !d ? !bySyn : (words.length && !bySyn && !words.every(w => hay.includes(w)))) continue; // бытовое название — только его позиции
     const score = (d ? 50 : 0) + (bySyn ? 40 : 0) + words.reduce((a, w) => a + (name.toLowerCase().includes(w) ? 20 : 5), 0);
     out.push([score, { code, name, duty: e.duty, vat: (e.vat || []).map(v => v[0] + '%').filter((v, i, a) => a.indexOf(v) === i).join(' / '), cat: e.cat || '', source: 'base' }]);
   }
