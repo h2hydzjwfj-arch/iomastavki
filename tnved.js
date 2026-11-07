@@ -125,7 +125,13 @@ function createTnved(dataDir, cloud) {
       scored.push([score, x.r]);
     }
     scored.sort((a, b) => b[0] - a[0] || a[1].code.localeCompare(b[1].code));
-    return { items: scored.slice(0, limit).map(v => v[1]), total: scored.length };
+    const items = scored.slice(0, limit).map(v => v[1]);
+    // своих записей мало — добавляем коды из встроенного справочника (reference/tnved-base.json), помечены source: 'base'
+    if (items.length < limit) {
+      const have = new Set(items.map(r => r.code));
+      for (const r of require('./tnved-check').searchBase(q, limit)) if (!have.has(r.code) && items.length < limit) items.push(r);
+    }
+    return { items, total: Math.max(scored.length, items.length) };
   }
   function get(code) {
     all(); const c = digits(code); if (!c) return null;
@@ -167,7 +173,13 @@ function setup(app, ctx) {
   app.get('/api/tnved/search', admin, (req, res) => { const r = db.search(req.query.q, req.query.limit); res.json({ ok: true, ...r }); });
   app.get('/api/tnved/lookup', admin, (req, res) => { const r = db.lookup(req.query.code, vatDefault()); if (!r) return res.status(404).json({ ok: false, error: 'Кода нет в локальном справочнике' }); res.json({ ok: true, ...r }); });
   app.get('/api/tnved/cert', admin, (req, res) => res.json({ ok: true, ...db.certCheck(req.query.code) }));
-  app.get('/api/tnved/code/:code', admin, (req, res) => { const r = db.get(req.params.code); if (!r) return res.status(404).json({ ok: false, error: 'Не найдено' }); res.json({ ok: true, item: r, calc: db.lookup(r.code, vatDefault()), cert: db.certCheck(r.code) }); });
+  app.get('/api/tnved/code/:code', admin, (req, res) => {
+    let r = db.get(req.params.code);
+    if (!r || !r.exact) { // нет в своём справочнике — встроенный справочник (reference/tnved-base.json)
+      const b = require('./tnved-check').baseInfo(digits(req.params.code));
+      if (b) { const vat = [...new Set(b.vat.map(v => v.rate + '%'))].join(' / ') || '22%'; return res.json({ ok: true, item: { code: b.code, name: b.levels.map(l => l.text).slice(-2).join(' — '), duty: b.duty.text, vat, excise: b.excise, note: (b.duty.note ? b.duty.note + ' ' : '') + 'Встроенный справочник, ставки на ' + b.baseDate + '.', exact: true, source: 'base' }, calc: null, cert: db.certCheck(b.code) }); }
+    }
+    if (!r) return res.status(404).json({ ok: false, error: 'Не найдено' }); res.json({ ok: true, item: r, calc: db.lookup(r.code, vatDefault()), cert: db.certCheck(r.code) }); });
   app.put('/api/tnved/code/:code', admin, (req, res) => { try { res.json({ ok: true, item: db.upsert({ ...(req.body || {}), code: req.params.code }) }); } catch (e) { res.status(400).json({ ok: false, error: e.message }); } });
   app.delete('/api/tnved/code/:code', admin, (req, res) => res.json({ ok: db.remove(req.params.code) }));
   if (upload) app.post('/api/tnved/import', admin, upload.single('file'), (req, res) => {

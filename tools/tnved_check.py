@@ -48,6 +48,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import time
@@ -167,6 +168,8 @@ class TnvedInfo:
     duty: Duty
     vat: List[VatRate]
     excise: str = ''
+    source: str = 'alta'           # alta — живая страница; local — запасной справочник
+    base_date: str = ''            # дата сборки запасного справочника (ГГГГ-ММ-ДД)
 
 
 @dataclass
@@ -415,8 +418,62 @@ def _get(session: requests.Session, url: str, what: str) -> requests.Response:
     raise SourceUnavailable(f'{what} недоступен ({last}). Проверьте интернет и попробуйте позже.')
 
 
+# Запасной справочник: reference/tnved-base.json рядом с сайтом (200–300 ходовых для Китая кодов с реальными
+# ставками, собранными с alta.ru скриптом tools/build-tnved-base.js). Путь можно задать переменной TNVED_BASE.
+BASE_FILE = os.environ.get('TNVED_BASE') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'reference', 'tnved-base.json')
+_base_cache: Dict[str, object] = {}
+
+
+def load_base(path: Optional[str] = None) -> Optional[dict]:
+    path = path or BASE_FILE
+    if path not in _base_cache:
+        try:
+            with open(path, encoding='utf-8') as f:
+                b = json.load(f)
+            _base_cache[path] = b if isinstance(b, dict) and 'codes' in b and 'nodes' in b else None
+        except (OSError, ValueError):
+            _base_cache[path] = None
+    return _base_cache[path]  # type: ignore[return-value]
+
+
+def base_info(code: str, path: Optional[str] = None) -> Optional[TnvedInfo]:
+    """Запись запасного справочника в том же виде, что разбор страницы alta.ru."""
+    b = load_base(path)
+    e = b and b['codes'].get(code)
+    if not e:
+        return None
+    levels = [Level(code=c, text=t) for c, t in (b['nodes'][i] for i in e.get('path', []))]
+    vat = [VatRate(rate=Decimal(str(v[0])), condition=(v[1] if len(v) > 1 else '')) for v in e.get('vat', [])]
+    return TnvedInfo(code=code, url=ALTA_URL.format(code=code), levels=levels, duty=parse_duty(e['duty'], e.get('note', '')),
+                     vat=vat, excise=e.get('excise', ''), source='local', base_date=b.get('fetchedAt', ''))
+
+
+def nearest_base(code: str, n: int = 3, path: Optional[str] = None) -> List[str]:
+    b = load_base(path)
+    if not b:
+        return []
+    for length in range(min(8, len(code) - 1), 3, -2):
+        found = [c for c in b['codes'] if c.startswith(code[:length])]
+        if found:
+            return found[:n]
+    return []
+
+
 def fetch_tnved(code: str, session: Optional[requests.Session] = None) -> TnvedInfo:
-    """Скачивает и разбирает страницу кода."""
+    """Скачивает и разбирает страницу кода; alta.ru недоступен или сменил вёрстку — запасной справочник."""
+    try:
+        return _fetch_alta(code, session)
+    except (SourceUnavailable, PageFormatChanged) as e:
+        local = base_info(code)
+        if local:
+            return local
+        near = nearest_base(code)
+        if near:
+            raise type(e)(f'{e} В запасном справочнике такого кода нет; похожие: {", ".join(near)}.') from e
+        raise
+
+
+def _fetch_alta(code: str, session: Optional[requests.Session] = None) -> TnvedInfo:
     s = session or new_session()
     url = ALTA_URL.format(code=code)
     r = _get(s, url, 'Справочник alta.ru')
@@ -527,6 +584,9 @@ def format_report(res: CheckResult) -> str:
     lines.append(f'🧾 НДС: {head}')
     lines.extend(f'   {x}' for x in extra)
     lines.append(f'⚡ Сбор: {fmt_money(res.fee)} ₽ (при стоимости груза {fmt_money(res.customs_value)} ₽)')
+    if info.source == 'local':
+        d8 = '.'.join(reversed(info.base_date.split('-'))) if re.match(r'^\d{4}-\d{2}-\d{2}$', info.base_date) else info.base_date
+        lines.append(f'ℹ️ alta.ru недоступен — ставки из локального справочника на {d8}; перед декларированием сверьте с действующими.')
     return '\n'.join(lines)
 
 

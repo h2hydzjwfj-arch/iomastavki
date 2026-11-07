@@ -407,7 +407,8 @@ function setup(app, ctx) {
     const d = db(); let logins = [];
     if (ctx.journal) { try { const months = (await ctx.journal.monthsList()).slice(0, 2); for (const m of months) logins = logins.concat((await ctx.journal.list(m)).filter(r => r.type === 'login' || r.type === 'login_fail')); } catch {} }
     const fails24 = logins.filter(r => r.type === 'login_fail' && Date.parse(r.at) > Date.now() - 864e5).length;
-    res.json({ ok: true, secrets: SECRETS.map(([key, label, kind]) => ({ key, label, kind, set: key === 'SUPABASE_URL' ? !!require('./cloud').supabaseUrl() : key === 'SUPABASE_SERVICE_KEY' ? !!require('./cloud').supabaseKey() : !!process.env[key] })),
+    const envCheck = require('./resilience').checkEnv(); // формат ключей: «задан, но похоже на ошибку» — без значений
+    res.json({ ok: true, envProblems: envCheck.problems, secrets: SECRETS.map(([key, label, kind]) => ({ key, label, kind, set: key === 'SUPABASE_URL' ? !!require('./cloud').supabaseUrl() : key === 'SUPABASE_SERVICE_KEY' ? !!require('./cloud').supabaseKey() : !!process.env[key], invalid: (envCheck.items.find(i => i.name === key) || {}).state === 'invalid' })),
       logins: logins.slice(0, 80).map(r => ({ at: r.at, ok: r.type === 'login', role: r.role || '', name: r.name || '', login: r.contact || r.email || '', visitor: r.visitor || '', result: r.result || '' })),
       fails24, storage: store.kind, sessionVersion: d.settings.adminSv || 0, customPassword: !!d.settings.adminHash, lastLogoutAll: d.settings.adminSvAt || null });
   });
@@ -484,6 +485,11 @@ function setup(app, ctx) {
     return out;
   }
   function botLog(e) { const d = db(); d.botLog.unshift({ id: newId(5), at: now(), ...e, q: str(e.q, 4000), a: String(e.a || '').slice(0, 8000) }); d.botLog = d.botLog.slice(0, 3000); store.save(d); }
+  function botFallback() {
+    // Ответ, когда ИИ недоступен (нет ключа, ошибка, таймаут) и в базе знаний ничего не нашлось.
+    const site = String(process.env.SITE_URL || 'https://iomastavki.onrender.com').replace(/\/+$/, '');
+    return 'Сейчас не могу ответить подробно — менеджер увидит ваш вопрос.\n\nЧто можно сделать прямо сейчас:\n• рассчитать ставку и срок: ' + site + '\n• проверить код ТН ВЭД: /tnved <код> <стоимость, ₽>\n• оставить заявку: ' + site + ' → «Оставить заявку»';
+  }
   function telegramAccess(m) {
     // учёт пользователя бота и доступ: бот включён, пользователь не заблокирован и есть в белом списке (если он задан).
     const d = db(); const b = bot(d); const uid = String(m.from && m.from.id || m.chat.id);
@@ -495,16 +501,19 @@ function setup(app, ctx) {
   }
   async function telegramMessage(m) {
     // ответ бота в Telegram: белый список, блокировка, база знаний и ИИ. Возвращает текст или '' (не отвечать особо).
-    const acc = telegramAccess(m); if (!acc) return '';
+    // null — не отвечать (бот выключен, блокировка, белый список); иначе — всегда текст: ИИ, база знаний или запасной ответ.
+    const acc = telegramAccess(m); if (!acc) return null;
     const { uid, u } = acc;
-    const text = String(m.text || '').trim(); const t0 = Date.now(); let a = '';
+    const text = String(m.text || '').trim(); const t0 = Date.now(); let a = '', src = 'ai';
     const kb = kbFor(text, 4);
     if (ctx.ai && ctx.ai.enabled()) {
-      try { a = await ctx.ai.run([{ role: 'system', content: 'Ты — бот логистической компании iomastavka (доставка грузов из Китая и Азии в Россию). Отвечай кратко, по делу, на языке вопроса. Не выдумывай ставки и сроки — предложи оставить заявку на сайте.' + botContext(text) }, { role: 'user', content: text }]); } catch (e) { a = ''; }
+      // 20 секунд на ответ: дольше человек в мессенджере не ждёт; ошибка ИИ — не ошибка бота
+      try { a = await ctx.ai.run([{ role: 'system', content: 'Ты — бот логистической компании iomastavka (доставка грузов из Китая и Азии в Россию). Отвечай кратко, по делу, на языке вопроса. Не выдумывай ставки и сроки — предложи оставить заявку на сайте.' + botContext(text) }, { role: 'user', content: text }], { timeoutMs: 20000, maxTokens: 900 }); }
+      catch (e) { a = ''; console.warn('bot ai:', String(e.message || e).slice(0, 200)); }
     }
-    if (!a && kb.length) a = kb[0].content.slice(0, 3500);
-    if (!a) return '';
-    botLog({ channel: 'telegram', user_id: uid, username: u.display_name || u.username, q: text, a, ms: Date.now() - t0 });
+    if (!a && kb.length) { a = kb[0].content.slice(0, 3500); src = 'kb'; }
+    if (!a) { a = botFallback(); src = 'fallback'; }
+    botLog({ channel: 'telegram', user_id: uid, username: u.display_name || u.username, q: text, a, ms: Date.now() - t0, src });
     return a;
   }
   app.get('/api/bot/stats', admin, (req, res) => {
@@ -569,7 +578,7 @@ function setup(app, ctx) {
     }
     return out;
   }
-  return { tnvedAffected, botContext, botLog, telegramMessage, telegramAccess, vedSettings, mailAdd, classify, offOn: (name, date) => offOn(db(), name, date), siteBotEnabled: () => bot(db()).answerSite !== false };
+  return { tnvedAffected, botContext, botLog, telegramMessage, telegramAccess, botFallback, vedSettings, mailAdd, classify, offOn: (name, date) => offOn(db(), name, date), siteBotEnabled: () => bot(db()).answerSite !== false };
 }
 
 module.exports = { setup, HOLIDAYS, expandCn, classify, SECRETS };
