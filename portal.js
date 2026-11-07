@@ -185,7 +185,9 @@ function setup(app, opts) {
   const tnvedBotBusy = chat => { const t = Date.now(), a = (tnvedBotHits.get(chat) || []).filter(x => t - x < 60000); a.push(t); tnvedBotHits.set(chat, a); if (tnvedBotHits.size > 2000) tnvedBotHits.delete(tnvedBotHits.keys().next().value); return a.length > 10; };
   // агенты и запросы ставок из сделки (перенос модуля RQ West Asia)
   const crm3 = require('./crm3').setup(app, { store, admin, upload, str, newId, ai: opts.ai, rates: opts.rates || (async () => ({ rates: {} })),
-    mail: { enabled: () => mail.enabled(), kind: () => mail.kind(), send: (...a) => mail.send(...a) }, who: req => roleOf(req).name || 'Менеджер', publicAgents: opts.agents || null });
+    mail: { enabled: () => mail.enabled(), kind: () => mail.kind(), send: (...a) => mail.send(...a) }, who: req => roleOf(req).name || 'Менеджер', publicAgents: opts.agents || null, newCalcDoc: (d, o) => crm2.newCalcDoc(d, o) });
+  // после сделки: «Факт», «Мои средства», ЭТрН
+  require('./crm4').setup(app, { store, admin, str, newId, who: req => roleOf(req).name || 'Менеджер', contractFor: id => crm2.contractFor(id) });
   const splitContact = c => { c = String(c || '').trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c) ? { contactEmail: c } : { contactPhone: c }; };
   function dealFromLead(lead, extraText) {
     const text = ['Новая заявка с сайта', `Имя: ${lead.name}`, `Контакт: ${lead.contact}`, `Маршрут: ${lead.from || '—'} → ${lead.to || '—'}`, lead.cargo ? `Груз: ${lead.cargo}` : '', lead.weight != null ? `Вес: ${lead.weight} кг` : '', lead.volume != null ? `Объём: ${lead.volume} м³` : '', lead.estimate ? `Оценка с сайта: ${lead.estimate}` : '', lead.comment ? `Комментарий: ${lead.comment}` : '', extraText || ''].filter(Boolean).join('\n');
