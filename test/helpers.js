@@ -22,22 +22,20 @@ async function startServer(port, extraEnv = {}) {
 // тогда сначала раскрываем группу; если в группе для этой роли один пункт, он виден в меню как обычная кнопка.
 async function navTo(p, view) {
   const sel = `.v3-nav [data-open-view=${view}]`, grp = `.v3-nav [data-sg]:has([data-open-view=${view}]) .sg-btn`;
+  const state = () => p.evaluate(() => ({ body: document.body.className, open: [...document.querySelectorAll('.view-layer.open')].map(x => x.id), scrollY,
+    groups: [...document.querySelectorAll('.v3-nav [data-sg]')].map(g => ({ cls: g.className, btn: getComputedStyle(g.querySelector('.sg-btn')).display,
+      items: [...g.querySelectorAll('.sg-menu button')].map(b => (b.dataset.openView || b.dataset.proxy) + ':' + getComputedStyle(b).display + '/' + getComputedStyle(b).visibility) })) })).catch(e => e.message);
   await p.waitForSelector(sel, { state: 'attached' });
-  for (let i = 0; i < 4; i++) {
-    if (await p.isVisible(sel)) return p.click(sel);          // кнопка на виду (в т. ч. одиночная группа)
-    if (await p.isVisible(grp)) {                              // пункт в группе — раскрываем её
-      await p.click(grp);
-      try { await p.waitForSelector(sel, { state: 'visible', timeout: 3000 }); } catch {}
-      continue;
-    }
+  let last = null;
+  for (let i = 0; i < 6; i++) {
+    try {
+      if (await p.isVisible(sel)) { await p.click(sel, { timeout: 5000 }); return; }   // на виду (в т. ч. одиночная группа)
+      if (await p.isVisible(grp)) { await p.click(grp, { timeout: 5000 }); await p.waitForSelector(sel, { state: 'visible', timeout: 3000 }); continue; }
+    } catch (e) { last = e; }
     await p.waitForTimeout(500);                               // страница ещё перестраивается после входа
   }
-  // не вышло — печатаем состояние меню, чтобы по журналу CI было видно причину
-  const st = await p.evaluate(v => ({ body: document.body.className, open: [...document.querySelectorAll('.view-layer.open')].map(x => x.id),
-    groups: [...document.querySelectorAll('.v3-nav [data-sg]')].map(g => ({ cls: g.className, hidden: g.hidden, btn: getComputedStyle(g.querySelector('.sg-btn')).display,
-      items: [...g.querySelectorAll('.sg-menu button')].map(b => (b.dataset.openView || b.dataset.proxy) + ':' + getComputedStyle(b).display + '/' + getComputedStyle(b).visibility) })) }), view).catch(e => e.message);
-  console.log('navTo(' + view + ') — меню:', JSON.stringify(st));
-  await p.click(sel);
+  console.log('navTo(' + view + ') не вышло:', last && last.message.split('\n').slice(0, 12).join(' | '), JSON.stringify(await state()));
+  throw last || new Error('navTo: пункт ' + view + ' не найден на виду');
 }
 
 module.exports = { startServer, ADMIN_PASS, navTo };
