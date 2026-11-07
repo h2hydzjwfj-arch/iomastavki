@@ -1,7 +1,7 @@
 'use strict';
 // CRM, часть 2: задачи, финансы сделки, калькулятор ВЭД, аналитика, отгулы, праздники,
 // компания (сотрудники, юрлица, шаблоны), безопасность, почта и очередь менеджеров, бот (база знаний, диалоги).
-// Перенос логики CRM West Asia: tasks.js, activity.js (финансы), calc.js, analytics.js, time_off.js,
+// Перенос логики прежней CRM: tasks.js, activity.js (финансы), calc.js, analytics.js, time_off.js,
 // company_settings.js, security_panel.js, mail.js, bot_panel.js.
 const VED = require('./ved');
 const CONTRACT = require('./contract');
