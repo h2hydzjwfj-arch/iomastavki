@@ -35,11 +35,11 @@ class FakeResponse:
 
 class FakeSession:
     """Отдаёт сохранённые страницы вместо интернета; считает обращения к ЦБ."""
-    def __init__(self, fail=None):
-        self.cbr_calls, self.fail = 0, fail
+    def __init__(self, fail=None, cbr_ok=False):
+        self.cbr_calls, self.fail, self.cbr_ok = 0, fail, cbr_ok
 
     def get(self, url, timeout=None):
-        if self.fail:
+        if self.fail and not (self.cbr_ok and 'cbr.ru' in url):
             raise T.requests.ConnectionError('offline')
         if 'cbr.ru' in url:
             self.cbr_calls += 1
@@ -168,8 +168,39 @@ class TestEndToEnd(unittest.TestCase):
 
     def test_offline(self):
         T.RETRY_PAUSE = 0
-        with self.assertRaises(T.SourceUnavailable):
-            T.check('6403190000', '1000', session=FakeSession(fail=True))
+        old, T.BASE_FILE = T.BASE_FILE, os.path.join(FIX, 'нет-такого.json')
+        try:
+            with self.assertRaises(T.SourceUnavailable):
+                T.check('6403190000', '1000', session=FakeSession(fail=True))
+        finally:
+            T.BASE_FILE = old
+
+    def test_offline_local_base(self):
+        """alta.ru недоступен — ставки из запасного справочника, в отчёте пометка с датой."""
+        import json, tempfile
+        nodes, idx, codes = [], {}, {}
+        for c in ('6201400000', '8471300000'):
+            info = T.parse_alta_page(page(c), c)
+            path_ = []
+            for lv in info.levels:
+                k = (lv.code, lv.text)
+                if k not in idx:
+                    idx[k] = len(nodes); nodes.append([lv.code, lv.text])
+                path_.append(idx[k])
+            codes[c] = {'path': path_, 'duty': info.duty.text, 'vat': [[float(v.rate)] + ([v.condition] if v.condition else []) for v in info.vat]}
+        with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False, encoding='utf-8') as f:
+            json.dump({'fetchedAt': '2026-11-07', 'nodes': nodes, 'codes': codes}, f, ensure_ascii=False)
+        T.RETRY_PAUSE = 0
+        old, T.BASE_FILE = T.BASE_FILE, f.name
+        try:
+            text = T.format_report(T.check('6201400000', '500000', weight_raw='300', session=FakeSession(fail=True, cbr_ok=True)))
+            self.assertIn('💰 Пошлина: 10%, но не менее 2.25 евро/кг ≈ 61 831 ₽', text)
+            self.assertIn('ℹ️ alta.ru недоступен — ставки из локального справочника на 07.11.2026', text)
+            with self.assertRaises(T.SourceUnavailable) as cm:
+                T.check('8471300001', '1000', session=FakeSession(fail=True))
+            self.assertIn('похожие: 8471300000', str(cm.exception))
+        finally:
+            T.BASE_FILE = old
 
     def test_json(self):
         import json

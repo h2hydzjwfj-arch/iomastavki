@@ -8,10 +8,14 @@ const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const { signSession, verifySession, safeFetchText } = require('./security');
 const TNVED_CHECK = require('./tnved-check');
+const RES = require('./resilience');
+RES.installProcessGuards();
 let compression = null; try { compression = require('compression'); } catch { /* необязательная зависимость */ }
 const upload = multer({storage: multer.memoryStorage(), limits:{fileSize: 15*1024*1024}});
 
-const app = express();
+const app = RES.catchAsyncRoutes(express()); // ошибки async-маршрутов уходят в общий обработчик, а не роняют процесс
+const ENV = RES.logEnv();
+const aiBreaker = RES.breaker({ limit: 3, coolMs: 60000 });
 const PORT = process.env.PORT || 10000;
 const ROOT = __dirname;
 const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, 'data');
@@ -52,7 +56,7 @@ function bestRate({ from, to, mode, distance }) {
 const portal = require('./portal').setup(app, { verifySession, DATA_DIR, upload, rateLimit, cloud, engine: q => bestRate(q), rates: () => cbrRatesToday(),
   agents: () => { try { const r = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'agents.json'), 'utf8')); return Array.isArray(r) && r.length ? r : BUILTIN_AGENTS; } catch { return BUILTIN_AGENTS; } },
   // ИИ для разбора инвойсов и упаковочных листов (если задан OPENAI_API_KEY)
-  ai: { enabled: () => !!process.env.OPENAI_API_KEY, run: async input => { const out = await responsesRequest({ key: process.env.OPENAI_API_KEY, preferred: process.env.OPENAI_MODEL, input, max_output_tokens: 8000 }); if (out.error) throw new Error(out.error.error || 'AI error'); return responseText(out.d); } } });
+  ai: { enabled: () => !!process.env.OPENAI_API_KEY && aiBreaker.allow(), state: () => aiBreaker.state(), run: async (input, o = {}) => { const out = await responsesRequest({ key: process.env.OPENAI_API_KEY, preferred: process.env.OPENAI_MODEL, input, max_output_tokens: o.maxTokens || 8000, timeoutMs: o.timeoutMs || 120000 }); if (out.error) throw Object.assign(new Error(out.error.error || 'AI error'), { status: out.error.status }); return responseText(out.d); } } });
 app.use(['/api/agents', '/api/agents/import', '/api/rates/import', '/api/rates/import-text', '/api/rates/import-local',
   '/api/ai', '/api/tts', '/api/transcribe', '/api/realtime/call', '/api/customs/check', '/api/news/article/audio'], portal.admin);
 app.get('/api/rates', portal.admin);
@@ -178,7 +182,7 @@ function storageIssue() {
   if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(u)) return 'адрес Supabase в неверном виде — нужно https://<проект>.supabase.co' + hint;
   return 'ключи заданы, но подключение не создано' + hint;
 }
-app.get('/api/health', (req,res) => res.json({ ok: true, storage: cloud && !cloudError ? 'supabase' : 'local', storageIssue: storageIssue() || undefined, uptime: Math.round(process.uptime()) }));
+app.get('/api/health', (req,res) => res.json({ ok: true, storage: cloud && !cloudError ? 'supabase' : 'local', storageIssue: storageIssue() || undefined, uptime: Math.round(process.uptime()), ai: ENV.flags.ai ? (aiBreaker.state().ok ? 'ok' : 'paused') : 'off', bot: ENV.flags.telegramWebhook ? 'webhook' : ENV.flags.telegram ? 'token-only' : 'off' }));
 app.get('/api/version', (req,res) => res.json({ok:true,version:'28',build:'IOMASTAVKA_FILE_28'}));
 // Weather without API key: Open-Meteo (fixed URL, cached 10 min).
 let weatherCache = { at: 0, data: null };
@@ -449,18 +453,25 @@ function aiModelCandidates(preferred){
   const first=openAIModel(preferred);
   return [...new Set([first,'gpt-5','gpt-4.1-mini','gpt-4o-mini'])];
 }
-async function responsesRequest({key,preferred,input,tools,max_output_tokens=1000}){
-  let last={status:502,error:'OpenAI request failed'};
+// Запрос к ИИ: перебор моделей, общий лимит времени и «предохранитель» — при серии ошибок ИИ отдыхает,
+// и ответы сразу уходят в запасной вариант вместо ожидания таймаута. Никогда не бросает исключение.
+async function responsesRequest({key,preferred,input,tools,max_output_tokens=1000,timeoutMs=90000}){
+  if(!key) return {error:{status:503,error:'OPENAI_API_KEY не задан'}};
+  if(!aiBreaker.allow()) return {error:{status:503,error:'ИИ временно недоступен: '+(aiBreaker.state().lastError||'серия ошибок')}};
+  let last={status:502,error:'OpenAI request failed'}; const deadline=Date.now()+timeoutMs;
   for(const model of aiModelCandidates(preferred)){
+    const left=deadline-Date.now(); if(left<1500){last={status:504,error:'ИИ не ответил вовремя'};break;}
     const body={model,input,max_output_tokens};
     if(tools) body.tools=tools;
     try{
-      const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify(body)});
+      const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify(body),signal:AbortSignal.timeout(left)});
       const raw=await r.text(); let d={}; try{d=JSON.parse(raw)}catch{}
-      if(r.ok)return {r,d};
-      last={status:r.status,error:d?.error?.message||raw||`Model ${model} failed`};
-    }catch(e){last={status:502,error:e.message||'OpenAI unavailable'};}
+      if(r.ok){aiBreaker.success();return {r,d};}
+      last={status:r.status,error:d?.error?.message||raw.slice(0,300)||`Model ${model} failed`};
+      if(r.status===401||r.status===403||(r.status===429&&/quota|billing|insufficient/i.test(last.error)))break; // ключ или баланс — другие модели не помогут
+    }catch(e){last={status:e.name==='TimeoutError'||e.name==='AbortError'?504:502,error:e.name==='TimeoutError'?'ИИ не ответил вовремя':(e.message||'OpenAI unavailable')};}
   }
+  aiBreaker.failure(last);
   return {error:last};
 }
 function responseText(d){
@@ -765,7 +776,8 @@ app.use((req,res) => res.status(404).type('html').send('<!doctype html><meta cha
         .catch(e => console.error('Telegram webhook:', e.message));
     }
   } catch (e) { console.error('Ошибка подключения хранилища:', e.message); if (cloud) cloudError = String(e.message || e).replace(/eyJ[\w.-]+/g, '***'); }
-  app.listen(PORT, () => console.log(`iomastavka listening on ${PORT}`));
+  app.use(RES.errorHandler()); // последним: любая ошибка маршрута — вменяемый ответ, процесс живёт
+  app.listen(PORT, () => { console.log(`iomastavka listening on ${PORT}`); RES.startKeepAlive({ site: 'https://iomastavki.onrender.com' }); });
 })();
 // Перед остановкой сохраняем несохранённое.
 process.on('SIGTERM', async () => { try { await portal.store.flush(); } catch {} try { await portal.journal.flush(); } catch {} try { await portal.tnved.flush(); } catch {} process.exit(0); });

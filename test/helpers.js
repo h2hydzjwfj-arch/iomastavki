@@ -18,4 +18,24 @@ async function startServer(port, extraEnv = {}) {
   }
   proc.kill(); throw new Error('Сервер не запустился:\n' + log);
 }
-module.exports = { startServer, ADMIN_PASS };
+// Переход в раздел через меню: пункт может лежать в группе («Управление грузом», «Инструменты ВЭД») —
+// тогда сначала раскрываем группу; если в группе для этой роли один пункт, он виден в меню как обычная кнопка.
+async function navTo(p, view) {
+  const sel = `.v3-nav [data-open-view=${view}]`, grp = `.v3-nav [data-sg]:has([data-open-view=${view}]) .sg-btn`;
+  const state = () => p.evaluate(() => ({ body: document.body.className, open: [...document.querySelectorAll('.view-layer.open')].map(x => x.id), scrollY,
+    groups: [...document.querySelectorAll('.v3-nav [data-sg]')].map(g => ({ cls: g.className, btn: getComputedStyle(g.querySelector('.sg-btn')).display,
+      items: [...g.querySelectorAll('.sg-menu button')].map(b => (b.dataset.openView || b.dataset.proxy) + ':' + getComputedStyle(b).display + '/' + getComputedStyle(b).visibility) })) })).catch(e => e.message);
+  await p.waitForSelector(sel, { state: 'attached' });
+  let last = null;
+  for (let i = 0; i < 6; i++) {
+    try {
+      if (await p.isVisible(sel)) { await p.click(sel, { timeout: 5000 }); return; }   // на виду (в т. ч. одиночная группа)
+      if (await p.isVisible(grp)) { await p.click(grp, { timeout: 5000 }); await p.waitForSelector(sel, { state: 'visible', timeout: 3000 }); continue; }
+    } catch (e) { last = e; }
+    await p.waitForTimeout(500);                               // страница ещё перестраивается после входа
+  }
+  console.log('navTo(' + view + ') не вышло:', last && last.message.split('\n').slice(0, 12).join(' | '), JSON.stringify(await state()));
+  throw last || new Error('navTo: пункт ' + view + ' не найден на виду');
+}
+
+module.exports = { startServer, ADMIN_PASS, navTo };

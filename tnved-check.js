@@ -8,6 +8,8 @@
  *   по действующей шкале (настройки калькулятора ВЭД, по умолчанию — 2026 год); 5) отчёт с эмодзи.
  * Без внешних зависимостей: разметка alta.ru разбирается по известным классам (pTnved_*).
  */
+const fs = require('fs');
+const path = require('path');
 const VED = require('./ved');
 
 const ALTA_URL = code => `https://www.alta.ru/tnved/code/${code}/`;
@@ -217,15 +219,114 @@ async function httpGet(url, opts) {
   throw unavailable(`Справочник alta.ru недоступен (${last}). Попробуйте позже.`);
 }
 
+// ---------------------------------------------------------------- локальный справочник (запасной источник)
+
+/*
+ * reference/tnved-base.json — 200–300 ходовых для Китая кодов (электроника, одежда, оборудование, станки…)
+ * с реальными ставками, собранными с alta.ru скриптом tools/build-tnved-base.js. Используется, когда alta.ru
+ * недоступен или сменил вёрстку; в отчёте всегда помечено, что данные из локальной базы и на какую дату.
+ */
+const BASE_FILE = path.join(__dirname, 'reference', 'tnved-base.json');
+let base;
+function loadBase(file) {
+  if (file) { base = undefined; }
+  if (base !== undefined) return base;
+  try { const b = JSON.parse(fs.readFileSync(file || BASE_FILE, 'utf8')); base = b && b.codes && Array.isArray(b.nodes) ? b : null; }
+  catch { base = null; }
+  return base;
+}
+const fmtDate = iso => (/^\d{4}-\d{2}-\d{2}/.test(iso || '') ? iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.' + iso.slice(0, 4) : String(iso || ''));
+
+/** Запись локального справочника в том же виде, что разбор страницы alta.ru. */
+function baseInfo(code) {
+  const b = loadBase(); const e = b && b.codes[code]; if (!e) return null;
+  const levels = (e.path || []).map(i => b.nodes[i]).filter(Boolean).map(([c, t]) => ({ code: c, text: t }));
+  return { code, url: ALTA_URL(code), levels, duty: parseDuty(e.duty, e.note), vat: (e.vat || []).map(([rate, condition]) => ({ rate, condition: condition || '' })),
+    excise: e.excise || '', category: e.cat || '', source: 'local', baseDate: b.fetchedAt || '' };
+}
+const baseName = e => { const b = loadBase(); const p = (e.path || []).map(i => b.nodes[i]).filter(Boolean); const last = p[p.length - 1]; let n = last ? last[1] : '';
+  // «прочие» и «– – прочая» без родителя непонятны: добавляем ближайший осмысленный уровень
+  if (/^[–—-]*\s*прочи[ейяхм]/i.test(n) || n.length < 14) { const up = p.slice(0, -1).reverse().find(x => x[1] && !/^[–—-]*\s*прочи/i.test(x[1])); if (up) n = up[1].replace(/\s*:$/, '') + ' — ' + n.replace(/^[–—-\s]+/, ''); }
+  return n; };
+
+// Бытовые названия → позиции ТН ВЭД: в номенклатуре нет слов «ноутбук» или «кроссовки»
+const SYN = [
+  [/ноутбук|лэптоп|laptop|планшет/, ['847130']], [/смартфон|телефон|мобильн/, ['851713']], [/роутер|маршрутизатор|коммутатор|модем|смарт-?час/, ['851762']],
+  [/наушник|гарнитур/, ['851830']], [/колонк|динамик|акустик/, ['851822', '851821']], [/зарядн|блок питания|адаптер питания|power bank/, ['850440']],
+  [/аккумулятор|батаре/, ['8507']], [/кабел|провод/, ['8544']], [/телевизор/, ['852872']], [/монитор/, ['852852', '852859']], [/проектор/, ['852862']],
+  [/камер|видеонаблюд/, ['852589']], [/флешк|ssd|накопител/, ['852351', '847170']], [/клавиатур|мыш|принтер|сканер/, ['847160', '844332']],
+  [/светодиод|лампа|led/, ['853950', '854141']], [/солнечн|панел/, ['854143']], [/кондиционер/, ['841510']], [/холодильник/, ['841821']],
+  [/стиральн/, ['845011']], [/пылесос/, ['850811']], [/фен(?![а-яё])|фена/, ['851631']], [/микроволн/, ['851650']], [/кофе/, ['851671']], [/вентилятор/, ['841459']],
+  [/насос/, ['8413']], [/компрессор/, ['8414']], [/подшипник/, ['8482']], [/клапан|кран|задвижк/, ['8481']], [/генератор/, ['8501']], [/сварочн/, ['8515']],
+  [/дрел|шуруповерт|перфоратор/, ['846721']], [/пил[аы]|болгарк/, ['846722', '846729']], [/погрузчик/, ['8427']],
+  [/станок|станк|чпу|фрезер|токарн|лазерн/, ['8456', '8457', '8458', '8459', '8460', '8461', '8462', '8465']],
+  [/футболк|майк/, ['6109']], [/свитер|джемпер|кофт|худи/, ['6110']], [/куртк|пуховик|ветровк/, ['6201', '6202']], [/брюк|джинс/, ['6203', '6204']],
+  [/рубашк/, ['6205']], [/блузк/, ['6206']], [/бюстгальтер|белье/, ['6212']], [/детск.*одежд/, ['6111']], [/постельн|полотенц/, ['6302']],
+  [/кроссовк|кед/, ['6404', '6402']], [/обув|ботинк|туфл/, ['6403', '6402', '6404']], [/сумк|рюкзак|чемодан/, ['4202']],
+  [/мебел|стол|шкаф/, ['9403']], [/кресл|стул|диван/, ['9401']], [/светильник|люстр/, ['9405']], [/игрушк|конструктор/, ['9503']],
+  [/велосипед/, ['8712']], [/самокат|электровелосипед/, ['8711']], [/шин[аы]|покрышк/, ['4011']], [/запчаст|тормоз|подвеск|диск колес/, ['8708']],
+  [/косметик|крем|макияж/, ['3304']], [/шампун/, ['3305']], [/шприц/, ['901831']], [/посуд|кастрюл|сковород/, ['7323', '6912', '6911']],
+];
+
+/** Поиск по локальному справочнику: цифры кода, слова из названия или бытовое название («ноутбук», «кроссовки»). */
+function searchBase(q, limit) {
+  const b = loadBase(); if (!b) return [];
+  limit = Math.min(Number(limit) || 20, 100);
+  const s = String(q || '').toLowerCase().replace(/ё/g, 'е'), d = s.replace(/\D/g, '');
+  const words = s.replace(/[\d.\s-]+/g, ' ').trim().split(' ').filter(w => w.length > 1).map(w => (w.length > 5 ? w.slice(0, w.length - 2) : w));
+  if (!d && !words.length) return [];
+  // слово должно начинаться с синонима: «шины» — шины, а «машины» — нет
+  const syn = []; for (const [re, pref] of SYN) if (new RegExp('(?:^|[^а-яёa-z0-9])(?:' + re.source + ')').test(s)) syn.push(...pref);
+  const out = [];
+  for (const [code, e] of Object.entries(b.codes)) {
+    if (d && !code.startsWith(d)) continue;
+    const name = baseName(e);
+    const hay = ((e.path || []).map(i => (b.nodes[i] || [])[1]).join(' ') + ' ' + (e.cat || '')).toLowerCase().replace(/ё/g, 'е');
+    const bySyn = syn.some(p => code.startsWith(p));
+    if (syn.length && !d ? !bySyn : (words.length && !bySyn && !words.every(w => hay.includes(w)))) continue; // бытовое название — только его позиции
+    const score = (d ? 50 : 0) + (bySyn ? 40 : 0) + words.reduce((a, w) => a + (name.toLowerCase().includes(w) ? 20 : 5), 0);
+    out.push([score, { code, name, duty: e.duty, vat: (e.vat || []).map(v => v[0] + '%').filter((v, i, a) => a.indexOf(v) === i).join(' / '), cat: e.cat || '', source: 'base' }]);
+  }
+  return out.sort((a, b2) => b2[0] - a[0] || a[1].code.localeCompare(b2[1].code)).slice(0, limit).map(x => x[1]);
+}
+
+/** Ближайшие по цифрам коды локального справочника — подсказка, если точного кода нет. */
+function nearestBase(code, n) {
+  const b = loadBase(); if (!b) return [];
+  let best = [];
+  for (let len = Math.min(8, code.length - 1); len >= 4 && !best.length; len -= 2) best = Object.keys(b.codes).filter(c => c.startsWith(code.slice(0, len)));
+  return best.slice(0, n || 3).map(c => ({ code: c, name: baseName(b.codes[c]) }));
+}
+
+function withHint(err, code) {
+  const near = nearestBase(code, 3);
+  if (near.length) err.message += ` В локальном справочнике такого кода нет; похожие: ${near.map(x => `${x.code} (${x.name.slice(0, 60)})`).join(', ')}.`;
+  err.near = near;
+  return err;
+}
+
 const cache = new Map();
-/** Страница кода с кешем на 6 часов. get(url) — загрузчик (подменяется в тестах). */
+/**
+ * Страница кода с кешем на 6 часов. get(url) — загрузчик (подменяется в тестах).
+ * alta.ru недоступен или сменил вёрстку → запись из локального справочника (не кешируется: в следующий раз снова alta.ru).
+ */
 async function fetchTnved(code, get) {
   const hit = cache.get(code);
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.info;
   const url = ALTA_URL(code);
-  const r = await (get || httpGet)(url);
+  let r;
+  try { r = await (get || httpGet)(url); }
+  catch (e) {
+    const local = baseInfo(code); if (local) return local;
+    throw withHint(e instanceof TnvedError ? e : unavailable(`Справочник alta.ru недоступен (${e.message}).`), code);
+  }
   if (r.status === 404) throw notFound(`Код ${code} не найден в справочнике ТН ВЭД ЕАЭС`);
-  const info = parseAltaPage(r.text, code, url);
+  let info;
+  try { info = parseAltaPage(r.text, code, url); }
+  catch (e) {
+    if (e.kind === 'format_changed') { const local = baseInfo(code); if (local) return local; throw withHint(e, code); }
+    throw e;
+  }
   cache.set(code, { at: Date.now(), info });
   if (cache.size > 500) cache.delete(cache.keys().next().value);
   return info;
@@ -297,6 +398,7 @@ function formatReport(res) {
   for (const x of extra) L.push(`   ${x}`);
   if (res.fee == null) L.push('⚡ Сбор: укажите стоимость груза, ₽');
   else L.push(`⚡ Сбор: ${fmtMoney(res.fee)} ₽ (при стоимости груза ${fmtMoney(res.value)} ₽)${res.radio ? ' — товар из Приложения № 1 к ПП № 1637' : ''}`);
+  if (res.source === 'local') L.push(`ℹ️ alta.ru недоступен — ставки из локального справочника на ${fmtDate(res.baseDate)}; перед декларированием сверьте с действующими.`);
   return L.join('\n');
 }
 
@@ -326,4 +428,4 @@ function parseCommand(msg) {
 
 const HELP = 'Проверка кода ТН ВЭД:\n/tnved <код> <стоимость, ₽> [вес кг] [кол-во пар/шт]\nНапример:\n/tnved 6201400000 500000 300кг\n/tnved 6403190000 150 000 200 пар';
 
-module.exports = { check, parseAltaPage, parseDuty, computeDuty, customsFee, cleanCode, parseAmount, fmtMoney, fmtNum, fmtCode, vatLines, formatReport, parseCommand, fetchTnved, httpGet, TnvedError, HELP, _cache: cache };
+module.exports = { loadBase, baseInfo, searchBase, nearestBase, check, parseAltaPage, parseDuty, computeDuty, customsFee, cleanCode, parseAmount, fmtMoney, fmtNum, fmtCode, vatLines, formatReport, parseCommand, fetchTnved, httpGet, TnvedError, HELP, _cache: cache };
