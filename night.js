@@ -86,7 +86,9 @@
           place(); sg.classList.add('open'); btn.setAttribute('aria-expanded', 'true');
         },
         close: function () { clearTimeout(tIn); sg.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); },
-        isOpen: function () { return sg.classList.contains('open'); }
+        isOpen: function () { return sg.classList.contains('open'); },
+        // прокрутка/смена размера: меню едет за кнопкой; закрывается, только если кнопка ушла с экрана
+        follow: function () { if (!api.isOpen()) return; var r = btn.getBoundingClientRect(); if (r.bottom < 0 || r.top > window.innerHeight || !r.width) api.close(); else place(); }
       };
       groups.push(api);
       // одна видимая команда для этой роли (гость: «Оставить заявку») — вместо группы показываем саму команду
@@ -123,8 +125,9 @@
       menu.addEventListener('click', function (e) { if (e.target.closest('button') && !sg.classList.contains('sg-solo')) setTimeout(api.close, 0); });
     });
     document.addEventListener('click', function (e) { if (!e.target.closest || !e.target.closest('[data-sg]')) closeGroups(); });
-    window.addEventListener('resize', function () { closeGroups(); });
-    window.addEventListener('scroll', function () { closeGroups(); }, { passive: true });
+    var follow = function () { groups.forEach(function (g) { g.follow(); }); };
+    window.addEventListener('resize', follow);
+    window.addEventListener('scroll', follow, { passive: true });
     window.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeGroups(); });
   });
 
