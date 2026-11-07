@@ -286,10 +286,37 @@ function setup(app, ctx) {
     res.json({ ...(await docOut(doc)), id: doc.id });
   });
   app.get('/api/calc/:id', admin, async (req, res) => { const doc = db().calcDocs.find(v => v.id === req.params.id); if (!doc) return bad(res, 'Расчёт не найден', 404); res.json(await docOut(doc)); });
+  // история расчёта: кто, когда, что поменял (правки одного человека в течение 10 минут — одной записью, как одно редактирование)
+  const HIST = [['transport_mode', 'Транспорт'], ['freight_total', 'Фрахт'], ['freight_currency', 'Валюта фрахта'], ['freight_fx', 'Надбавка агента к курсу, %'], ['payment', 'Оплата инвойса'], ['td', 'Торговый дом'], ['declarant', 'Декларант'], ['declarant_rub', 'Декларант, ₽'], ['margin', 'Маржа'], ['insurance_pct', 'Страхование, %'], ['border_split_enabled', 'Фрахт до/после границы'], ['radio_fee', 'Особый сбор'], ['calc_type', 'Тип расчёта']];
+  const HIST_IT = [['name', 'товар'], ['tnved_code', 'код ТН ВЭД'], ['invoice_amount', 'инвойс'], ['invoice_currency', 'валюта'], ['weight', 'брутто, кг'], ['net', 'нетто, кг'], ['duty_rate', 'пошлина, %'], ['vat_rate', 'НДС, %'], ['chz', 'Честный знак']];
+  const hv = v => (v == null || v === '' ? '—' : typeof v === 'boolean' ? (v ? 'да' : 'нет') : String(v));
+  function snap(doc) {
+    const o = {}; for (const [k] of HIST) o[k] = hv(doc[k]);
+    (doc.items || []).forEach((it, i) => { for (const [k] of HIST_IT) o['items.' + i + '.' + k] = k === 'chz' ? hv(!!it.chz) : hv(it[k]); });
+    o.extras = (doc.extra_costs || []).filter(e => !e.is_percent_of_invoice).map(e => `${e.label} ${e.amount} ${e.currency}`).join('; ') || '—';
+    o.markups = (doc.markups || []).map(m => `${m.label} ${m.amount} ${m.currency}`).join('; ') || '—';
+    return o;
+  }
+  const histLabel = k => { const h = HIST.find(x => x[0] === k); if (h) return h[1]; const m = k.match(/^items\.(\d+)\.(\w+)$/); if (m) return 'Позиция ' + (+m[1] + 1) + ': ' + ((HIST_IT.find(x => x[0] === m[2]) || [])[1] || m[2]); return k === 'extras' ? 'Доп. расходы' : k === 'markups' ? 'Наценки' : k; };
+  function remember(doc, before, totalBefore, by) {
+    const after = snap(doc), keys = [...new Set(Object.keys(before).concat(Object.keys(after)))];
+    const ch = keys.filter(k => (before[k] || '—') !== (after[k] || '—') && !(/\.vat_rate$/.test(k) && (before[k] || '—') === '—' && before[k.replace(/vat_rate$/, 'name')] != null)).map(k => ({ key: k, label: histLabel(k), from: before[k] || '—', to: after[k] || '—' }));
+    if (!ch.length) return;
+    const total = doc.lastTotal ? `${doc.lastTotal.display} ${doc.lastTotal.currency}` : '', h = doc.history = doc.history || [], last = h[0];
+    if (last && last.by === by && Date.now() - Date.parse(last.at) < 10 * 60 * 1000) {
+      for (const c of ch) { const e = last.changes.find(v => v.key === c.key); if (e) e.to = c.to; else last.changes.push(c); }
+      last.changes = last.changes.filter(c => c.from !== c.to); last.at = now(); last.totalTo = total;
+      if (!last.changes.length) h.shift();
+    } else h.unshift({ at: now(), by, changes: ch, totalFrom: totalBefore, totalTo: total });
+    doc.history = h.slice(0, 300);
+  }
+  app.get('/api/calc/:id/history', admin, (req, res) => { const doc = db().calcDocs.find(v => v.id === req.params.id); if (!doc) return bad(res, 'Расчёт не найден', 404); res.json({ ok: true, items: doc.history || [], createdAt: doc.createdAt, createdBy: doc.createdBy || '' }); });
   app.patch('/api/calc/:id', admin, async (req, res) => {
     const d = db(); const doc = d.calcDocs.find(v => v.id === req.params.id); if (!doc) return bad(res, 'Расчёт не найден', 404);
+    const before = snap(doc), totalBefore = doc.lastTotal ? `${doc.lastTotal.display} ${doc.lastTotal.currency}` : '';
     docBody(req.body || {}, doc); if (req.body && req.body.dealId !== undefined) { if (req.body.dealId && !dealOf(d, req.body.dealId)) return bad(res, 'Сделка не найдена'); doc.dealId = req.body.dealId || ''; }
     doc.updatedAt = now(); const out = await docOut(doc); doc.lastTotal = out.contract && out.contract.ok ? { rub: out.contract.totalRub || Math.round(out.contract.total * out.contract.rate), display: out.contract.total, currency: out.contract.currency } : { rub: out.result.grand_total_rub, display: out.result.grand_total_display, currency: out.result.display_currency };
+    remember(doc, before, totalBefore, who(req));
     store.save(d); res.json(out);
   });
   app.delete('/api/calc/:id', admin, (req, res) => { const d = db(); const i = d.calcDocs.findIndex(v => v.id === req.params.id); if (i < 0) return bad(res, 'Расчёт не найден', 404); d.calcDocs.splice(i, 1); store.save(d); res.json({ ok: true }); });
