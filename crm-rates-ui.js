@@ -49,6 +49,13 @@
     if (r.requests.length) h += '<details class="cx-rqs"><summary>Запросы · ' + r.requests.length + '</summary>' + r.requests.map(function (q) {
       return '<div class="cx-rq"><div class="cx-rqh"><b>' + esc(q.id) + '</b><span class="cx-mut">' + K.dt(q.createdAt) + ' · ' + esc(q.by || '') + '</span><button type="button" class="cx-link" data-r="copy" data-id="' + q.id + '">Скопировать текст</button><button type="button" class="cx-ib" data-r="delrq" data-id="' + q.id + '" title="Удалить запрос">✕</button></div><div class="cx-rqi">' + q.items.map(function (it) { var s = ST[it.status] || ['', '']; return '<button type="button" class="cx-chip2 ' + s[1] + '" data-r="reply1" data-rq="' + q.id + '" data-id="' + it.id + '" title="' + esc((it.email || it.phone || '') + (it.error ? ' — ' + it.error : '')) + '">' + esc(it.agent) + ' <small>' + s[0] + '</small></button>'; }).join('') + '</div></div>';
     }).join('') + '</details>';
+    // ответы агентов целиком — читаемо: суммы и сроки подсвечены, подпись мелко, старая переписка свёрнута
+    var reps = []; r.requests.forEach(function (q) { (q.replies || []).forEach(function (p) { reps.push(p); }); });
+    if (reps.length) h += '<details class="cx-rqs cx-reps"><summary>Ответы агентов · ' + reps.length + '</summary>' + reps.sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); }).map(function (p) {
+      var who = [p.sender && p.sender.name, p.sender && p.sender.email, p.sender && p.sender.phone].filter(Boolean).join(' · ');
+      return '<article class="cx-rep"><header><b>' + esc(p.agent) + '</b><small class="cx-mut">' + K.dt(p.at) + (who ? ' · ' + esc(who) : '') + '</small><em class="cx-tag ' + (p.rates_n ? 'green' : 'amb') + '">' + (p.rates_n ? 'ставок: ' + p.rates_n : 'ставок не нашлось') + '</em></header>'
+        + '<div class="fm fm-clamp">' + (window.IOMA_FMT ? window.IOMA_FMT.rich(p.text || '') : esc(p.text || '')) + '</div><button type="button" class="cx-more" data-r="repmore">показать полностью</button></article>';
+    }).join('') + '</details>';
     if (!r.requests.length && !r.refs.length) h += '<p class="cx-empty">Запросите ставки у агентов — письмо уйдёт тем, у кого указан email, остальным можно отправить текст в мессенджер.</p>';
     box.innerHTML = h;
   }
@@ -148,6 +155,7 @@
   function onClick(e) {
     var b = e.target.closest('[data-r]'); if (!b || !box.contains(b) || b.disabled) return;
     var r = b.dataset.r, id = b.dataset.id;
+    if (r === 'repmore') { var fm = b.previousElementSibling, cl = fm.classList.toggle('fm-clamp'); b.textContent = cl ? 'показать полностью' : 'свернуть'; return; }
     if (r === 'ask') return askModal();
     if (r === 'reply') return replyModal();
     if (r === 'reply1') return replyModal(b.dataset.rq, id);
