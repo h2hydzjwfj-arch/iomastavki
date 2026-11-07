@@ -39,6 +39,16 @@
     'Авто': ['Truck', '公路'], 'ЖД': ['Rail', '铁路'], 'Авиа': ['Air', '空运'], 'Море + ЖД': ['Sea + rail', '海运 + 铁路'], 'Мульти': ['Multimodal', '多式联运'],
     'кг': ['kg', '公斤'], 'т': ['t', '吨'], 'м³': ['m³', '立方米'], 'млн ₽': ['M RUB', '百万卢布'],
   };
+  // кейсы и товары по умолчанию; новые кейсы администратор пишет сам (с ИИ робот переведёт их)
+  var GOODS = { 'Баллистическая ткань': ['Ballistic fabric', '防弹面料'], 'Сумки и рюкзаки': ['Bags and backpacks', '箱包和背包'], 'Бутылки': ['Bottles', '瓶子'], 'Арамидная верёвка': ['Aramid rope', '芳纶绳'],
+    'Гидравлический инструмент': ['Hydraulic tools', '液压工具'], 'Гидроцилиндры': ['Hydraulic cylinders', '液压缸'], 'Транспаки': ['Transport packs', '运输包装'], 'Термомозаика': ['Fuse beads', '拼豆'], 'Инверторы': ['Inverters', '逆变器'],
+    'Камеры для банкоматов': ['ATM cameras', 'ATM 摄像头'], 'Капсульный дом': ['Capsule house', '太空舱房屋'], 'Когтеточки': ['Cat scratchers', '猫抓板'], 'Конвейерная лента': ['Conveyor belt', '输送带'], 'Косметика': ['Cosmetics', '化妆品'],
+    'Регуляторы скорости': ['Speed controllers', '调速器'], 'Кухонные мойки': ['Kitchen sinks', '厨房水槽'], 'Лампы': ['Lamps', '灯具'], 'Образцы свитеров': ['Sweater samples', '毛衣样品'], 'Пищевое оборудование': ['Food processing equipment', '食品加工设备'],
+    'Токарные пластины': ['Turning inserts', '车刀片'], 'Портативные анализаторы': ['Portable analysers', '便携式分析仪'], 'Рюкзаки': ['Backpacks', '背包'], 'Салфетки': ['Wipes and napkins', '湿巾和纸巾'], 'Тара': ['Packaging', '包装容器'],
+    'Техническое оборудование': ['Technical equipment', '技术设备'], 'Синьчжоу → Москва': ['Xinzhou → Moscow', '忻州 → 莫斯科'], 'Партия 15 т на 27 млн ₽ — пять фур.': ['A 15-tonne shipment worth 27 million ₽ — five trucks.', '15 吨货物，价值 2700 万卢布，五辆卡车。'],
+    'Расчётный вес 780 кг при фактическом 580 кг — груз объёмный, ставка считалась по объёмному весу.': ['Chargeable weight 780 kg with an actual weight of 580 kg — bulky cargo, so the rate was based on volumetric weight.', '计费重 780 公斤，实重 580 公斤——货物体积大，按体积重计费。'],
+    'Р': ['R', 'R'] };
+  Object.keys(GOODS).forEach(function (k) { DICT[k] = GOODS[k]; });
   if (window.IOMA_T_ADD) window.IOMA_T_ADD(DICT);
 
   /* ---------------- главная: «Под ключ» / «Только доставка» ---------------- */

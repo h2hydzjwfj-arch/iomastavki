@@ -38,6 +38,11 @@
     '@напр. 400': ['e.g. 400', '例如 400', 'örn. 400'], '@если знаете': ['if known', '如已知', 'biliyorsanız'], '@Масштаб карты': ['Map zoom', '地图缩放', 'Harita yakınlaştırma'],
     '@Приблизить': ['Zoom in', '放大', 'Yakınlaştır'], '@Отдалить': ['Zoom out', '缩小', 'Uzaklaştır'], '@Вся карта': ['Whole map', '全图', 'Tüm harita'], '@Выбор города': ['Choose a city', '选择城市', 'Şehir seçin'], '@Город': ['City', '城市', 'Şehir'],
     '@Показать динамику': ['Show history', '查看走势', 'Geçmişi göster'],
+    // ТН ВЭД: поля проверки кода
+    'необязательно': ['optional', '可选', 'isteğe bağlı'], 'Фрахт': ['Freight', '运费', 'Navlun'], 'в той же валюте': ['in the same currency', '同一币种', 'aynı para biriminde'],
+    'Вес нетто, кг': ['Net weight, kg', '净重，公斤', 'Net ağırlık, kg'], 'Количество / площадь': ['Quantity / area', '数量 / 面积', 'Miktar / alan'],
+    '@например 800 USD': ['e.g. 800 USD', '例如 800 USD', 'örn. 800 USD'], '@для пошлины и НДС': ['for duty and VAT', '用于计算关税和增值税', 'gümrük vergisi ve KDV için'],
+    '@для ставок «€/кг»': ['for “€/kg” rates', '用于“欧元/公斤”税率', '“€/kg” oranları için'], '@пары, шт, л, м²': ['pairs, pcs, l, m²', '双、件、升、平方米', 'çift, adet, l, m²'],
     'Опасный груз': ['Dangerous goods', '危险品', 'Tehlikeli yük'],
     'аккумуляторы, жидкости, химия': ['batteries, liquids, chemicals', '电池、液体、化学品', 'piller, sıvılar, kimyasallar'],
     'ГИД ПО ДОСТАВКЕ': ['SHIPPING GUIDE', '运输指南', 'TAŞIMA REHBERİ'],
