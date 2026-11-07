@@ -323,3 +323,18 @@ test('«Изменить данные»: только с причиной, в п
   assert.equal((await call('PUT', '/api/contract/settings', { values: { 'declarant.ecp': 27000 }, reason: 'то же' })).status, 400); // ничего не изменилось
   await call('PUT', '/api/contract/settings', { values: { 'declarant.ecp': '' }, reason: 'вернуть' }); assert.equal((await call('GET', '/api/calc/' + c.id)).body.contract.declarant.rub, 25000);
 });
+
+test('история расчёта: кто, когда, что было и что стало; правки подряд — одной записью', async () => {
+  const { call } = setupAll();
+  const c = (await call('POST', '/api/calc', { calc_type: 'our_contract' })).body;
+  await call('PATCH', '/api/calc/' + c.id, { freight_total: 1000, freight_currency: 'USD' });
+  await call('PATCH', '/api/calc/' + c.id, { freight_total: 1200 });
+  await call('PATCH', '/api/calc/' + c.id, { items: [{ name: 'Сумки', tnved_code: '4202929100', invoice_currency: 'CNY', invoice_amount: 5000, weight: 50, auto_lookup: false }] });
+  const h = (await call('GET', '/api/calc/' + c.id + '/history')).body;
+  assert.equal(h.items.length, 1); // один человек, в пределах 10 минут
+  const fr = h.items[0].changes.find(x => x.key === 'freight_total'); assert.equal(fr.from, '0'); assert.equal(fr.to, '1200');
+  assert.ok(h.items[0].changes.some(x => x.label === 'Позиция 1: инвойс' && x.to === '5000'));
+  await call('PATCH', '/api/calc/' + c.id, { freight_total: 0, freight_currency: 'CNY' }); // вернули как было — запись про фрахт исчезает
+  const h2 = (await call('GET', '/api/calc/' + c.id + '/history')).body; assert.ok(!h2.items[0].changes.some(x => x.key === 'freight_total'));
+  await call('PATCH', '/api/calc/' + c.id, { name: 'Только название' }); assert.equal((await call('GET', '/api/calc/' + c.id + '/history')).body.items[0].changes.length, h2.items[0].changes.length);
+});

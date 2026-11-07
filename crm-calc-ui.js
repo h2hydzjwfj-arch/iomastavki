@@ -72,9 +72,18 @@
     if (no && self.opts.dealId) body += '<div class="cv-card"><div class="cv-ct">Комментарий к расчёту</div><div data-part="notes"></div><div class="cv-add"><input data-c2="note" placeholder="Комментарий к расчёту…"><button type="button" class="cx-btn sm" data-c="addnote">Отправить</button></div></div>';
     self.root.innerHTML = '<div class="cv-tabs">' + tabs + '<span class="cv-addb">' + self.addButtons() + '</span></div><div class="cv-layout"><div class="cv-main">' + head + body + '</div><aside class="cv-aside"><div class="cv-card cv-res"><div class="cv-ct">Итого</div><div data-r="result"></div>'
       + (self.isContract() ? '<button type="button" class="cx-btn primary sm cv-kpb" data-c="kp">КП для клиента</button>' : '')
-      + (self.opts.dealId ? '<button type="button" class="cx-btn sm" data-c="tofin" title="Добавит статьи расходов во вкладку «Финансы»">→ В финансы сделки</button>' : '') + '<small class="cv-rates">' + self.ratesLine() + '</small></div></aside></div>';
+      + (self.opts.dealId ? '<button type="button" class="cx-btn sm" data-c="tofin" title="Добавит статьи расходов во вкладку «Финансы»">→ В финансы сделки</button>' : '') + '<small class="cv-rates">' + self.ratesLine() + '</small></div><details class="cv-card cv-hist" data-hist><summary>История расчёта</summary><div data-histl><p class="cx-mut cx-small">Загружаю…</p></div></details></aside></div>';
     self.bindTop(); self.bind(); self.paint();
     if (no && self.opts.dealId) self.notes();
+    var hd = $('[data-hist]', self.root); if (hd) hd.addEventListener('toggle', function () { if (hd.open) self.history(); });
+  };
+  Calc.prototype.history = function () {
+    var self = this, box = $('[data-histl]', self.root); if (!box) return;
+    api('/api/calc/' + self.curId + '/history').then(function (r) {
+      box.innerHTML = (r.items.length ? r.items.map(function (h) {
+        return '<div class="cv-hi"><small class="cx-mut">' + K.dt(h.at) + ' · ' + esc(h.by || '') + (h.totalFrom || h.totalTo ? ' · итог ' + esc(h.totalFrom || '—') + ' → ' + esc(h.totalTo || '—') : '') + '</small><ul>' + h.changes.slice(0, 30).map(function (c) { return '<li>' + esc(c.label) + ': ' + esc(c.from) + ' → <b>' + esc(c.to) + '</b></li>'; }).join('') + '</ul></div>';
+      }).join('') : '<p class="cx-mut cx-small">Изменений пока не было.</p>') + '<p class="cx-mut cx-small">Создан ' + K.dt(r.createdAt) + (r.createdBy ? ' · ' + esc(r.createdBy) : '') + '</p>';
+    }).catch(function (e) { box.innerHTML = '<p class="v3p-err">' + esc(e.message) + '</p>'; });
   };
   Calc.prototype.ratesLine = function () { var r = this.rates; return 'Курс ЦБ' + (this.rateDate ? ' на ' + esc(this.rateDate) : '') + ': ' + ['USD', 'EUR', 'CNY'].map(function (c) { return c + ' ' + (r[c] ? K.num(r[c]) : '—'); }).join(' · '); };
   Calc.prototype.simpleHtml = function () {

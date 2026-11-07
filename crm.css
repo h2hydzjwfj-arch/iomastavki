@@ -823,3 +823,4 @@ html:root body .cx-ov input[type=checkbox],html:root body #workView input[type=c
 @media (max-width:560px){.v3p-kprow{grid-template-columns:1fr auto}.v3p-kprow>button{grid-column:1/-1}}
 .lk-h{padding:10px 0;border-bottom:1px dashed var(--v-bd)}.lk-h>small,.lk-h>b{display:block}.lk-h ul{margin:4px 0 0;padding-left:18px;font-size:14px}
 #cxLocked .fx-main{max-width:980px}#cxLocked .cx-f small{display:block;margin-top:3px}
+.cv-hist{margin-top:12px}.cv-hist summary{cursor:pointer;font-weight:600}.cv-hi{padding:8px 0;border-bottom:1px dashed var(--v-bd)}.cv-hi ul{margin:4px 0 0;padding-left:16px;font-size:13px;line-height:1.45}
