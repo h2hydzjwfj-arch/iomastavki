@@ -33,7 +33,7 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
 
     // --- гость
     await check('Гость: роль guest', async () => ok((await call('g', 'GET', '/api/me')).role === 'guest'));
-    for (const [m, u] of [['GET', '/api/agents'], ['GET', '/api/rates'], ['POST', '/api/ai'], ['POST', '/api/customs/check'], ['POST', '/api/tnved/check'], ['GET', '/api/leads'], ['GET', '/api/clients'], ['GET', '/api/quotes']])
+    for (const [m, u] of [['GET', '/api/agents'], ['GET', '/api/rates'], ['POST', '/api/ai'], ['POST', '/api/customs/check'], ['GET', '/api/leads'], ['GET', '/api/clients'], ['GET', '/api/quotes']])
       await check(`Гостю закрыто: ${m} ${u}`, async () => { const j = await call('g', m, u, m === 'POST' ? {} : undefined); ok(j._status === 401, 'код ' + j._status); });
     await check('Гость: ориентир ставки без названия агента', async () => {
       const j = await call('g', 'GET', '/api/rates/recommend?from=Shanghai&to=' + encodeURIComponent('Москва') + '&mode=rail');

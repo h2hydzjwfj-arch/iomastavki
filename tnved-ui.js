@@ -104,6 +104,8 @@
       box.hidden = false; box.innerHTML = '<div class="cx-clh"><b>Из собственного справочника</b>' + (x.exact ? '' : '<small>точного кода нет — ближайшая позиция ' + esc(fmtCode(x.code)) + '</small>') + '</div><p>' + esc(x.name || '') + '</p><div class="cx-tnc"><div><small>Пошлина</small><b>' + esc(x.duty || '—') + '</b></div><div><small>НДС</small><b>' + esc(x.vat || '—') + '</b></div><div><small>Документы</small><b>' + esc(x.cert || '—') + '</b></div><div><small>Честный знак</small><b>' + esc(x.marking || '—') + '</b></div>' + (x.radio ? '<div><small>Сбор</small><b>73 860 ₽</b></div>' : '') + '</div>';
     }).catch(function () { box.hidden = true; });
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', enhanceCustoms); else enhanceCustoms();
+  // Поиск кода по названию и карточка «из собственного справочника» в «Проверке ТН ВЭД» отключены по решению владельца:
+  // код подбирает декларант по полному описанию, а ответ проверки — только код, название, пошлина, НДС и разрешительные.
+  void enhanceCustoms;
   window.IOMA_TNVED = { load: load, openCode: openCode };
 })();

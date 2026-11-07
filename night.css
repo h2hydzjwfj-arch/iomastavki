@@ -406,3 +406,10 @@ html:root body.night .tnr-copy:hover{background:var(--c-claydd)}
 html:root body.night .tnr-foot a{color:var(--c-clayl);text-decoration:none}
 html:root body.night .tnr-foot a:hover{text-decoration:underline}
 @media(max-width:650px){html:root body.night .customs-calc{grid-template-columns:1fr 1fr;margin-top:-10px}html:root body.night .customs-calc label:first-child{grid-column:1/-1}html:root body.night .customs-report{padding:14px 14px 12px;font-size:14px}html:root body.night .tnr-sub{padding-left:16px}}
+/* проверка кода: стоимость в любой валюте */
+html:root body.night .customs-calc{grid-template-columns:minmax(0,1.5fr) repeat(3,minmax(0,1fr))}
+html:root body.night .customs-calc label small{font-weight:400;opacity:.65;margin-left:4px}
+html:root body.night .customs-calc .cc-pair{display:flex;gap:6px;min-width:0}
+html:root body.night .customs-calc .cc-pair input{flex:1}
+html:root body.night .customs-shell .customs-calc select{height:48px;padding:0 10px;border-radius:12px;border:1px solid;font:500 15px 'Inter Tight',system-ui,sans-serif;background:inherit;color:inherit;flex:0 0 auto}
+@media (max-width:760px){html:root body.night .customs-calc{grid-template-columns:1fr 1fr}html:root body.night .customs-calc .cc-money{grid-column:1/-1}}

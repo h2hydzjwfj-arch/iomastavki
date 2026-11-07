@@ -113,6 +113,11 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await A.p.click('#workView .cx-nav [data-tab=tasks]'); await A.p.waitForSelector('#cxTasks .cx-search', { timeout: 8000 });
       await A.p.click('#workView .cx-nav [data-tab=ved]'); await A.p.click('#cxVed [data-c=create][data-t=our_contract]'); await A.p.waitForSelector('#cxVed .cv-layout');
       await A.p.fill('#cxVed [data-k=invoice_amount]', '10000'); await A.p.waitForFunction(() => { const b = document.querySelector('#cxVed .cv-total b'); return b && /[1-9]/.test(b.textContent); }, null, { timeout: 6000 }); await shot(A.p, '06e_ved_calc');
+      // расчёт контракта по рабочей таблице: условия, итог вверх до юаня, текст КП без маржи
+      await A.p.selectOption('#cxVed [data-d=payment]', 'bank'); await A.p.waitForFunction(() => /по внутреннему курсу банка/.test(document.querySelector('#cxVed [data-r=result]').textContent), null, { timeout: 6000 });
+      await A.p.click('#cxVed [data-c=kp]'); await A.p.waitForSelector('.cv-kp'); const kp = await A.p.inputValue('.cv-kp');
+      if (!/Стоимость контракта: [\d ]+ /.test(kp) || /Маржа|налог/i.test(kp)) throw new Error('текст КП: ' + kp.slice(0, 200));
+      await shot(A.p, '06e2_kp'); await A.p.keyboard.press('Escape');
       await A.p.click('#workView .cx-nav [data-tab=tnved]'); await A.p.waitForSelector('#cxTnved [data-tq]'); await shot(A.p, '06f_tnved');
       // ставки агентов в сделке: ориентир по прайсу и окно запроса
       await A.p.click('#workView .cx-nav [data-tab=inbox]'); await A.p.click('#crmInbox [data-x=open]:has-text("Документы UI")'); await A.p.waitForSelector('#crmDeal .cx-deal');
