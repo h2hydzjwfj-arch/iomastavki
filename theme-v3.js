@@ -11,7 +11,7 @@
 
   /* 2. nav pill */
   var nav=$('.v3-nav'),pill=$('.v3-pill');
-  function movePill(){safe(function(){var b=$('.v3-nav > button.on, .v3-nav .sg-btn.on');if(!b||!pill)return;pill.style.left=b.offsetLeft+'px';pill.style.width=b.offsetWidth+'px'})}
+  function movePill(){safe(function(){var b=$('.v3-nav > button.on, .v3-nav .sg:not(.sg-solo) .sg-btn.on, .v3-nav .sg-solo .sg-menu button.on');if(!b||!pill)return;pill.style.left=b.offsetLeft+'px';pill.style.width=b.offsetWidth+'px'})}
   function syncNav(){
     var open=$('.view-layer.open'),map={kbView:'kbView',calculatorView:'calculator',assistantView:'assistant',newsView:'news',forwardersView:'forwarders',customsView:'customsView',loginView:'loginView',leadView:'leadView',cabinetView:'cabinetView',workView:'workView'};
     var key=open?map[open.id]:null;
@@ -27,6 +27,7 @@
     $$('.view-layer').forEach(function(v){new MutationObserver(syncNav).observe(v,{attributes:true,attributeFilter:['class']})});
     document.addEventListener('click',function(){setTimeout(syncNav,30)});
     window.addEventListener('resize',movePill);
+    new MutationObserver(function(){requestAnimationFrame(movePill)}).observe(nav,{subtree:true,characterData:true,childList:true}); // перевод меню меняет ширину кнопок
     if(document.fonts&&document.fonts.ready)document.fonts.ready.then(movePill);
     movePill();setTimeout(movePill,300);
   });

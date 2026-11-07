@@ -81,7 +81,7 @@
       var api = {
         open: function () {
           var list = items(); if (!list.length) return;
-          if (list.length === 1 && sg.classList.contains('sg-solo')) return;
+          if (sg.classList.contains('sg-solo')) return;
           closeGroups(api); list.forEach(function (x, i) { x.style.setProperty('--i', i); });
           place(); sg.classList.add('open'); btn.setAttribute('aria-expanded', 'true');
         },
@@ -89,29 +89,29 @@
         isOpen: function () { return sg.classList.contains('open'); }
       };
       groups.push(api);
-      // одна видимая команда для этой роли — кнопка группы сразу выполняет её, без меню
+      // одна видимая команда для этой роли (гость: «Оставить заявку») — вместо группы показываем саму команду
+      // обычной кнопкой меню (стили .sg-solo); подпись переводится вместе с остальным меню
       function solo() {
         var list = items(), one = list.length === 1;
-        sg.classList.toggle('sg-solo', one); sg.hidden = !list.length;
-        var lbl = btn.firstChild; if (lbl && lbl.nodeType === 3) { if (!btn.dataset.label) btn.dataset.label = lbl.nodeValue; lbl.nodeValue = one ? $('b', list[0]).textContent : btn.dataset.label; }
-        btn.setAttribute('aria-haspopup', one ? 'false' : 'true');
+        if (sg.classList.contains('sg-solo') !== one) { api.close(); sg.classList.toggle('sg-solo', one); }
+        sg.hidden = !list.length;
+        list.forEach(function (x) { if (one) x.removeAttribute('role'); else x.setAttribute('role', 'menuitem'); });
       }
       solo(); new MutationObserver(solo).observe(document.body, { attributes: true, attributeFilter: ['class'] });
       btn.addEventListener('click', function (e) {
         e.preventDefault(); e.stopPropagation();
-        if (sg.classList.contains('sg-solo')) { var one = items()[0]; if (one) one.click(); return; }
         // мышью группа уже раскрылась при наведении — щелчок её не закрывает; на телефоне — переключает
         if (e.pointerType === 'mouse' || (fine && !e.pointerType)) { clearTimeout(tOut); api.open(); return; }
         api.isOpen() ? api.close() : api.open();
       });
       if (fine) {
-        sg.addEventListener('pointerenter', function (e) { if (e.pointerType !== 'mouse') return; clearTimeout(tOut); tIn = setTimeout(api.open, 70); });
+        sg.addEventListener('pointerenter', function (e) { if (e.pointerType !== 'mouse' || sg.classList.contains('sg-solo')) return; clearTimeout(tOut); tIn = setTimeout(api.open, 70); });
         sg.addEventListener('pointerleave', function (e) { if (e.pointerType !== 'mouse') return; clearTimeout(tIn); tOut = setTimeout(api.close, 220); });
         menu.addEventListener('pointerenter', function () { clearTimeout(tOut); });
         menu.addEventListener('pointerleave', function () { tOut = setTimeout(api.close, 220); });
       }
       btn.addEventListener('keydown', function (e) {
-        if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') { if (sg.classList.contains('sg-solo')) return; e.preventDefault(); api.open(); var f = items()[0]; if (f) setTimeout(function () { f.focus(); }, 30); }
+        if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); api.open(); var f = items()[0]; if (f) setTimeout(function () { f.focus(); }, 30); }
       });
       menu.addEventListener('keydown', function (e) {
         var list = items(), i = list.indexOf(document.activeElement);
@@ -120,7 +120,7 @@
         else if (e.key === 'Escape') { e.preventDefault(); api.close(); btn.focus(); }
       });
       sg.addEventListener('focusout', function (e) { if (!sg.contains(e.relatedTarget)) api.close(); });
-      menu.addEventListener('click', function (e) { if (e.target.closest('button')) setTimeout(api.close, 0); });
+      menu.addEventListener('click', function (e) { if (e.target.closest('button') && !sg.classList.contains('sg-solo')) setTimeout(api.close, 0); });
     });
     document.addEventListener('click', function (e) { if (!e.target.closest || !e.target.closest('[data-sg]')) closeGroups(); });
     window.addEventListener('resize', function () { closeGroups(); });

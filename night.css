@@ -95,7 +95,15 @@ html:root body.night .sg-menu button:hover,html:root body.night .sg-menu button:
 html:root body.night .sg-menu button:hover::after,html:root body.night .sg-menu button:focus-visible::after{opacity:1;transform:none}
 html:root body.night .sg-menu button.on b{color:var(--c-clayl)}
 html:root body.night .sg-menu button:focus-visible{outline:2px solid var(--c-clayl);outline-offset:-2px}
-html:root body.night .sg-solo .sg-chev{display:none}
+/* одна команда для роли: группа превращается в обычную кнопку меню */
+html:root body.night .sg-solo>.sg-btn{display:none!important}
+html:root body.night .sg-solo>.sg-menu{all:unset;display:contents}
+html:root body.night .sg-solo .sg-menu button{position:relative;z-index:1;display:inline-flex;align-items:center;padding:11px 15px;border-radius:999px;font-size:14px;line-height:1;white-space:nowrap;color:rgba(246,241,234,.78);opacity:1;transform:none;transition:color var(--n-t) var(--n-ease)}
+html:root body.night .sg-solo .sg-menu button:hover,html:root body.night .sg-solo .sg-menu button.on{background:none;color:#fff}
+html:root body.night .sg-solo .sg-menu button b{font-weight:400;font-size:inherit;letter-spacing:-.005em}
+html:root body.night .sg-solo .sg-menu button b{color:inherit}
+html:root body.night .sg-solo .sg-menu button small,html:root body.night .sg-solo .sg-menu button::after{display:none}
+@media (max-width:700px){html:root body.night .sg-solo .sg-menu button{padding:8px 11px;font-size:13px}}
 
 /* ---------- главная: общий ритм ---------- */
 html:root body.night .home-view{padding:0!important;align-items:stretch!important;gap:0!important}
