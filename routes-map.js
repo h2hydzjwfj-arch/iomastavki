@@ -205,7 +205,7 @@
     function label(k, cls, alt) { var p = xy(k), o = LBL[k] || [8, 4, 'start']; return text(p[0] + o[0] * U * .62, p[1] + o[1] * U * .62, alt || nm(k), cls, o[2]); }
     function draw() {
       var l = lang(), cors = MODES[state.mode], h = '';
-      h += '<defs><linearGradient id="rmG" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#F28A3A"/><stop offset="1" stop-color="#E06A2C"/></linearGradient><radialGradient id="rmGlow"><stop offset="0" stop-color="#F28A3A" stop-opacity=".55"/><stop offset="1" stop-color="#F28A3A" stop-opacity="0"/></radialGradient></defs>';
+      h += '<defs><linearGradient id="rmG" x1="1" y1="0" x2="0" y2="0"><stop offset="0" style="stop-color:var(--ui-o1,#F28A3A)"/><stop offset="1" style="stop-color:var(--ui-o2,#E06A2C)"/></linearGradient><radialGradient id="rmGlow"><stop offset="0" stop-color="#F28A3A" stop-opacity=".55"/><stop offset="1" stop-color="#F28A3A" stop-opacity="0"/></radialGradient></defs>';
       h += land();
       RU_MINOR.forEach(function (k) { if (k === 'vvo' && state.mode === 'sea') return; var p = xy(k); h += '<circle class="rm-ru" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="' + (1.364 * U).toFixed(2) + '"/>' + label(k, 'rm-ru-t'); });
       var used = {}, gws = {}, n = 0;
