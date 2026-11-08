@@ -6,7 +6,7 @@
   'use strict';
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function lang() { try { return localStorage.getItem('iomastavka_lang') || 'ru'; } catch (e) { return 'ru'; } }
-  var LOC = { ru: 'ru-RU', en: 'en-GB', zh: 'zh-CN', tr: 'tr-TR' };
+  var LOC = { ru: 'ru-RU', en: 'en-GB', zh: 'zh-CN', tr: 'tr-TR', de: 'de-DE', fr: 'fr-FR' };
   function dshort(iso) { if (!iso) return ''; var d = new Date(/^\d{4}-\d\d-\d\d$/.test(iso) ? iso + 'T12:00:00' : iso); if (isNaN(d)) return ''; return d.toLocaleDateString(LOC[lang()] || 'ru-RU', { day: 'numeric', month: 'short' }).replace('.', ''); }
   function dtime(iso) { var d = new Date(iso); if (isNaN(d)) return ''; return d.toLocaleString(LOC[lang()] || 'ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace('.', ''); }
 

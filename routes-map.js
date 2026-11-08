@@ -45,14 +45,14 @@
   // коридоры по видам: переход (gw — две точки пары), путь по Китаю для каждого города, путь от перехода до Москвы
   var MODES = {
     rail: [
-      { id: 'zab', gw: ['zab', 'mzl'], ru: ['zab'].concat(TS_RU), cn: { bj: ['bj', 'sy', 'hrb', 'qqh', 'hlr', 'mzl'], sy: ['sy', 'hrb', 'qqh', 'hlr', 'mzl'], hrb: ['hrb', 'qqh', 'hlr', 'mzl'], qd: ['qd', 'tj', 'sy'] } },
+      { id: 'zab', gw: ['zab', 'mzl'], ru: ['zab'].concat(TS_RU), cn: { bj: ['bj', 'sy', 'hrb', 'qqh', 'hlr', 'mzl'], sy: ['sy', 'hrb', 'qqh', 'hlr', 'mzl'], hrb: ['hrb', 'qqh', 'hlr', 'mzl'], qd: ['qd', 'tj', 'sy'], tj: ['tj', 'bj'], dl: ['dl', 'sy'], yw: ['yw', 'hz', 'sh'], hz: ['hz', 'sh'], nb: ['nb', 'sh'], suz: ['suz', 'sh'], sh: ['sh', 'nj', 'bj'], nj: ['nj', 'bj'], xm: ['xm', 'hz'], gz: ['gz', 'cs', 'wh', 'zz', 'bj'], sz: ['sz', 'gz'], fs: ['fs', 'gz'], dg: ['dg', 'gz'], qz: ['qz', 'gz'], cs: ['cs', 'wh'], wh: ['wh', 'zz'], zz: ['zz', 'bj'], xa: ['xa', 'zz'], lz: ['lz', 'xa'], cd: ['cd', 'xa'], cq: ['cq', 'cd'], ty: ['ty', 'bj'], xz: ['xz', 'ty'] } },
       { id: 'dos', gw: ['dos', 'ala'], ru: ['dos'].concat(KZ_RU), cn: { sh: ['sh', 'zz', 'xa', 'lz', 'urc', 'ala'], nb: ['nb', 'sh'], yw: ['yw', 'zz'], zz: ['zz', 'xa'], xa: ['xa', 'lz'], cd: ['cd', 'lz'], cq: ['cq', 'cd'], gz: ['gz', 'zz'], sz: ['sz', 'gz'], qz: ['qz', 'cq'], urc: ['urc', 'ala'] } },
       { id: 'hor', gw: ['hor'], ru: ['hor', 'akt'].concat(KZ_RU.slice(1)), cn: { urc2: ['urc', 'hor'] } },
       { id: 'nau', gw: ['nau', 'erl'], ru: ['nau', 'ulu'].concat(TS_RU.slice(2)), mid: ['erl', 'uba', 'nau'], cn: { bj2: ['bj', 'erl'] } },
       { id: 'pog', gw: ['pog', 'sfh'], ru: ['pog', 'uss', 'khb', 'bel', 'chita'].concat(TS_RU.slice(1)), cn: { hrb2: ['hrb', 'sfh'] } },
     ],
     road: [
-      { id: 'zab', gw: ['zab', 'mzl'], ru: ['zab'].concat(TS_RU), cn: { bj: ['bj', 'sy', 'hrb', 'qqh', 'hlr', 'mzl'], sy: ['sy', 'hrb', 'qqh', 'hlr', 'mzl'], hrb: ['hrb', 'qqh', 'hlr', 'mzl'], qd: ['qd', 'tj', 'sy'] } },
+      { id: 'zab', gw: ['zab', 'mzl'], ru: ['zab'].concat(TS_RU), cn: { bj: ['bj', 'sy', 'hrb', 'qqh', 'hlr', 'mzl'], sy: ['sy', 'hrb', 'qqh', 'hlr', 'mzl'], hrb: ['hrb', 'qqh', 'hlr', 'mzl'], qd: ['qd', 'tj', 'sy'], tj: ['tj', 'bj'], dl: ['dl', 'sy'], yw: ['yw', 'hz', 'sh'], hz: ['hz', 'sh'], nb: ['nb', 'sh'], suz: ['suz', 'sh'], sh: ['sh', 'nj', 'bj'], nj: ['nj', 'bj'], xm: ['xm', 'hz'], gz: ['gz', 'cs', 'wh', 'zz', 'bj'], sz: ['sz', 'gz'], fs: ['fs', 'gz'], dg: ['dg', 'gz'], qz: ['qz', 'gz'], cs: ['cs', 'wh'], wh: ['wh', 'zz'], zz: ['zz', 'bj'], xa: ['xa', 'zz'], lz: ['lz', 'xa'], cd: ['cd', 'xa'], cq: ['cq', 'cd'], ty: ['ty', 'bj'], xz: ['xz', 'ty'] } },
       { id: 'hor', gw: ['hor'], ru: ['hor', 'akt'].concat(KZ_RU.slice(1)), cn: { sh: ['sh', 'zz', 'xa', 'lz', 'urc', 'hor'], nb: ['nb', 'sh'], yw: ['yw', 'zz'], zz: ['zz', 'xa'], xa: ['xa', 'lz'], cd: ['cd', 'lz'], cq: ['cq', 'cd'], gz: ['gz', 'zz'], sz: ['sz', 'gz'], qz: ['qz', 'cq'], urc: ['urc', 'hor'] } },
       { id: 'kya', gw: ['kya', 'erl'], ru: ['kya', 'ulu'].concat(TS_RU.slice(2)), mid: ['erl', 'uba', 'kya'], cn: { bj2: ['bj', 'erl'] } },
       { id: 'pog', gw: ['pog', 'sfh'], ru: ['pog', 'uss', 'khb', 'bel', 'chita'].concat(TS_RU.slice(1)), cn: { hrb2: ['hrb', 'sfh'] } },
@@ -70,9 +70,18 @@
   var UI = { km: ['км', 'km', '公里'], via: ['погранпереход', 'border crossing', '口岸'], calc: ['Рассчитать', 'Get a rate', '计算运费'], direct: ['прямой рейс', 'direct flight', '直飞'], toMsk: ['до Москвы', 'to Moscow', '至莫斯科'], seaThen: ['морем до Владивостока, дальше ЖД', 'by sea to Vladivostok, then rail', '海运至符拉迪沃斯托克，再铁路'],
     china: ['по Китаю', 'in China', '中国境内'], ru: ['по России', 'in Russia', '俄罗斯境内'], transit: ['транзит', 'transit', '过境'], seaLeg: ['морем', 'by sea', '海运'], railLeg: ['по ЖД', 'by rail', '铁路'], air: ['перелёт', 'flight', '航程'] };
   var LI = { ru: 0, en: 1, zh: 2 };
-  function lang() { var l; try { l = localStorage.getItem('iomastavka_lang'); } catch (e) {} return LI.hasOwnProperty(l) ? l : 'ru'; }
-  function nm(k, l) { var c = C[k]; return c ? c[LI[l || lang()] + 0] || c[0] : k; }
-  function ui(k, l) { return UI[k][LI[l || lang()]]; }
+  function lang() { var l; try { l = localStorage.getItem('iomastavka_lang'); } catch (e) {} return ['ru', 'en', 'zh', 'de', 'fr', 'tr'].indexOf(l) >= 0 ? l : 'ru'; }
+  function li(l) { return LI.hasOwnProperty(l) ? LI[l] : 0; } // нет своих текстов на языке — русский, его переводит общий словарь
+  function pa(arr, l) { l = l || lang(); if (LI.hasOwnProperty(l)) return arr[LI[l]] || arr[0]; return window.IOMA_T ? window.IOMA_T(arr[0], l) : arr[0]; } // сразу на нужном языке, без мигания русского
+  // названия городов на немецком, французском и турецком там, где они отличаются от английских
+  var LOC = {
+    de: { msk: 'Moskau', spb: 'Sankt Petersburg', nnov: 'Nischni Nowgorod', kzn: 'Kasan', ekb: 'Jekaterinburg', chel: 'Tscheljabinsk', nsk: 'Nowosibirsk', krs: 'Krasnojarsk', chita: 'Tschita', khb: 'Chabarowsk', uss: 'Ussurijsk', vvo: 'Wladiwostok', rnd: 'Rostow am Don', zab: 'Sabaikalsk', akt: 'Aktogai', nau: 'Nauschki', kya: 'Kjachta', pog: 'Pogranitschny', blg: 'Blagoweschtschensk', bj: 'Peking', tpe: 'Taipeh', tyo: 'Tokio', tmn: 'Tjumen', vrn: 'Woronesch', uba: 'Ulaanbaatar' },
+    fr: { msk: 'Moscou', spb: 'Saint-Pétersbourg', nnov: 'Nijni Novgorod', ekb: 'Iekaterinbourg', chel: 'Tcheliabinsk', nsk: 'Novossibirsk', krs: 'Krasnoïarsk', irk: 'Irkoutsk', ulu: 'Oulan-Oudé', chita: 'Tchita', uss: 'Oussouriisk', rnd: 'Rostov-sur-le-Don', zab: 'Zabaïkalsk', akt: 'Aktogaï', nau: 'Naouchki', kya: 'Kiakhta', pog: 'Pogranitchny', blg: 'Blagovechtchensk', bj: 'Pékin', sel: 'Séoul', ufa: 'Oufa', tmn: 'Tioumen', vrn: 'Voronej', uba: 'Oulan-Bator' },
+    tr: { msk: 'Moskova', spb: 'Sankt-Peterburg', nnov: 'Nijniy Novgorod', chel: 'Çelyabinsk', irk: 'İrkutsk', chita: 'Çita', khb: 'Habarovsk', rnd: 'Rostov-na-Donu', zab: 'Zabaykalsk', mzl: 'Mançuli', nau: 'Nauşki', kya: 'Kyahta', pog: 'Pograniçnıy', blg: 'Blagoveşçensk', bj: 'Pekin', sel: 'Seul', icn: 'İncheon', uba: 'Ulan Batur', urc: 'Urumçi', hor: 'Horgos', hh: 'Heihe', ala: 'Alaşankou' }
+  };
+  function nm(k, l) { var c = C[k]; l = l || siteLang(); if (!c) return k; if (LOC[l]) return LOC[l][k] || c[1] || c[0]; return c[LI.hasOwnProperty(l) ? li(l) : 1] || c[0]; }
+  function siteLang() { var l; try { l = localStorage.getItem('iomastavka_lang'); } catch (e) {} return l || 'ru'; }
+  function ui(k, l) { return pa(UI[k], l); }
   function ll(k) { return C[k] ? [C[k][3], C[k][4]] : SEA[k]; }
   // расстояние по дуге, км
   function hav(a, b) { var R = 6371, r = Math.PI / 180, dLat = (b[1] - a[1]) * r, dLon = (b[0] - a[0]) * r, s = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a[1] * r) * Math.cos(b[1] * r) * Math.sin(dLon / 2) * Math.sin(dLon / 2); return 2 * R * Math.asin(Math.sqrt(s)); }
@@ -97,6 +106,8 @@
   }
   // ЖД от перехода до Москвы по Транссибу (ориентир по тарифным расстояниям); остальное — по карте с поправкой на изгибы пути
   var TRUNK_KM = { zab: 6650, nau: 5900, pog: 9270, vvo: 9290, blg: 7980 };
+  // так возит компания: авто и ЖД — через Маньчжурию и Забайкальск, море — через Владивосток; Казахстан и Монголия — запасные
+  var PREF = { zab: 1, pog: 1, blg: 1, vvo: 1, dos: 1.6, hor: 1.6, nau: 1.4, kya: 1.4 };
   // маршрут для расчёта ставки: путь, километры по участкам, переход
   function routeFor(fromKey, mode) {
     mode = MODES[mode] ? mode : 'rail';
@@ -138,7 +149,8 @@
       var total = legs.reduce(function (s, l) { return s + l.km; }, 0);
       var path = p.concat(mid ? mid.slice(1) : []).concat(ruPath.slice(cor.sea || mid ? 1 : 0));
       path = path.filter(function (k, i) { return !i || k !== path[i - 1]; });
-      if (!best || total < best.km) best = { mode: mode, path: path, legs: legs, km: total, gw: cor.id, to: toKey };
+      var w = total * (PREF[cor.id] || 1) * (fromKey === 'urc' && (cor.id === 'dos' || cor.id === 'hor') ? 0.6 : 1);
+      if (!best || w < best.w) best = { mode: mode, path: path, legs: legs, km: total, gw: cor.id, to: toKey, w: w };
     }
     MODES[mode].forEach(each);
     if (!best) { far = true; MODES[mode].forEach(each); }
@@ -201,7 +213,7 @@
   var ICON_I = { rail: 'rail', road: 'road', air: 'air', sea: 'sea' };
   var KM = { kz: ['Казахстан и Россия', 'Kazakhstan and Russia', '哈萨克斯坦和俄罗斯'], all: ['всего', 'total', '合计'], pick: ['Выберите город в Китае и город в России — маршрут построится сам', 'Pick a city in China and a city in Russia — the route builds itself', '在地图上选择中国城市和俄罗斯城市，即可显示路线'],
     via2: ['Путь', 'Route', '路径'], from: ['Откуда', 'From', '起运地'], to: ['Куда', 'To', '目的地'] };
-  function kmT(k, l) { return KM[k][LI[l || lang()]]; }
+  function kmT(k, l) { return pa(KM[k], l); }
   function legLabel(r, x, l) {
     if (x.kind === 'china') return ui('china', l); if (x.kind === 'transit') return ui('transit', l) + (r.gw === 'nau' || r.gw === 'kya' ? ' · ' + nm('uba', l) : '');
     if (x.kind === 'ru') return r.gw === 'dos' || r.gw === 'hor' ? kmT('kz', l) : ui('ru', l);
@@ -225,7 +237,7 @@
       var other = el.getBoundingClientRect().height - svg.getBoundingClientRect().height, avail = Math.floor(box.clientHeight - other - 2); if (avail > 0) svg.style.maxHeight = Math.max(180, avail) + 'px';
     }
     function scale() { fit(); var u = unit(); el.style.setProperty('--u', u.toFixed(3)); el.classList.toggle('rmap-sm', svg.getBoundingClientRect().width < 520); if (Math.abs(u - U) / U > .1) { U = u; draw(); } }
-    function drawTabs() { var l = lang(); tabs.innerHTML = ['rail', 'road', 'air', 'sea'].map(function (m) { return '<button type="button" role="tab" data-m="' + m + '" aria-selected="' + (m === state.mode) + '"' + (m === state.mode ? ' class="on"' : '') + '>' + MODE_NAME[m][LI[l]] + '</button>'; }).join('') + '<i class="rmap-ind"></i>'; moveInd(); hint.textContent = kmT('pick', l); }
+    function drawTabs() { var l = lang(); tabs.innerHTML = ['rail', 'road', 'air', 'sea'].map(function (m) { return '<button type="button" role="tab" data-m="' + m + '" aria-selected="' + (m === state.mode) + '"' + (m === state.mode ? ' class="on"' : '') + '>' + pa(MODE_NAME[m], l) + '</button>'; }).join('') + '<i class="rmap-ind"></i>'; moveInd(); hint.textContent = kmT('pick', l); }
     function moveInd() { var b = tabs.querySelector('.on'), i = tabs.querySelector('.rmap-ind'); if (b && i) { i.style.width = b.offsetWidth + 'px'; i.style.transform = 'translateX(' + b.offsetLeft + 'px)'; } }
     function f(n) { return n.toFixed(1); }
     var NEAR = {};
@@ -276,14 +288,14 @@
       if (C[state.to]) h += dot(state.to, 'to', true); if (C[state.from]) h += dot(state.from, 'from', true);
       lbl.unshift({ k: state.to, t: nm(state.to, l), cls: 'rm-l rm-l-to', fs: 15, prefer: ['l', 't'] }, { k: state.from, t: nm(state.from, l), cls: 'rm-l rm-l-from', fs: 14, prefer: ['r', 'b', 'l'] });
       h += labels(lbl) + '<text class="rm-l rm-hov" visibility="hidden"></text>';
-      svg.innerHTML = h; svg.setAttribute('aria-label', nm(state.from, l) + ' → ' + nm(state.to, l) + ', ' + MODE_NAME[state.mode][LI[l]]);
+      svg.innerHTML = h; svg.setAttribute('aria-label', nm(state.from, l) + ' → ' + nm(state.to, l) + ', ' + pa(MODE_NAME[state.mode], l));
       el.dataset.mode = state.mode; panel(r); fit();
     }
     function panel(r) {
       var l = lang(), loc = l === 'ru' ? 'ru-RU' : 'en-US';
       if (!r) { info.innerHTML = '<div class="rmap-od"><b>' + nm(state.from, l) + ' → ' + nm(state.to, l) + '</b><small>—</small></div>'; return; }
       var g = r.gw && GW_NAME[r.gw] ? GW_NAME[r.gw].map(function (x) { return nm(x, l); }).join(' · ') : '';
-      var sub = MODE_NAME[r.mode][LI[l]] + (r.mode === 'air' ? ' · ' + ui('direct', l) : g ? ' · ' + ui('via', l) + ' ' + g : '');
+      var sub = pa(MODE_NAME[r.mode], l) + (r.mode === 'air' ? ' · ' + ui('direct', l) : g ? ' · ' + ui('via', l) + ' ' + g : '');
       var hubs = r.path.filter(function (k) { return C[k]; }).map(function (k) { return nm(k, l); }).join(' — ');
       info.innerHTML = '<div class="rmap-od"><b>' + nm(state.from, l) + ' <i>→</i> ' + nm(state.to, l) + '</b><small>' + sub + '</small></div>'
         + '<div class="rmap-km">' + r.legs.filter(function (x) { return x.km > 0; }).map(function (x) { return '<span class="k-' + x.kind + '"><small>' + legLabel(r, x, l) + '</small><b>≈ ' + x.km.toLocaleString(loc) + ' ' + ui('km', l) + '</b></span>'; }).join('')
@@ -345,5 +357,6 @@
       + '<circle class="rmini-b" cx="' + f(last[0]) + '" cy="' + f(last[1]) + '" r="' + f(6.5 * k) + '"/><text class="rmini-t msk" x="' + f(last[0]) + '" y="' + f(last[1] - 14 * k) + '" text-anchor="middle">' + nm(dest, l) + '</text></svg>';
   }
 
-  window.IOMA_RMAP = { mount: mount, routeFor: routeFor, routeTo: routeTo, find: find, name: nm, cities: C, origins: ORIGINS, routeSvg: routeSvg, gwNames: function (id, l) { return (GW_NAME[id] || []).map(function (k) { return nm(k, l); }); }, gwKeys: function (id) { return (GW_NAME[id] || []).slice(); }, modeName: function (m, l) { return MODE_NAME[m] ? MODE_NAME[m][LI[l || lang()]] : m; }, ui: ui };
+  var GEO_API = { xy: xy, VB: VB, land: land, smooth: smooth, arc: arc, dots: { cn: CN_DOTS, ru: RU_DOTS }, gwNames: GW_NAME, lang: lang, ll: ll, hav: hav };
+  window.IOMA_RMAP = { geo: GEO_API, mount: mount, routeFor: routeFor, routeTo: routeTo, find: find, name: nm, cities: C, origins: ORIGINS, routeSvg: routeSvg, gwNames: function (id, l) { return (GW_NAME[id] || []).map(function (k) { return nm(k, l); }); }, gwKeys: function (id) { return (GW_NAME[id] || []).slice(); }, modeName: function (m, l) { return MODE_NAME[m] ? pa(MODE_NAME[m], l) : m; }, ui: ui };
 })();

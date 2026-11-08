@@ -96,7 +96,19 @@
       KR: 'Южная Корея', JP: 'Япония', TW: 'Тайвань', VN: 'Вьетнам', TH: 'Таиланд', SG: 'Сингапур', MY: 'Малайзия', ID: 'Индонезия', IN: 'Индия' },
     en: { FE: 'Russian Far East', ES: 'Eastern Siberia', WS: 'Western Siberia', UR: 'the Urals', VG: 'the Volga region', C: 'Central Russia', NW: 'North-West Russia', S: 'Southern Russia', KGD: 'Kaliningrad' },
     enCN: { XJ: 'Xinjiang (West China)', NE: 'Northeast China', N: 'North China', NW: 'Northwest China', SW: 'Southwest China', SWC: 'South China (Guangxi)', E: 'East China', S: 'South China', C: 'Central China',
-      KR: 'South Korea', JP: 'Japan', TW: 'Taiwan', VN: 'Vietnam', TH: 'Thailand', SG: 'Singapore', MY: 'Malaysia', ID: 'Indonesia', IN: 'India' }
+      KR: 'South Korea', JP: 'Japan', TW: 'Taiwan', VN: 'Vietnam', TH: 'Thailand', SG: 'Singapore', MY: 'Malaysia', ID: 'Indonesia', IN: 'India' },
+    zh: { FE: '俄罗斯远东', ES: '东西伯利亚', WS: '西西伯利亚', UR: '乌拉尔', VG: '伏尔加地区', C: '俄罗斯中部', NW: '俄罗斯西北', S: '俄罗斯南部', KGD: '加里宁格勒' },
+    zhCN: { XJ: '新疆（中国西部）', NE: '中国东北', N: '华北', NW: '中国西北', SW: '中国西南', SWC: '华南（广西）', E: '华东', S: '华南', C: '华中',
+      KR: '韩国', JP: '日本', TW: '台湾', VN: '越南', TH: '泰国', SG: '新加坡', MY: '马来西亚', ID: '印度尼西亚', IN: '印度' },
+    tr: { FE: 'Rusya Uzak Doğusu', ES: 'Doğu Sibirya', WS: 'Batı Sibirya', UR: 'Ural', VG: 'Volga bölgesi', C: 'Orta Rusya', NW: 'Kuzeybatı Rusya', S: 'Güney Rusya', KGD: 'Kaliningrad' },
+    trCN: { XJ: 'Sincan (Batı Çin)', NE: 'Kuzeydoğu Çin', N: 'Kuzey Çin', NW: 'Kuzeybatı Çin', SW: 'Güneybatı Çin', SWC: 'Güney Çin (Guangxi)', E: 'Doğu Çin', S: 'Güney Çin', C: 'Orta Çin',
+      KR: 'Güney Kore', JP: 'Japonya', TW: 'Tayvan', VN: 'Vietnam', TH: 'Tayland', SG: 'Singapur', MY: 'Malezya', ID: 'Endonezya', IN: 'Hindistan' },
+    de: { FE: 'Russisch-Fernost', ES: 'Ostsibirien', WS: 'Westsibirien', UR: 'Ural', VG: 'Wolgaregion', C: 'Zentralrussland', NW: 'Nordwestrussland', S: 'Südrussland', KGD: 'Kaliningrad' },
+    deCN: { XJ: 'Xinjiang (Westchina)', NE: 'Nordostchina', N: 'Nordchina', NW: 'Nordwestchina', SW: 'Südwestchina', SWC: 'Südchina (Guangxi)', E: 'Ostchina', S: 'Südchina', C: 'Zentralchina',
+      KR: 'Südkorea', JP: 'Japan', TW: 'Taiwan', VN: 'Vietnam', TH: 'Thailand', SG: 'Singapur', MY: 'Malaysia', ID: 'Indonesien', IN: 'Indien' },
+    fr: { FE: 'Extrême-Orient russe', ES: 'Sibérie orientale', WS: 'Sibérie occidentale', UR: 'Oural', VG: 'région de la Volga', C: 'Russie centrale', NW: 'Nord-Ouest de la Russie', S: 'Sud de la Russie', KGD: 'Kaliningrad' },
+    frCN: { XJ: 'Xinjiang (ouest de la Chine)', NE: 'Nord-Est de la Chine', N: 'Nord de la Chine', NW: 'Nord-Ouest de la Chine', SW: 'Sud-Ouest de la Chine', SWC: 'Sud de la Chine (Guangxi)', E: 'Est de la Chine', S: 'Sud de la Chine', C: 'Centre de la Chine',
+      KR: 'Corée du Sud', JP: 'Japon', TW: 'Taïwan', VN: 'Vietnam', TH: 'Thaïlande', SG: 'Singapour', MY: 'Malaisie', ID: 'Indonésie', IN: 'Inde' }
   };
   var ZONE_ORDER = ['FE', 'ES', 'WS', 'UR', 'VG', 'C', 'NW', 'S', 'KGD'];
   function zi(z) { var i = ZONE_ORDER.indexOf(z); return i < 0 ? 5 : i; }
@@ -133,21 +145,27 @@
   function add(r, d) { return [Math.max(1, r[0] + d), Math.max(2, r[1] + d)]; }
 
   // ---------- коридоры (подписи)
+  // так возит компания: авто и ЖД — через Маньчжурию и Забайкальск (главный коридор), на Дальний Восток — через Приморье и Приамурье,
+  // через Казахстан — только из Синьцзяна; море — до Владивостока
+  var GW = { // погранпереходы на всех языках сайта: ru, en, zh, tr, de, fr
+    heihe: ['Хэйхэ — Благовещенск', 'Heihe — Blagoveshchensk', '黑河 — 布拉戈维申斯克', 'Heihe — Blagoveşçensk', 'Heihe — Blagoweschtschensk', 'Heihe — Blagovechtchensk'],
+    sfPog: ['Суйфэньхэ — Пограничный', 'Suifenhe — Pogranichny', '绥芬河 — 波格拉尼奇内', 'Suifenhe — Pograniçnıy', 'Suifenhe — Pogranitschny', 'Suifenhe — Pogranitchny'],
+    khorgos: ['Хоргос — Казахстан', 'Khorgos — Kazakhstan', '霍尔果斯 — 哈萨克斯坦', 'Horgos — Kazakistan', 'Khorgos — Kasachstan', 'Khorgos — Kazakhstan'],
+    zab: ['Маньчжурия — Забайкальск', 'Manzhouli — Zabaikalsk', '满洲里 — 后贝加尔斯克', 'Mançuli — Zabaykalsk', 'Manzhouli — Sabaikalsk', 'Manzhouli — Zabaïkalsk'],
+    sfGrod: ['Суйфэньхэ — Гродеково', 'Suifenhe — Grodekovo', '绥芬河 — 格罗杰科沃', 'Suifenhe — Grodekovo', 'Suifenhe — Grodekowo', 'Suifenhe — Grodekovo'],
+    kzRail: ['Казахстан: Достык / Алтынколь', 'Kazakhstan: Dostyk / Altynkol', '哈萨克斯坦：多斯特克 / 阿腾科里', 'Kazakistan: Dostık / Altınköl', 'Kasachstan: Dostyk / Altynkol', 'Kazakhstan : Dostyk / Altynkol']
+  };
+  var LX = { ru: 0, en: 1, zh: 2, tr: 3, de: 4, fr: 5 };
+  function gw(k, l) { return GW[k][LX[l] || 0]; }
   function autoVia(reg, zone, toName, l) {
-    var ru = l !== 'en';
-    if (zone === 'FE') return reg === 'NE' || reg === 'N' || reg === 'E' || reg === 'C' || reg === 'S' || reg === 'SWC' ?
-      (/благовещ/.test(toName) ? (ru ? 'Хэйхэ — Благовещенск' : 'Heihe — Blagoveshchensk') : (ru ? 'Суйфэньхэ — Пограничный' : 'Suifenhe — Pogranichny')) : (ru ? 'через Забайкальск' : 'via Zabaikalsk');
-    if (zone === 'ES' || (reg === 'NE' && zi(zone) <= 5)) return ru ? 'Маньчжурия — Забайкальск' : 'Manzhouli — Zabaikalsk';
-    if (reg === 'N' && zone === 'ES') return ru ? 'Эрлянь — Монголия — Кяхта' : 'Erenhot — Mongolia — Kyakhta';
-    return ru ? 'через Казахстан: Хоргос — Алматы — Астана' : 'via Kazakhstan: Khorgos — Almaty — Astana';
+    if (zone === 'FE') return gw(/благовещ/.test(toName) ? 'heihe' : 'sfPog', l);
+    if (reg === 'XJ') return gw('khorgos', l);
+    return gw('zab', l);
   }
   function railVia(reg, zone, l) {
-    var ru = l !== 'en';
-    if (zone === 'FE') return ru ? 'Суйфэньхэ — Гродеково' : 'Suifenhe — Grodekovo';
-    if (reg === 'NE' || zone === 'ES') return ru ? 'Маньчжурия — Забайкальск' : 'Manzhouli — Zabaikalsk';
-    if (reg === 'N') return ru ? 'Эрлянь — Монголия — Наушки' : 'Erenhot — Mongolia — Naushki';
-    if (reg === 'XJ' || reg === 'NW' || reg === 'SW' || zone === 'UR' || zone === 'WS') return ru ? 'Казахстан: Достык / Алтынколь' : 'Kazakhstan: Dostyk / Altynkol';
-    return ru ? 'Забайкальск или Казахстан (Достык)' : 'Zabaikalsk or Kazakhstan (Dostyk)';
+    if (zone === 'FE') return gw('sfGrod', l);
+    if (reg === 'XJ') return gw('kzRail', l);
+    return gw('zab', l);
   }
 
   // ---------- размер партии
@@ -159,7 +177,11 @@
     return 'multi';
   }
   var BAND = { ru: { tiny: 'мелкая посылка', ltl: 'сборный груз', mid: 'часть машины или контейнер 20′', fcl: 'контейнер или машина целиком', multi: 'несколько контейнеров' },
-    en: { tiny: 'small parcel', ltl: 'groupage (LCL/LTL)', mid: 'part load or 20′ container', fcl: 'full container or truck', multi: 'several containers' } };
+    en: { tiny: 'small parcel', ltl: 'groupage (LCL/LTL)', mid: 'part load or 20′ container', fcl: 'full container or truck', multi: 'several containers' },
+    zh: { tiny: '小包裹', ltl: '拼箱/拼车货', mid: '部分车厢或 20′ 集装箱', fcl: '整箱或整车', multi: '多个集装箱' },
+    tr: { tiny: 'küçük paket', ltl: 'parsiyel yük', mid: 'kısmi araç veya 20′ konteyner', fcl: 'tam konteyner veya tam araç', multi: 'birkaç konteyner' },
+    de: { tiny: 'kleines Paket', ltl: 'Sammelgut', mid: 'Teilladung oder 20′-Container', fcl: 'voller Container oder ganzer Lkw', multi: 'mehrere Container' },
+    fr: { tiny: 'petit colis', ltl: 'groupage', mid: 'chargement partiel ou conteneur 20′', fcl: 'conteneur ou camion complet', multi: 'plusieurs conteneurs' } };
 
   // стоимость — относительная шкала (1 дешевле всего … 5 дороже всего), по типу партии
   var COST = {
@@ -184,13 +206,13 @@
       bigAir: 'для такого объёма авиа неоправданно дорого',
       ltlAuto: 'сборное авто — самый удобный способ для партии до 10–12 м³: оплата за объём, без целой машины',
       yiwuHub: 'Иу — главный хаб сборных грузов: машины на Россию уходят ежедневно',
-      kzShort: 'через Казахстан до Урала и Сибири короче, чем через Забайкальск',
+      zabMain: 'главный коридор — Маньчжурия — Забайкальск: так везём большинство грузов',
       zabShort: 'до Сибири и Дальнего Востока ближе всего через Забайкальск и Приморье',
       neShort: 'северо-восток Китая граничит с Россией — путь самый короткий',
       seaCheap: 'контейнер морем до Владивостока и дальше по ЖД — самый дешёвый способ для полного контейнера',
       seaFE: 'Владивосток — порт назначения: контейнер приходит морем за несколько дней, без ЖД',
       railFcl: 'ЖД — золотая середина для контейнера: дешевле авто, быстрее моря',
-      railHub: 'из Чэнду, Чунцина, Сианя и Урумчи регулярно идут контейнерные поезда через Казахстан',
+      railHub: 'из Урумчи ближе всего через Казахстан',
       ftl: 'машина целиком — быстрее ЖД, без перегрузок от склада до склада',
       airFast: 'самый быстрый способ: срочный, лёгкий или дорогой груз',
       airTiny: 'для небольшой посылки авиа почти не дороже сборного авто, а в разы быстрее',
@@ -200,6 +222,9 @@
       kgd: 'в Калининград — морем из Петербурга или через Усть-Лугу: транзит через Литву ограничен',
       port: 'во Владивостоке закладывайте до 1–2 недель на выгрузку и вывоз из порта',
       days: 'дн.', best: 'Рекомендуем', alt: 'Ещё варианты', no: 'Не подходит', cheap: 'дешевле', fast: 'быстрее',
+      viaCN: 'через Китай', how: 'Как лучше везти', loc: 'ru-RU',
+      hubMsk: function (to, km, d) { return 'До города ' + to + ' выгоднее довезти груз до Москвы — главного хаба — и дальше отправить сборным грузом по России (Деловые Линии, ПЭК и др.): ≈ ' + km + ' км, ещё ' + d[0] + '–' + d[1] + ' дн.'; },
+      hubDirect: function (to) { return to + ' на основном пути — везём напрямую, без заезда в Москву; авиа — до Москвы и дальше машиной.'; },
       sum: function (o, from, to, b) { return 'Из ' + from + ' в ' + to + ' ' + b + ' лучше везти: ' + o + '.'; }
     },
     en: {
@@ -214,13 +239,13 @@
       bigAir: 'air is unreasonably expensive for this volume',
       ltlAuto: 'groupage truck is the handiest way for up to 10–12 m³: you pay per m³, no full truck needed',
       yiwuHub: 'Yiwu is the main groupage hub: trucks to Russia leave daily',
-      kzShort: 'via Kazakhstan the Urals and Siberia are closer than via Zabaikalsk',
+      zabMain: 'main corridor — Manzhouli — Zabaikalsk: most of our cargo goes this way',
       zabShort: 'Siberia and the Far East are closest via Zabaikalsk and Primorye',
       neShort: 'Northeast China borders Russia — the shortest way',
       seaCheap: 'container by sea to Vladivostok and on by rail is the cheapest way for a full container',
       seaFE: 'Vladivostok is the destination port: the container arrives by sea in a few days, no rail',
       railFcl: 'rail is the sweet spot for a container: cheaper than truck, faster than sea',
-      railHub: 'container trains via Kazakhstan run regularly from Chengdu, Chongqing, Xi’an and Urumqi',
+      railHub: 'from Urumqi, Kazakhstan is the closest way',
       ftl: 'a full truck is faster than rail, door to door without reloading',
       airFast: 'the fastest way: urgent, light or valuable cargo',
       airTiny: 'for a small parcel air costs about the same as groupage truck and is many times faster',
@@ -230,17 +255,152 @@
       kgd: 'to Kaliningrad — by sea from St Petersburg or Ust-Luga: transit via Lithuania is restricted',
       port: 'allow up to 1–2 weeks in Vladivostok for unloading and port pick-up',
       days: 'days', best: 'Recommended', alt: 'Other options', no: 'Not suitable', cheap: 'cheaper', fast: 'faster',
+      viaCN: 'via China', how: 'Best way to ship', loc: 'en-US',
+      hubMsk: function (to, km, d) { return 'To ' + to + ' it is cheaper to bring the cargo to Moscow — the main hub — and send it on as groupage within Russia (Dellin, PEK, etc.): ≈ ' + km + ' km, ' + d[0] + '–' + d[1] + ' more days.'; },
+      hubDirect: function (to) { return to + ' lies on the main route — we deliver directly, without going through Moscow; by air — to Moscow, then by truck.'; },
       sum: function (o, from, to, b) { return 'From ' + from + ' to ' + to + ', ' + b + ' is best shipped by ' + o + '.'; }
+    },
+    zh: {
+      auto: '公路', rail: '铁路', sea: '海运 + 铁路', sea_only: '海运', sea_direct: '经苏伊士海运', air: '空运',
+      viaVvo: '海运至符拉迪沃斯托克，再转铁路', viaVvoOnly: '海运至符拉迪沃斯托克', viaSuez: '绕行亚洲经苏伊士运河', airVia: '直飞莫斯科，再转公路', airDirect: '直飞',
+      noLand: '没有陆路：韩国与俄罗斯不通公路，经朝鲜的通道已关闭 — 只能海运或空运',
+      noLandJP: '日本是岛国：只能海运或空运', noLandTW: '台湾是岛屿：只能海运或空运',
+      inland: '城市离海较远：到港口还需 1–3 天，只有多个集装箱时海运才划算',
+      farSea: '距海超过 1000 公里 — 陆运更快也更便宜',
+      seaMin: '货量太少，不适合海运 — 最低收费会抵消节省',
+      railMin: '铁路拼箱 1 立方米起，小件货比公路更贵',
+      bigAir: '这么大的体积空运过于昂贵',
+      ltlAuto: '10–12 立方米以内，公路拼车最方便：按体积付费，无需整车',
+      yiwuHub: '义乌是拼货的主要枢纽：发往俄罗斯的卡车每天出发',
+      zabMain: '主要通道 — 满洲里 — 后贝加尔斯克：我们的大部分货物走这条线',
+      zabShort: '去西伯利亚和远东，经后贝加尔斯克和滨海边疆区最近',
+      neShort: '中国东北与俄罗斯接壤 — 路线最短',
+      seaCheap: '集装箱海运至符拉迪沃斯托克再转铁路 — 整箱最便宜的方式',
+      seaFE: '符拉迪沃斯托克就是目的港：集装箱几天即可海运到达，无需铁路',
+      railFcl: '铁路是集装箱的最佳平衡：比公路便宜，比海运快',
+      railHub: '从乌鲁木齐出发，经哈萨克斯坦最近',
+      ftl: '整车比铁路快，仓到仓无需倒装',
+      airFast: '最快的方式：适合急件、轻货或贵重货物',
+      airTiny: '小包裹空运几乎不比公路拼车贵，却快好几倍',
+      koreaSea: '韩国至符拉迪沃斯托克海运 2–4 天 — 韩国货物运往俄罗斯的主要路线',
+      vnRail: '有越南 — 俄罗斯经中国的直达铁路服务（25–35 天）',
+      suezRisk: '黑海几乎对进口关闭；经苏伊士至圣彼得堡需 45–60 天 — 仅适合不赶时间的大批货物',
+      kgd: '去加里宁格勒 — 从圣彼得堡或乌斯季卢加海运：经立陶宛过境受限',
+      port: '在符拉迪沃斯托克港卸货和提柜需预留 1–2 周',
+      days: '天', best: '推荐', alt: '其他方案', no: '不适合', cheap: '更便宜', fast: '更快',
+      viaCN: '经中国', how: '最佳运输方式', loc: 'zh-CN',
+      hubMsk: function (to, km, d) { return '运往' + to + '，更划算的是先把货物运到主要枢纽莫斯科，再在俄罗斯境内拼货发运（Dellin、PEK 等）：≈ ' + km + ' 公里，另需 ' + d[0] + '–' + d[1] + ' 天。'; },
+      hubDirect: function (to) { return to + '位于主线上 — 直接送达，无需经过莫斯科；空运 — 先到莫斯科，再用卡车。'; },
+      sum: function (o, from, to, b) { return '从' + from + '到' + to + '，' + b + '最好：' + o + '。'; }
+    },
+    tr: {
+      auto: 'Karayolu', rail: 'Demiryolu', sea: 'Deniz + demiryolu', sea_only: 'Deniz', sea_direct: 'Süveyş üzerinden deniz', air: 'Hava',
+      viaVvo: 'Vladivostok’a deniz yoluyla, sonra demiryolu', viaVvoOnly: 'Vladivostok’a deniz yoluyla', viaSuez: 'Asya çevresinden Süveyş Kanalı üzerinden', airVia: 'Moskova’ya direkt uçuş, sonra kamyon', airDirect: 'direkt uçuş',
+      noLand: 'kara yolu yok: Kore ile Rusya arasında yol bağlantısı yok, Kuzey Kore üzerinden geçiş kapalı — yalnızca deniz veya hava',
+      noLandJP: 'Japonya bir ada ülkesi: yalnızca deniz veya hava', noLandTW: 'Tayvan bir ada: yalnızca deniz veya hava',
+      inland: 'şehir denizden uzak: limana 1–3 gün daha; deniz yalnızca birkaç konteyner için kârlı',
+      farSea: 'denize 1000 km’den fazla — karadan daha hızlı ve ucuz',
+      seaMin: 'deniz için yük çok az — minimum ücretler kazancı yer',
+      railMin: 'demiryolu parsiyel 1 m³’ten başlar; küçük yük karayolundan pahalıya gelir',
+      bigAir: 'bu hacim için hava yolu gereksiz derecede pahalı',
+      ltlAuto: 'parsiyel kamyon 10–12 m³’e kadar en pratik yol: hacme göre ödeme, tam araç gerekmez',
+      yiwuHub: 'Yiwu parsiyel yüklerin ana merkezi: Rusya’ya kamyonlar her gün çıkıyor',
+      zabMain: 'ana koridor — Mançuli — Zabaykalsk: yüklerimizin çoğu bu yoldan gider',
+      zabShort: 'Sibirya ve Uzak Doğu’ya en kısa yol Zabaykalsk ve Primorye üzerinden',
+      neShort: 'Kuzeydoğu Çin Rusya ile komşu — en kısa yol',
+      seaCheap: 'Vladivostok’a deniz yoluyla konteyner, sonra demiryolu — tam konteyner için en ucuz yol',
+      seaFE: 'Vladivostok varış limanı: konteyner birkaç günde denizden gelir, demiryolu gerekmez',
+      railFcl: 'demiryolu konteyner için altın orta: karayolundan ucuz, denizden hızlı',
+      railHub: 'Urumçi’den en kısa yol Kazakistan üzerinden',
+      ftl: 'tam kamyon demiryolundan hızlı, aktarmasız depodan depoya',
+      airFast: 'en hızlı yol: acil, hafif veya değerli yük',
+      airTiny: 'küçük bir paket için hava yolu parsiyel kamyondan pek pahalı değil, ama kat kat hızlı',
+      koreaSea: 'Kore’den Vladivostok’a deniz yoluyla 2–4 gün — Kore yüklerinin Rusya’ya ana yolu',
+      vnRail: 'Çin üzerinden doğrudan Vietnam — Rusya demiryolu servisi var (25–35 gün)',
+      suezRisk: 'Karadeniz ithalata neredeyse kapalı; Süveyş üzerinden St. Petersburg’a 45–60 gün — yalnızca acelesi olmayan büyük partiler için',
+      kgd: 'Kaliningrad’a — St. Petersburg veya Ust-Luga’dan deniz yoluyla: Litvanya üzerinden transit kısıtlı',
+      port: 'Vladivostok’ta boşaltma ve limandan çıkış için 1–2 hafta ayırın',
+      days: 'gün', best: 'Önerilen', alt: 'Diğer seçenekler', no: 'Uygun değil', cheap: 'daha ucuz', fast: 'daha hızlı',
+      viaCN: 'Çin üzerinden', how: 'En iyi taşıma yolu', loc: 'tr-TR',
+      hubMsk: function (to, km, d) { return to + ' için yükü ana merkez Moskova’ya getirip Rusya içinde parsiyel olarak göndermek daha ucuz (Dellin, PEK vb.): ≈ ' + km + ' km, ' + d[0] + '–' + d[1] + ' gün daha.'; },
+      hubDirect: function (to) { return to + ' ana güzergâh üzerinde — Moskova’ya uğramadan doğrudan teslim ediyoruz; hava yoluyla — Moskova’ya, sonra kamyonla.'; },
+      sum: function (o, from, to, b) { return from + ' → ' + to + ', ' + b + ': en iyisi ' + o + '.'; }
+    },
+    de: {
+      auto: 'Lkw', rail: 'Bahn', sea: 'See + Bahn', sea_only: 'See', sea_direct: 'See über Suez', air: 'Luftfracht',
+      viaVvo: 'per Schiff nach Wladiwostok, dann Bahn', viaVvoOnly: 'per Schiff nach Wladiwostok', viaSuez: 'um Asien herum durch den Suezkanal', airVia: 'Direktflug nach Moskau, dann Lkw', airDirect: 'Direktflug',
+      noLand: 'kein Landweg: Korea hat keine Straßenverbindung nach Russland, der Weg über Nordkorea ist gesperrt — nur See- oder Luftfracht',
+      noLandJP: 'Japan ist ein Inselstaat: nur See- oder Luftfracht', noLandTW: 'Taiwan ist eine Insel: nur See- oder Luftfracht',
+      inland: 'weit vom Meer: noch 1–3 Tage bis zum Hafen; der Seeweg lohnt sich nur für mehrere Container',
+      farSea: 'über 1.000 km bis zum Meer — über Land schneller und günstiger',
+      seaMin: 'zu wenig Fracht für den Seeweg — Mindestgebühren fressen die Ersparnis auf',
+      railMin: 'Bahn-Sammelgut ab 1 m³; kleine Fracht kostet mehr als per Lkw',
+      bigAir: 'für dieses Volumen ist Luftfracht unverhältnismäßig teuer',
+      ltlAuto: 'Sammelgut per Lkw ist bis 10–12 m³ am praktischsten: Bezahlung nach Volumen, kein ganzer Lkw nötig',
+      yiwuHub: 'Yiwu ist der wichtigste Sammelgut-Hub: Lkw nach Russland fahren täglich ab',
+      zabMain: 'Hauptkorridor — Manzhouli — Sabaikalsk: so transportieren wir die meisten Sendungen',
+      zabShort: 'nach Sibirien und Fernost ist der Weg über Sabaikalsk und Primorje am kürzesten',
+      neShort: 'Nordostchina grenzt an Russland — der kürzeste Weg',
+      seaCheap: 'Container per Schiff nach Wladiwostok und weiter per Bahn — der günstigste Weg für einen vollen Container',
+      seaFE: 'Wladiwostok ist der Zielhafen: der Container kommt in wenigen Tagen per Schiff an, ohne Bahn',
+      railFcl: 'die Bahn ist der goldene Mittelweg für Container: günstiger als Lkw, schneller als der Seeweg',
+      railHub: 'von Ürümqi ist der Weg über Kasachstan am kürzesten',
+      ftl: 'ein ganzer Lkw ist schneller als die Bahn, ohne Umladen von Lager zu Lager',
+      airFast: 'der schnellste Weg: dringende, leichte oder wertvolle Fracht',
+      airTiny: 'für ein kleines Paket kostet Luftfracht kaum mehr als Sammelgut per Lkw, ist aber um ein Vielfaches schneller',
+      koreaSea: 'von Korea nach Wladiwostok 2–4 Tage per Schiff — der Hauptweg für koreanische Fracht nach Russland',
+      vnRail: 'es gibt einen direkten Bahnservice Vietnam — Russland über China (25–35 Tage)',
+      suezRisk: 'das Schwarze Meer ist für Importe fast geschlossen; über Suez nach St. Petersburg 45–60 Tage — nur für große Partien ohne Eile',
+      kgd: 'nach Kaliningrad — per Schiff ab St. Petersburg oder Ust-Luga: der Transit durch Litauen ist eingeschränkt',
+      port: 'in Wladiwostok bis zu 1–2 Wochen für Entladung und Abholung aus dem Hafen einplanen',
+      days: 'Tage', best: 'Empfohlen', alt: 'Weitere Optionen', no: 'Nicht geeignet', cheap: 'günstiger', fast: 'schneller',
+      viaCN: 'über China', how: 'So transportieren Sie am besten', loc: 'de-DE',
+      hubMsk: function (to, km, d) { return 'Nach ' + to + ' ist es günstiger, die Fracht bis Moskau — dem Hauptdrehkreuz — zu bringen und als Sammelgut innerhalb Russlands weiterzuschicken (Dellin, PEK usw.): ≈ ' + km + ' km, weitere ' + d[0] + '–' + d[1] + ' Tage.'; },
+      hubDirect: function (to) { return to + ' liegt auf der Hauptroute — wir liefern direkt, ohne Umweg über Moskau; per Luftfracht — bis Moskau, dann per Lkw.'; },
+      sum: function (o, from, to, b) { return 'Von ' + from + ' nach ' + to + ' transportiert man ' + b + ' am besten so: ' + o + '.'; }
+    },
+    fr: {
+      auto: 'Camion', rail: 'Rail', sea: 'Mer + rail', sea_only: 'Mer', sea_direct: 'Mer via Suez', air: 'Aérien',
+      viaVvo: 'par mer jusqu’à Vladivostok, puis rail', viaVvoOnly: 'par mer jusqu’à Vladivostok', viaSuez: 'autour de l’Asie par le canal de Suez', airVia: 'vol direct vers Moscou, puis camion', airDirect: 'vol direct',
+      noLand: 'pas de route terrestre : la Corée n’a pas de liaison routière avec la Russie, le passage par la Corée du Nord est fermé — mer ou aérien uniquement',
+      noLandJP: 'le Japon est un pays insulaire : mer ou aérien uniquement', noLandTW: 'Taïwan est une île : mer ou aérien uniquement',
+      inland: 'loin de la mer : encore 1 à 3 jours jusqu’au port ; la mer n’est rentable que pour plusieurs conteneurs',
+      farSea: 'plus de 1 000 km jusqu’à la mer — par voie terrestre, c’est plus rapide et moins cher',
+      seaMin: 'trop peu de marchandise pour la mer — les frais minimums annulent l’économie',
+      railMin: 'le groupage ferroviaire commence à 1 m³ ; un petit envoi coûte plus cher qu’en camion',
+      bigAir: 'pour ce volume, l’aérien est déraisonnablement cher',
+      ltlAuto: 'le groupage routier est le plus pratique jusqu’à 10–12 m³ : paiement au volume, sans camion complet',
+      yiwuHub: 'Yiwu est le principal hub de groupage : des camions partent chaque jour vers la Russie',
+      zabMain: 'corridor principal — Manzhouli — Zabaïkalsk : c’est par là que passent la plupart de nos envois',
+      zabShort: 'vers la Sibérie et l’Extrême-Orient, le plus court passe par Zabaïkalsk et le Primorié',
+      neShort: 'le nord-est de la Chine borde la Russie — le trajet le plus court',
+      seaCheap: 'conteneur par mer jusqu’à Vladivostok puis par rail — le moyen le moins cher pour un conteneur complet',
+      seaFE: 'Vladivostok est le port de destination : le conteneur arrive par mer en quelques jours, sans rail',
+      railFcl: 'le rail est le juste milieu pour un conteneur : moins cher que le camion, plus rapide que la mer',
+      railHub: 'depuis Ürümqi, le plus court passe par le Kazakhstan',
+      ftl: 'un camion complet est plus rapide que le rail, d’entrepôt à entrepôt sans transbordement',
+      airFast: 'le moyen le plus rapide : marchandise urgente, légère ou de valeur',
+      airTiny: 'pour un petit colis, l’aérien coûte à peine plus que le groupage routier et va bien plus vite',
+      koreaSea: 'de la Corée à Vladivostok, 2 à 4 jours par mer — la voie principale des marchandises coréennes vers la Russie',
+      vnRail: 'il existe un service ferroviaire direct Vietnam — Russie via la Chine (25–35 jours)',
+      suezRisk: 'la mer Noire est presque fermée aux importations ; via Suez jusqu’à Saint-Pétersbourg, 45–60 jours — seulement pour de gros lots sans urgence',
+      kgd: 'vers Kaliningrad — par mer depuis Saint-Pétersbourg ou Oust-Louga : le transit par la Lituanie est limité',
+      port: 'à Vladivostok, prévoyez jusqu’à 1–2 semaines pour le déchargement et l’enlèvement au port',
+      days: 'jours', best: 'Recommandé', alt: 'Autres options', no: 'Ne convient pas', cheap: 'moins cher', fast: 'plus rapide',
+      viaCN: 'via la Chine', how: 'Le meilleur moyen d’expédier', loc: 'fr-FR',
+      hubMsk: function (to, km, d) { return 'Pour ' + to + ', il est plus avantageux d’acheminer la marchandise jusqu’à Moscou — le hub principal — puis de l’envoyer en groupage en Russie (Dellin, PEK, etc.) : ≈ ' + km + ' km, encore ' + d[0] + '–' + d[1] + ' jours.'; },
+      hubDirect: function (to) { return to + ' se trouve sur l’axe principal — nous livrons directement, sans passer par Moscou ; en aérien — jusqu’à Moscou, puis en camion.'; },
+      sum: function (o, from, to, b) { return 'De ' + from + ' à ' + to + ', pour ' + b + ', le mieux : ' + o + '.'; }
     }
   };
-  function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+  function cap(s) { return s ? s.split(/(\s|-)/).map(function (w, i) { return /^(на|де|ам)$/.test(w) && i ? w : w.charAt(0).toUpperCase() + w.slice(1); }).join('') : s; }
 
   /**
    * @param {object} q { from, to, weight (кг), volume (м³), priority: 'balance'|'cheap'|'fast', dangerous, lang,
    *                    fromLL: [lon,lat] и toLL: [lon,lat] — если город уже найден на карте }
    */
   function advise(q) {
-    q = q || {}; var l = q.lang === 'en' || q.lang === 'zh' ? 'en' : 'ru', T = TX[l], Z = ZN[l], ZC = ZN[l + 'CN'];
+    q = q || {}; var l = TX[q.lang] ? q.lang : 'ru', T = TX[l], Z = ZN[l], ZC = ZN[l + 'CN'];
     var fo = lookup(q.from), to = lookup(q.to);
     if (!fo && q.fromLL) fo = { name: norm(q.from), lon: q.fromLL[0], lat: q.fromLL[1], cc: '' };
     if (!to && q.toLL) to = { name: norm(q.to), lon: q.toLL[0], lat: q.toLL[1], cc: '' };
@@ -258,7 +418,7 @@
     var port = cc === 'KR' ? PORT_KR : PORT;
     var a = cc === 'CN' ? adj(reg, zone) : [0, 0];
     var opts = [], no = [];
-    var fromN = cap(fo.name), toN = cap(to.name);
+    var fromN = q.fromLabel || cap(fo.name), toN = q.toLabel || cap(to.name);
     function opt(id, mode, days, why, extra) { var o = { id: id, mode: mode, title: T[id] || T[mode], days: days, cost: cost[id] != null ? cost[id] : cost[mode], why: why.filter(Boolean), cons: [] }; for (var k in extra) o[k] = extra[k]; opts.push(o); return o; }
 
     // --- авто
@@ -269,7 +429,7 @@
       if (b === 'ltl' || b === 'tiny') ow.push(T.ltlAuto);
       if (b === 'fcl' || b === 'mid') ow.push(T.ftl);
       if (/^иу$|^цзиньхуа/.test(fo.name) && (b === 'ltl' || b === 'tiny')) ow.push(T.yiwuHub);
-      if (reg === 'NE' && zi(zone) <= 1) ow.push(T.neShort); else if ((zone === 'UR' || zone === 'WS') && reg !== 'NE' && reg !== 'N') ow.push(T.kzShort);
+      if (reg === 'NE' && zi(zone) <= 1) ow.push(T.neShort); else if (reg !== 'XJ' && zone !== 'FE') ow.push(T.zabMain);
       var ao = opt('auto', 'auto', ad, ow, { via: autoVia(reg, zone, to.name, l) });
       if (b === 'multi') ao.cost += 0.6;
       if (zone === 'KGD') { ao.cons.push(T.kgd); ao.cost += 1; }
@@ -280,10 +440,10 @@
       var rd = add(RAIL[zone] || RAIL.C, a[1] + (cc === 'VN' ? 3 : 0));
       var rw = [];
       if (b === 'fcl' || b === 'mid' || b === 'multi') rw.push(T.railFcl);
-      if (reg === 'SW' || reg === 'NW' || reg === 'XJ') rw.push(T.railHub);
+      if (reg === 'XJ') rw.push(T.railHub);
       if (cc === 'VN') rw.push(T.vnRail);
-      if (zi(zone) <= 1 && reg !== 'XJ') rw.push(T.zabShort);
-      var ro = opt('rail', 'rail', b === 'ltl' || b === 'tiny' ? add(rd, 4) : rd, rw, { via: cc === 'VN' ? (l === 'en' ? 'via China' : 'через Китай') : railVia(reg, zone, l) });
+      if (reg !== 'XJ' && zone !== 'FE') rw.push(T.zabMain);
+      var ro = opt('rail', 'rail', b === 'ltl' || b === 'tiny' ? add(rd, 4) : rd, rw, { via: cc === 'VN' ? T.viaCN : railVia(reg, zone, l) });
       if (b === 'tiny') ro.cons.push(T.railMin);
       if (zone === 'KGD') { ro.cons.push(T.kgd); ro.cost += 0.8; }
     }
@@ -320,11 +480,19 @@
     var cheapest = opts.reduce(function (x, y) { return y.cost < x.cost ? y : x; }), fastest = opts.reduce(function (x, y) { return y.days[1] < x.days[1] ? y : x; });
     opts.forEach(function (o, i) { o.tags = []; if (i === 0) o.tags.push('best'); if (o === cheapest) o.tags.push('cheap'); if (o === fastest) o.tags.push('fast'); o.rub = Math.max(1, Math.min(5, Math.round(o.cost))); });
     var best = opts[0];
+    // Москва — главный хаб: в центр, Поволжье, на юг и северо-запад выгоднее довезти до Москвы и дальше сборным по России
+    var M = CITY['москва'], hubKm = Math.round(hav([M[0], M[1]], [to.lon, to.lat]) * 1.22 / 10) * 10, hub = null;
+    if (hubKm > 80) {
+      var hd = [Math.max(1, Math.round(hubKm / 650)), Math.round(hubKm / 650) + 3];
+      if (['C', 'VG', 'NW', 'S', 'KGD'].indexOf(zone) >= 0) hub = { via: 'msk', km: hubKm, days: hd, text: T.hubMsk(toN, hubKm.toLocaleString(T.loc), hd) };
+      else hub = { via: 'direct', km: hubKm, text: T.hubDirect(toN) };
+    }
     return {
+      hub: hub,
       ok: true, lang: l, band: b, bandName: BAND[l][b], priority: q.priority || 'balance',
       from: { name: fromN, cc: cc, region: reg, regionName: ZC[reg] || '' }, to: { name: toN, zone: zone, zoneName: Z[zone] },
       best: best.id, options: opts, impossible: no,
-      summary: T.sum(best.title.toLowerCase() + (best.via ? ' (' + best.via + ')' : '') + ', ' + best.days[0] + '–' + best.days[1] + ' ' + T.days, fromN, toN, BAND[l][b])
+      summary: T.sum((l === 'de' || l === 'zh' ? best.title : best.title.toLowerCase()) + (best.via ? ' (' + best.via + ')' : '') + ', ' + best.days[0] + '–' + best.days[1] + ' ' + T.days, fromN, toN, BAND[l][b])
     };
   }
 
