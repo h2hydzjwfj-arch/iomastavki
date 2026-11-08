@@ -5,7 +5,7 @@
   var $ = function (s, r) { return (r || document).querySelector(s); }, $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function lang() { try { return localStorage.getItem('iomastavka_lang') || 'ru'; } catch (e) { return 'ru'; } }
-  var LOC = { ru: 'ru-RU', en: 'en-GB', zh: 'zh-CN', tr: 'tr-TR' };
+  var LOC = { ru: 'ru-RU', en: 'en-GB', zh: 'zh-CN', tr: 'tr-TR', de: 'de-DE', fr: 'fr-FR' };
   var CUR = [['CNY', 'Юань'], ['USD', 'Доллар'], ['EUR', 'Евро'], ['KZT', 'Тенге'], ['KRW', 'Вона']];
   var PER = [['7', 'Неделя'], ['30', 'Месяц'], ['90', '3 месяца'], ['182', 'Полгода'], ['365', 'Год'], ['1826', '5 лет'], ['own', 'Свои даты']];
   var st = { code: 'CNY', per: '30', from: '', to: '', data: null, seq: 0 };

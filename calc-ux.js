@@ -8,13 +8,14 @@
 (function () {
   'use strict';
   var LI = { ru: 0, en: 1, zh: 2 };
-  function lang() { var l; try { l = localStorage.getItem('iomastavka_lang'); } catch (e) {} return LI.hasOwnProperty(l) ? l : 'ru'; }
-  function T(a) { return a[LI[lang()]] || a[0]; }
+  // язык сайта; своих текстов здесь три языка — на остальных показываем русский, его переводит общий словарь (i18n-v3 + i18n-more)
+  function lang() { var l; try { l = localStorage.getItem('iomastavka_lang'); } catch (e) {} return ['ru', 'en', 'zh', 'de', 'fr', 'tr'].indexOf(l) >= 0 ? l : 'ru'; }
+  function T(a) { var l = lang(); if (LI.hasOwnProperty(l)) return a[LI[l]] || a[0]; return window.IOMA_T ? window.IOMA_T(a[0], l) : a[0]; }
   function $(s, r) { return (r || document).querySelector(s); }
   function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function val(id) { var e = document.getElementById(id); return e ? String(e.value || '').trim() : ''; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
-  function fmt(n) { return Math.round(n).toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-US'); }
+  function fmt(n) { return Math.round(n).toLocaleString(({ ru: 'ru-RU', zh: 'zh-CN', de: 'de-DE', fr: 'fr-FR', tr: 'tr-TR' })[lang()] || 'en-US'); }
   var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var REQ = ['fromCity', 'toCity', 'weight'];
   function filled(id) { var v = val(id); return id === 'weight' || id === 'pieces' ? Number(String(v).replace(',', '.')) > 0 : !!v; }
@@ -130,12 +131,13 @@
   function adviceHtml(fromT, toT) {
     var A = window.IOMA_ADVICE, R = window.IOMA_RMAP; if (!A || !fromT) return '';
     var ll = function (k) { var c = k && R && R.cities && R.cities[k]; return c ? [c[3], c[4]] : null; };
-    var a = A.advise({ from: fromT, to: toT || 'Москва', fromLL: ll(R && R.find(fromT)), toLL: ll(R && R.find(toT || 'Москва')), weight: nval('weight'), volume: nval('autoVolume'), lang: lang() });
+    var fk = R && R.find(fromT), tk = R && R.find(toT || 'Москва');
+    var a = A.advise({ from: fromT, to: toT || 'Москва', fromLL: ll(fk), toLL: ll(tk), fromLabel: fk && lang() !== 'ru' ? R.name(fk) : undefined, toLabel: tk && lang() !== 'ru' ? R.name(tk) : undefined, weight: nval('weight'), volume: nval('autoVolume'), lang: lang() });
     if (!a.ok) return '';
     var X = A.text[a.lang], b = a.options[0], cm = ($('.v3c-chips .chip.on') || {}).dataset;
     var tag = function (o) { return o.tags.indexOf('cheap') >= 0 ? X.cheap : o.tags.indexOf('fast') >= 0 ? X.fast : ''; };
     var rubs = function (o) { return '<i class="cxa-r" aria-label="цена">' + '₽₽₽₽₽'.slice(0, o.rub) + '<s>' + '₽₽₽₽₽'.slice(o.rub) + '</s></i>'; };
-    var h = '<div class="cxa"><div class="cxa-h"><b>' + esc(a.lang === 'en' ? 'Best way to ship' : 'Как лучше везти') + '</b><span>' + esc(a.from.regionName + ' → ' + a.to.zoneName + ' · ' + a.bandName) + '</span></div>';
+    var h = '<div class="cxa"><div class="cxa-h"><b>' + esc(X.how) + '</b><span>' + esc(a.from.regionName + ' → ' + a.to.zoneName + ' · ' + a.bandName) + '</span></div>';
     h += '<button type="button" class="cxa-best' + (cm && cm.m === CHIP[b.mode] ? ' on' : '') + '" data-cxm="' + b.mode + '"><em>' + esc(X.best) + '</em><b>' + esc(b.title) + '</b><span>' + esc(b.via || '') + '</span><strong>' + b.days[0] + '–' + b.days[1] + ' ' + esc(X.days) + rubs(b) + '</strong><small>' + esc(b.why[0] || '') + (b.cons[0] ? ' · ' + esc(b.cons[0]) : '') + '</small></button>';
     var alt = a.options.slice(1, 4);
     if (alt.length) h += '<div class="cxa-alt">' + alt.map(function (o) { return '<button type="button" data-cxm="' + o.mode + '" title="' + esc((o.why[0] || '') + (o.cons[0] ? ' · ' + o.cons[0] : '')) + '"><b>' + esc(o.title) + '</b><span>' + o.days[0] + '–' + o.days[1] + ' ' + esc(X.days) + (tag(o) ? ' · ' + esc(tag(o)) : '') + '</span>' + rubs(o) + '</button>'; }).join('') + '</div>';

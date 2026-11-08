@@ -5,7 +5,7 @@
   'use strict';
   var $ = function (s, r) { return (r || document).querySelector(s); }, $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
-  function lang() { try { var l = localStorage.getItem('iomastavka_lang'); return l === 'en' || l === 'zh' ? l : 'ru'; } catch (e) { return 'ru'; } }
+  function lang() { try { var l = localStorage.getItem('iomastavka_lang'); return ['en', 'zh', 'de', 'fr', 'tr'].indexOf(l) >= 0 ? l : 'ru'; } catch (e) { return 'ru'; } }
   var T = function (s) { return window.IOMA_T ? window.IOMA_T(s) : s; };
   function role() { var m = document.body.className.match(/\brole-(admin|client|guest)\b/); return m ? m[1] : 'guest'; }
 
@@ -25,7 +25,7 @@
     // услуги
     'Что мы делаем': ['What we do', '我们的服务'], 'От оплаты поставщику до вашего склада — или только перевозка, если поставщик уже есть.': ['From paying the supplier to your warehouse — or just the transport if you already have a supplier.', '从向供应商付款到送达您的仓库——如果您已有供应商，也可只负责运输。'],
     'Выкуп и оплата поставщику': ['Purchasing and supplier payment', '采购与供应商付款'], 'Платим поставщику в Китае напрямую через ВТБ Шанхай или через торговый дом. Контракт, инвойс, контроль отгрузки.': ['We pay your supplier in China directly via VTB Shanghai or through a trading house. Contract, invoice, shipment control.', '通过VTB上海分行或贸易公司直接向中国供应商付款。合同、发票、发货监控。'],
-    'Доставка любым транспортом': ['Delivery by any transport', '多种运输方式'], 'Авиа — от нескольких дней; авто и ЖД — через Забайкальск, Казахстан, Монголию или Приморье; море — до Владивостока и дальше ЖД.': ['Air — from a few days; truck and rail — via Zabaikalsk, Kazakhstan, Mongolia or Primorye; sea — to Vladivostok, then rail.', '空运——数天起；公路和铁路——经后贝加尔斯克、哈萨克斯坦、蒙古或滨海边疆区；海运——至符拉迪沃斯托克后转铁路。'],
+    'Доставка любым транспортом': ['Delivery by any transport', '多种运输方式'], 'Авиа — от нескольких дней; авто и ЖД — в основном через Забайкальск, также через Приморье и Монголию; море — до Владивостока и дальше ЖД.': ['Air — from a few days; truck and rail — mainly via Zabaikalsk, also via Primorye and Mongolia; sea — to Vladivostok, then rail.', '空运——数天起；公路和铁路——主要经后贝加尔斯克，也可经滨海边疆区和蒙古；海运——至符拉迪沃斯托克后转铁路。'],
     'Таможенное оформление': ['Customs clearance', '清关'], 'Подбор кода ТН ВЭД, расчёт пошлины и НДС, декларант под вашу ЭЦП или под печать брокера.': ['HS code selection, duty and VAT calculation, declarant using your e-signature or the broker’s seal.', '确定海关编码，计算关税和增值税，可用您的电子签名或报关行印章申报。'],
     'Сертификация': ['Certification', '认证'], 'Декларации и сертификаты соответствия, СГР, Честный знак — заранее, чтобы груз не стоял на таможне.': ['Declarations and certificates of conformity, state registration, Honest Sign labelling — in advance so the cargo doesn’t wait at customs.', '符合性声明和证书、国家注册证书、“诚信标志”——提前办理，避免货物滞留海关。'],
     'Только логистика': ['Logistics only', '仅物流'], 'Поставщик и контракт ваши — мы забираем груз и привозим. Ставка под ваш контракт: EXW, FOB и другие условия.': ['Your supplier and contract — we pick up and deliver. A rate for your terms: EXW, FOB and others.', '供应商和合同由您负责——我们负责提货和运输。按您的条款报价：EXW、FOB等。'],
@@ -120,7 +120,7 @@
     cert: '<path d="M7 3h10v18l-5-3-5 3zM9 8h6M9 12h6"/>', truck: '<path d="M2 6h12v10H2zM14 9h4l4 4v3h-8zM6 19a2 2 0 100-4 2 2 0 000 4zM18 19a2 2 0 100-4 2 2 0 000 4z"/>', doc: '<path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/>',
   };
   var SERVICES = [['buy', 'Выкуп и оплата поставщику', 'Платим поставщику в Китае напрямую через ВТБ Шанхай или через торговый дом. Контракт, инвойс, контроль отгрузки.'],
-    ['ship', 'Доставка любым транспортом', 'Авиа — от нескольких дней; авто и ЖД — через Забайкальск, Казахстан, Монголию или Приморье; море — до Владивостока и дальше ЖД.'],
+    ['ship', 'Доставка любым транспортом', 'Авиа — от нескольких дней; авто и ЖД — в основном через Забайкальск, также через Приморье и Монголию; море — до Владивостока и дальше ЖД.'],
     ['customs', 'Таможенное оформление', 'Подбор кода ТН ВЭД, расчёт пошлины и НДС, декларант под вашу ЭЦП или под печать брокера.'],
     ['cert', 'Сертификация', 'Декларации и сертификаты соответствия, СГР, Честный знак — заранее, чтобы груз не стоял на таможне.'],
     ['truck', 'Только логистика', 'Поставщик и контракт ваши — мы забираем груз и привозим. Ставка под ваш контракт: EXW, FOB и другие условия.'],
@@ -133,7 +133,7 @@
   }
   var MODE_RU = { road: 'Авто', rail: 'ЖД', air: 'Авиа', sea: 'Море + ЖД', multi: 'Мульти' };
   var CASES = null;
-  function num(v) { return Number(v || 0).toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-US', { maximumFractionDigits: 1 }); }
+  function num(v) { return Number(v || 0).toLocaleString(({ ru: 'ru-RU', zh: 'zh-CN', de: 'de-DE', fr: 'fr-FR', tr: 'tr-TR' })[lang()] || 'en-US', { maximumFractionDigits: 1 }); }
   function weight(v) { return v >= 1000 ? num(v / 1000) + ' ' + T('т') : num(v) + ' ' + T('кг'); }
   function money(v) { return v >= 1e6 ? num(v / 1e6) + ' ' + T('млн ₽') : num(v) + ' ₽'; }
   // значок транспорта — для кейса без фото (рамка не пустая)
@@ -142,7 +142,7 @@
     return '<span class="cs-frame' + (big ? ' big' : '') + (c.photo ? '' : ' empty') + '">' + (c.photo ? '<img src="' + esc(c.photo) + '" alt="' + esc(c.goods) + '" loading="lazy" decoding="async">' : '<svg viewBox="0 0 24 24" aria-hidden="true">' + (MODE_ICON[c.transport === 'multi' ? 'sea' : c.transport] || MODE_ICON.road) + '</svg>') + '</span>';
   }
   function caseCard(c, i) {
-    var facts = [c.weight ? weight(c.weight) : '', T(MODE_RU[c.transport] || ''), c.trucks ? c.trucks + ' ' + (lang() === 'ru' ? (c.trucks % 10 === 1 && c.trucks % 100 !== 11 ? 'фура' : c.trucks % 10 >= 2 && c.trucks % 10 <= 4 && (c.trucks % 100 < 10 || c.trucks % 100 >= 20) ? 'фуры' : 'фур') : T('Машин').toLowerCase()) : ''].filter(Boolean);
+    var facts = [c.weight ? weight(c.weight) : '', T(MODE_RU[c.transport] || ''), c.trucks ? c.trucks + ' ' + (lang() === 'ru' ? (c.trucks % 10 === 1 && c.trucks % 100 !== 11 ? 'фура' : c.trucks % 10 >= 2 && c.trucks % 10 <= 4 && (c.trucks % 100 < 10 || c.trucks % 100 >= 20) ? 'фуры' : 'фур') : lang() === 'de' ? T('Машин') : T('Машин').toLowerCase()) : ''].filter(Boolean);
     return '<button type="button" class="cs-c" data-case="' + esc(c.id) + '" style="--i:' + i + '">' + frame(c) + '<span class="cs-body"><span class="cs-mode cs-' + esc(c.transport || 'road') + '">' + esc(T(MODE_RU[c.transport] || '')) + '</span><b>' + esc(c.goods) + '</b><span class="cs-f">' + facts.map(esc).join(' · ') + '</span>'
       + (c.value ? '<span class="cs-val"><small>' + esc(T('Стоимость груза')) + '</small><em>' + esc(money(c.value)) + '</em></span>' : '')
       + (c.from || c.to ? '<small class="cs-route">' + esc([c.from, c.to].filter(Boolean).join(' → ')) + '</small>' : '') + '</span><i aria-hidden="true">→</i></button>';
