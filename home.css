@@ -229,5 +229,6 @@ html:root body .cs-c>i{top:22px;right:22px;background:rgba(255,255,255,.92);colo
   .rmap-info{grid-template-columns:1fr;grid-template-areas:"od" "km" "go" "path"}
   .rmap-go{justify-content:center}
   .rmap-hint{width:100%}
+  .rmap-user .rmap-hint{display:none}
   .hx-call{border-radius:22px}
 }
