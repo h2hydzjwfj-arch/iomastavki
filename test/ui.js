@@ -66,6 +66,18 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await p.goto(B + '/kejsy'); await p.waitForSelector('#casesView.open [data-case]'); await p.click('[data-case]'); await p.waitForSelector('.cx-ov .cs-m');
       await shot(p, '03c_case'); await p.click('.cx-ov .cx-x'); await p.goto(B + '/'); await p.waitForFunction(() => /role-/.test(document.body.className));
     });
+    await step('Гость: инструменты — влезет ли груз, объём, сумма прописью, без прокрутки страницы', async () => {
+      await p.goto(B + '/vlezet'); await p.waitForSelector('#fitView.open .tl-go');
+      await p.fill('#fitView [data-k="l"]', '300'); await p.fill('#fitView [data-k="w"]', '200'); await p.fill('#fitView [data-k="h"]', '275'); await p.fill('#fitView [data-k="kg"]', '5000'); await p.fill('#fitView [data-k="q"]', '1');
+      await p.click('#fitView .tl-go'); await p.waitForSelector('#fitView .tl-verdict');
+      const fit = await p.textContent('#fitView .tl-out'); if (!/Open Top|Flat Rack/.test(fit) || !/Мега|мега/.test(fit)) throw new Error('влезет ли: ' + fit.slice(0, 200));
+      await shot(p, '03d_fit');
+      await p.goto(B + '/propis'); await p.waitForSelector('#propisView .tl-res-row'); await p.fill('#propisView [data-p="sum"]', '1000'); await p.selectOption('#propisView [data-p="c"]', 'gen');
+      await p.waitForFunction(() => /одной тысячи рублей/i.test(document.querySelector('#propisView .tl-out').textContent));
+      await p.goto(B + '/obem'); await p.waitForSelector('#volumeView .tl-big');
+      const sc = await p.evaluate(() => document.scrollingElement.scrollHeight - innerHeight); if (sc > 4) throw new Error('страница «Объём груза» прокручивается на ' + sc + ' px');
+      await p.goto(B + '/');
+    });
     await step('Гость: язык одной кнопкой — весь первый экран на английском', async () => {
       await p.click('.lx-btn'); await p.click('.lx-menu [data-lang="en"]'); await p.waitForFunction(() => /We buy in China/.test(document.querySelector('.hx-h1').textContent));
       await p.waitForFunction(() => /Rail/.test(document.querySelector('.rmap-tabs').textContent));

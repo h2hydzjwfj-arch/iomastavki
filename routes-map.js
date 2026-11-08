@@ -188,7 +188,7 @@
     return h;
   }
   // точки на карте главной: все крупные города Китая (откуда) и города России (куда)
-  var CN_DOTS = ['bj', 'tj', 'sy', 'hrb', 'dl', 'qd', 'sh', 'nb', 'yw', 'hz', 'nj', 'wh', 'cs', 'zz', 'xa', 'ty', 'xz', 'lz', 'cd', 'cq', 'gz', 'sz', 'xm', 'qz', 'urc'];
+  var CN_DOTS = ['bj', 'tj', 'sy', 'hrb', 'dl', 'qd', 'sh', 'nb', 'yw', 'hz', 'nj', 'wh', 'cs', 'zz', 'xa', 'ty', 'xz', 'lz', 'cd', 'cq', 'gz', 'sz', 'xm', 'qz', 'urc', 'pus', 'icn', 'osa', 'tyo', 'tpe']; // и Корея, Япония, Тайвань — только море или авиа
   var RU_DOTS = ['msk', 'spb', 'nnov', 'kzn', 'sam', 'ufa', 'perm', 'ekb', 'chel', 'tmn', 'omsk', 'nsk', 'krs', 'irk', 'ulu', 'chita', 'khb', 'vvo', 'krd', 'rnd', 'vrn'];
   var DEMO = ['yw', 'sh', 'gz', 'bj', 'cd', 'sz', 'qd', 'urc', 'cq', 'hz'];
   // значки транспорта (24×24, линии)
@@ -288,8 +288,18 @@
       info.innerHTML = '<div class="rmap-od"><b>' + nm(state.from, l) + ' <i>→</i> ' + nm(state.to, l) + '</b><small>' + sub + '</small></div>'
         + '<div class="rmap-km">' + r.legs.filter(function (x) { return x.km > 0; }).map(function (x) { return '<span class="k-' + x.kind + '"><small>' + legLabel(r, x, l) + '</small><b>≈ ' + x.km.toLocaleString(loc) + ' ' + ui('km', l) + '</b></span>'; }).join('')
         + (r.legs.length > 1 ? '<span class="tot"><small>' + kmT('all', l) + '</small><b>≈ ' + r.km.toLocaleString(loc) + ' ' + ui('km', l) + '</b></span>' : '') + '</div>'
-        + '<button type="button" class="rmap-go">' + ui('calc', l) + '</button>'
+        + '<button type="button" class="rmap-go">' + ui('calc', l) + '</button>' + rec(l)
         + (r.mode !== 'air' ? '<p class="rmap-path" title="' + hubs + '">' + kmT('via2', l) + ': ' + hubs + '</p>' : '');
+    }
+    // рекомендация: сборный груз и полный контейнер (route-advice.js)
+    function rec(l) {
+      var A = window.IOMA_ADVICE; if (!A) return '';
+      var q = function (w, v) { return A.advise({ from: nm(state.from, 'ru'), to: nm(state.to, 'ru'), fromLL: ll(state.from), toLL: ll(state.to), weight: w, volume: v, lang: l }); };
+      var a = q(800, 4), b = q(20000, 60); if (!a.ok || !b.ok) return '';
+      var M = { auto: 'road', rail: 'rail', sea: 'sea', air: 'air' }, X = A.text[a.lang];
+      var one = function (lbl, o) { return '<button type="button" data-recm="' + M[o.mode] + '" title="' + (o.why[0] || '') + '"><small>' + lbl + '</small><b>' + o.title + '</b><em>' + o.days[0] + '–' + o.days[1] + ' ' + X.days + '</em></button>'; };
+      var en = a.lang === 'en';
+      return '<div class="rmap-rec"><span>' + (en ? 'Best way' : 'Как лучше') + '</span>' + one(en ? 'Groupage' : 'Сборный груз', a.options[0]) + one(en ? 'Full container' : 'Контейнер', b.options[0]) + '</div>';
     }
     function setMode(m, user) { if (!MODES[m]) return; state.mode = m; if (user) stopAuto(); drawTabs(); draw(); if (opts.onMode) opts.onMode(m); }
     function setFrom(k, user) { if (!C[k]) return; state.from = k; if (user) stopAuto(); draw(); }
@@ -307,7 +317,7 @@
       t.textContent = nmTxt; t.setAttribute('x', f(x)); t.setAttribute('y', f(p[1] - 6 * U)); t.style.fontSize = f(fs) + 'px'; t.setAttribute('visibility', 'visible');
     });
     svg.addEventListener('mouseleave', function () { var t = svg.querySelector('.rm-hov'); if (t) t.setAttribute('visibility', 'hidden'); });
-    info.addEventListener('click', function (e) { if (e.target.closest('.rmap-go') && opts.onPick) opts.onPick(state.from, state.mode, nm(state.from, 'ru'), state.to, nm(state.to, 'ru')); });
+    info.addEventListener('click', function (e) { var rb = e.target.closest('[data-recm]'); if (rb) { setMode(rb.dataset.recm, true); return; } if (e.target.closest('.rmap-go') && opts.onPick) opts.onPick(state.from, state.mode, nm(state.from, 'ru'), state.to, nm(state.to, 'ru')); });
     var drawnLang = lang(); new MutationObserver(function () { if (lang() === drawnLang) return; drawnLang = lang(); drawTabs(); draw(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
     window.addEventListener('resize', function () { scale(); moveInd(); });
     if (window.ResizeObserver) new ResizeObserver(function () { scale(); moveInd(); }).observe(svg);
