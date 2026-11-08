@@ -1,9 +1,9 @@
-/* IOMASTAVKA — готовые переводы интерфейса (RU → EN / 中文 / TR).
+/* IOMASTAVKA — готовые переводы интерфейса (RU → EN / 中文 / TR / DE / FR).
    Тексты написаны заранее, а не переводятся «на лету». Работает вместе с переводами app.js:
    всё, что не покрыто там, переводится здесь по точному совпадению русской фразы. */
 (function () {
   'use strict';
-  // RU: [EN, ZH, TR]
+  // RU: [EN, ZH, TR]; немецкий и французский добавляются из i18n-more.js (IOMA_DICT_DF, IOMA_DICT_MORE)
   var D = {
 
     // --- v4: карта-калькулятор, трекинг, динамика курса, экскурсия
@@ -242,43 +242,116 @@
     '@Удалить документ': ['Delete document', '删除单证', 'Belgeyi sil'], '@Комментарий к статусу (видит клиент)': ['Status comment (visible to client)', '状态备注（客户可见）', 'Durum yorumu (müşteri görür)'], '@Прибытие': ['Arrival', '到达', 'Varış'],
     '@Почта для тестового письма (необязательно)': ['E-mail for a test message (optional)', '测试邮件地址（可选）', 'Test e-postası için adres (isteğe bağlı)'], '@Закрыть': ['Close', '关闭', 'Kapat'], '@авто': ['auto', '自动', 'otomatik'],
   };
-  // Фразы с переменной частью
+  // Фразы с переменной частью: [EN, ZH, TR, DE, FR]
   var P = [
-    [/^(На складе в Китае|В пути по Китаю|На границе|В порту прибытия|В аэропорту прилёта|В пути по России|На таможне): (.+)$/, ['$1: $2', '$1：$2', '$1: $2']],
-    [/^сейчас: (.+)$/, ['now: $1', '当前：$1', 'şu an: $1']],
-    [/^Курс ЦБ на (.+)$/, ['Central Bank rate on $1', '$1 央行汇率', '$1 Merkez Bankası kuru']],
-    [/^(.+), здесь ваши грузы: статус, маршрут, расходы и документы\.$/, ['$1, here are your shipments: status, route, costs and documents.', '$1，这里是您的货物：状态、路线、费用和单证。', '$1, gönderileriniz burada: durum, güzergâh, maliyetler ve belgeler.']],
-    [/^(.+) · прибытие: (.+)$/, ['$1 · arrival: $2', '$1 · 到达：$2', '$1 · varış: $2']],
-    [/^Транспорт уточняется · прибытие: (.+)$/, ['Transport TBC · arrival: $1', '运输方式待定 · 到达：$1', 'Taşıma teyit edilecek · varış: $1']],
-    [/^История \((\d+)\)$/, ['History ($1)', '记录（$1）', 'Geçmiş ($1)']],
-    [/^· новых: (\d+)$/, ['· new: $1', '· 新：$1', '· yeni: $1']],
-    [/^Обновлено (\d+) мин назад$/, ['Updated $1 min ago', '$1 分钟前更新', '$1 dk önce güncellendi']],
-    [/^от (\d\d\.\d\d\.\d{4})$/, ['of $1', '日期 $1', '$1 tarihli']],
-    [/^Действует до (.+)$/, ['Valid until $1', '有效期至 $1', '$1 tarihine kadar geçerli']],
-    [/^≈ ([\d\s ]+) ₽ по курсу ЦБ на сегодня$/, ['≈ $1 ₽ at today’s Bank of Russia rate', '≈ $1 ₽（按今日央行汇率）', '≈ $1 ₽ (bugünkü MB kuruyla)']],
-    [/^≈ ([\d\s ]+) ₽ по курсу ЦБ ([\d,.]+)$/, ['≈ $1 ₽ at Bank of Russia rate $2', '≈ $1 ₽（央行汇率 $2）', '≈ $1 ₽ (MB kuru $2)']],
-    [/^(\d+) дн\.$/, ['$1 days', '$1 天', '$1 gün']],
-    [/^(\d\d\.\d\d\.\d{4}) г\.$/, ['$1', '$1', '$1']],
-    [/^([\d\s\u00a0,.]+) кг$/, ['$1 kg', '$1 公斤', '$1 kg']],
-    [/^([\d\s\u00a0,.]+) м³$/, ['$1 m³', '$1 立方米', '$1 m³']],
-    [/^(.+) см$/, ['$1 cm', '$1 厘米', '$1 cm']],
-    [/^нет (.+)$/, ['missing $1', '缺少 $1', '$1 eksik']],
+    [/^(На складе в Китае|В пути по Китаю|На границе|В порту прибытия|В аэропорту прилёта|В пути по России|На таможне): (.+)$/, ['$1: $2', '$1：$2', '$1: $2', '$1: $2', '$1 : $2']],
+    [/^сейчас: (.+)$/, ['now: $1', '当前：$1', 'şu an: $1', 'jetzt: $1', 'actuellement : $1']],
+    [/^Курс ЦБ на (.+)$/, ['Central Bank rate on $1', '$1 央行汇率', '$1 Merkez Bankası kuru', 'Kurs der Zentralbank am $1', 'Taux de la Banque centrale au $1']],
+    [/^(.+), здесь ваши грузы: статус, маршрут, расходы и документы\.$/, ['$1, here are your shipments: status, route, costs and documents.', '$1，这里是您的货物：状态、路线、费用和单证。', '$1, gönderileriniz burada: durum, güzergâh, maliyetler ve belgeler.', '$1, hier sind Ihre Sendungen: Status, Route, Kosten und Dokumente.', '$1, voici vos envois : statut, itinéraire, coûts et documents.']],
+    [/^(.+) · прибытие: (.+)$/, ['$1 · arrival: $2', '$1 · 到达：$2', '$1 · varış: $2', '$1 · Ankunft: $2', '$1 · arrivée : $2']],
+    [/^Транспорт уточняется · прибытие: (.+)$/, ['Transport TBC · arrival: $1', '运输方式待定 · 到达：$1', 'Taşıma teyit edilecek · varış: $1', 'Transport wird geklärt · Ankunft: $1', 'Transport à confirmer · arrivée : $1']],
+    [/^История \((\d+)\)$/, ['History ($1)', '记录（$1）', 'Geçmiş ($1)', 'Verlauf ($1)', 'Historique ($1)']],
+    [/^· новых: (\d+)$/, ['· new: $1', '· 新：$1', '· yeni: $1', '· neu: $1', '· nouveaux : $1']],
+    [/^Обновлено (\d+) мин назад$/, ['Updated $1 min ago', '$1 分钟前更新', '$1 dk önce güncellendi', 'Vor $1 Min. aktualisiert', 'Mis à jour il y a $1 min']],
+    [/^от (\d\d\.\d\d\.\d{4})$/, ['of $1', '日期 $1', '$1 tarihli', 'vom $1', 'du $1']],
+    [/^Действует до (.+)$/, ['Valid until $1', '有效期至 $1', '$1 tarihine kadar geçerli', 'Gültig bis $1', 'Valable jusqu’au $1']],
+    [/^≈ ([\d\s ]+) ₽ по курсу ЦБ на сегодня$/, ['≈ $1 ₽ at today’s Bank of Russia rate', '≈ $1 ₽（按今日央行汇率）', '≈ $1 ₽ (bugünkü MB kuruyla)', '≈ $1 ₽ zum heutigen Kurs der Bank von Russland', '≈ $1 ₽ au taux du jour de la Banque de Russie']],
+    [/^≈ ([\d\s ]+) ₽ по курсу ЦБ ([\d,.]+)$/, ['≈ $1 ₽ at Bank of Russia rate $2', '≈ $1 ₽（央行汇率 $2）', '≈ $1 ₽ (MB kuru $2)', '≈ $1 ₽ zum Kurs der Bank von Russland $2', '≈ $1 ₽ au taux de la Banque de Russie $2']],
+    [/^(\d+) дн\.$/, ['$1 days', '$1 天', '$1 gün', '$1 Tage', '$1 jours']],
+    [/^(\d+)\s?[–-]\s?(\d+) дн\.$/, ['$1–$2 days', '$1–$2 天', '$1–$2 gün', '$1–$2 Tage', '$1–$2 jours']],
+    [/^(\d+)\s?[–-]\s?(\d+) дн\. · (быстрее|дешевле)$/, ['$1–$2 days · $3', '$1–$2 天 · $3', '$1–$2 gün · $3', '$1–$2 Tage · $3', '$1–$2 jours · $3']],
+    [/^≈\s?(\d+) дн\.$/, ['≈ $1 days', '≈ $1 天', '≈ $1 gün', '≈ $1 Tage', '≈ $1 jours']],
+    [/^(\d+)\s?[–-]\s?(\d+)\+? дн\.$/, ['$1–$2+ days', '$1–$2+ 天', '$1–$2+ gün', '$1–$2+ Tage', '$1–$2+ jours']],
+    [/^(\d\d\.\d\d\.\d{4}) г\.$/, ['$1', '$1', '$1', '$1', '$1']],
+    [/^([\d\s ,.]+) кг$/, ['$1 kg', '$1 公斤', '$1 kg', '$1 kg', '$1 kg']],
+    [/^([\d\s ,.]+) т$/, ['$1 t', '$1 吨', '$1 t', '$1 t', '$1 t']],
+    [/^([\d\s ,.]+) м³$/, ['$1 m³', '$1 立方米', '$1 m³', '$1 m³', '$1 m³']],
+    [/^≈ ([\d\s ,.]+) км$/, ['≈ $1 km', '≈ $1 公里', '≈ $1 km', '≈ $1 km', '≈ $1 km']],
+    [/^([\d\s ,.]+) км$/, ['$1 km', '$1 公里', '$1 km', '$1 km', '$1 km']],
+    [/^([\d\s ]+) мест$/, ['$1 pcs', '$1 件', '$1 parça', '$1 Packstücke', '$1 colis']],
+    [/^1 шт\. · (\d+) мест$/, ['1 unit · $1 pcs', '1 个 · $1 件', '1 adet · $1 parça', '1 Stk. · $1 Packstücke', '1 unité · $1 colis']],
+    [/^(\d+) шт\. · (\d+) мест$/, ['$1 units · $2 pcs', '$1 个 · $2 件', '$1 adet · $2 parça', '$1 Stk. · $2 Packstücke', '$1 unités · $2 colis']],
+    [/^к оплате ([\d\s ,.]+) кг · по объёму$/, ['chargeable $1 kg · by volume', '计费 $1 公斤 · 按体积', 'ücretli $1 kg · hacme göre', 'abgerechnet $1 kg · nach Volumen', 'facturé $1 kg · au volume']],
+    [/^к оплате ([\d\s ,.]+) кг · по весу$/, ['chargeable $1 kg · by weight', '计费 $1 公斤 · 按重量', 'ücretli $1 kg · ağırlığa göre', 'abgerechnet $1 kg · nach Gewicht', 'facturé $1 kg · au poids']],
+    [/^([+−–]) (.+)$/, ['$1 $2', '$1 $2', '$1 $2', '$1 $2', '$1 $2']],
+    [/^· (.+)$/, ['· $1', '· $1', '· $1', '· $1', '· $1']],
+    [/^через (.+)$/, ['via $1', '经$1', '$1 üzerinden', 'über $1', 'via $1']],
+    [/^(\d+) фур[аы]?$/, ['$1 trucks', '$1 辆卡车', '$1 tır', '$1 Lkw', '$1 camions']],
+    [/^([\d,.]+) м³\*$/, ['$1 m³*', '$1 立方米*', '$1 m³*', '$1 m³*', '$1 m³*']],
+    [/^(\d+) \/ (\d+) готово$/, ['$1 / $2 ready', '$1 / $2 已完成', '$1 / $2 hazır', '$1 / $2 fertig', '$1 / $2 prêts']],
+    [/^(.+) ↗$/, ['$1 ↗', '$1 ↗', '$1 ↗', '$1 ↗', '$1 ↗']],
+    [/^НДС (\d+(?:[,.]\d+)?) %$/, ['VAT $1 %', '增值税 $1 %', 'KDV %$1', 'MwSt. $1 %', 'TVA $1 %']],
+    [/^Код (\d+) не найден в справочнике ТН ВЭД ЕАЭС$/, ['Code $1 not found in the EAEU HS directory', '在欧亚经济联盟海关编码目录中未找到编码 $1', '$1 kodu EAEU GTİP rehberinde bulunamadı', 'Code $1 im Zolltarif der EAWU nicht gefunden', 'Code $1 introuvable dans la nomenclature douanière de l’UEE']],
+    [/^Груз ([\d×,.\s]+) см выше, чем можно \(([\d\s,.]+) см\)(, даже если положить на бок)?$/, ['Cargo $1 cm is taller than allowed ($2 cm)$3', '货物 $1 厘米超高（限 $2 厘米）$3', '$1 cm yük izin verilenden yüksek ($2 cm)$3', 'Fracht $1 cm ist höher als zulässig ($2 cm)$3', 'Marchandise $1 cm plus haute que permis ($2 cm)$3']],
+    [/^Груз ([\d×,.\s]+) см шире, чем можно \(([\d\s,.]+) см\)$/, ['Cargo $1 cm is wider than allowed ($2 cm)', '货物 $1 厘米超宽（限 $2 厘米）', '$1 cm yük izin verilenden geniş ($2 cm)', 'Fracht $1 cm ist breiter als zulässig ($2 cm)', 'Marchandise $1 cm plus large que permis ($2 cm)']],
+    [/^Груз ([\d×,.\s]+) см длиннее, чем помещается \(([\d\s,.]+) см\)$/, ['Cargo $1 cm is longer than fits ($2 cm)', '货物 $1 厘米超长（限 $2 厘米）', '$1 cm yük sığandan uzun ($2 cm)', 'Fracht $1 cm ist länger als hineinpasst ($2 cm)', 'Marchandise $1 cm plus longue que l’espace ($2 cm)']],
+    [/^Груз ([\d×,.\s]+) см не проходит в дверь \(проём ([\d×,.\s]+) см\)$/, ['Cargo $1 cm does not pass through the door (opening $2 cm)', '货物 $1 厘米无法通过箱门（门洞 $2 厘米）', '$1 cm yük kapıdan geçmez (açıklık $2 cm)', 'Fracht $1 cm passt nicht durch die Tür (Öffnung $2 cm)', 'Marchandise $1 cm ne passe pas par la porte (ouverture $2 cm)']],
+    [/^, даже если положить на бок$/, [', even laid on its side', '，即使侧放也不行', ', yan yatırılsa bile', ', auch wenn gekippt', ', même couchée sur le côté']],
+    [/^Позиция (\d+) \(([\d×,.\s]+)\): (.+)$/, ['Item $1 ($2): $3', '第 $1 项（$2）：$3', 'Kalem $1 ($2): $3', 'Position $1 ($2): $3', 'Ligne $1 ($2) : $3']],
+    [/^выступает над бортом на ([\d\s,.]+) см — негабарит, нужна доплата и согласование$/, ['sticks out $1 cm above the sides — oversize, surcharge and approval needed', '高出箱壁 $1 厘米 — 超限，需要加价并报批', 'kenardan $1 cm taşıyor — gabari dışı, ek ücret ve onay gerekir', 'ragt $1 cm über die Bordwand — Übermaß, Aufpreis und Genehmigung nötig', 'dépasse de $1 cm au-dessus des parois — hors gabarit, supplément et accord nécessaires']],
+    [/^шире платформы на ([\d\s,.]+) см — негабарит по ширине$/, ['$1 cm wider than the platform — over-width', '比平台宽 $1 厘米 — 超宽', 'platformdan $1 cm geniş — genişlikte gabari dışı', '$1 cm breiter als die Plattform — Überbreite', '$1 cm plus large que la plateforme — hors gabarit en largeur']],
+    [/^Одно место тяжелее грузоподъёмности \(([\d\s ,.]+) кг\)$/, ['One piece is heavier than the payload ($1 kg)', '单件超过载重（$1 公斤）', 'Tek parça taşıma kapasitesinden ağır ($1 kg)', 'Ein Packstück ist schwerer als die Nutzlast ($1 kg)', 'Un colis dépasse la charge utile ($1 kg)']],
+    [/^по весу входит (\d+) мест из (\d+) по размеру$/, ['by weight $1 of $2 pieces fit', '按重量可装 $1 件（按尺寸 $2 件）', 'ağırlığa göre $2 parçadan $1 parça sığar', 'nach Gewicht passen $1 von $2 Packstücken', 'au poids, $1 colis sur $2 tiennent']],
+    [/^Вид сверху, (.+): (\d+) × (\d+) мест в ряду$/, ['Top view, $1: $2 × $3 pieces per layer', '俯视图，$1：每层 $2 × $3 件', 'Üstten görünüm, $1: katta $2 × $3 parça', 'Draufsicht, $1: $2 × $3 Packstücke pro Lage', 'Vue de dessus, $1 : $2 × $3 colis par rangée']],
+    [/^(\d+) ярус(а|ов)?$/, ['$1 tiers', '$1 层', '$1 kat', '$1 Lagen', '$1 niveaux']],
+    [/^помещается (\d+) мест$/, ['$1 pieces fit', '可装 $1 件', '$1 parça sığar', '$1 Packstücke passen', '$1 colis tiennent']],
+    [/^([\d,.]+(?:×[\d,.]+)+) м$/, ['$1 m', '$1 米', '$1 m', '$1 m', '$1 m']],
+    [/^([\d,.]+(?:×[\d,.]+)*)×без крыши м$/, ['$1 m · open top', '$1 米 · 无顶', '$1 m · üstü açık', '$1 m · ohne Dach', '$1 m · toit ouvert']],
+    [/^до ([\d\s ,.]+) т$/, ['up to $1 t', '最多 $1 吨', '$1 t’ye kadar', 'bis $1 t', 'jusqu’à $1 t']],
+    [/^(\d+) шт\.$/, ['$1 units', '$1 个', '$1 adet', '$1 Stk.', '$1 unités']],
+    [/^([+−-]\d+(?::\d\d)?) ч к Москве$/, ['$1 h vs Moscow', '比莫斯科 $1 小时', 'Moskova’ya göre $1 sa', '$1 Std. zu Moskau', '$1 h par rapport à Moscou']],
+    [/^Хранение, (\d+) сут\.$/, ['Storage, $1 days', '仓储，$1 天', 'Depolama, $1 gün', 'Lagerung, $1 Tage', 'Stockage, $1 jours']],
+    [/^Открыть отслеживание (.+) ↗$/, ['Open $1 tracking ↗', '打开 $1 追踪 ↗', '$1 takibini aç ↗', '$1-Sendungsverfolgung öffnen ↗', 'Ouvrir le suivi $1 ↗']],
+    [/^ЖД-дислокация сейчас недоступна: (.+)$/, ['Rail location is unavailable right now: $1', '铁路位置暂不可用：$1', 'Demiryolu konumu şu an alınamıyor: $1', 'Bahn-Standort derzeit nicht verfügbar: $1', 'Localisation ferroviaire indisponible pour le moment : $1']],
+    [/^контрольная цифра должна быть (\d) — проверьте номер$/, ['check digit should be $1 — check the number', '校验位应为 $1 — 请检查号码', 'kontrol hanesi $1 olmalı — numarayı kontrol edin', 'Prüfziffer müsste $1 sein — prüfen Sie die Nummer', 'le chiffre de contrôle devrait être $1 — vérifiez le numéro']],
+    [/^контрольная цифра не сходится — проверьте номер$/, ['check digit does not match — check the number', '校验位不符 — 请检查号码', 'kontrol hanesi tutmuyor — numarayı kontrol edin', 'Prüfziffer stimmt nicht — prüfen Sie die Nummer', 'le chiffre de contrôle ne correspond pas — vérifiez le numéro']],
+    [/^Посчитано по (.+)\. Сумма ориентировочная, точную выставит терминал\.$/, ['Calculated by $1. The amount is approximate; the terminal will issue the exact one.', '依据 $1 计算。金额为估算，准确金额以货站开票为准。', '$1 ile hesaplandı. Tutar yaklaşıktır, kesin tutarı terminal keser.', 'Berechnet nach $1. Der Betrag ist ein Richtwert, den genauen stellt das Terminal in Rechnung.', 'Calculé selon $1. Montant indicatif ; le terminal facturera le montant exact.']],
+    [/^Посчитано калькулятором терминала на moscow-cargo\.com\. Сумма ориентировочная, точную выставит терминал\.$/, ['Calculated with the terminal calculator on moscow-cargo.com. The amount is approximate; the terminal will issue the exact one.', '使用 moscow-cargo.com 货站计算器计算。金额为估算，准确金额以货站开票为准。', 'moscow-cargo.com terminal hesaplayıcısıyla hesaplandı. Tutar yaklaşıktır, kesin tutarı terminal keser.', 'Berechnet mit dem Terminalrechner auf moscow-cargo.com. Der Betrag ist ein Richtwert, den genauen stellt das Terminal in Rechnung.', 'Calculé avec le calculateur du terminal sur moscow-cargo.com. Montant indicatif ; le terminal facturera le montant exact.']],
+    [/^Калькулятор Москва Карго не ответил \((.+)\), посчитано по их тарифам на рейсах других авиакомпаний$/, ['The Moscow Cargo calculator did not respond ($1); calculated by their tariffs for other airlines', 'Moscow Cargo 计算器未响应（$1），已按其他航空公司的费率计算', 'Moscow Cargo hesaplayıcısı yanıt vermedi ($1), diğer havayolları tarifeleriyle hesaplandı', 'Der Rechner von Moscow Cargo hat nicht geantwortet ($1); berechnet nach ihren Tarifen für andere Fluggesellschaften', 'Le calculateur de Moscow Cargo n’a pas répondu ($1) ; calcul selon leurs tarifs pour les autres compagnies']],
+    [/^Деловые Линии не ответили: (.+)\. Показан ориентир\.$/, ['Dellin did not respond: $1. An estimate is shown.', 'Dellin 未响应：$1。显示参考价。', 'Dellin yanıt vermedi: $1. Tahmin gösteriliyor.', 'Dellin hat nicht geantwortet: $1. Richtwert angezeigt.', 'Dellin n’a pas répondu : $1. Estimation affichée.']],
+    [/^Деловые Линии не знают город «(.+)»$/, ['Dellin does not know the city “$1”', 'Dellin 没有城市“$1”', 'Dellin “$1” şehrini tanımıyor', 'Dellin kennt die Stadt „$1“ nicht', 'Dellin ne connaît pas la ville « $1 »']],
+    [/^Сервер ответил не так, как ожидалось \((\d+)\)$/, ['The server responded unexpectedly ($1)', '服务器响应异常（$1）', 'Sunucu beklenmedik yanıt verdi ($1)', 'Der Server hat unerwartet geantwortet ($1)', 'Le serveur a répondu de façon inattendue ($1)']],
+    [/^(\d+) мест · ([\d\s ,.]+) кг · плотность ([\d\s ,.]+) кг\/м³$/, ['$1 pcs · $2 kg · density $3 kg/m³', '$1 件 · $2 公斤 · 密度 $3 公斤/立方米', '$1 parça · $2 kg · yoğunluk $3 kg/m³', '$1 Packstücke · $2 kg · Dichte $3 kg/m³', '$1 colis · $2 kg · densité $3 kg/m³']],
+    [/^(.+) см$/, ['$1 cm', '$1 厘米', '$1 cm', '$1 cm', '$1 cm']],
+    [/^(\d+) (сделк[аи]|сделок)$/, ['$1 deals', '$1 笔交易', '$1 işlem', '$1 Deals', '$1 affaires']],
+    [/^(\d+) · предложения$/, ['$1 · offers', '$1 · 报价', '$1 · teklif', '$1 · Angebote', '$1 · offres']],
+    [/^Сегодня отсутствуют: (.+)$/, ['Absent today: $1', '今日缺勤：$1', 'Bugün yok: $1', 'Heute abwesend: $1', 'Absents aujourd’hui : $1']],
+    [/^нет (.+)$/, ['missing $1', '缺少 $1', '$1 eksik', '$1 fehlt', '$1 manquant']],
   ];
-  var IDX = { en: 0, zh: 1, tr: 2 };
-  var SKIP = '#kbBody,#chatMessages,#newsList,#directoryGrid,#v3leadsList .v3p-lead p,#v3clientsList small,svg,script,style,.tarot-shell,#articleContent,.result-notes,input,textarea';
+  var IDX = { en: 0, zh: 1, tr: 2, de: 3, fr: 4 };
+  // переводы на немецкий и французский и строки, которых не было в словаре, — из i18n-more.js
+  (function merge() {
+    var DF = window.IOMA_DICT_DF || {}, MORE = window.IOMA_DICT_MORE || {};
+    Object.keys(DF).forEach(function (k) { var v = DF[k], t = D[k]; if (t) { while (t.length < 5) t.push(null); t[3] = v[0]; t[4] = v[1]; } else D[k] = [null, null, null, v[0], v[1]]; });
+    var TDF = window.IOMA_DICT_TDF || {};
+    Object.keys(TDF).forEach(function (k) { var v = TDF[k], t = D[k] || (D[k] = [null, null, null, null, null]); t[2] = t[2] || v[0]; t[3] = t[3] || v[1]; t[4] = t[4] || v[2]; });
+    Object.keys(MORE).forEach(function (k) { var v = MORE[k], t = D[k]; if (!t) { D[k] = v.slice(); return; } for (var i = 0; i < 5; i++) if (!t[i] && v[i]) t[i] = v[i]; });
+  })();
+  var SKIP = '#chatMessages,#newsList,#directoryGrid,#v3leadsList .v3p-lead p,#v3clientsList small,svg,script,style,.tarot-shell,#articleContent,.result-notes,input,textarea,[data-no-i18n]';
   var orig = new WeakMap();
-  function lang() { try { return localStorage.getItem('iomastavka_lang') || 'ru'; } catch (e) { return 'ru'; } }
+  function lang() { var l; try { l = localStorage.getItem('iomastavka_lang') || 'ru'; } catch (e) { l = 'ru'; } return IDX.hasOwnProperty(l) ? l : 'ru'; }
+  function pick(t, l) { return t[IDX[l]] || t[0] || null; } // нет перевода на язык — английский понятнее русского
+  var CYR = /[а-яё]/i, SEPS = [' → ', ' — ', ' – ', ': ', '; ', ', '];
   function tr(ru, l, attr) {
-    var k = attr ? '@' + ru : ru, t = D[k] || (attr ? null : null);
-    if (t) return t[IDX[l]];
-    for (var i = 0; i < P.length; i++) { if (P[i][0].test(ru)) { var m = ru.match(P[i][0]); return P[i][1][IDX[l]].replace(/\$(\d)/g, function (_, d) { var part = m[d] || ''; var pt = D[part.trim()]; return pt ? pt[IDX[l]] : part; }); } }
+    var k = attr ? '@' + ru : ru, t = D[k] || (attr ? D[ru] : null);
+    if (t) { var tt = pick(t, l); if (tt) return tt; }
+    for (var i = 0; i < P.length; i++) { if (P[i][0].test(ru)) { var m = ru.match(P[i][0]); var tpl = P[i][1][IDX[l]] || P[i][1][0]; return tpl.replace(/\$(\d)/g, function (_, d) { var part = m[d] || ''; var pt = D[part.trim()], pp = pt && pick(pt, l); if (pp) return pp; if (CYR.test(part) && part !== ru) { var p2 = tr(part.trim(), l); if (p2) return p2; } return part; }); } }
     // «часть · часть»: переводим известные части, остальное (данные) оставляем
     if (ru.indexOf(' · ') > 0) { var parts = ru.split(' · '), any = false; var outp = parts.map(function (x) { var t2 = tr(x.trim(), l); if (t2) { any = true; return t2; } return x; }); if (any) return outp.join(' · '); }
+    // составные фразы «A → B», «A — B», «A: B», «A, B»: переводим, только если известны все русские части
+    for (var j = 0; j < SEPS.length; j++) {
+      var sp = SEPS[j]; if (ru.indexOf(sp) < 1) continue;
+      var ps = ru.split(sp), ok = true, out = ps.map(function (x) { var y = x.trim(); if (!y || !CYR.test(y)) return x; var z = (D[y] && pick(D[y], l)) || tr(y, l); if (!z) ok = false; return z || x; });
+      if (ok) { var res = out.join(sp); if (l === 'fr' && sp === ': ') res = out.join(' : '); return res; }
+    }
+    // скобки в конце: «Текст (пояснение)»
+    var mb = ru.match(/^(.+?) \(([^()]+)\)$/); if (mb) { var a = tr(mb[1], l), b = CYR.test(mb[2]) ? tr(mb[2], l) : mb[2]; if (a && b) return a + ' (' + b + ')'; }
     return null;
   }
-  // новые разделы добавляют свои переводы: { 'Русский текст': ['English', '中文'] }
-  window.IOMA_T_ADD = function (obj) { Object.keys(obj || {}).forEach(function (k) { var v = obj[k]; D[k] = [v[0], v[1], v[0]]; }); if (typeof later === 'function') later(); };
-  window.IOMA_T = function (ru) { var l = lang(); if (l === 'ru' || !IDX.hasOwnProperty(l)) return ru; return tr(ru, l) || ru; };
+  // новые разделы добавляют свои переводы: { 'Русский текст': ['English', '中文', 'Türkçe', 'Deutsch', 'Français'] }; языки, которых нет, берутся из i18n-more.js, иначе — английский
+  window.IOMA_T_ADD = function (obj) { Object.keys(obj || {}).forEach(function (k) { var v = obj[k], o = D[k] || []; D[k] = [v[0] || o[0] || null, v[1] || o[1] || null, v[2] || o[2] || null, v[3] || o[3] || null, v[4] || o[4] || null]; }); if (typeof later === 'function') later(); };
+  window.IOMA_T = function (ru, l) { l = l || lang(); if (l === 'ru' || !IDX.hasOwnProperty(l)) return ru; return tr(ru, l) || ru; };
+  window.IOMA_LANGS = ['ru', 'en', 'zh', 'de', 'fr', 'tr'];
   var busy = false;
   function apply(root) {
     var l = lang(); busy = true;
@@ -305,7 +378,8 @@
     } finally { busy = false; }
   }
   var timer = null;
-  function later() { clearTimeout(timer); timer = setTimeout(function () { apply(); }, 80); }
+  // не откладываем бесконечно: если страница всё время меняется (анимация, счётчики), перевод всё равно применяется не реже раза в 80 мс
+  function later() { if (timer) return; timer = setTimeout(function () { timer = null; apply(); }, 80); }
   document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.lang')) setTimeout(later, 30); });
   new MutationObserver(function () { if (!busy && lang() !== 'ru') later(); }).observe(document.body, { childList: true, subtree: true, characterData: true });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', later); else later();

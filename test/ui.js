@@ -45,42 +45,33 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
     await step('Гость: ввод калькулятора не теряется после перезагрузки', async () => {
       await p.reload(); await p.waitForFunction(() => document.getElementById('fromCity').value === 'Shanghai', null, { timeout: 5000 });
     });
-    await step('Гость: главная — один экран, «Под ключ» / «Только доставка», карта маршрутов до Москвы', async () => {
-      await p.evaluate(() => window.__iomaCloseViews()); await p.waitForSelector('#hxMap .rmap-svg .rm-to.on[data-to="msk"]');
+    await step('Гость: главная — один экран; карта по шагам: откуда → куда → транспорт → путешествие → расчёт', async () => {
+      await p.evaluate(() => window.__iomaCloseViews()); await p.waitForSelector('#hxMap .jm-chips [data-from="gz"]');
       const h = await p.evaluate(() => { const r = document.querySelector('.hx').getBoundingClientRect(); return { top: r.top, h: r.height, vh: innerHeight }; });
       if (Math.abs(h.top + h.h - h.vh) > 2) throw new Error('первый экран не до низа окна: ' + JSON.stringify(h));
       await p.click('.hx-pick [data-hx="cargo"]'); await p.waitForSelector('.hx-card.on[data-hxc="cargo"]');
-      for (const m of ['road', 'air', 'sea', 'rail']) { await p.click('.rmap-tabs [data-m="' + m + '"]'); await p.waitForFunction(mm => document.querySelector('#hxMap').dataset.mode === mm, m); }
-      // гость выбирает город в России и город в Китае — маршрут строится до выбранного города
-      await p.evaluate(() => { const c = s => document.querySelector('#hxMap ' + s).dispatchEvent(new MouseEvent('click', { bubbles: true })); c('[data-to="spb"]'); c('[data-from="gz"]'); });
-      await p.waitForFunction(() => /Гуанчжоу\s*→\s*Санкт-Петербург/.test(document.querySelector('#hxMap .rmap-info').textContent));
-      const tip = await p.textContent('#hxMap .rmap-info'); if (!/км/.test(tip) || !/Путь:/.test(tip)) throw new Error('маршрут на карте: ' + tip);
-      await shot(p, '03b_home_map');
-      await p.click('.rmap-go'); await p.waitForSelector('#calculatorView.open');
+      await p.click('#hxMap .jm-chips [data-from="gz"]'); await p.click('#hxMap .jm-chips [data-to="spb"]');
+      await p.waitForSelector('#hxMap .jm-m.best'); const modes = await p.textContent('#hxMap .jm-panel'); if (!/Рекомендуем/.test(modes) || !/Москв/.test(modes)) throw new Error('выбор транспорта: ' + modes.slice(0, 200));
+      await shot(p, '03b_home_map'); await p.click('#hxMap [data-jm="rail"]'); await p.waitForSelector('#hxMap .jm-fly .jm-hud b'); await shot(p, '03b2_home_journey');
+      await p.click('#hxMap .jm-skip'); await p.waitForSelector('#hxMap .jm-sum');
+      const sum = await p.textContent('#hxMap .jm-sum'); if (!/Забайкальск/.test(sum) || !/км/.test(sum)) throw new Error('итог маршрута: ' + sum.slice(0, 200));
+      await p.click('#hxMap .jm-calc'); await p.waitForSelector('#calculatorView.open');
       await p.waitForFunction(() => /Гуанчжоу/.test(document.getElementById('fromCity').value) && /Санкт-Петербург/.test(document.getElementById('toCity').value), null, { timeout: 5000 });
       await p.evaluate(() => window.__iomaCloseViews());
-      await p.click('[data-call-open].hx-num'); await p.waitForSelector('#hxCallActs:not([hidden])');
+      await p.hover('.hx-num'); await p.waitForSelector('#hxCallActs:not([hidden]) .hx-i-tg');
     });
     await step('Гость: «Услуги» и «Кейсы» — отдельные страницы, кейс открывается по клику', async () => {
       await p.goto(B + '/uslugi'); await p.waitForSelector('#servicesView.open .sv-c');
       await p.goto(B + '/kejsy'); await p.waitForSelector('#casesView.open [data-case]'); await p.click('[data-case]'); await p.waitForSelector('.cx-ov .cs-m');
       await shot(p, '03c_case'); await p.click('.cx-ov .cx-x'); await p.goto(B + '/'); await p.waitForFunction(() => /role-/.test(document.body.className));
     });
-    await step('Гость: инструменты — влезет ли груз, объём, сумма прописью, без прокрутки страницы', async () => {
-      await p.goto(B + '/vlezet'); await p.waitForSelector('#fitView.open .tl-go');
-      await p.fill('#fitView [data-k="l"]', '300'); await p.fill('#fitView [data-k="w"]', '200'); await p.fill('#fitView [data-k="h"]', '275'); await p.fill('#fitView [data-k="kg"]', '5000'); await p.fill('#fitView [data-k="q"]', '1');
-      await p.click('#fitView .tl-go'); await p.waitForSelector('#fitView .tl-verdict');
-      const fit = await p.textContent('#fitView .tl-out'); if (!/Open Top|Flat Rack/.test(fit) || !/Мега|мега/.test(fit)) throw new Error('влезет ли: ' + fit.slice(0, 200));
-      await shot(p, '03d_fit');
-      await p.goto(B + '/propis'); await p.waitForSelector('#propisView .tl-res-row'); await p.fill('#propisView [data-p="sum"]', '1000'); await p.selectOption('#propisView [data-p="c"]', 'gen');
-      await p.waitForFunction(() => /одной тысячи рублей/i.test(document.querySelector('#propisView .tl-out').textContent));
-      await p.goto(B + '/obem'); await p.waitForSelector('#volumeView .tl-big');
-      const sc = await p.evaluate(() => document.scrollingElement.scrollHeight - innerHeight); if (sc > 4) throw new Error('страница «Объём груза» прокручивается на ' + sc + ' px');
-      await p.goto(B + '/');
+    await step('Гость: инструменты только для сотрудников — в меню их нет, по адресу — приглашение войти', async () => {
+      await p.goto(B + '/vlezet'); await p.waitForSelector('#fitView.open .tl-login'); await p.goto(B + '/');
+      if (await p.isVisible('.sg-menu [data-open-view="fitView"]')) throw new Error('гость видит инструменты в меню');
     });
     await step('Гость: язык одной кнопкой — весь первый экран на английском', async () => {
       await p.click('.lx-btn'); await p.click('.lx-menu [data-lang="en"]'); await p.waitForFunction(() => /We buy in China/.test(document.querySelector('.hx-h1').textContent));
-      await p.waitForFunction(() => /Rail/.test(document.querySelector('.rmap-tabs').textContent));
+      await p.waitForFunction(() => { const e = document.querySelector('.jm-steps'); return e && /From/.test(e.textContent) && /Transport/.test(e.textContent); });
       await p.click('.lx-btn'); await p.click('.lx-menu [data-lang="ru"]'); await p.waitForFunction(() => /Купим в Китае/.test(document.querySelector('.hx-h1').textContent));
     });
     await step('Окно закрывается только крестиком — ни протяжка мышью, ни щелчок мимо его не закрывают', async () => {
@@ -105,6 +96,18 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
     });
     await step('Гость: база знаний с источниками', async () => { await p.evaluate(() => window.__v3open('kbView')); await p.waitForSelector('#kbBody .kb-n .kb-src a'); await p.waitForSelector('#kbBody .kb-p.kb-risk'); await shot(p, '05a_kb'); await p.click('#kbBody [data-kbt=choose]'); await p.click('#kbBody [data-kbr="3"]'); await p.waitForSelector('#kbBody .kb-ans'); await p.click('#kbBody [data-kbt=docs]'); await p.check('#kbBody [data-kbd="0"]'); await p.waitForSelector('#kbBody .kb-dh b:has-text("1 /")'); await shot(p, '05b_kb_docs'); });
     await step('Гость: английская версия без русских надписей в меню', async () => { await p.evaluate(() => [...document.querySelectorAll('.lang')].find(x => x.dataset.lang === 'en').click()); await p.waitForTimeout(400); const t = await p.textContent('.v3-nav'); if (/[а-яё]/i.test(t)) throw new Error(t); await p.evaluate(() => [...document.querySelectorAll('.lang')].find(x => x.dataset.lang === 'ru').click()); await p.waitForTimeout(300); });
+    await step('Гость: немецкий, французский и турецкий — главная, меню и гид без русских надписей', async () => {
+      const want = { de: 'Wir kaufen in China', fr: 'Nous achetons en Chine', tr: 'Çin’de satın alırız' };
+      for (const l of ['de', 'fr', 'tr']) {
+        await p.evaluate(x => [...document.querySelectorAll('.lang')].find(b => b.dataset.lang === x).click(), l); await p.waitForTimeout(500);
+        const nav = await p.textContent('.v3-nav'); if (/[а-яё]/i.test(nav)) throw new Error(l + ' меню: ' + nav);
+        const home = await p.evaluate(() => document.getElementById('homeView').textContent); if (!home.includes(want[l])) throw new Error(l + ' главная: ' + home.slice(0, 300));
+        await p.evaluate(() => window.__v3open('kbView')); await p.waitForTimeout(500);
+        const kb = await p.evaluate(() => document.getElementById('kbBody').innerText); const ru = (kb.match(/[А-Яа-яЁё][^\n]{0,40}/) || [])[0]; if (ru) throw new Error(l + ' гид: ' + ru);
+      }
+      await shot(p, '05c_lang_tr');
+      await p.evaluate(() => [...document.querySelectorAll('.lang')].find(x => x.dataset.lang === 'ru').click()); await p.waitForTimeout(300);
+    });
     await step('Гость: новости открываются', async () => { await p.evaluate(() => window.__iomaOpenView('news')); await p.waitForTimeout(1500); await shot(p, '05_news'); });
 
     let clientPw = '';
@@ -169,6 +172,21 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       if (await p.isVisible('.rb-btn')) throw new Error('гость видит робота');
       const t = await A.p.evaluate(() => fetch('/api/robot').then(r => r.json())); for (const x of t.texts) await A.p.evaluate(id => fetch('/api/robot/texts/' + id, { method: 'DELETE' }), x.id);
       await A.p.click('.rb-x');
+    });
+    await step('Админ: инструменты — влезет ли груз, объём, сумма прописью, без прокрутки страницы', async () => {
+      const p = A.p;
+      await p.goto(B + '/vlezet'); await p.waitForSelector('#fitView.open .tl-go');
+      await p.fill('#fitView [data-k="l"]', '300'); await p.fill('#fitView [data-k="w"]', '200'); await p.fill('#fitView [data-k="h"]', '275'); await p.fill('#fitView [data-k="kg"]', '5000'); await p.fill('#fitView [data-k="q"]', '1');
+      await p.click('#fitView .tl-go'); await p.waitForSelector('#fitView .tl-verdict');
+      const fit = await p.textContent('#fitView .tl-out'); if (!/Open Top|Flat Rack/.test(fit) || !/Мега|мега/.test(fit)) throw new Error('влезет ли: ' + fit.slice(0, 200));
+      await shot(p, '03d_fit');
+      await p.goto(B + '/propis'); await p.waitForSelector('#propisView .tl-res-row'); await p.fill('#propisView [data-p="sum"]', '1000'); await p.selectOption('#propisView [data-p="c"]', 'gen');
+      await p.waitForFunction(() => /одной тысячи рублей/i.test(document.querySelector('#propisView .tl-out').textContent));
+      await p.goto(B + '/obem'); await p.waitForSelector('#volumeView .tl-big');
+      const sc = await p.evaluate(() => document.scrollingElement.scrollHeight - innerHeight); if (sc > 4) throw new Error('страница «Объём груза» прокручивается на ' + sc + ' px');
+      await p.goto(B + '/');
+      for (const id of ['trackView', 'terminalView', 'phoneView']) { await p.evaluate(() => window.__iomaCloseViews()); await p.click('.sg-btn >> text=Инструменты ВЭД').catch(() => {}); await p.evaluate(v => document.querySelector('.sg-menu [data-open-view="' + v + '"]').click(), id); await p.waitForSelector('#' + id + '.open .tl-go'); }
+      await p.evaluate(() => window.__iomaCloseViews());
     });
     await step('Админ: меню аккаунта — состояние сайта, профиль, меню закрывается после выбора', async () => {
       await A.p.click('.v3-acc'); await A.p.waitForSelector('.am-menu:not([hidden]) [data-am=site]'); await shot(A.p, '08a_admin_menu');

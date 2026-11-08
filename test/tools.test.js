@@ -10,9 +10,10 @@ function tools() { // браузерный модуль инструментов
   delete require.cache[require.resolve('../tools.js')]; require('../tools.js'); return global.IOMA_TOOLS;
 }
 
-test('маршрут: Иу → Челябинск сборным — авто через Казахстан', () => {
+test('маршрут: Иу → Челябинск сборным — авто через Маньчжурию и Забайкальск (главный коридор)', () => {
   const r = A.advise({ from: 'Иу', to: 'Челябинск', weight: 500, volume: 3 });
-  assert.ok(r.ok); assert.strictEqual(r.best, 'auto'); assert.match(r.options[0].via, /Казахстан/); assert.strictEqual(r.to.zone, 'UR');
+  assert.ok(r.ok); assert.strictEqual(r.best, 'auto'); assert.match(r.options[0].via, /Забайкальск/); assert.strictEqual(r.to.zone, 'UR'); assert.strictEqual(r.hub.via, 'direct');
+  assert.strictEqual(A.advise({ from: 'Иу', to: 'Нижний Новгород' }).hub.via, 'msk');
 });
 test('маршрут: Шэньчжэнь → Москва контейнером — море + ЖД через Владивосток', () => {
   const r = A.advise({ from: 'Шэньчжэнь', to: 'Москва', weight: 20000, volume: 60 });

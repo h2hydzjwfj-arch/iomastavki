@@ -22,14 +22,11 @@ const ok = (c, m) => { if (!c) throw new Error(m || 'нет'); };
     const bad = s.sources.filter(x => !x.ok); ok(!bad.length, 'не отвечают: ' + bad.map(x => x.name + ' (' + (x.error || x.status) + ')').join(', ') + ' — сайт считает по запасному варианту');
     return s.sources.map(x => x.name).join(', ') + (s.dellinKey ? ', Деловые Линии по ключу' : ', Деловые Линии — ориентир (нет ключа)');
   }, true);
-  await check('Инструменты: номер телефона, терминальные Москва Карго, контейнер и авианакладная', async () => {
-    const post = (u, b) => fetch(B + u, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) }).then(r => r.json());
-    const ph = await post('/api/tools/phone', { number: '+7 351 240-12-34' }); ok(ph.ok && /Челябинск/.test(ph.city || '') && ph.tz === 'Asia/Yekaterinburg', 'телефон: ' + JSON.stringify(ph).slice(0, 200));
-    const d = new Date(), d2 = new Date(Date.now() + 5 * 864e5), f = x => x.toISOString().slice(0, 10);
-    const tm = await post('/api/tools/terminal', { terminal: 'mc', airline: 'SU', weight: 100, chargeable: 120, category: 'general', from: f(d), to: f(d2) }); ok(tm.ok && tm.total > 0, 'Москва Карго: ' + JSON.stringify(tm).slice(0, 200));
-    const c = await (await fetch(B + '/api/tools/container?no=CSQU3054383')).json(); ok(c.ok && c.valid && c.rail && c.rail.ok, 'контейнер: ' + JSON.stringify(c).slice(0, 200));
-    const a = await (await fetch(B + '/api/tools/awb?no=55512345675')).json(); ok(a.ok && Array.isArray(a.tables), 'авианакладная: ' + JSON.stringify(a).slice(0, 200));
-    return 'Москва Карго ' + (tm.live ? 'считает своим калькулятором' : 'по тарифам') + ', ' + tm.total + ' ₽';
+  await check('Инструменты закрыты для гостей: без входа сервер не отвечает', async () => {
+    const r = await fetch(B + '/api/tools/phone', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ number: '+7 351 240-12-34' }) });
+    ok(r.status === 401 || r.status === 403, 'гость получил ответ инструмента: ' + r.status);
+    const c = await fetch(B + '/api/tools/container?no=CSQU3054383'); ok(c.status === 401 || c.status === 403, 'гость отследил контейнер: ' + c.status);
+    const h = await (await fetch(B + '/')).text(); ok(/journey-map\.js\?v=\d+/.test(h), 'нет новой карты (journey-map.js)');
   });
   await check('Главная 8 ноября: карта с выбором городов, Telegram @iomasd, фото кейсов', async () => { const h = await (await fetch(B + '/')).text(); const ver = n => +((h.match(new RegExp(n + '\\?v=(\\d+)')) || [])[1] || 0); ok(ver('routes-map.js') >= 4 && ver('home.js') >= 4, 'на сайте старая карта — Render ещё не обновился'); ok(h.includes('https://t.me/iomasd'), 'нет Telegram @iomasd'); ok(!h.includes('hx-foot'), 'остался подвал главной'); const r = await fetch(B + '/api/cases/none/photo'); ok(r.status === 404, 'фото кейса: ожидали 404, а не ' + r.status); });
   await check('Новая главная: один экран, карта маршрутов, «Услуги» и «Кейсы»', async () => { const h = await (await fetch(B + '/')).text(); for (const f of ['routes-map.js', 'home.js', 'home.css', 'ui.js', 'ui.css']) ok(h.includes(f), 'нет ' + f + ' — Render ещё не обновился'); ok(!h.includes('map-calc.js') && !h.includes('tour.js'), 'старая главная ещё на месте'); for (const u of ['/uslugi', '/kejsy']) ok((await fetch(B + u)).status === 200, u + ' не открывается'); const c = await (await fetch(B + '/api/cases')).json(); ok(c.ok && c.items.length >= 1, 'нет кейсов'); });
