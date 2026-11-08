@@ -118,3 +118,7 @@ body.manual-dark .rb-card{background:#14204E;border-color:rgba(246,241,234,.1)}
 body.manual-dark .rb-fchip{background:rgba(246,241,234,.08)}
 @media (max-width:560px){.rb-btn{width:52px;height:52px;border-radius:18px}.rb-btn svg{width:28px;height:28px}}
 @media (prefers-reduced-motion:reduce){.rb-btn .rb-eye,.rb-dot,.rb-typing i{animation:none}}
+/* светлая тема — светлый робот */
+html:root body:not(.manual-dark) .rb-btn{background:linear-gradient(160deg,#FFFFFF 0%,#FBF6F0 60%,#F3EADF 100%);border-color:rgba(224,106,44,.38);box-shadow:0 12px 28px rgba(10,18,48,.14),inset 0 1px 0 #fff}
+html:root body:not(.manual-dark) .rb-btn:hover{box-shadow:0 16px 34px rgba(10,18,48,.18),0 0 0 4px rgba(242,138,58,.14)}
+html:root body:not(.manual-dark) .rb-btn svg{stroke:#C96B40}

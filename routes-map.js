@@ -45,14 +45,14 @@
   // коридоры по видам: переход (gw — две точки пары), путь по Китаю для каждого города, путь от перехода до Москвы
   var MODES = {
     rail: [
-      { id: 'zab', gw: ['zab', 'mzl'], ru: ['zab'].concat(TS_RU), cn: { bj: ['bj', 'sy', 'hrb', 'qqh', 'hlr', 'mzl'], sy: ['sy', 'hrb', 'qqh', 'hlr', 'mzl'], hrb: ['hrb', 'qqh', 'hlr', 'mzl'], qd: ['qd', 'tj', 'sy'] } },
+      { id: 'zab', gw: ['zab', 'mzl'], ru: ['zab'].concat(TS_RU), cn: { bj: ['bj', 'sy', 'hrb', 'qqh', 'hlr', 'mzl'], sy: ['sy', 'hrb', 'qqh', 'hlr', 'mzl'], hrb: ['hrb', 'qqh', 'hlr', 'mzl'], qd: ['qd', 'tj', 'sy'], tj: ['tj', 'bj'], dl: ['dl', 'sy'], yw: ['yw', 'hz', 'sh'], hz: ['hz', 'sh'], nb: ['nb', 'sh'], suz: ['suz', 'sh'], sh: ['sh', 'nj', 'bj'], nj: ['nj', 'bj'], xm: ['xm', 'hz'], gz: ['gz', 'cs', 'wh', 'zz', 'bj'], sz: ['sz', 'gz'], fs: ['fs', 'gz'], dg: ['dg', 'gz'], qz: ['qz', 'gz'], cs: ['cs', 'wh'], wh: ['wh', 'zz'], zz: ['zz', 'bj'], xa: ['xa', 'zz'], lz: ['lz', 'xa'], cd: ['cd', 'xa'], cq: ['cq', 'cd'], ty: ['ty', 'bj'], xz: ['xz', 'ty'] } },
       { id: 'dos', gw: ['dos', 'ala'], ru: ['dos'].concat(KZ_RU), cn: { sh: ['sh', 'zz', 'xa', 'lz', 'urc', 'ala'], nb: ['nb', 'sh'], yw: ['yw', 'zz'], zz: ['zz', 'xa'], xa: ['xa', 'lz'], cd: ['cd', 'lz'], cq: ['cq', 'cd'], gz: ['gz', 'zz'], sz: ['sz', 'gz'], qz: ['qz', 'cq'], urc: ['urc', 'ala'] } },
       { id: 'hor', gw: ['hor'], ru: ['hor', 'akt'].concat(KZ_RU.slice(1)), cn: { urc2: ['urc', 'hor'] } },
       { id: 'nau', gw: ['nau', 'erl'], ru: ['nau', 'ulu'].concat(TS_RU.slice(2)), mid: ['erl', 'uba', 'nau'], cn: { bj2: ['bj', 'erl'] } },
       { id: 'pog', gw: ['pog', 'sfh'], ru: ['pog', 'uss', 'khb', 'bel', 'chita'].concat(TS_RU.slice(1)), cn: { hrb2: ['hrb', 'sfh'] } },
     ],
     road: [
-      { id: 'zab', gw: ['zab', 'mzl'], ru: ['zab'].concat(TS_RU), cn: { bj: ['bj', 'sy', 'hrb', 'qqh', 'hlr', 'mzl'], sy: ['sy', 'hrb', 'qqh', 'hlr', 'mzl'], hrb: ['hrb', 'qqh', 'hlr', 'mzl'], qd: ['qd', 'tj', 'sy'] } },
+      { id: 'zab', gw: ['zab', 'mzl'], ru: ['zab'].concat(TS_RU), cn: { bj: ['bj', 'sy', 'hrb', 'qqh', 'hlr', 'mzl'], sy: ['sy', 'hrb', 'qqh', 'hlr', 'mzl'], hrb: ['hrb', 'qqh', 'hlr', 'mzl'], qd: ['qd', 'tj', 'sy'], tj: ['tj', 'bj'], dl: ['dl', 'sy'], yw: ['yw', 'hz', 'sh'], hz: ['hz', 'sh'], nb: ['nb', 'sh'], suz: ['suz', 'sh'], sh: ['sh', 'nj', 'bj'], nj: ['nj', 'bj'], xm: ['xm', 'hz'], gz: ['gz', 'cs', 'wh', 'zz', 'bj'], sz: ['sz', 'gz'], fs: ['fs', 'gz'], dg: ['dg', 'gz'], qz: ['qz', 'gz'], cs: ['cs', 'wh'], wh: ['wh', 'zz'], zz: ['zz', 'bj'], xa: ['xa', 'zz'], lz: ['lz', 'xa'], cd: ['cd', 'xa'], cq: ['cq', 'cd'], ty: ['ty', 'bj'], xz: ['xz', 'ty'] } },
       { id: 'hor', gw: ['hor'], ru: ['hor', 'akt'].concat(KZ_RU.slice(1)), cn: { sh: ['sh', 'zz', 'xa', 'lz', 'urc', 'hor'], nb: ['nb', 'sh'], yw: ['yw', 'zz'], zz: ['zz', 'xa'], xa: ['xa', 'lz'], cd: ['cd', 'lz'], cq: ['cq', 'cd'], gz: ['gz', 'zz'], sz: ['sz', 'gz'], qz: ['qz', 'cq'], urc: ['urc', 'hor'] } },
       { id: 'kya', gw: ['kya', 'erl'], ru: ['kya', 'ulu'].concat(TS_RU.slice(2)), mid: ['erl', 'uba', 'kya'], cn: { bj2: ['bj', 'erl'] } },
       { id: 'pog', gw: ['pog', 'sfh'], ru: ['pog', 'uss', 'khb', 'bel', 'chita'].concat(TS_RU.slice(1)), cn: { hrb2: ['hrb', 'sfh'] } },
@@ -97,6 +97,8 @@
   }
   // ЖД от перехода до Москвы по Транссибу (ориентир по тарифным расстояниям); остальное — по карте с поправкой на изгибы пути
   var TRUNK_KM = { zab: 6650, nau: 5900, pog: 9270, vvo: 9290, blg: 7980 };
+  // так возит компания: авто и ЖД — через Маньчжурию и Забайкальск, море — через Владивосток; Казахстан и Монголия — запасные
+  var PREF = { zab: 1, pog: 1, blg: 1, vvo: 1, dos: 1.6, hor: 1.6, nau: 1.4, kya: 1.4 };
   // маршрут для расчёта ставки: путь, километры по участкам, переход
   function routeFor(fromKey, mode) {
     mode = MODES[mode] ? mode : 'rail';
@@ -138,7 +140,8 @@
       var total = legs.reduce(function (s, l) { return s + l.km; }, 0);
       var path = p.concat(mid ? mid.slice(1) : []).concat(ruPath.slice(cor.sea || mid ? 1 : 0));
       path = path.filter(function (k, i) { return !i || k !== path[i - 1]; });
-      if (!best || total < best.km) best = { mode: mode, path: path, legs: legs, km: total, gw: cor.id, to: toKey };
+      var w = total * (PREF[cor.id] || 1) * (fromKey === 'urc' && (cor.id === 'dos' || cor.id === 'hor') ? 0.6 : 1);
+      if (!best || w < best.w) best = { mode: mode, path: path, legs: legs, km: total, gw: cor.id, to: toKey, w: w };
     }
     MODES[mode].forEach(each);
     if (!best) { far = true; MODES[mode].forEach(each); }
@@ -345,5 +348,6 @@
       + '<circle class="rmini-b" cx="' + f(last[0]) + '" cy="' + f(last[1]) + '" r="' + f(6.5 * k) + '"/><text class="rmini-t msk" x="' + f(last[0]) + '" y="' + f(last[1] - 14 * k) + '" text-anchor="middle">' + nm(dest, l) + '</text></svg>';
   }
 
-  window.IOMA_RMAP = { mount: mount, routeFor: routeFor, routeTo: routeTo, find: find, name: nm, cities: C, origins: ORIGINS, routeSvg: routeSvg, gwNames: function (id, l) { return (GW_NAME[id] || []).map(function (k) { return nm(k, l); }); }, gwKeys: function (id) { return (GW_NAME[id] || []).slice(); }, modeName: function (m, l) { return MODE_NAME[m] ? MODE_NAME[m][LI[l || lang()]] : m; }, ui: ui };
+  var GEO_API = { xy: xy, VB: VB, land: land, smooth: smooth, arc: arc, dots: { cn: CN_DOTS, ru: RU_DOTS }, gwNames: GW_NAME, lang: lang, ll: ll, hav: hav };
+  window.IOMA_RMAP = { geo: GEO_API, mount: mount, routeFor: routeFor, routeTo: routeTo, find: find, name: nm, cities: C, origins: ORIGINS, routeSvg: routeSvg, gwNames: function (id, l) { return (GW_NAME[id] || []).map(function (k) { return nm(k, l); }); }, gwKeys: function (id) { return (GW_NAME[id] || []).slice(); }, modeName: function (m, l) { return MODE_NAME[m] ? MODE_NAME[m][LI[l || lang()]] : m; }, ui: ui };
 })();

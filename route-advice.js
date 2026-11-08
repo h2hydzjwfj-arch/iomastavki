@@ -133,21 +133,19 @@
   function add(r, d) { return [Math.max(1, r[0] + d), Math.max(2, r[1] + d)]; }
 
   // ---------- коридоры (подписи)
+  // так возит компания: авто и ЖД — через Маньчжурию и Забайкальск (главный коридор), на Дальний Восток — через Приморье и Приамурье,
+  // через Казахстан — только из Синьцзяна; море — до Владивостока
   function autoVia(reg, zone, toName, l) {
     var ru = l !== 'en';
-    if (zone === 'FE') return reg === 'NE' || reg === 'N' || reg === 'E' || reg === 'C' || reg === 'S' || reg === 'SWC' ?
-      (/благовещ/.test(toName) ? (ru ? 'Хэйхэ — Благовещенск' : 'Heihe — Blagoveshchensk') : (ru ? 'Суйфэньхэ — Пограничный' : 'Suifenhe — Pogranichny')) : (ru ? 'через Забайкальск' : 'via Zabaikalsk');
-    if (zone === 'ES' || (reg === 'NE' && zi(zone) <= 5)) return ru ? 'Маньчжурия — Забайкальск' : 'Manzhouli — Zabaikalsk';
-    if (reg === 'N' && zone === 'ES') return ru ? 'Эрлянь — Монголия — Кяхта' : 'Erenhot — Mongolia — Kyakhta';
-    return ru ? 'через Казахстан: Хоргос — Алматы — Астана' : 'via Kazakhstan: Khorgos — Almaty — Astana';
+    if (zone === 'FE') return /благовещ/.test(toName) ? (ru ? 'Хэйхэ — Благовещенск' : 'Heihe — Blagoveshchensk') : (ru ? 'Суйфэньхэ — Пограничный' : 'Suifenhe — Pogranichny');
+    if (reg === 'XJ') return ru ? 'Хоргос — Казахстан' : 'Khorgos — Kazakhstan';
+    return ru ? 'Маньчжурия — Забайкальск' : 'Manzhouli — Zabaikalsk';
   }
   function railVia(reg, zone, l) {
     var ru = l !== 'en';
     if (zone === 'FE') return ru ? 'Суйфэньхэ — Гродеково' : 'Suifenhe — Grodekovo';
-    if (reg === 'NE' || zone === 'ES') return ru ? 'Маньчжурия — Забайкальск' : 'Manzhouli — Zabaikalsk';
-    if (reg === 'N') return ru ? 'Эрлянь — Монголия — Наушки' : 'Erenhot — Mongolia — Naushki';
-    if (reg === 'XJ' || reg === 'NW' || reg === 'SW' || zone === 'UR' || zone === 'WS') return ru ? 'Казахстан: Достык / Алтынколь' : 'Kazakhstan: Dostyk / Altynkol';
-    return ru ? 'Забайкальск или Казахстан (Достык)' : 'Zabaikalsk or Kazakhstan (Dostyk)';
+    if (reg === 'XJ') return ru ? 'Казахстан: Достык / Алтынколь' : 'Kazakhstan: Dostyk / Altynkol';
+    return ru ? 'Маньчжурия — Забайкальск' : 'Manzhouli — Zabaikalsk';
   }
 
   // ---------- размер партии
@@ -184,13 +182,13 @@
       bigAir: 'для такого объёма авиа неоправданно дорого',
       ltlAuto: 'сборное авто — самый удобный способ для партии до 10–12 м³: оплата за объём, без целой машины',
       yiwuHub: 'Иу — главный хаб сборных грузов: машины на Россию уходят ежедневно',
-      kzShort: 'через Казахстан до Урала и Сибири короче, чем через Забайкальск',
+      zabMain: 'главный коридор — Маньчжурия — Забайкальск: так везём большинство грузов',
       zabShort: 'до Сибири и Дальнего Востока ближе всего через Забайкальск и Приморье',
       neShort: 'северо-восток Китая граничит с Россией — путь самый короткий',
       seaCheap: 'контейнер морем до Владивостока и дальше по ЖД — самый дешёвый способ для полного контейнера',
       seaFE: 'Владивосток — порт назначения: контейнер приходит морем за несколько дней, без ЖД',
       railFcl: 'ЖД — золотая середина для контейнера: дешевле авто, быстрее моря',
-      railHub: 'из Чэнду, Чунцина, Сианя и Урумчи регулярно идут контейнерные поезда через Казахстан',
+      railHub: 'из Урумчи ближе всего через Казахстан',
       ftl: 'машина целиком — быстрее ЖД, без перегрузок от склада до склада',
       airFast: 'самый быстрый способ: срочный, лёгкий или дорогой груз',
       airTiny: 'для небольшой посылки авиа почти не дороже сборного авто, а в разы быстрее',
@@ -214,13 +212,13 @@
       bigAir: 'air is unreasonably expensive for this volume',
       ltlAuto: 'groupage truck is the handiest way for up to 10–12 m³: you pay per m³, no full truck needed',
       yiwuHub: 'Yiwu is the main groupage hub: trucks to Russia leave daily',
-      kzShort: 'via Kazakhstan the Urals and Siberia are closer than via Zabaikalsk',
+      zabMain: 'main corridor — Manzhouli — Zabaikalsk: most of our cargo goes this way',
       zabShort: 'Siberia and the Far East are closest via Zabaikalsk and Primorye',
       neShort: 'Northeast China borders Russia — the shortest way',
       seaCheap: 'container by sea to Vladivostok and on by rail is the cheapest way for a full container',
       seaFE: 'Vladivostok is the destination port: the container arrives by sea in a few days, no rail',
       railFcl: 'rail is the sweet spot for a container: cheaper than truck, faster than sea',
-      railHub: 'container trains via Kazakhstan run regularly from Chengdu, Chongqing, Xi’an and Urumqi',
+      railHub: 'from Urumqi, Kazakhstan is the closest way',
       ftl: 'a full truck is faster than rail, door to door without reloading',
       airFast: 'the fastest way: urgent, light or valuable cargo',
       airTiny: 'for a small parcel air costs about the same as groupage truck and is many times faster',
@@ -233,7 +231,7 @@
       sum: function (o, from, to, b) { return 'From ' + from + ' to ' + to + ', ' + b + ' is best shipped by ' + o + '.'; }
     }
   };
-  function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+  function cap(s) { return s ? s.split(/(\s|-)/).map(function (w, i) { return /^(на|де|ам)$/.test(w) && i ? w : w.charAt(0).toUpperCase() + w.slice(1); }).join('') : s; }
 
   /**
    * @param {object} q { from, to, weight (кг), volume (м³), priority: 'balance'|'cheap'|'fast', dangerous, lang,
@@ -269,7 +267,7 @@
       if (b === 'ltl' || b === 'tiny') ow.push(T.ltlAuto);
       if (b === 'fcl' || b === 'mid') ow.push(T.ftl);
       if (/^иу$|^цзиньхуа/.test(fo.name) && (b === 'ltl' || b === 'tiny')) ow.push(T.yiwuHub);
-      if (reg === 'NE' && zi(zone) <= 1) ow.push(T.neShort); else if ((zone === 'UR' || zone === 'WS') && reg !== 'NE' && reg !== 'N') ow.push(T.kzShort);
+      if (reg === 'NE' && zi(zone) <= 1) ow.push(T.neShort); else if (reg !== 'XJ' && zone !== 'FE') ow.push(T.zabMain);
       var ao = opt('auto', 'auto', ad, ow, { via: autoVia(reg, zone, to.name, l) });
       if (b === 'multi') ao.cost += 0.6;
       if (zone === 'KGD') { ao.cons.push(T.kgd); ao.cost += 1; }
@@ -280,9 +278,9 @@
       var rd = add(RAIL[zone] || RAIL.C, a[1] + (cc === 'VN' ? 3 : 0));
       var rw = [];
       if (b === 'fcl' || b === 'mid' || b === 'multi') rw.push(T.railFcl);
-      if (reg === 'SW' || reg === 'NW' || reg === 'XJ') rw.push(T.railHub);
+      if (reg === 'XJ') rw.push(T.railHub);
       if (cc === 'VN') rw.push(T.vnRail);
-      if (zi(zone) <= 1 && reg !== 'XJ') rw.push(T.zabShort);
+      if (reg !== 'XJ' && zone !== 'FE') rw.push(T.zabMain);
       var ro = opt('rail', 'rail', b === 'ltl' || b === 'tiny' ? add(rd, 4) : rd, rw, { via: cc === 'VN' ? (l === 'en' ? 'via China' : 'через Китай') : railVia(reg, zone, l) });
       if (b === 'tiny') ro.cons.push(T.railMin);
       if (zone === 'KGD') { ro.cons.push(T.kgd); ro.cost += 0.8; }
@@ -320,7 +318,15 @@
     var cheapest = opts.reduce(function (x, y) { return y.cost < x.cost ? y : x; }), fastest = opts.reduce(function (x, y) { return y.days[1] < x.days[1] ? y : x; });
     opts.forEach(function (o, i) { o.tags = []; if (i === 0) o.tags.push('best'); if (o === cheapest) o.tags.push('cheap'); if (o === fastest) o.tags.push('fast'); o.rub = Math.max(1, Math.min(5, Math.round(o.cost))); });
     var best = opts[0];
+    // Москва — главный хаб: в центр, Поволжье, на юг и северо-запад выгоднее довезти до Москвы и дальше сборным по России
+    var M = CITY['москва'], hubKm = Math.round(hav([M[0], M[1]], [to.lon, to.lat]) * 1.22 / 10) * 10, hub = null;
+    if (hubKm > 80) {
+      var hd = [Math.max(1, Math.round(hubKm / 650)), Math.round(hubKm / 650) + 3];
+      if (['C', 'VG', 'NW', 'S', 'KGD'].indexOf(zone) >= 0) hub = { via: 'msk', km: hubKm, days: hd, text: l === 'en' ? 'To ' + toN + ' it is cheaper to bring the cargo to Moscow — the main hub — and send it on as groupage within Russia (Dellin, PEK, etc.): ≈ ' + hubKm.toLocaleString('en-US') + ' km, ' + hd[0] + '–' + hd[1] + ' more days.' : 'До города ' + toN + ' выгоднее довезти груз до Москвы — главного хаба — и дальше отправить сборным грузом по России (Деловые Линии, ПЭК и др.): ≈ ' + hubKm.toLocaleString('ru-RU') + ' км, ещё ' + hd[0] + '–' + hd[1] + ' дн.' };
+      else hub = { via: 'direct', km: hubKm, text: l === 'en' ? toN + ' lies on the main route — we deliver directly, without going through Moscow; by air — to Moscow, then by truck.' : toN + ' на основном пути — везём напрямую, без заезда в Москву; авиа — до Москвы и дальше машиной.' };
+    }
     return {
+      hub: hub,
       ok: true, lang: l, band: b, bandName: BAND[l][b], priority: q.priority || 'balance',
       from: { name: fromN, cc: cc, region: reg, regionName: ZC[reg] || '' }, to: { name: toN, zone: zone, zoneName: Z[zone] },
       best: best.id, options: opts, impossible: no,

@@ -23,7 +23,7 @@
   api('/api/me').then(function(d){setRole(d.role,d.name);if(d.storage==='local'){var h=$('#workView .v3-head');if(h&&!$('.v3p-warn',h)){var w=document.createElement('p');w.className='v3p-warn';w.textContent='⚠ Хранилище временное — данные сотрутся при перезапуске. Подключите Supabase в Render.';h.appendChild(w);fetch('/api/health').then(function(r){return r.json()}).then(function(j){if(j&&j.storageIssue)w.textContent='⚠ Хранилище временное — данные сотрутся при перезапуске. Причина: '+j.storageIssue+'.'}).catch(function(){})}}}).catch(function(){setRole('guest')});
 
   /* ---------- открытие своих окон ---------- */
-  var MY={loginView:1,leadView:1,cabinetView:1,workView:1,accountView:1,resetView:1,quoteView:1,kbView:1};
+  var MY={loginView:1,leadView:1,cabinetView:1,workView:1,accountView:1,resetView:1,quoteView:1,kbView:1,trackView:1,fitView:1,volumeView:1,terminalView:1,russiaView:1,phoneView:1,propisView:1};
   function openView(id){
     if(id==='cabinetView'&&role==='guest')id='loginView';
     if(id==='workView'&&role!=='admin')id='loginView';if(id==='accountView'&&role==='guest')id='loginView';

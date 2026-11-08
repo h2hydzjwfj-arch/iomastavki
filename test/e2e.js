@@ -120,6 +120,10 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       ok((await call('g', 'POST', '/api/cases', { goods: 'Тест' }))._status === 401, 'гость добавил кейс');
       const a = await call('a', 'POST', '/api/cases', { goods: 'Лампы CI', weight: 1200, transport: 'rail', from: 'Иу', to: 'Москва' }); ok(a.ok && a.item.id, JSON.stringify(a).slice(0, 160));
       ok((await call('g', 'GET', '/api/cases')).items.some(c => c.goods === 'Лампы CI'), 'новый кейс не виден гостю');
+      // инструменты логиста: только сотрудникам; иностранный номер определяется без внешних сайтов
+      ok((await call('g', 'POST', '/api/tools/phone', { number: '+86 138 0013 8000' }))._status === 401, 'гость пользуется инструментами');
+      const phn = await call('a', 'POST', '/api/tools/phone', { number: '+86 138 0013 8000' }); ok(phn.ok && phn.country === 'Китай' && phn.tz === 'Asia/Shanghai', 'телефон: ' + JSON.stringify(phn).slice(0, 160));
+      const tm = await call('a', 'POST', '/api/tools/terminal', { terminal: 'sher', weight: 120, from: '2026-11-09', to: '2026-11-16' }); ok(tm.ok && tm.total > 0 && tm.lines.length >= 3, 'терминальные: ' + JSON.stringify(tm).slice(0, 160));
       // фото кейса: загружает только администратор, смотрят все, удаляется вместе с кейсом
       const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
       const ph = () => { const fd = new FormData(); fd.append('file', new Blob([png], { type: 'image/png' }), 'photo.png'); return fd; };
