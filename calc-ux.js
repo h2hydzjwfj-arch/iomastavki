@@ -54,7 +54,11 @@
     var el = document.createElement('span'); el.className = 'cx-ph'; el.setAttribute('aria-hidden', 'true');
     inp.insertAdjacentElement('afterend', el);
     var p = PHS[id] = { id: id, inp: inp, el: el, i: 0, delay: delay };
-    if (inp.placeholder) { inp.setAttribute('aria-placeholder', inp.placeholder); inp.placeholder = ''; }
+    // свой серый текст браузера убираем навсегда: старый код ставил туда «0», «1» и города — и они проступали под нашей подсказкой
+    if (inp.placeholder) inp.setAttribute('aria-placeholder', inp.placeholder);
+    inp.removeAttribute('placeholder');
+    try { Object.defineProperty(inp, 'placeholder', { configurable: true, get: function () { return ''; }, set: function () {} }); } catch (e) {}
+    new MutationObserver(function () { if (inp.getAttribute('placeholder')) inp.removeAttribute('placeholder'); }).observe(inp, { attributes: true, attributeFilter: ['placeholder'] });
     ['input', 'change', 'focus', 'blur'].forEach(function (ev) { inp.addEventListener(ev, function () { phSync(p); }); });
     phShow(p, false); phPlace(p); phSync(p);
   }
@@ -69,7 +73,8 @@
     var list = PH[p.id], t = list[p.i % list.length](), old = p.el.querySelector('.cx-ph-t:not(.out)');
     if (old && old.textContent === t) return;
     var n = document.createElement('span'); n.className = 'cx-ph-t'; n.textContent = t;
-    if (old) { if (anim && !reduce) { old.classList.add('out'); setTimeout(function () { old.remove(); }, 650); n.classList.add('in'); } else old.remove(); }
+    if (old) { if (anim && !reduce) { old.classList.add('out'); setTimeout(function () { old.remove(); }, 320); n.classList.add('in'); } else old.remove(); }
+    $$('.cx-ph-t.out', p.el).forEach(function (x) { if (x !== old) x.remove(); });
     p.el.appendChild(n);
   }
   function phSync(p) { p.el.classList.toggle('off', !!p.inp.value); p.el.classList.toggle('foc', document.activeElement === p.inp); }
@@ -195,6 +200,7 @@
     var miss = REQ.filter(function (id) { return !filled(id); })[0]; var f = miss && document.getElementById(miss);
     if (f) setTimeout(function () { try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } }, 120);
   }
+  window.IOMA_CALC_PH = true; clearInterval(window.cityPlaceholderTimer);
   window.IOMA_CALC_PUBLIC = window.IOMA_CALC_PUBLIC || {};
   window.IOMA_CALC_PUBLIC.prefill = prefill;
 

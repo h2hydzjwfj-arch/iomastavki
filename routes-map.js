@@ -67,7 +67,7 @@
   };
   var GW_NAME = { zab: ['zab', 'mzl'], dos: ['dos', 'ala'], hor: ['hor'], nau: ['nau', 'erl'], kya: ['kya', 'erl'], pog: ['pog', 'sfh'], blg: ['blg', 'hh'], vvo: ['vvo'] };
   var MODE_NAME = { rail: ['ЖД', 'Rail', '铁路'], road: ['Авто', 'Truck', '公路'], air: ['Авиа', 'Air', '空运'], sea: ['Море + ЖД', 'Sea + rail', '海运 + 铁路'] };
-  var UI = { km: ['км', 'km', '公里'], via: ['через', 'via', '经'], calc: ['Рассчитать', 'Get a rate', '计算运费'], direct: ['прямой рейс', 'direct flight', '直飞'], toMsk: ['до Москвы', 'to Moscow', '至莫斯科'], seaThen: ['морем до Владивостока, дальше ЖД', 'by sea to Vladivostok, then rail', '海运至符拉迪沃斯托克，再铁路'],
+  var UI = { km: ['км', 'km', '公里'], via: ['погранпереход', 'border crossing', '口岸'], calc: ['Рассчитать', 'Get a rate', '计算运费'], direct: ['прямой рейс', 'direct flight', '直飞'], toMsk: ['до Москвы', 'to Moscow', '至莫斯科'], seaThen: ['морем до Владивостока, дальше ЖД', 'by sea to Vladivostok, then rail', '海运至符拉迪沃斯托克，再铁路'],
     china: ['по Китаю', 'in China', '中国境内'], ru: ['по России', 'in Russia', '俄罗斯境内'], transit: ['транзит', 'transit', '过境'], seaLeg: ['морем', 'by sea', '海运'], railLeg: ['по ЖД', 'by rail', '铁路'], air: ['перелёт', 'flight', '航程'] };
   var LI = { ru: 0, en: 1, zh: 2 };
   function lang() { var l; try { l = localStorage.getItem('iomastavka_lang'); } catch (e) {} return LI.hasOwnProperty(l) ? l : 'ru'; }
@@ -187,77 +187,134 @@
     if (G.borders) h += '<g class="rm-borders">' + G.borders.map(function (b) { return '<path d="' + b + '"/>'; }).join('') + '</g>';
     return h;
   }
-  // подписи: смещение и выравнивание, чтобы не налезали
-  var LBL = { msk: [-12, -12, 'end'], spb: [9, 4, 'start'], nnov: [8, 13, 'start'], kzn: [-8, 12, 'end'], ekb: [6, -8, 'start'], nsk: [0, -10, 'middle'], irk: [-8, 14, 'end'], khb: [9, -4, 'start'], vvo: [-9, 12, 'end'], krd: [9, 4, 'start'],
-    bj: [-9, 4, 'end'], sy: [9, 4, 'start'], hrb: [-9, 12, 'end'], qd: [9, 4, 'start'], sh: [10, 2, 'start'], nb: [10, 9, 'start'], yw: [-9, 8, 'end'], zz: [0, -10, 'middle'], xa: [-9, 10, 'end'], cd: [-9, 4, 'end'], cq: [0, 18, 'middle'], gz: [-9, 4, 'end'], sz: [9, 10, 'start'], qz: [-9, 4, 'end'], urc: [0, 18, 'middle'], pus: [10, 4, 'start'],
-    zab: [10, -14, 'start'], dos: [-10, -18, 'end'], hor: [-10, 20, 'end'], nau: [-10, -18, 'end'], kya: [-10, -18, 'end'], pog: [11, 6, 'start'], blg: [11, -14, 'start'] };
+  // точки на карте главной: все крупные города Китая (откуда) и города России (куда)
+  var CN_DOTS = ['bj', 'tj', 'sy', 'hrb', 'dl', 'qd', 'sh', 'nb', 'yw', 'hz', 'nj', 'wh', 'cs', 'zz', 'xa', 'ty', 'xz', 'lz', 'cd', 'cq', 'gz', 'sz', 'xm', 'qz', 'urc'];
+  var RU_DOTS = ['msk', 'spb', 'nnov', 'kzn', 'sam', 'ufa', 'perm', 'ekb', 'chel', 'tmn', 'omsk', 'nsk', 'krs', 'irk', 'ulu', 'chita', 'khb', 'vvo', 'krd', 'rnd', 'vrn'];
+  var DEMO = ['yw', 'sh', 'gz', 'bj', 'cd', 'sz', 'qd', 'urc', 'cq', 'hz'];
+  // значки транспорта (24×24, линии)
+  var ICON = {
+    rail: '<rect x="6" y="3" width="12" height="13" rx="3"/><path d="M6 10h12M9.5 20l-1.5-4M14.5 20l1.5-4"/><circle cx="9.5" cy="13" r=".7"/><circle cx="14.5" cy="13" r=".7"/>',
+    road: '<path d="M2.5 6.5h11v9h-11zM13.5 9.5h4l3 3.2v2.8h-7"/><circle cx="6.5" cy="16.5" r="1.8"/><circle cx="16.5" cy="16.5" r="1.8"/>',
+    air: '<path d="M21 12.6l-7.2-3V5a1.8 1.8 0 00-3.6 0v4.6L3 12.6v2l7.2-1.8v4l-2.1 1.5V20l3.9-1 3.9 1v-1.7l-2.1-1.5v-4l7.2 1.8z"/>',
+    sea: '<path d="M3 15.5l1.8 3.5h14.4l1.8-3.5zM6 15.5V10h12v5.5M9 10V6.5h6V10M12 3.5v3"/>'
+  };
+  var ICON_I = { rail: 'rail', road: 'road', air: 'air', sea: 'sea' };
+  var KM = { kz: ['Казахстан и Россия', 'Kazakhstan and Russia', '哈萨克斯坦和俄罗斯'], all: ['всего', 'total', '合计'], pick: ['Выберите город в Китае и город в России — маршрут построится сам', 'Pick a city in China and a city in Russia — the route builds itself', '在地图上选择中国城市和俄罗斯城市，即可显示路线'],
+    via2: ['Путь', 'Route', '路径'], from: ['Откуда', 'From', '起运地'], to: ['Куда', 'To', '目的地'] };
+  function kmT(k, l) { return KM[k][LI[l || lang()]]; }
+  function legLabel(r, x, l) {
+    if (x.kind === 'china') return ui('china', l); if (x.kind === 'transit') return ui('transit', l) + (r.gw === 'nau' || r.gw === 'kya' ? ' · ' + nm('uba', l) : '');
+    if (x.kind === 'ru') return r.gw === 'dos' || r.gw === 'hor' ? kmT('kz', l) : ui('ru', l);
+    return x.kind === 'sea' ? ui('seaLeg', l) : x.kind === 'rail' ? ui('railLeg', l) : ui('air', l);
+  }
 
   function mount(el, opts) {
-    opts = opts || {}; var state = { mode: opts.mode || 'rail', pick: null, auto: !!opts.auto, timer: 0 };
+    opts = opts || {};
+    var state = { mode: opts.mode || 'rail', from: opts.from || 'yw', to: opts.to || 'msk', auto: !!opts.auto, timer: 0, demo: 0 };
+    var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     el.classList.add('rmap');
-    el.innerHTML = '<div class="rmap-tabs" role="tablist"></div><div class="rmap-stage"><svg class="rmap-svg" viewBox="' + VB.join(' ') + '" role="img" aria-label="Маршруты Китай — Москва"></svg><div class="rmap-tip" hidden></div></div>';
-    var svg = el.querySelector('svg'), tabs = el.querySelector('.rmap-tabs'), tip = el.querySelector('.rmap-tip');
-    var U = 1; // пользовательских единиц на 1 пиксель экрана: точки и отступы подписей одинаковые на любом экране
-    function scale() { var w = svg.getBoundingClientRect().width || W, u = W / w; el.style.setProperty('--u', u.toFixed(3)); el.classList.toggle('rmap-sm', w < 560); if (Math.abs(u - U) / U > .12) { U = u; draw(); } }
-    function drawTabs() { var l = lang(); tabs.innerHTML = ['rail', 'road', 'air', 'sea'].map(function (m) { return '<button type="button" role="tab" data-m="' + m + '" aria-selected="' + (m === state.mode) + '"' + (m === state.mode ? ' class="on"' : '') + '>' + MODE_NAME[m][LI[l]] + '</button>'; }).join('') + '<i class="rmap-ind"></i>'; moveInd(); }
+    el.innerHTML = '<div class="rmap-top"><div class="rmap-tabs" role="tablist"></div><p class="rmap-hint"></p></div><div class="rmap-stage"><svg class="rmap-svg" viewBox="' + VB.join(' ') + '" preserveAspectRatio="xMidYMid meet" role="img"></svg></div><div class="rmap-info" aria-live="polite"></div>';
+    var svg = el.querySelector('svg'), tabs = el.querySelector('.rmap-tabs'), info = el.querySelector('.rmap-info'), hint = el.querySelector('.rmap-hint');
+    var U = 1;
+    // единиц карты на пиксель экрана — с учётом того, что карта может упираться в высоту
+    function unit() { var r = svg.getBoundingClientRect(); if (!r.width) return U; return Math.max(W / r.width, H / (r.height || r.width * H / W)); }
+    // на главной карта не выше, чем остаётся места в первом экране (без прокрутки страницы)
+    function fit() {
+      var box = opts.fitTo; if (!box) return;
+      if (window.innerWidth <= 900) { svg.style.maxHeight = ''; return; }
+      var other = el.getBoundingClientRect().height - svg.getBoundingClientRect().height, avail = Math.floor(box.clientHeight - other - 2); if (avail > 0) svg.style.maxHeight = Math.max(180, avail) + 'px';
+    }
+    function scale() { fit(); var u = unit(); el.style.setProperty('--u', u.toFixed(3)); el.classList.toggle('rmap-sm', svg.getBoundingClientRect().width < 520); if (Math.abs(u - U) / U > .1) { U = u; draw(); } }
+    function drawTabs() { var l = lang(); tabs.innerHTML = ['rail', 'road', 'air', 'sea'].map(function (m) { return '<button type="button" role="tab" data-m="' + m + '" aria-selected="' + (m === state.mode) + '"' + (m === state.mode ? ' class="on"' : '') + '>' + MODE_NAME[m][LI[l]] + '</button>'; }).join('') + '<i class="rmap-ind"></i>'; moveInd(); hint.textContent = kmT('pick', l); }
     function moveInd() { var b = tabs.querySelector('.on'), i = tabs.querySelector('.rmap-ind'); if (b && i) { i.style.width = b.offsetWidth + 'px'; i.style.transform = 'translateX(' + b.offsetLeft + 'px)'; } }
-    function text(x, y, t, cls, anchor) { return '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" class="' + cls + '" text-anchor="' + (anchor || 'start') + '">' + t + '</text>'; }
-    function label(k, cls, alt) { var p = xy(k), o = LBL[k] || [8, 4, 'start']; return text(p[0] + o[0] * U * .62, p[1] + o[1] * U * .62, alt || nm(k), cls, o[2]); }
-    function draw() {
-      var l = lang(), cors = MODES[state.mode], h = '';
-      h += '<defs><linearGradient id="rmG" x1="1" y1="0" x2="0" y2="0"><stop offset="0" style="stop-color:var(--ui-o1,#F28A3A)"/><stop offset="1" style="stop-color:var(--ui-o2,#E06A2C)"/></linearGradient><radialGradient id="rmGlow"><stop offset="0" stop-color="#F28A3A" stop-opacity=".55"/><stop offset="1" stop-color="#F28A3A" stop-opacity="0"/></radialGradient></defs>';
-      h += land();
-      RU_MINOR.forEach(function (k) { if (k === 'vvo' && state.mode === 'sea') return; var p = xy(k); h += '<circle class="rm-ru" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="' + (1.364 * U).toFixed(2) + '"/>' + label(k, 'rm-ru-t'); });
-      var used = {}, gws = {}, n = 0;
-      cors.forEach(function (cor) {
-        if (cor.air) { cor.air.forEach(function (k) { used[k] = 1; h += '<path class="rm-r rm-air" data-o="' + k + '" d="' + arc(k, 'msk') + '" pathLength="1" style="--d:' + (n++ * 0.06) + 's"/>'; }); return; }
-        Object.keys(cor.cn).forEach(function (k) { var seg = cor.cn[k]; used[seg[0]] = 1; h += '<path class="rm-r rm-cn' + (cor.sea ? ' rm-sea' : '') + '" data-o="' + seg[0] + '" d="' + smooth(seg) + '" pathLength="1" style="--d:' + (n++ * 0.05) + 's"/>'; });
-        if (cor.mid) h += '<path class="rm-r rm-cn" d="' + smooth(cor.mid) + '" pathLength="1" style="--d:' + (n++ * 0.05) + 's"/>';
-        h += '<path class="rm-r rm-trunk" data-gw="' + cor.id + '" id="rmT_' + cor.id + '" d="' + smooth(cor.ru) + '" pathLength="1" style="--d:' + (0.25 + n++ * 0.05) + 's"/>';
-        if (cor.gw.length) gws[cor.id] = cor.gw;
+    function f(n) { return n.toFixed(1); }
+    var NEAR = {};
+    function near(k) { if (NEAR[k] != null) return NEAR[k]; var p = xy(k), m = Infinity; RU_DOTS.concat(CN_DOTS).forEach(function (o) { if (o === k) return; var q = xy(o), d = Math.hypot(p[0] - q[0], p[1] - q[1]); if (d < m) m = d; }); return (NEAR[k] = m); }
+    function route() { return routeTo(state.from, state.to, state.mode); }
+    // подписи выбранных точек: пробуем справа, слева, сверху, снизу — берём место, где не налезает на другие подписи
+    function labels(items) {
+      var boxes = [], out = '';
+      items.forEach(function (it) {
+        var p = xy(it.k), fs = it.fs * U, w = it.t.length * fs * .56, h = fs * 1.25 * (it.lines || 1), g = 9 * U, cands = it.prefer || ['r', 'l', 't', 'b'], best = null;
+        cands.concat(['r', 'l', 't', 'b']).some(function (c) {
+          var x = c === 'r' ? p[0] + g : c === 'l' ? p[0] - g - w : p[0] - w / 2, y = c === 't' ? p[1] - g - h : c === 'b' ? p[1] + g : p[1] - h / 2;
+          x = Math.max(VB[0] + 2 * U, Math.min(VB[0] + W - w - 2 * U, x)); y = Math.max(VB[1] + 2 * U, Math.min(VB[1] + H - h - 2 * U, y));
+          var bx = { x: x, y: y, w: w, h: h }, hit = boxes.some(function (o) { return !(bx.x + bx.w < o.x || o.x + o.w < bx.x || bx.y + bx.h < o.y || o.y + o.h < bx.y); });
+          if (!best) best = bx; if (!hit) { best = bx; return true; } return false;
+        });
+        boxes.push(best);
+        var lines = it.t.split('\n');
+        out += '<text class="' + it.cls + '" x="' + f(best.x) + '" y="' + f(best.y + fs) + '" style="font-size:' + f(fs) + 'px">' + lines.map(function (ln, i) { return '<tspan x="' + f(best.x) + '" dy="' + (i ? '1.2em' : '0') + '">' + ln + '</tspan>'; }).join('') + '</text>';
       });
-      // бегущие огоньки по магистралям
-      if (!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches) cors.forEach(function (cor, i) { if (cor.air) { cor.air.slice(0, 6).forEach(function (k, j) { h += '<circle class="rm-dot" r="' + (1.984 * U).toFixed(2) + '"><animateMotion dur="' + (5 + j * .7).toFixed(1) + 's" repeatCount="indefinite" begin="-' + (j * 1.3 + .4).toFixed(1) + 's" path="' + arc(k, 'msk') + '"/></circle>'; }); return; } h += '<circle class="rm-dot" r="' + (2.108 * U).toFixed(2) + '"><animateMotion dur="' + (7 + i * 1.3).toFixed(1) + 's" repeatCount="indefinite" begin="-' + (i * 2.1 + .5).toFixed(1) + 's" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#rmT_' + cor.id + '"/></animateMotion></circle>'; });
-      Object.keys(gws).forEach(function (id) { var g = gws[id], p = xy(g[0]), o = LBL[g[0]] || [10, 4, 'start'], lx = p[0] + o[0] * U * .62, ly = p[1] + o[1] * U * .62, nmTxt = g.map(function (k, i) { return '<tspan x="' + lx.toFixed(1) + '" dy="' + (i ? '1.15em' : '0') + '">' + nm(k, l) + '</tspan>'; }).join(''); h += '<g class="rm-gw" data-gw="' + id + '"><rect x="' + (p[0] - 5).toFixed(1) + '" y="' + (p[1] - 5).toFixed(1) + '" width="10" height="10" transform="rotate(45 ' + p[0].toFixed(1) + ' ' + p[1].toFixed(1) + ')"/>' + '<text class="rm-gw-t" x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="' + o[2] + '">' + nmTxt + '</text>' + '</g>'; });
-      ORIGINS.forEach(function (k) { var p = xy(k), on = !!used[k]; h += '<g class="rm-o' + (on ? '' : ' off') + '" data-o="' + k + '" tabindex="' + (on ? 0 : -1) + '" role="button" aria-label="' + nm(k) + '"><circle class="rm-hit" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="' + (8.06 * U).toFixed(2) + '"/><circle class="rm-o-c" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="' + (2.48 * U).toFixed(2) + '"/>' + label(k, 'rm-o-t') + '</g>'; });
-      var m = xy('msk'); h += '<g class="rm-msk"><circle cx="' + m[0].toFixed(1) + '" cy="' + m[1].toFixed(1) + '" r="' + (13.64 * U).toFixed(2) + '" fill="url(#rmGlow)" class="rm-pulse"/><circle cx="' + m[0].toFixed(1) + '" cy="' + m[1].toFixed(1) + '" r="' + (3.7199999999999998 * U).toFixed(2) + '"/>' + label('msk', 'rm-msk-t') + '</g>';
-      svg.innerHTML = h; svg.setAttribute('aria-label', MODE_NAME[state.mode][LI[l]] + ' — ' + ui('toMsk', l));
-      el.dataset.mode = state.mode; hideTip();
+      return out;
     }
-    function hl(k) {
-      svg.classList.toggle('pick', !!k); var o = svg.querySelector('.rm-hl'); if (o) o.remove(); if (!k) return;
-      var r = routeFor(k, state.mode); if (!r) return;
-      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('class', 'rm-hl'); path.setAttribute('pathLength', '1'); path.setAttribute('d', state.mode === 'air' ? arc(k, 'msk') : smooth(r.path));
-      var first = svg.querySelector('.rm-gw, .rm-o, .rm-msk'); svg.insertBefore(path, first);
+    function veh(pathD, kind, dur, delay) {
+      if (reduce) return '';
+      return '<g class="rm-veh rm-veh-' + kind + '"><animateMotion dur="' + dur + 's" repeatCount="indefinite" begin="' + delay + 's" path="' + pathD + '" calcMode="linear"/>'
+        + '<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.06;.92;1" dur="' + dur + 's" begin="' + delay + 's" repeatCount="indefinite"/>'
+        + '<g transform="scale(' + U.toFixed(3) + ')"><circle class="rm-veh-b" r="12.5"/><g transform="translate(-8.4 -8.4) scale(.7)" class="rm-veh-i">' + ICON[kind] + '</g></g></g>';
     }
-    function showTip(k, g) {
-      var l = lang(), r = routeFor(k, state.mode); if (!r) return hideTip();
-      var gw = r.gw && GW_NAME[r.gw] ? GW_NAME[r.gw].map(function (x) { return nm(x, l); }).join(' · ') : '';
-      var legs = r.legs.map(function (x) { return '<span>' + (x.kind === 'china' ? ui('china', l) : x.kind === 'ru' ? ui('ru', l) : x.kind === 'transit' ? ui('transit', l) : x.kind === 'sea' ? ui('seaLeg', l) : x.kind === 'rail' ? ui('railLeg', l) : ui('air', l)) + ' <b>≈ ' + x.km.toLocaleString(l === 'ru' ? 'ru-RU' : 'en-US') + ' ' + ui('km', l) + '</b></span>'; }).join('');
-      tip.innerHTML = '<b>' + nm(k, l) + ' → ' + nm('msk', l) + '</b><small>' + MODE_NAME[state.mode][LI[l]] + (gw ? ' · ' + ui('via', l) + ' ' + gw : state.mode === 'air' ? ' · ' + ui('direct', l) : '') + '</small><div class="rmap-legs">' + legs + '</div><button type="button" class="rmap-go" data-go="' + k + '">' + ui('calc', l) + '</button>';
-      var p = xy(k), rect = svg.getBoundingClientRect(), s = rect.width / W, stage = el.querySelector('.rmap-stage').getBoundingClientRect(); p = [p[0] - VB[0], p[1] - VB[1]];
-      tip.hidden = false; var tw = tip.offsetWidth, th = tip.offsetHeight, x = rect.left - stage.left + p[0] * s, y = rect.top - stage.top + p[1] * s;
-      tip.style.left = Math.max(4, Math.min(stage.width - tw - 4, x - tw / 2)) + 'px'; tip.style.top = (y - th - 16 < 0 ? y + 18 : y - th - 16) + 'px';
-      hl(k); state.pick = k;
+    function draw() {
+      var l = lang(), r = route(), h = '';
+      h += '<defs><linearGradient id="rmG" x1="1" y1="0" x2="0" y2="0"><stop offset="0" style="stop-color:var(--ui-o1,#F28A3A)"/><stop offset="1" style="stop-color:var(--ui-o2,#E06A2C)"/></linearGradient></defs>';
+      h += land();
+      // все точки: Россия — куда, Китай — откуда. Зона нажатия не больше половины расстояния до соседа,
+      // чтобы соседние города (Гуанчжоу и Шэньчжэнь, Шанхай и Ханчжоу) не перекрывали друг друга
+      function dot(k, side, on) { var p = xy(k), r = Math.max(3.2 * U, Math.min(9 * U, near(k) / 2)); return '<g class="rm-pt rm-' + side + (on ? ' on' : '') + '" data-' + side + '="' + k + '" tabindex="0" role="button" aria-label="' + nm(k, l) + '"><circle class="rm-hit" cx="' + f(p[0]) + '" cy="' + f(p[1]) + '" r="' + f(r) + '"/><circle class="rm-c" cx="' + f(p[0]) + '" cy="' + f(p[1]) + '" r="' + f((on ? 5 : 2.6) * U) + '"/></g>'; }
+      // выбранные точки рисуем последними — они поверх соседних
+      RU_DOTS.filter(function (k) { return k !== state.to; }).forEach(function (k) { h += dot(k, 'to', false); });
+      CN_DOTS.filter(function (k) { return k !== state.from; }).forEach(function (k) { h += dot(k, 'from', false); });
+      var lbl = [];
+      if (r) {
+        var keys = r.path, vi = keys.indexOf('vvo'), seaSplit = r.mode === 'sea' && vi > 0 && vi < keys.length - 1;
+        var full = r.mode === 'air' ? arc(keys[0], keys[keys.length - 1]) : smooth(keys);
+        h += '<path class="rm-track" d="' + full + '"/>';
+        if (seaSplit) { var dSea = smooth(keys.slice(0, vi + 1)), dRail = smooth(keys.slice(vi)); h += '<path class="rm-route rm-sea" d="' + dSea + '" pathLength="1"/><path class="rm-route" d="' + dRail + '" pathLength="1" style="animation-delay:.5s"/>' + veh(dSea, 'sea', 6, 0) + veh(dRail, 'rail', 7.5, 1.5); }
+        else { h += '<path class="rm-route' + (r.mode === 'sea' ? ' rm-sea' : '') + (r.mode === 'air' ? ' rm-air' : '') + '" d="' + full + '" pathLength="1"/>' + veh(full, ICON_I[r.mode], r.mode === 'air' ? 6 : 9, 0); }
+        if (r.gw && GW_NAME[r.gw] && r.mode !== 'air') { var gk = GW_NAME[r.gw][0], gp2 = xy(gk); h += '<rect class="rm-gw" x="' + f(gp2[0] - 4.5 * U) + '" y="' + f(gp2[1] - 4.5 * U) + '" width="' + f(9 * U) + '" height="' + f(9 * U) + '" transform="rotate(45 ' + f(gp2[0]) + ' ' + f(gp2[1]) + ')"/>'; lbl.push({ k: gk, t: GW_NAME[r.gw].map(function (x) { return nm(x, l); }).join('\n'), cls: 'rm-l rm-l-gw', fs: 11.5, lines: GW_NAME[r.gw].length, prefer: ['r', 'b'] }); }
+      }
+      if (C[state.to]) h += dot(state.to, 'to', true); if (C[state.from]) h += dot(state.from, 'from', true);
+      lbl.unshift({ k: state.to, t: nm(state.to, l), cls: 'rm-l rm-l-to', fs: 15, prefer: ['l', 't'] }, { k: state.from, t: nm(state.from, l), cls: 'rm-l rm-l-from', fs: 14, prefer: ['r', 'b', 'l'] });
+      h += labels(lbl) + '<text class="rm-l rm-hov" visibility="hidden"></text>';
+      svg.innerHTML = h; svg.setAttribute('aria-label', nm(state.from, l) + ' → ' + nm(state.to, l) + ', ' + MODE_NAME[state.mode][LI[l]]);
+      el.dataset.mode = state.mode; panel(r); fit();
     }
-    function hideTip() { tip.hidden = true; state.pick = null; hl(null); }
+    function panel(r) {
+      var l = lang(), loc = l === 'ru' ? 'ru-RU' : 'en-US';
+      if (!r) { info.innerHTML = '<div class="rmap-od"><b>' + nm(state.from, l) + ' → ' + nm(state.to, l) + '</b><small>—</small></div>'; return; }
+      var g = r.gw && GW_NAME[r.gw] ? GW_NAME[r.gw].map(function (x) { return nm(x, l); }).join(' · ') : '';
+      var sub = MODE_NAME[r.mode][LI[l]] + (r.mode === 'air' ? ' · ' + ui('direct', l) : g ? ' · ' + ui('via', l) + ' ' + g : '');
+      var hubs = r.path.filter(function (k) { return C[k]; }).map(function (k) { return nm(k, l); }).join(' — ');
+      info.innerHTML = '<div class="rmap-od"><b>' + nm(state.from, l) + ' <i>→</i> ' + nm(state.to, l) + '</b><small>' + sub + '</small></div>'
+        + '<div class="rmap-km">' + r.legs.filter(function (x) { return x.km > 0; }).map(function (x) { return '<span class="k-' + x.kind + '"><small>' + legLabel(r, x, l) + '</small><b>≈ ' + x.km.toLocaleString(loc) + ' ' + ui('km', l) + '</b></span>'; }).join('')
+        + (r.legs.length > 1 ? '<span class="tot"><small>' + kmT('all', l) + '</small><b>≈ ' + r.km.toLocaleString(loc) + ' ' + ui('km', l) + '</b></span>' : '') + '</div>'
+        + '<button type="button" class="rmap-go">' + ui('calc', l) + '</button>'
+        + (r.mode !== 'air' ? '<p class="rmap-path" title="' + hubs + '">' + kmT('via2', l) + ': ' + hubs + '</p>' : '');
+    }
     function setMode(m, user) { if (!MODES[m]) return; state.mode = m; if (user) stopAuto(); drawTabs(); draw(); if (opts.onMode) opts.onMode(m); }
-    function stopAuto() { state.auto = false; clearInterval(state.timer); }
+    function setFrom(k, user) { if (!C[k]) return; state.from = k; if (user) stopAuto(); draw(); }
+    function setTo(k, user) { if (!C[k]) return; state.to = k; if (user) stopAuto(); draw(); }
+    function stopAuto() { state.auto = false; clearInterval(state.timer); el.classList.add('rmap-user'); }
     tabs.addEventListener('click', function (e) { var b = e.target.closest('[data-m]'); if (b) setMode(b.dataset.m, true); });
-    svg.addEventListener('click', function (e) { var o = e.target.closest('.rm-o:not(.off)'); if (o) { stopAuto(); if (state.pick !== o.dataset.o) showTip(o.dataset.o); } else hideTip(); });
-    svg.addEventListener('keydown', function (e) { var o = e.target.closest && e.target.closest('.rm-o'); if (o && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); stopAuto(); showTip(o.dataset.o); } });
-    if (window.matchMedia && window.matchMedia('(hover:hover)').matches) {
-      svg.addEventListener('mouseover', function (e) { var o = e.target.closest('.rm-o:not(.off)'); if (o && state.pick !== o.dataset.o) { stopAuto(); showTip(o.dataset.o); } });
-    }
-    tip.addEventListener('click', function (e) { var b = e.target.closest('[data-go]'); if (b && opts.onPick) opts.onPick(b.dataset.go, state.mode, nm(b.dataset.go, 'ru')); });
-    el.addEventListener('mouseleave', function () { if (state.pick) hideTip(); });
+    function pick(t) { var g = t.closest && t.closest('.rm-pt'); if (!g) return false; if (g.dataset.from) setFrom(g.dataset.from, true); else setTo(g.dataset.to, true); return true; }
+    svg.addEventListener('click', function (e) { pick(e.target); });
+    svg.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && pick(e.target)) e.preventDefault(); });
+    // подсказка с названием — одна, у точки под курсором
+    svg.addEventListener('mouseover', function (e) {
+      var g = e.target.closest && e.target.closest('.rm-pt'), t = svg.querySelector('.rm-hov'); if (!t) return;
+      if (!g || g.classList.contains('on')) { t.setAttribute('visibility', 'hidden'); return; }
+      var k = g.dataset.from || g.dataset.to, p = xy(k), fs = 12.5 * U, nmTxt = nm(k), w = nmTxt.length * fs * .56, x = p[0] + 9 * U; if (x + w > VB[0] + W) x = p[0] - 9 * U - w;
+      t.textContent = nmTxt; t.setAttribute('x', f(x)); t.setAttribute('y', f(p[1] - 6 * U)); t.style.fontSize = f(fs) + 'px'; t.setAttribute('visibility', 'visible');
+    });
+    svg.addEventListener('mouseleave', function () { var t = svg.querySelector('.rm-hov'); if (t) t.setAttribute('visibility', 'hidden'); });
+    info.addEventListener('click', function (e) { if (e.target.closest('.rmap-go') && opts.onPick) opts.onPick(state.from, state.mode, nm(state.from, 'ru'), state.to, nm(state.to, 'ru')); });
     var drawnLang = lang(); new MutationObserver(function () { if (lang() === drawnLang) return; drawnLang = lang(); drawTabs(); draw(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
     window.addEventListener('resize', function () { scale(); moveInd(); });
     if (window.ResizeObserver) new ResizeObserver(function () { scale(); moveInd(); }).observe(svg);
-    drawTabs(); U = W / (svg.getBoundingClientRect().width || W) || 1; draw(); scale();
-    if (state.auto) { var order = ['rail', 'road', 'air', 'sea']; state.timer = setInterval(function () { if (document.hidden) return; setMode(order[(order.indexOf(state.mode) + 1) % order.length]); }, 7000); }
-    return { setMode: setMode, show: function (k) { stopAuto(); showTip(k); }, hide: hideTip, stopAuto: stopAuto };
+    drawTabs(); U = unit() || 1; draw(); scale();
+    // пока гость не выбрал сам — раз в 6 секунд показываем другой город Китая
+    if (state.auto) state.timer = setInterval(function () { if (document.hidden || el.matches(':hover')) return; state.demo = (state.demo + 1) % DEMO.length; state.from = DEMO[state.demo]; draw(); }, 6500);
+    return { setMode: setMode, setFrom: setFrom, setTo: setTo, stopAuto: stopAuto, get state() { return state; } };
   }
 
   // путь для маленькой карты маршрута (расчёт ставки): только выбранный маршрут

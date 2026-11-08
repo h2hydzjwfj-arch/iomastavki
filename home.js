@@ -47,7 +47,7 @@
     'Токарные пластины': ['Turning inserts', '车刀片'], 'Портативные анализаторы': ['Portable analysers', '便携式分析仪'], 'Рюкзаки': ['Backpacks', '背包'], 'Салфетки': ['Wipes and napkins', '湿巾和纸巾'], 'Тара': ['Packaging', '包装容器'],
     'Техническое оборудование': ['Technical equipment', '技术设备'], 'Синьчжоу → Москва': ['Xinzhou → Moscow', '忻州 → 莫斯科'], 'Партия 15 т на 27 млн ₽ — пять фур.': ['A 15-tonne shipment worth 27 million ₽ — five trucks.', '15 吨货物，价值 2700 万卢布，五辆卡车。'],
     'Расчётный вес 780 кг при фактическом 580 кг — груз объёмный, ставка считалась по объёмному весу.': ['Chargeable weight 780 kg with an actual weight of 580 kg — bulky cargo, so the rate was based on volumetric weight.', '计费重 780 公斤，实重 580 公斤——货物体积大，按体积重计费。'],
-    'Р': ['R', 'R'] };
+    'Р': ['R', 'R'], 'Стоимость груза': ['Cargo value', '货值'], 'Нажмите на груз — покажем, как ехал: вес, объём, стоимость груза и транспорт.': ['Tap a shipment to see how it travelled: weight, volume, cargo value and transport.', '点击货物，查看运输详情：重量、体积、货值和运输方式。'] };
   Object.keys(GOODS).forEach(function (k) { DICT[k] = GOODS[k]; });
   if (window.IOMA_T_ADD) window.IOMA_T_ADD(DICT);
 
@@ -85,11 +85,14 @@
   }
 
   /* ---------------- карта маршрутов ---------------- */
-  function openCalc(fromRu, mode) {
+  function openCalc(fromRu, mode, toRu) {
     if (window.__iomaOpenView) window.__iomaOpenView('calculator');
-    setTimeout(function () { if (window.IOMA_CALC_PUBLIC && window.IOMA_CALC_PUBLIC.prefill) window.IOMA_CALC_PUBLIC.prefill({ from: fromRu, mode: mode }); else { var f = $('#fromCity'); if (f) { f.value = fromRu; f.dispatchEvent(new Event('input', { bubbles: true })); } } }, 80);
+    setTimeout(function () { if (window.IOMA_CALC_PUBLIC && window.IOMA_CALC_PUBLIC.prefill) window.IOMA_CALC_PUBLIC.prefill({ from: fromRu, to: toRu, mode: mode }); else { var f = $('#fromCity'); if (f) { f.value = fromRu; f.dispatchEvent(new Event('input', { bubbles: true })); } } }, 80);
   }
-  function mountMap() { var el = $('#hxMap'); if (!el || !window.IOMA_RMAP || el.dataset.on) return; el.dataset.on = '1'; window.IOMA_RMAP.mount(el, { auto: true, onPick: function (k, mode, ru) { openCalc(ru, mode); } }); }
+  // высота шапки бывает разной (меню переносится на вторую строку) — первый экран считаем от настоящей
+  function hdr() { var t = document.querySelector('.topbar'); if (t && t.offsetHeight) document.documentElement.style.setProperty('--hdr', t.offsetHeight + 'px'); }
+  hdr(); window.addEventListener('resize', hdr); if (window.ResizeObserver) { var tb = document.querySelector('.topbar'); if (tb) new ResizeObserver(hdr).observe(tb); }
+  function mountMap() { var el = $('#hxMap'); if (!el || !window.IOMA_RMAP || el.dataset.on) return; el.dataset.on = '1'; window.IOMA_RMAP.mount(el, { auto: true, fitTo: el.closest('.hx-r'), onPick: function (k, mode, ru, to, toRu) { openCalc(ru, mode, toRu); } }); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountMap); else mountMap();
 
   /* ---------------- язык одной кнопкой ---------------- */
@@ -126,9 +129,16 @@
   function num(v) { return Number(v || 0).toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-US', { maximumFractionDigits: 1 }); }
   function weight(v) { return v >= 1000 ? num(v / 1000) + ' ' + T('т') : num(v) + ' ' + T('кг'); }
   function money(v) { return v >= 1e6 ? num(v / 1e6) + ' ' + T('млн ₽') : num(v) + ' ₽'; }
+  // значок транспорта — для кейса без фото (рамка не пустая)
+  var MODE_ICON = { road: '<path d="M2.5 6.5h11v9h-11zM13.5 9.5h4l3 3.2v2.8h-7"/><circle cx="6.5" cy="16.5" r="1.8"/><circle cx="16.5" cy="16.5" r="1.8"/>', rail: '<rect x="6" y="3" width="12" height="13" rx="3"/><path d="M6 10h12M9.5 20l-1.5-4M14.5 20l1.5-4"/>', air: '<path d="M21 12.6l-7.2-3V5a1.8 1.8 0 00-3.6 0v4.6L3 12.6v2l7.2-1.8v4l-2.1 1.5V20l3.9-1 3.9 1v-1.7l-2.1-1.5v-4l7.2 1.8z"/>', sea: '<path d="M3 15.5l1.8 3.5h14.4l1.8-3.5zM6 15.5V10h12v5.5M9 10V6.5h6V10M12 3.5v3"/>' };
+  function frame(c, big) {
+    return '<span class="cs-frame' + (big ? ' big' : '') + (c.photo ? '' : ' empty') + '">' + (c.photo ? '<img src="' + esc(c.photo) + '" alt="' + esc(c.goods) + '" loading="lazy" decoding="async">' : '<svg viewBox="0 0 24 24" aria-hidden="true">' + (MODE_ICON[c.transport === 'multi' ? 'sea' : c.transport] || MODE_ICON.road) + '</svg>') + '</span>';
+  }
   function caseCard(c, i) {
     var facts = [c.weight ? weight(c.weight) : '', T(MODE_RU[c.transport] || ''), c.trucks ? c.trucks + ' ' + (lang() === 'ru' ? (c.trucks % 10 === 1 && c.trucks % 100 !== 11 ? 'фура' : c.trucks % 10 >= 2 && c.trucks % 10 <= 4 && (c.trucks % 100 < 10 || c.trucks % 100 >= 20) ? 'фуры' : 'фур') : T('Машин').toLowerCase()) : ''].filter(Boolean);
-    return '<button type="button" class="cs-c" data-case="' + esc(c.id) + '" style="--i:' + i + '"><span class="cs-mode cs-' + esc(c.transport || 'road') + '">' + esc(T(MODE_RU[c.transport] || '')) + '</span><b>' + esc(c.goods) + '</b><span class="cs-f">' + facts.map(esc).join(' · ') + '</span>' + (c.from || c.to ? '<small>' + esc([c.from, c.to].filter(Boolean).join(' → ')) + '</small>' : '') + '<i aria-hidden="true">→</i></button>';
+    return '<button type="button" class="cs-c" data-case="' + esc(c.id) + '" style="--i:' + i + '">' + frame(c) + '<span class="cs-body"><span class="cs-mode cs-' + esc(c.transport || 'road') + '">' + esc(T(MODE_RU[c.transport] || '')) + '</span><b>' + esc(c.goods) + '</b><span class="cs-f">' + facts.map(esc).join(' · ') + '</span>'
+      + (c.value ? '<span class="cs-val"><small>' + esc(T('Стоимость груза')) + '</small><em>' + esc(money(c.value)) + '</em></span>' : '')
+      + (c.from || c.to ? '<small class="cs-route">' + esc([c.from, c.to].filter(Boolean).join(' → ')) + '</small>' : '') + '</span><i aria-hidden="true">→</i></button>';
   }
   function renderCases() {
     var b = $('#casesBody'); if (!b) return;
@@ -137,7 +147,7 @@
       CASES = d.items || [];
       var known = {}; CASES.forEach(function (c) { known[String(c.goods).toLowerCase()] = 1; });
       var more = (d.goods || []).filter(function (g) { return !known[g.toLowerCase()]; });
-      b.innerHTML = '<header class="pg-h"><span class="pg-ey">Кейсы</span><h2>Что мы уже привезли</h2><p>Нажмите на груз — покажем, как ехал: вес, объём, транспорт. Сколько стоила доставка клиенту, не показываем.</p>' + (role() === 'admin' ? '<button type="button" class="hx-btn hx-btn-l pg-add" data-case-add>+ Кейс</button>' : '') + '</header>'
+      b.innerHTML = '<header class="pg-h"><span class="pg-ey">Кейсы</span><h2>Что мы уже привезли</h2><p>Нажмите на груз — покажем, как ехал: вес, объём, стоимость груза и транспорт.</p>' + (role() === 'admin' ? '<button type="button" class="hx-btn hx-btn-l pg-add" data-case-add>+ Кейс</button>' : '') + '</header>'
         + '<div class="cs-g">' + CASES.map(caseCard).join('') + '</div>'
         + (more.length ? '<h3 class="cs-more-h">Ещё возили</h3><div class="cs-more">' + more.map(function (g) { return '<span>' + esc(g) + '</span>'; }).join('') + '</div>' : '');
     }).catch(function () { b.innerHTML = '<p class="pg-load">Не удалось загрузить кейсы</p>'; });
@@ -145,9 +155,9 @@
   function caseModal(c) {
     var K = window.CX; if (!K) return;
     var row = function (k, v) { return v ? '<div class="cs-row"><span>' + esc(T(k)) + '</span><b>' + esc(v) + '</b></div>' : ''; };
-    var body = '<div class="cs-m"><div class="cs-m-hero"><span class="cs-mode cs-' + esc(c.transport || 'road') + '">' + esc(T(MODE_RU[c.transport] || '')) + '</span><h3>' + esc(c.goods) + '</h3>' + (c.from || c.to ? '<p>' + esc([c.from, c.to].filter(Boolean).join(' → ')) + '</p>' : '') + '</div>'
+    var body = '<div class="cs-m">' + (c.photo ? frame(c, true) : '') + '<div class="cs-m-hero"><span class="cs-mode cs-' + esc(c.transport || 'road') + '">' + esc(T(MODE_RU[c.transport] || '')) + '</span><h3>' + esc(c.goods) + '</h3>' + (c.from || c.to ? '<p>' + esc([c.from, c.to].filter(Boolean).join(' → ')) + '</p>' : '') + '</div>'
       + row('Вес', c.weight ? weight(c.weight) : '') + row('Фактический вес', c.actualWeight ? weight(c.actualWeight) : '') + row('Объём', c.volume ? num(c.volume) + ' ' + T('м³') : '') + row('Мест', c.places ? num(c.places) : '')
-      + row('Стоимость товара', c.value ? money(c.value) : '') + row('Транспорт', T(MODE_RU[c.transport] || '')) + row('Машин', c.trucks ? String(c.trucks) : '') + (c.note ? '<p class="cs-note">' + esc(c.note) + '</p>' : '') + '</div>';
+      + row('Стоимость груза', c.value ? money(c.value) : '') + row('Транспорт', T(MODE_RU[c.transport] || '')) + row('Машин', c.trucks ? String(c.trucks) : '') + (c.note ? '<p class="cs-note">' + esc(c.note) + '</p>' : '') + '</div>';
     var foot = '<button type="button" class="cx-btn primary" data-case-calc>' + esc(T('Посчитать такой же груз')) + '</button>' + (role() === 'admin' ? '<button type="button" class="cx-btn ghost" data-case-edit>Изменить</button><button type="button" class="cx-btn ghost" data-case-del>' + esc(T('Удалить')) + '</button>' : '');
     var md = K.modal(T('Кейс'), body, foot, { noFocus: true });
     md.el.addEventListener('click', function (e) {
@@ -161,9 +171,31 @@
     var f = function (k, label, type, ph) { return '<label class="cx-f"><span>' + label + '</span><input data-k="' + k + '"' + (type ? ' inputmode="decimal"' : '') + ' value="' + esc(c[k] == null ? '' : c[k]) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : '') + '></label>'; };
     var md = K.modal(c.id ? 'Кейс: ' + c.goods : 'Новый кейс', '<div class="cx-grid2">' + f('goods', 'Груз', '', 'Баллистическая ткань') + '<label class="cx-f"><span>Транспорт</span><select data-k="transport">' + ['road', 'rail', 'air', 'sea'].map(function (m) { return '<option value="' + m + '"' + (c.transport === m ? ' selected' : '') + '>' + MODE_RU[m] + '</option>'; }).join('') + '</select></label>'
       + f('from', 'Откуда', '', 'Иу') + f('to', 'Куда', '', 'Москва') + f('weight', 'Вес, кг', 1) + f('actualWeight', 'Фактический вес, кг', 1) + f('volume', 'Объём, м³', 1) + f('places', 'Мест', 1) + f('value', 'Стоимость товара, ₽', 1) + f('trucks', 'Машин', 1)
-      + '<label class="cx-f wide"><span>Как ехал (коротко)</span><textarea data-k="note" rows="3">' + esc(c.note || '') + '</textarea></label></div><p class="cx-mut cx-small">Сколько стоила доставка клиенту, на сайте не показывается.</p>',
+      + '<label class="cx-f wide"><span>Как ехал (коротко)</span><textarea data-k="note" rows="3">' + esc(c.note || '') + '</textarea></label>'
+      + '<div class="cx-f wide cs-up"><span>Фото груза</span><div class="cs-up-row">' + frame(c) + '<div class="cs-up-b"><label class="cx-btn ghost">Выбрать фото<input type="file" accept="image/jpeg,image/png,image/webp,image/heic" hidden data-photo></label>' + (c.photo ? '<button type="button" class="cx-btn ghost" data-photo-del>Убрать фото</button>' : '') + '<small class="cx-mut">JPG, PNG или WebP — сайт сам уменьшит и вставит в рамку</small></div></div></div>'
+      + '</div><p class="cx-mut cx-small">Сколько стоила доставка клиенту, на сайте не показывается.</p>',
       '<button type="button" class="cx-btn ghost" data-cx="close">Отмена</button><button type="button" class="cx-btn primary" data-go>Сохранить</button>');
-    $('[data-go]', md.el).addEventListener('click', function () { var b = {}; $$('[data-k]', md.el).forEach(function (i) { b[i.dataset.k] = i.value.trim().replace(/\s/g, i.dataset.k === 'goods' || i.dataset.k === 'note' || i.dataset.k === 'from' || i.dataset.k === 'to' ? ' ' : ''); }); K.guard(this, function () { return K.api(c.id ? '/api/cases/' + c.id : '/api/cases', { method: c.id ? 'PATCH' : 'POST', body: b }).then(function () { md.close(); K.toast('Кейс сохранён'); renderCases(); }); }); });
+    var photo = null, dropPhoto = false;
+    $('[data-photo]', md.el).addEventListener('change', function () {
+      var file = this.files && this.files[0]; if (!file) return;
+      shrink(file).then(function (f) { photo = f; dropPhoto = false; var fr = $('.cs-up .cs-frame', md.el), url = URL.createObjectURL(f); fr.className = 'cs-frame'; fr.innerHTML = '<img src="' + url + '" alt="">'; });
+    });
+    var del = $('[data-photo-del]', md.el); if (del) del.addEventListener('click', function () { dropPhoto = true; photo = null; var fr = $('.cs-up .cs-frame', md.el); fr.className = 'cs-frame empty'; fr.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + MODE_ICON.road + '</svg>'; del.remove(); });
+    $('[data-go]', md.el).addEventListener('click', function () { var b = {}; $$('[data-k]', md.el).forEach(function (i) { b[i.dataset.k] = i.value.trim().replace(/\s/g, i.dataset.k === 'goods' || i.dataset.k === 'note' || i.dataset.k === 'from' || i.dataset.k === 'to' ? ' ' : ''); }); K.guard(this, function () {
+      return K.api(c.id ? '/api/cases/' + c.id : '/api/cases', { method: c.id ? 'PATCH' : 'POST', body: b }).then(function (r) {
+        var id = (r.item && r.item.id) || c.id;
+        if (photo) { var fd = new FormData(); fd.append('file', photo, 'case.jpg'); return K.api('/api/cases/' + id + '/photo', { method: 'POST', body: fd }); }
+        if (dropPhoto && c.photo) return K.api('/api/cases/' + id + '/photo', { method: 'DELETE' });
+      }).then(function () { md.close(); K.toast('Кейс сохранён'); renderCases(); });
+    }); });
+  }
+  // фото уменьшаем в браузере: до 1600 px по длинной стороне, JPEG — быстро грузится у гостей
+  function shrink(file) {
+    return new Promise(function (ok) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () { try { var k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)), cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url); cv.toBlob(function (bl) { ok(bl ? new File([bl], 'case.jpg', { type: 'image/jpeg' }) : file); }, 'image/jpeg', .86); } catch (e) { ok(file); } };
+      img.onerror = function () { URL.revokeObjectURL(url); ok(file); }; img.src = url;
+    });
   }
   document.addEventListener('click', function (e) {
     var cs = e.target.closest && e.target.closest('[data-case]'); if (cs && CASES) { var c = CASES.filter(function (x) { return x.id === cs.dataset.case; })[0]; if (c) caseModal(c); return; }

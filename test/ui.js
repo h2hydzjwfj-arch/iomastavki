@@ -46,16 +46,18 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await p.reload(); await p.waitForFunction(() => document.getElementById('fromCity').value === 'Shanghai', null, { timeout: 5000 });
     });
     await step('Гость: главная — один экран, «Под ключ» / «Только доставка», карта маршрутов до Москвы', async () => {
-      await p.evaluate(() => window.__iomaCloseViews()); await p.waitForSelector('#hxMap .rmap-svg .rm-msk');
+      await p.evaluate(() => window.__iomaCloseViews()); await p.waitForSelector('#hxMap .rmap-svg .rm-to.on[data-to="msk"]');
       const h = await p.evaluate(() => { const r = document.querySelector('.hx').getBoundingClientRect(); return { top: r.top, h: r.height, vh: innerHeight }; });
       if (Math.abs(h.top + h.h - h.vh) > 2) throw new Error('первый экран не до низа окна: ' + JSON.stringify(h));
       await p.click('.hx-pick [data-hx="cargo"]'); await p.waitForSelector('.hx-card.on[data-hxc="cargo"]');
       for (const m of ['road', 'air', 'sea', 'rail']) { await p.click('.rmap-tabs [data-m="' + m + '"]'); await p.waitForFunction(mm => document.querySelector('#hxMap').dataset.mode === mm, m); }
-      await p.evaluate(() => document.querySelector('.rm-o[data-o="yw"]').dispatchEvent(new MouseEvent('click', { bubbles: true })));
-      await p.waitForSelector('.rmap-tip:not([hidden])'); const tip = await p.textContent('.rmap-tip');
-      if (!/Иу → Москва/.test(tip) || !/км/.test(tip)) throw new Error('подсказка маршрута: ' + tip);
+      // гость выбирает город в России и город в Китае — маршрут строится до выбранного города
+      await p.evaluate(() => { const c = s => document.querySelector('#hxMap ' + s).dispatchEvent(new MouseEvent('click', { bubbles: true })); c('[data-to="spb"]'); c('[data-from="gz"]'); });
+      await p.waitForFunction(() => /Гуанчжоу\s*→\s*Санкт-Петербург/.test(document.querySelector('#hxMap .rmap-info').textContent));
+      const tip = await p.textContent('#hxMap .rmap-info'); if (!/км/.test(tip) || !/Путь:/.test(tip)) throw new Error('маршрут на карте: ' + tip);
       await shot(p, '03b_home_map');
       await p.click('.rmap-go'); await p.waitForSelector('#calculatorView.open');
+      await p.waitForFunction(() => /Гуанчжоу/.test(document.getElementById('fromCity').value) && /Санкт-Петербург/.test(document.getElementById('toCity').value), null, { timeout: 5000 });
       await p.evaluate(() => window.__iomaCloseViews());
       await p.click('[data-call-open].hx-num'); await p.waitForSelector('#hxCallActs:not([hidden])');
     });

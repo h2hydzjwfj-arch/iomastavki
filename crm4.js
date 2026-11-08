@@ -115,7 +115,7 @@ function setup(app, ctx) {
 
   // Кейсы для сайта: что и как привезли (без цены доставки клиенту). Смотрят все, добавляет и правит администратор (и робот-помощник).
   const MODES = ['road', 'rail', 'air', 'sea', 'multi'];
-  const caseOf = c => ({ id: c.id, goods: c.goods, weight: c.weight, actualWeight: c.actualWeight, volume: c.volume, places: c.places, value: c.value, transport: c.transport, trucks: c.trucks, from: c.from, to: c.to, note: c.note, at: c.at });
+  const caseOf = c => ({ id: c.id, goods: c.goods, weight: c.weight, actualWeight: c.actualWeight, volume: c.volume, places: c.places, value: c.value, transport: c.transport, trucks: c.trucks, from: c.from, to: c.to, note: c.note, at: c.at, photo: c.photo ? '/api/cases/' + c.id + '/photo?v=' + (c.photoV || '1') : null });
   function cleanCase(b, prev) {
     const o = { ...(prev || {}) };
     for (const [k, m] of [['goods', 120], ['from', 80], ['to', 80], ['note', 600]]) if (b[k] !== undefined) o[k] = str(b[k], m);
@@ -133,9 +133,31 @@ function setup(app, ctx) {
     const d = db(), list = casesOf(d).slice(), i = list.findIndex(c => c.id === req.params.id); if (i < 0) return bad(res, 'Кейс не найден', 404);
     list[i] = cleanCase(req.body || {}, list[i]); d.settings.cases = list; store.save(d); res.json({ ok: true, item: caseOf(list[i]) });
   });
-  app.delete('/api/cases/:id', admin, (req, res) => {
-    const d = db(), list = casesOf(d).filter(c => c.id !== req.params.id); if (list.length === casesOf(d).length) return bad(res, 'Кейс не найден', 404);
+  app.delete('/api/cases/:id', admin, async (req, res) => {
+    const d = db(), gone = casesOf(d).find(c => c.id === req.params.id), list = casesOf(d).filter(c => c.id !== req.params.id); if (!gone) return bad(res, 'Кейс не найден', 404);
+    if (gone.photo && store.delDoc) { try { await store.delDoc('cases', gone.id); } catch (e) {} }
     d.settings.cases = list; store.save(d); res.json({ ok: true });
+  });
+  // фото кейса: загружает администратор (на сайте уже уменьшено до ~1600 px), смотрят все
+  const PHOTO_TYPES = { 'image/jpeg': 1, 'image/png': 1, 'image/webp': 1 };
+  if (ctx.upload) app.post('/api/cases/:id/photo', admin, ctx.upload.single('file'), async (req, res) => {
+    const d = db(), list = casesOf(d).map(c => ({ ...c })), c = list.find(x => x.id === req.params.id); if (!c) return bad(res, 'Кейс не найден', 404);
+    const f = req.file; if (!f || !f.buffer || !f.buffer.length) return bad(res, 'Выберите фото');
+    if (!PHOTO_TYPES[f.mimetype]) return bad(res, 'Фото — в JPG, PNG или WebP');
+    if (f.buffer.length > 6 * 1024 * 1024) return bad(res, 'Фото больше 6 МБ — уменьшите его');
+    try { await store.putDoc('cases', c.id, f.buffer, f.mimetype); } catch (e) { return bad(res, 'Не удалось сохранить фото', 502); }
+    c.photo = f.mimetype; c.photoV = newId(3); d.settings.cases = list; store.save(d); res.json({ ok: true, item: caseOf(c) });
+  });
+  app.get('/api/cases/:id/photo', async (req, res) => {
+    const c = casesOf(db()).find(x => x.id === req.params.id); if (!c || !c.photo) return res.status(404).end();
+    let buf = null; try { buf = await store.getDoc('cases', c.id); } catch (e) {}
+    if (!buf) return res.status(404).end();
+    res.set('Content-Type', c.photo); res.set('Cache-Control', 'public, max-age=604800, immutable'); res.set('X-Content-Type-Options', 'nosniff'); res.send(buf);
+  });
+  app.delete('/api/cases/:id/photo', admin, async (req, res) => {
+    const d = db(), list = casesOf(d).map(c => ({ ...c })), c = list.find(x => x.id === req.params.id); if (!c) return bad(res, 'Кейс не найден', 404);
+    try { if (store.delDoc) await store.delDoc('cases', c.id); } catch (e) {}
+    delete c.photo; delete c.photoV; d.settings.cases = list; store.save(d); res.json({ ok: true, item: caseOf(c) });
   });
   return { cleanCase, casesOf };
 }
