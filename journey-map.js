@@ -20,11 +20,11 @@
     border: ['Граница', 'Border', '口岸', 'Grenze', 'Frontière', 'Sınır'], customs: ['таможня и перегрузка, 1–3 дня', 'customs and transshipment, 1–3 days', '清关和换装，1–3天', 'Zoll und Umladung, 1–3 Tage', 'douane et transbordement, 1–3 jours', 'gümrük ve aktarma, 1–3 gün'],
     port: ['Порт Владивосток: выгрузка и вывоз — до 1–2 недель', 'Port of Vladivostok: unloading and pick-up — up to 1–2 weeks', '符拉迪沃斯托克港：卸货和提货最多1–2周', 'Hafen Wladiwostok: Entladen und Abholung — bis zu 1–2 Wochen', 'Port de Vladivostok : déchargement et enlèvement — jusqu’à 1–2 semaines', 'Vladivostok Limanı: boşaltma ve teslim — 1–2 haftaya kadar'],
     takeoff: ['Взлёт', 'Take-off', '起飞', 'Start', 'Décollage', 'Kalkış'], land: ['Посадка в Москве, Шереметьево', 'Landing in Moscow, Sheremetyevo', '降落莫斯科谢列梅捷沃', 'Landung in Moskau, Scheremetjewo', 'Atterrissage à Moscou, Cheremetievo', 'Moskova Şeremetyevo’ya iniş'],
-    truck: ['дальше машиной', 'then by truck', '之后公路运输', 'dann per LKW', 'puis par camion', 'sonra kamyonla'], way: ['Путь', 'Route', '路线', 'Route', 'Itinéraire', 'Güzergâh'],
+    truck: ['дальше машиной', 'then by truck', '之后公路运输', 'dann per Lkw', 'puis par camion', 'sonra kamyonla'], way: ['Путь', 'Route', '路线', 'Route', 'Itinéraire', 'Güzergâh'],
     time: ['Срок', 'Transit time', '时效', 'Laufzeit', 'Délai', 'Süre'],
     pop: ['Часто везём', 'Popular', '常用', 'Häufig', 'Fréquent', 'Sık'], step: ['Шаг', 'Step', '步骤', 'Schritt', 'Étape', 'Adım']
   };
-  var MN = { air: ['Авиа', 'Air', '空运', 'Luftfracht', 'Aérien', 'Hava'], road: ['Авто', 'Truck', '公路', 'LKW', 'Camion', 'Kara yolu'], rail: ['ЖД', 'Rail', '铁路', 'Bahn', 'Rail', 'Demiryolu'], sea: ['Море + ЖД', 'Sea + rail', '海运+铁路', 'See + Bahn', 'Mer + rail', 'Deniz + demiryolu'] };
+  var MN = { air: ['Авиа', 'Air', '空运', 'Luftfracht', 'Aérien', 'Hava'], road: ['Авто', 'Truck', '公路', 'Lkw', 'Camion', 'Karayolu'], rail: ['ЖД', 'Rail', '铁路', 'Bahn', 'Rail', 'Demiryolu'], sea: ['Море + ЖД', 'Sea + rail', '海运+铁路', 'See + Bahn', 'Mer + rail', 'Deniz + demiryolu'] };
   function mn(m) { return MN[m][L6.indexOf(lang())] || MN[m][1]; }
   // значки «сверху», нос вверх — так транспорт выглядит на карте, когда камера летит следом
   var TOP = {
@@ -55,7 +55,7 @@
       '<div class="jm-panel" aria-live="polite"></div>';
     var stage = el.querySelector('.jm-stage'), cam = el.querySelector('.jm-cam'), svg = el.querySelector('svg'), veh = el.querySelector('.jm-veh'), hud = el.querySelector('.jm-hud'), toast = el.querySelector('.jm-toast'),
       skip = el.querySelector('.jm-skip'), panel = el.querySelector('.jm-panel'), steps = el.querySelector('.jm-steps'), reset = el.querySelector('.jm-reset');
-    function nm(k) { var l = lang(); return R.name(k, l === 'ru' || l === 'zh' ? l : 'en'); }
+    function nm(k) { return R.name(k, lang()); }
     function f(n) { return (+n).toFixed(1); }
     function unit() { var r = svg.getBoundingClientRect(); return r.width ? Math.max(VB[2] / r.width, VB[3] / r.height) : 1.2; }
 
@@ -80,7 +80,7 @@
     function pathD(r) { return r.mode === 'air' ? G.arc(r.path[0], r.path[r.path.length - 1]) : G.smooth(r.path); }
     function advice() {
       var A = window.IOMA_ADVICE; if (!A || !st.from || !st.to) return null;
-      var a = A.advise({ from: R.name(st.from, 'ru'), to: R.name(st.to, 'ru'), fromLL: G.ll(st.from), toLL: G.ll(st.to), lang: lang() === 'ru' ? 'ru' : 'en' });
+      var a = A.advise({ from: R.name(st.from, 'ru'), to: R.name(st.to, 'ru'), fromLL: G.ll(st.from), toLL: G.ll(st.to), lang: lang(), fromLabel: lang() === 'ru' ? undefined : nm(st.from), toLabel: lang() === 'ru' ? undefined : nm(st.to) });
       return a && a.ok ? a : null;
     }
 
@@ -116,7 +116,7 @@
     }
     function summary() {
       var r = route(), a = advice(); if (!r) return '';
-      var o = a && a.options.filter(function (x) { return ADV2MAP[x.mode] === st.mode; })[0], loc = lang() === 'ru' ? 'ru-RU' : 'en-US';
+      var o = a && a.options.filter(function (x) { return ADV2MAP[x.mode] === st.mode; })[0], loc = ({ ru: 'ru-RU', zh: 'zh-CN', de: 'de-DE', fr: 'fr-FR', tr: 'tr-TR' })[lang()] || 'en-US';
       var gw = r.gw && r.mode !== 'air' ? R.gwNames(r.gw, lang() === 'ru' ? 'ru' : 'en').join(' — ') : '';
       var hubs = r.mode === 'air' ? '' : r.path.filter(function (k) { return R.cities[k]; }).map(nm).join(' — ');
       return '<div class="jm-sum"><div class="jm-od"><b>' + nm(st.from) + ' <i>→</i> ' + nm(st.to) + '</b><small>' + mn(st.mode) + (gw ? ' · ' + gw : '') + '</small></div>' +
@@ -151,7 +151,7 @@
       stage.classList.add('jm-fly', 'jm-' + r.mode); veh.innerHTML = '<svg viewBox="0 0 48 48">' + TOP[r.mode] + '</svg>';
       skip.hidden = false;
       var VW = VB[2], VH = VB[3], cx = VB[0] + VW / 2, cy = VB[1] + VH * 0.66, zMax = r.mode === 'air' ? 2.3 : 3.2;
-      var dur = reduce ? 1 : Math.min(13000, Math.max(8000, r.km * 0.85)), t0 = 0, rot = 0, firstRot = null, loc = lang() === 'ru' ? 'ru-RU' : 'en-US';
+      var dur = reduce ? 1 : Math.min(13000, Math.max(8000, r.km * 0.85)), t0 = 0, rot = 0, firstRot = null, loc = ({ ru: 'ru-RU', zh: 'zh-CN', de: 'de-DE', fr: 'fr-FR', tr: 'tr-TR' })[lang()] || 'en-US';
       requestAnimationFrame(function () { cam.classList.add('jm-tilt'); });
       function ease(x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; }
       function frame(ts) {

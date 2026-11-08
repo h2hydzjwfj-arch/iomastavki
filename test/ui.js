@@ -96,6 +96,18 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
     });
     await step('Гость: база знаний с источниками', async () => { await p.evaluate(() => window.__v3open('kbView')); await p.waitForSelector('#kbBody .kb-n .kb-src a'); await p.waitForSelector('#kbBody .kb-p.kb-risk'); await shot(p, '05a_kb'); await p.click('#kbBody [data-kbt=choose]'); await p.click('#kbBody [data-kbr="3"]'); await p.waitForSelector('#kbBody .kb-ans'); await p.click('#kbBody [data-kbt=docs]'); await p.check('#kbBody [data-kbd="0"]'); await p.waitForSelector('#kbBody .kb-dh b:has-text("1 /")'); await shot(p, '05b_kb_docs'); });
     await step('Гость: английская версия без русских надписей в меню', async () => { await p.evaluate(() => [...document.querySelectorAll('.lang')].find(x => x.dataset.lang === 'en').click()); await p.waitForTimeout(400); const t = await p.textContent('.v3-nav'); if (/[а-яё]/i.test(t)) throw new Error(t); await p.evaluate(() => [...document.querySelectorAll('.lang')].find(x => x.dataset.lang === 'ru').click()); await p.waitForTimeout(300); });
+    await step('Гость: немецкий, французский и турецкий — главная, меню и гид без русских надписей', async () => {
+      const want = { de: 'Wir kaufen in China', fr: 'Nous achetons en Chine', tr: 'Çin’de satın alırız' };
+      for (const l of ['de', 'fr', 'tr']) {
+        await p.evaluate(x => [...document.querySelectorAll('.lang')].find(b => b.dataset.lang === x).click(), l); await p.waitForTimeout(500);
+        const nav = await p.textContent('.v3-nav'); if (/[а-яё]/i.test(nav)) throw new Error(l + ' меню: ' + nav);
+        const home = await p.evaluate(() => document.getElementById('homeView').textContent); if (!home.includes(want[l])) throw new Error(l + ' главная: ' + home.slice(0, 300));
+        await p.evaluate(() => window.__v3open('kbView')); await p.waitForTimeout(500);
+        const kb = await p.evaluate(() => document.getElementById('kbBody').innerText); const ru = (kb.match(/[А-Яа-яЁё][^\n]{0,40}/) || [])[0]; if (ru) throw new Error(l + ' гид: ' + ru);
+      }
+      await shot(p, '05c_lang_tr');
+      await p.evaluate(() => [...document.querySelectorAll('.lang')].find(x => x.dataset.lang === 'ru').click()); await p.waitForTimeout(300);
+    });
     await step('Гость: новости открываются', async () => { await p.evaluate(() => window.__iomaOpenView('news')); await p.waitForTimeout(1500); await shot(p, '05_news'); });
 
     let clientPw = '';

@@ -271,10 +271,10 @@
       var L = line(total), V = vat ? line(vat) : null, base = o.vatMode === 'add' ? line(x) : null;
       var contract = L.full + (o.vatMode === 'none' ? ', НДС не облагается' : V ? ', в том числе НДС ' + rate + ' % — ' + V.full : '');
       var h = '<div class="tl-big"><b>' + esc(L.num) + '</b><span>' + esc(CASE_NAME[o.c].split(' ')[0]) + ' падеж</span></div>';
-      h += '<div class="tl-res-row"><small>Для договора</small><p>' + esc(contract) + '</p>' + copyBtn(contract) + '</div>';
-      h += '<div class="tl-res-row"><small>Только прописью</small><p>' + esc(L.plain) + '</p>' + copyBtn(L.plain) + '</div>';
-      if (V) h += '<div class="tl-res-row"><small>НДС ' + rate + ' %</small><p>' + esc(V.full) + '</p>' + copyBtn(V.full) + '</div>';
-      if (base) h += '<div class="tl-res-row"><small>Сумма без НДС</small><p>' + esc(base.full) + '</p>' + copyBtn(base.full) + '</div>';
+      h += '<div class="tl-res-row"><small>Для договора</small><p data-no-i18n lang="ru">' + esc(contract) + '</p>' + copyBtn(contract) + '</div>';
+      h += '<div class="tl-res-row"><small>Только прописью</small><p data-no-i18n lang="ru">' + esc(L.plain) + '</p>' + copyBtn(L.plain) + '</div>';
+      if (V) h += '<div class="tl-res-row"><small>НДС ' + rate + ' %</small><p data-no-i18n lang="ru">' + esc(V.full) + '</p>' + copyBtn(V.full) + '</div>';
+      if (base) h += '<div class="tl-res-row"><small>Сумма без НДС</small><p data-no-i18n lang="ru">' + esc(base.full) + '</p>' + copyBtn(base.full) + '</div>';
       h += '<p class="tl-note">Падеж выбирают по фразе в договоре: «стоимость составляет …» — именительный, «в размере …» — родительный, «по цене, равной …» — дательный, «за …» — винительный.</p>';
       out.innerHTML = h;
     }
@@ -441,6 +441,6 @@
   }
   // роль становится известна после загрузки (вход сотрудника) — открытое окно инструмента перерисовываем
   var lastRole = '';
-  new MutationObserver(function () { var r = document.body.classList.contains('role-admin') ? 'admin' : 'other'; if (r === lastRole) return; lastRole = r; Object.keys(TOOLS).forEach(function (id) { var v = document.getElementById(id); if (v && v.classList.contains('open')) { var b = $('.tl', v); if (b) b.dataset.ok = ''; mount(id); } }); }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  if (typeof MutationObserver === 'function' && document.body) new MutationObserver(function () { var r = document.body.classList.contains('role-admin') ? 'admin' : 'other'; if (r === lastRole) return; lastRole = r; Object.keys(TOOLS).forEach(function (id) { var v = document.getElementById(id); if (v && v.classList.contains('open')) { var b = $('.tl', v); if (b) b.dataset.ok = ''; mount(id); } }); }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watch); else watch();
 })();
