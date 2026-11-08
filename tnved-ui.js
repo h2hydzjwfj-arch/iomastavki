@@ -41,6 +41,7 @@
       box.innerHTML = '<div class="cx-bar"><div class="cx-search big"><input type="search" data-tq value="' + esc(Q) + '" placeholder="Название товара или цифры кода" aria-label="Поиск по справочнику ТН ВЭД" autocomplete="off"></div>'
         + '<button type="button" class="cx-btn" data-tn="upl">Загрузить файл</button><button type="button" class="cx-btn ghost" data-tn="add">+ Код</button></div>'
         + (s.count ? '<p class="cx-tnstat"><b>' + K.num(s.count) + '</b> ' + K.plural(s.count, 'код', 'кода', 'кодов') + (s.importedAt ? ' · обновлено ' + K.d(s.importedAt) + (s.source ? ' из «' + esc(s.source) + '»' : '') : '') + ((s.history || 0) ? ' · <button type="button" class="cx-link" data-tn="hist">история обновлений</button>' : '') + '</p>' : '')
+        + (s.builtin && s.builtin.count ? '<p class="cx-tnstat cx-mut">Плюс встроенный справочник сайта: <b>' + K.num(s.builtin.count) + '</b> ' + K.plural(s.builtin.count, 'код', 'кода', 'кодов') + ' с пошлинами — проверка кода и поиск работают по нему, даже если alta.ru недоступен.</p>' : '')
         + upPanel + '<div data-tr></div>';
       var dz = $('[data-tz]', box), up = function (f) { var st = $('[data-ts]', box); st.textContent = '⏳ Загружаю ' + f.name + '…'; var fd = new FormData(); fd.append('file', f); if ($('[data-replace]', box).checked) fd.append('mode', 'replace');
         api('/api/tnved/import', { method: 'POST', body: fd }).then(function (r) { toast('Справочник обновлён: новых ' + r.added + ', обновлено ' + r.updated + (r.diff && r.diff.affected_n ? ', задето сделок ' + r.diff.affected_n : '')); load(); if (r.diff && (r.diff.rate_n || r.diff.removed_n || r.diff.affected_n)) setTimeout(function () { openDiff(r.diff.id); }, 300); }).catch(function (e) { st.textContent = '❌ ' + e.message; }); };
@@ -104,6 +105,8 @@
       box.hidden = false; box.innerHTML = '<div class="cx-clh"><b>Из собственного справочника</b>' + (x.exact ? '' : '<small>точного кода нет — ближайшая позиция ' + esc(fmtCode(x.code)) + '</small>') + '</div><p>' + esc(x.name || '') + '</p><div class="cx-tnc"><div><small>Пошлина</small><b>' + esc(x.duty || '—') + '</b></div><div><small>НДС</small><b>' + esc(x.vat || '—') + '</b></div><div><small>Документы</small><b>' + esc(x.cert || '—') + '</b></div><div><small>Честный знак</small><b>' + esc(x.marking || '—') + '</b></div>' + (x.radio ? '<div><small>Сбор</small><b>73 860 ₽</b></div>' : '') + '</div>';
     }).catch(function () { box.hidden = true; });
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', enhanceCustoms); else enhanceCustoms();
+  // Поиск кода по названию и карточка «из собственного справочника» в «Проверке ТН ВЭД» отключены по решению владельца:
+  // код подбирает декларант по полному описанию, а ответ проверки — только код, название, пошлина, НДС и разрешительные.
+  void enhanceCustoms;
   window.IOMA_TNVED = { load: load, openCode: openCode };
 })();

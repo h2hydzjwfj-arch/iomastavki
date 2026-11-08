@@ -125,6 +125,7 @@
       menu.addEventListener('click', function (e) { if (e.target.closest('button') && !sg.classList.contains('sg-solo')) setTimeout(api.close, 0); });
     });
     document.addEventListener('click', function (e) { if (!e.target.closest || !e.target.closest('[data-sg]')) closeGroups(); });
+    window.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.sg-menu button')) setTimeout(closeGroups, 0); }, true);
     var follow = function () { groups.forEach(function (g) { g.follow(); }); };
     window.addEventListener('resize', follow);
     window.addEventListener('scroll', follow, { passive: true });
@@ -135,7 +136,7 @@
   safe(function () {
     var els = $$('.rv'); if (!els.length) return;
     if (reduce || (window.CSS && CSS.supports && CSS.supports('animation-timeline: view()')) || !('IntersectionObserver' in window)) { els.forEach(function (x) { x.classList.add('in'); }); return; }
-    var io = new IntersectionObserver(function (ents) { ents.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } }); }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+    var io = new IntersectionObserver(function (ents) { ents.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } }); }, { rootMargin: '0px 0px 0px 0px', threshold: 0 });
     els.forEach(function (x) { io.observe(x); });
   });
 

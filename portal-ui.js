@@ -226,7 +226,12 @@
   document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-kpprint],[data-kpcopy],[data-kpopen]');if(!t)return;
     if(t.hasAttribute('data-kpprint'))window.print();if(t.dataset.kpcopy)copy(t.dataset.kpcopy);if(t.dataset.kpopen)openQuote(t.dataset.kpopen)});
   function quoteRow(q,owner){return '<article class="k v3p-qrow"><div><b>'+esc(q.number)+'</b> · '+esc(q.from)+' → '+esc(q.to)+'<small>'+date(q.createdAt)+(owner?' · '+esc(owner):'')+(q.company?' · '+esc(q.company):'')+' · до '+date(q.validUntil)+'</small></div><b class="v3p-qp">'+fmt(q.price)+' '+esc(q.currency)+'</b><button type="button" class="v3c-link" data-kpopen="'+esc(q.id)+'">Открыть</button></article>'}
-  function loadMyQuotes(){var box=$('#v3cabQuotes');api('/api/my/quotes').then(function(d){box.innerHTML=d.items.length?d.items.map(function(q){return quoteRow(q)}).join(''):'<div class="k v3p-empty"><b>Пока нет КП</b><small>Посчитайте ставку — КП сохранится здесь автоматически.</small><button type="button" class="calculate" data-open-view="calculator">Рассчитать ставку</button></div>'}).catch(function(x){box.innerHTML='<p class="v3p-err">'+esc(x.message)+'</p>'})}
+  // КП от менеджера (лист КП из расчёта контракта) — сверху, ниже — расчёты клиента на сайте
+  function kpMoney(v,c){return Math.round(Number(v)||0).toLocaleString('ru-RU')+' '+({CNY:'¥',USD:'$',EUR:'€',RUB:'₽'}[c]||c||'')}
+  function kpRow(k){return '<article class="k v3p-qrow v3p-kprow"><div><b>'+esc(k.title||'Коммерческое предложение')+(k.number?' № '+esc(k.number):'')+'</b>'+(k.route?' · '+esc(k.route):'')+'<small>'+date(k.createdAt)+(k.cargo?' · '+esc(k.cargo):'')+(k.valid?' · ставка до '+esc(k.valid):'')+'</small></div><div class="v3p-kpsum"><b>'+kpMoney(k.total,k.currency)+'</b>'+(k.rub?'<small>≈ '+kpMoney(k.rub,'RUB')+'</small>':'')+'</div><button type="button" class="v3p-btn ghost" data-kpopen="'+esc(k.id)+'">Открыть</button></article>'}
+  function openKp(id){api('/api/my/kps/'+encodeURIComponent(id)).then(function(d){var k=d.item;if(window.CX&&window.CX.modal){var md=window.CX.modal('Коммерческое предложение','<div class="kp-wrap">'+k.html+'</div><div class="cv-setb"><button type="button" class="cx-btn primary" data-kppdf>Скачать PDF</button></div>',false,{wide:true});var b=md.el.querySelector('[data-kppdf]');if(b)b.addEventListener('click',function(){if(window.IOMA_KP_PRINT)window.IOMA_KP_PRINT(k.html);else window.print()})}}).catch(function(x){alert(x.message)})}
+  function loadMyQuotes(){var box=$('#v3cabQuotes');Promise.all([api('/api/my/kps').catch(function(){return {items:[]}}),api('/api/my/quotes')]).then(function(rr){var kp=rr[0].items||[],d=rr[1];box.innerHTML=(kp.length?'<h3 class="v3p-kph">КП от менеджера</h3>'+kp.map(kpRow).join('')+(d.items.length?'<h3 class="v3p-kph">Мои расчёты на сайте</h3>':''):'')+(d.items.length?d.items.map(function(q){return quoteRow(q)}).join(''):kp.length?'':'<div class="k v3p-empty"><b>Пока нет КП</b><small>Посчитайте ставку — КП сохранится здесь автоматически. КП от менеджера тоже появятся здесь.</small><button type="button" class="calculate" data-open-view="calculator">Рассчитать ставку</button></div>')}).catch(function(x){box.innerHTML='<p class="v3p-err">'+esc(x.message)+'</p>'})}
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-kpopen]');if(b)openKp(b.dataset.kpopen)});
   function loadAllQuotes(){var box=$('#v3quotesList');if(!box)return;api('/api/quotes').then(function(d){box.innerHTML=d.items.length?d.items.map(function(q){return quoteRow(q,q.ownerName)}).join(''):'<div class="k v3p-empty"><b>КП пока нет</b><small>Здесь будут все расчёты клиентов и гостей, которые сохранили КП.</small></div>'}).catch(function(){})}
   $$('#v3cabTabs .chip').forEach(function(t){t.addEventListener('click',function(){$$('#v3cabTabs .chip').forEach(function(x){x.classList.toggle('on',x===t)});var q=t.dataset.ctab==='quotes';$('#v3cabList').hidden=q;$('#v3cabQuotes').hidden=!q;if(q)loadMyQuotes()})});
 
@@ -257,15 +262,18 @@
   /* память калькулятора: ввод не теряется при перезагрузке */
   var CK='iomaCalc';
   var CF=['fromCity','toCity','weight','pieces','distance','length','width','height'];
-  function saveCalc(){var m={};CF.forEach(function(id){var e=document.getElementById(id);if(e&&e.value)m[id]=e.value});lsSet(CK,m)}
+  // ввод держим только в этой вкладке (sessionStorage): перезагрузка не теряет данные, а новый визит начинается с чистых полей с подсказками
+  function ssGet(k,d){try{return JSON.parse(sessionStorage.getItem(k))||d}catch(e){return d}}function ssSet(k,v){try{sessionStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+  try{localStorage.removeItem(CK)}catch(e){}
+  function saveCalc(){var m={};CF.forEach(function(id){var e=document.getElementById(id);if(e&&e.value)m[id]=e.value});ssSet(CK,m)}
   CF.forEach(function(id){var e=document.getElementById(id);if(!e)return;e.addEventListener('change',saveCalc);e.addEventListener('input',function(){clearTimeout(saveCalc.t);saveCalc.t=setTimeout(saveCalc,400)})});
   // выбор города из подсказки меняет поле без события — сохраняем и после клика по подсказке, и перед расчётом
   document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('.suggestions,.suggestion,[class*=suggest],#calculate,#v3go'))setTimeout(saveCalc,80)},true);
   window.addEventListener('pagehide',saveCalc);
-  setTimeout(function(){var m=lsGet(CK,{});Object.keys(m).forEach(function(id){var e=document.getElementById(id);if(e&&!e.value&&m[id]){e.value=m[id];e.dispatchEvent(new Event('input',{bubbles:true}))}})},400);
+  setTimeout(function(){var m=ssGet(CK,{});Object.keys(m).forEach(function(id){var e=document.getElementById(id);if(e&&!e.value&&m[id]){e.value=m[id];e.dispatchEvent(new Event('input',{bubbles:true}))}})},400);
 
   /* ---------- регистрация, показ пароля, вход сразу в кабинет ---------- */
-  function goIn(r){try{history.replaceState(null,'',location.pathname+(r==='admin'?'#work':'#cabinet'))}catch(e){}location.reload()}
+  function goIn(r){try{history.replaceState(null,'',r==='admin'?'/rabota':'/kabinet')}catch(e){}location.reload()} // после входа — сразу на страницу «Работа» или «Мои грузы»
   var rf2=$('#v3regForm');
   $('#v3regBtn')&&$('#v3regBtn').addEventListener('click',function(){lf.hidden=true;rf2.hidden=false;if(lf.login.value.indexOf('@')>0)rf2.email.value=lf.login.value;rf2.name.focus()});
   $('#v3regBack')&&$('#v3regBack').addEventListener('click',function(){rf2.hidden=true;lf.hidden=false;if(rf2.email.value)lf.login.value=rf2.email.value;lf.password.focus()});
@@ -292,7 +300,7 @@
   function leaving(t){if(!t||!t.closest)return false;if(t.closest('#v3ask'))return false;
     if(t.closest('[data-close-view],.view-close,[data-nav],#logoutButton'))return true;
     var o=t.closest('[data-open-view]');if(o){var cur=openId();var map={calculator:'calculatorView',news:'newsView',assistant:'assistantView',forwarders:'forwardersView',customsView:'customsView'};var n=o.getAttribute('data-open-view');return (map[n]||n)!==cur}
-    return t.classList&&t.classList.contains('view-layer')&&t.classList.contains('open')&&window.__iomaDownOn===t}
+    return false}
   function showAsk(info,go){pending={info:info,go:go};$('#v3askP').textContent=info.p;$('[data-ask=save]',ask).textContent=info.saveText||'Сохранить';ask.hidden=false;setTimeout(function(){$('[data-ask=save]',ask).focus()},30)}
   window.addEventListener('click',function(e){if(bypass||!ask)return;if(!leaving(e.target))return;var info=dirtyInfo();if(!info)return;
     e.preventDefault();e.stopImmediatePropagation();var t=e.target;showAsk(info,function(){bypass=true;try{t.click()}finally{bypass=false}})},true);

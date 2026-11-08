@@ -53,7 +53,7 @@ function bestRate({ from, to, mode, distance }) {
     .sort((a, b) => b._score - a._score || new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
   return m[0] || null;
 }
-const portal = require('./portal').setup(app, { verifySession, DATA_DIR, upload, rateLimit, cloud, engine: q => bestRate(q), rates: () => cbrRatesToday(),
+const portal = require('./portal').setup(app, { verifySession, DATA_DIR, upload, rateLimit, cloud, engine: q => bestRate(q), mergeRates: (recs, src) => mergeRateRecords(recs, src), rates: () => cbrRatesToday(), fetchTnved: code => TNVED_CHECK.fetchTnved(code),
   agents: () => { try { const r = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'agents.json'), 'utf8')); return Array.isArray(r) && r.length ? r : BUILTIN_AGENTS; } catch { return BUILTIN_AGENTS; } },
   // ИИ для разбора инвойсов и упаковочных листов (если задан OPENAI_API_KEY)
   ai: { enabled: () => !!process.env.OPENAI_API_KEY && aiBreaker.allow(), state: () => aiBreaker.state(), run: async (input, o = {}) => { const out = await responsesRequest({ key: process.env.OPENAI_API_KEY, preferred: process.env.OPENAI_MODEL, input, max_output_tokens: o.maxTokens || 8000, timeoutMs: o.timeoutMs || 120000 }); if (out.error) throw Object.assign(new Error(out.error.error || 'AI error'), { status: out.error.status }); return responseText(out.d); } } });
@@ -154,6 +154,10 @@ function auth(req, res, next) {
 
 // Страница всегда свежая, скрипты и стили кэшируются на час (в index.html они подключаются с ?v=...).
 app.get('/', (req,res) => { res.set('Cache-Control', 'no-cache'); res.sendFile(path.join(ROOT, 'index.html'), { cacheControl: false }); });
+// Разделы сайта — отдельные адреса (pages.js открывает нужный раздел); остальные пути по-прежнему 404
+const PAGE_PATHS = ['/raschet', '/uslugi', '/kejsy', '/tnved', '/ekspeditory', '/novosti', '/gid', '/zayavka', '/vhod', '/kabinet', '/rabota', '/akkaunt'];
+app.get('/assistent', (req, res) => res.redirect(301, '/')); // ИИ-ассистент убран: вместо него — робот-помощник администратора
+app.get(PAGE_PATHS, (req,res) => { res.set('Cache-Control', 'no-cache'); res.sendFile(path.join(ROOT, 'index.html'), { cacheControl: false }); });
 app.get('/app.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'app.js'), { cacheControl: false }); });
 app.get('/styles.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'styles.css'), { cacheControl: false }); });
 app.get('/theme-v3.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.js'), { cacheControl: false }); });
@@ -165,10 +169,10 @@ app.get('/kb.js', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'
 app.get('/palettes.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'palettes.css'), { cacheControl: false }); });
 app.get('/theme-v3.css', (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, 'theme-v3.css'), { cacheControl: false }); });
 // Новые модули главной и кабинета: карта-калькулятор, трекинг груза, динамика курса, экскурсия, журнал
-for (const f of ['night.css', 'night.js', 'journal-ui.js', 'geo-asia.js', 'map-calc.js', 'track.js', 'rates-dyn.js', 'tour.js', 'v4.css', 'ved.js', 'crm.css', 'crm-kit.js', 'crm-calc-ui.js', 'crm-tasks-ui.js', 'crm-clients-ui.js', 'crm-sys-ui.js', 'tnved-ui.js', 'crm-rates-ui.js']) app.get('/' + f, (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, f), { cacheControl: false }); });
+for (const f of ['night.css', 'night.js', 'journal-ui.js', 'geo-asia.js', 'map-calc.js', 'track.js', 'rates-dyn.js', 'tour.js', 'v4.css', 'ved.js', 'contract.js', 'pages.js', 'pages.css', 'crm.css', 'crm-kit.js', 'crm-calc-ui.js', 'crm-tasks-ui.js', 'crm-clients-ui.js', 'crm-sys-ui.js', 'tnved-ui.js', 'crm-rates-ui.js', 'fact.js', 'crm-fact-ui.js', 'ui.js', 'ui.css', 'home.js', 'home.css', 'routes-map.js', 'calc-ux.js', 'calc.css', 'robot-ui.js', 'robot.css', 'site-custom.js', 'account-menu.js', 'crm-format.js']) app.get('/' + f, (req,res) => { res.set('Cache-Control', 'public, max-age=3600'); res.sendFile(path.join(ROOT, f), { cacheControl: false }); });
 const SITE_URL = process.env.SITE_URL || 'https://iomastavki.onrender.com';
 app.get('/robots.txt', (req,res) => { res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${SITE_URL}/sitemap.xml\n`); });
-app.get('/sitemap.xml', (req,res) => { const urls = ['/'].concat(seoPages ? seoPages.urls() : []); res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${SITE_URL}${u === '/' ? '/' : u}</loc><lastmod>2026-11-06</lastmod><changefreq>${u === '/novosti' || u === '/' ? 'daily' : 'monthly'}</changefreq><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('')}</urlset>`); });
+app.get('/sitemap.xml', (req,res) => { const urls = [...new Set(['/', '/raschet', '/uslugi', '/kejsy', '/tnved', '/ekspeditory', '/novosti', '/gid', '/zayavka'].concat(seoPages ? seoPages.urls() : []))]; res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${SITE_URL}${u === '/' ? '/' : u}</loc><lastmod>2026-11-06</lastmod><changefreq>${u === '/novosti' || u === '/' ? 'daily' : 'monthly'}</changefreq><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('')}</urlset>`); });
 let seoPages = null;
 // Почему хранилище не подключилось — без значений ключей, только что не так (видно в проверке сайта и в «Работе»).
 let cloudError = '';

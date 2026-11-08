@@ -5,7 +5,7 @@
   function api(url, opt) {
     opt = opt || {}; var o = { method: opt.method || 'GET', credentials: 'same-origin', headers: {} };
     if (opt.body instanceof FormData) o.body = opt.body; else if (opt.body) { o.headers['Content-Type'] = 'application/json'; o.body = JSON.stringify(opt.body); }
-    return fetch(url, o).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok || d.ok === false) { var e = new Error(d.error || 'Ошибка ' + r.status); e.status = r.status; throw e; } return d; }); });
+    return fetch(url, o).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok || d.ok === false) { if (r.status === 401) { try { window.dispatchEvent(new CustomEvent('ioma:signed-out')); } catch (x) {} var e1 = new Error('Вы вышли из аккаунта — войдите снова'); e1.status = 401; throw e1; } var e = new Error(d.error || 'Ошибка ' + r.status); e.status = r.status; throw e; } return d; }); });
   }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function toast(m, kind) { if (window.__v3toast) window.__v3toast(m); else { var t = document.createElement('div'); t.className = 'cx-toast' + (kind ? ' ' + kind : ''); t.textContent = m; document.body.appendChild(t); setTimeout(function () { t.remove(); }, 3200); } }
@@ -29,7 +29,7 @@
     var mf = $('.cx-mf', ov); if (mf) { if (typeof foot === 'string') mf.innerHTML = foot; else mf.innerHTML = '<button type="button" class="cx-btn ghost" data-cx="close">Закрыть</button>'; }
     var down = null;
     ov.addEventListener('pointerdown', function (e) { down = e.target; });
-    ov.addEventListener('click', function (e) { if (e.target === ov && down === ov) close(); if (e.target.closest('.cx-x,[data-cx=close]')) close(); });
+    ov.addEventListener('click', function (e) { if (e.target.closest('.cx-x,[data-cx=close]')) close(); }); // щелчок мимо окна ничего не закрывает
     function close() { if (opts.onClose && opts.onClose() === false) return; ov.classList.remove('on'); setTimeout(function () { ov.remove(); }, 160); stack = stack.filter(function (x) { return x !== api2; }); }
     var api2 = { el: ov, body: box, foot: mf, close: close };
     document.body.appendChild(ov); requestAnimationFrame(function () { ov.classList.add('on'); });
@@ -77,7 +77,7 @@
     if (!noLoad) load(tab);
   }
   // «Настройки»: компания, отгулы, праздники, почта, ИИ-бот, безопасность, журнал — одна строка меню и вкладки сверху
-  var SETTINGS = ['company', 'timeoff', 'holidays', 'mail', 'bot', 'security', 'journal'];
+  var SETTINGS = ['company', 'locked', 'timeoff', 'holidays', 'mail', 'bot', 'security', 'journal'];
   function lastSet() { try { var v = localStorage.getItem('iomaSetTab'); return SETTINGS.indexOf(v) >= 0 ? v : 'company'; } catch (e) { return 'company'; } }
   function markSettings(tab) {
     var isSet = SETTINGS.indexOf(tab) >= 0, chip = $('#workView .cx-nav [data-tab="settings"]'), bar = $('#cxSetBar');

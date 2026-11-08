@@ -21,7 +21,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
   try {
     const { p } = await ctx();
     await step('Гость: главная и меню без закрытых разделов', async () => {
-      await p.waitForSelector('.v3-hero'); await shot(p, '01_guest_home');
+      await p.waitForSelector('.hx'); await shot(p, '01_guest_home');
       if (await p.isVisible('.v3-nav [data-open-view=workView]')) throw new Error('видно «Работа»');
       if (await p.isVisible('.v3-nav [data-open-view=forwarders]')) throw new Error('видно «Экспедиторы»');
     });
@@ -45,39 +45,41 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
     await step('Гость: ввод калькулятора не теряется после перезагрузки', async () => {
       await p.reload(); await p.waitForFunction(() => document.getElementById('fromCity').value === 'Shanghai', null, { timeout: 5000 });
     });
-    await step('Гость: карта-калькулятор — города кликом, цена прямо в карточке', async () => {
-      await p.evaluate(() => window.__iomaCloseViews()); await p.waitForSelector('#mcStage .mc-pin', { state: 'attached' }); await p.waitForFunction(() => window.IOMA_MAP && document.querySelector('#v3Hero.mc-on'));
-      await p.evaluate(() => { window.IOMA_MAP.pick('from', 'qd'); window.IOMA_MAP.pick('to', 'nsk'); });
-      await p.fill('#mcW', '800'); await p.click('#mcGo'); await p.waitForSelector('#mcRes .mc-o', { timeout: 8000 });
-      await p.waitForFunction(() => document.getElementById('fromCity').value === 'Циндао' && document.getElementById('toCity').value === 'Новосибирск' && document.getElementById('weight').value === '800');
-      await p.waitForSelector('#mcRoute .mc-r-line'); await shot(p, '03b_home_map');
-      // клик по городу на самой карте
-      await p.click('#mcEdit');
-      await p.evaluate(() => { const el = document.querySelector('.mc-pin[data-id="sel"]'); const r = el.getBoundingClientRect(); ['pointerdown', 'pointerup'].forEach(t => el.dispatchEvent(new PointerEvent(t, { bubbles: true, clientX: r.left, clientY: r.top, pointerId: 7, pointerType: 'mouse', button: 0 }))); });
-      await p.waitForFunction(() => /Сеул/.test(document.querySelector('#mcFrom b').textContent));
-      // масштаб кнопкой
-      const s0 = await p.evaluate(() => window.IOMA_MAP.view().s); await p.click('.mc-zoom [data-z=in]'); await p.waitForTimeout(500);
-      if (!((await p.evaluate(() => window.IOMA_MAP.view().s)) > s0)) throw new Error('карта не приблизилась');
+    await step('Гость: главная — один экран, «Под ключ» / «Только доставка», карта маршрутов до Москвы', async () => {
+      await p.evaluate(() => window.__iomaCloseViews()); await p.waitForSelector('#hxMap .rmap-svg .rm-to.on[data-to="msk"]');
+      const h = await p.evaluate(() => { const r = document.querySelector('.hx').getBoundingClientRect(); return { top: r.top, h: r.height, vh: innerHeight }; });
+      if (Math.abs(h.top + h.h - h.vh) > 2) throw new Error('первый экран не до низа окна: ' + JSON.stringify(h));
+      await p.click('.hx-pick [data-hx="cargo"]'); await p.waitForSelector('.hx-card.on[data-hxc="cargo"]');
+      for (const m of ['road', 'air', 'sea', 'rail']) { await p.click('.rmap-tabs [data-m="' + m + '"]'); await p.waitForFunction(mm => document.querySelector('#hxMap').dataset.mode === mm, m); }
+      // гость выбирает город в России и город в Китае — маршрут строится до выбранного города
+      await p.evaluate(() => { const c = s => document.querySelector('#hxMap ' + s).dispatchEvent(new MouseEvent('click', { bubbles: true })); c('[data-to="spb"]'); c('[data-from="gz"]'); });
+      await p.waitForFunction(() => /Гуанчжоу\s*→\s*Санкт-Петербург/.test(document.querySelector('#hxMap .rmap-info').textContent));
+      const tip = await p.textContent('#hxMap .rmap-info'); if (!/км/.test(tip) || !/Путь:/.test(tip)) throw new Error('маршрут на карте: ' + tip);
+      await shot(p, '03b_home_map');
+      await p.click('.rmap-go'); await p.waitForSelector('#calculatorView.open');
+      await p.waitForFunction(() => /Гуанчжоу/.test(document.getElementById('fromCity').value) && /Санкт-Петербург/.test(document.getElementById('toCity').value), null, { timeout: 5000 });
+      await p.evaluate(() => window.__iomaCloseViews());
+      await p.click('[data-call-open].hx-num'); await p.waitForSelector('#hxCallActs:not([hidden])');
     });
-    await step('Гость: динамика курса ЦБ открывается', async () => {
-      await p.click('.rd-open-btn'); await p.waitForSelector('.rd-ov:not([hidden])');
-      await p.waitForFunction(() => document.querySelector('.rd-stats div') || !document.querySelector('.rd-load').hidden && !/Загружаю/.test(document.querySelector('.rd-load').textContent), null, { timeout: 15000 });
-      await p.click('.rd-per [data-rp="365"]'); await p.waitForTimeout(1500); await shot(p, '03c_rates_dynamics');
-      await p.keyboard.press('Escape'); await p.waitForSelector('.rd-ov', { state: 'hidden' });
+    await step('Гость: «Услуги» и «Кейсы» — отдельные страницы, кейс открывается по клику', async () => {
+      await p.goto(B + '/uslugi'); await p.waitForSelector('#servicesView.open .sv-c');
+      await p.goto(B + '/kejsy'); await p.waitForSelector('#casesView.open [data-case]'); await p.click('[data-case]'); await p.waitForSelector('.cx-ov .cs-m');
+      await shot(p, '03c_case'); await p.click('.cx-ov .cx-x'); await p.goto(B + '/'); await p.waitForFunction(() => /role-/.test(document.body.className));
     });
-    await step('Гость: экскурсия по сайту открывается и пропускается', async () => {
-      await p.evaluate(() => window.IOMA_TOUR.guest()); await p.waitForSelector('.tour .tour-card'); await shot(p, '03d_tour');
-      await p.click('.tour-next'); await p.waitForTimeout(500); await shot(p, '03e_tour_map'); await p.click('.tour-skip'); await p.waitForSelector('.tour', { state: 'detached' });
+    await step('Гость: язык одной кнопкой — весь первый экран на английском', async () => {
+      await p.click('.lx-btn'); await p.click('.lx-menu [data-lang="en"]'); await p.waitForFunction(() => /We buy in China/.test(document.querySelector('.hx-h1').textContent));
+      await p.waitForFunction(() => /Rail/.test(document.querySelector('.rmap-tabs').textContent));
+      await p.click('.lx-btn'); await p.click('.lx-menu [data-lang="ru"]'); await p.waitForFunction(() => /Купим в Китае/.test(document.querySelector('.hx-h1').textContent));
     });
-    await step('Окно не закрывается, если мышь зажали внутри и отпустили снаружи', async () => {
+    await step('Окно закрывается только крестиком — ни протяжка мышью, ни щелчок мимо его не закрывают', async () => {
       await p.evaluate(() => window.__v3open('leadView'));
       const box = await (await p.$('#leadView .v3p-form')).boundingBox();
       await p.mouse.move(box.x + 30, box.y + 30); await p.mouse.down(); await p.mouse.move(8, box.y + 30); await p.mouse.up(); await p.waitForTimeout(200);
       if (!(await p.evaluate(() => document.getElementById('leadView').classList.contains('open')))) throw new Error('окно закрылось');
       await p.mouse.click(8, 300); await p.waitForTimeout(200);
-      if (await p.evaluate(() => document.getElementById('leadView').classList.contains('open'))) throw new Error('клик по фону не закрыл окно');
+      if (!(await p.evaluate(() => document.getElementById('leadView').classList.contains('open')))) throw new Error('щелчок мимо закрыл окно — закрывать можно только крестиком');
+      await p.click('#leadView .view-close'); await p.waitForFunction(() => !document.getElementById('leadView').classList.contains('open'));
     });
-    await step('Гость: курс ЦБ на выбранную дату', async () => { await p.evaluate(() => { const i = document.getElementById('v3curDate'); i.value = '2026-08-07'; i.dispatchEvent(new Event('change')); }); await p.waitForFunction(() => /07\.08\.2026|Нет курса|CBR/.test(document.getElementById('v3date').textContent), null, { timeout: 12000 }); });
     await step('Гость: заявка отправляется', async () => {
       await p.evaluate(() => window.__v3open('leadView'));
       await p.fill('#v3leadForm [name=name]', 'Тест UI'); await p.fill('#v3leadForm [name=contact]', '@ui_test');
@@ -113,6 +115,11 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await A.p.click('#workView .cx-nav [data-tab=tasks]'); await A.p.waitForSelector('#cxTasks .cx-search', { timeout: 8000 });
       await A.p.click('#workView .cx-nav [data-tab=ved]'); await A.p.click('#cxVed [data-c=create][data-t=our_contract]'); await A.p.waitForSelector('#cxVed .cv-layout');
       await A.p.fill('#cxVed [data-k=invoice_amount]', '10000'); await A.p.waitForFunction(() => { const b = document.querySelector('#cxVed .cv-total b'); return b && /[1-9]/.test(b.textContent); }, null, { timeout: 6000 }); await shot(A.p, '06e_ved_calc');
+      // расчёт контракта по рабочей таблице: условия, итог вверх до юаня, текст КП без маржи
+      await A.p.selectOption('#cxVed [data-d=payment]', 'bank'); await A.p.waitForFunction(() => /по внутреннему курсу банка/.test(document.querySelector('#cxVed [data-r=result]').textContent), null, { timeout: 6000 });
+      await A.p.click('#cxVed [data-c=kp]'); await A.p.waitForSelector('.cx-modal .kp'); const kp = await A.p.textContent('.cx-modal .kp');
+      if (!/Стоимость контракта/.test(kp) || !/по курсу ЦБ/.test(kp) || !/В стоимость включено/i.test(kp) || /Маржа|налог/i.test(kp)) throw new Error('КП: ' + kp.slice(0, 200));
+      await shot(A.p, '06e2_kp'); await A.p.keyboard.press('Escape');
       await A.p.click('#workView .cx-nav [data-tab=tnved]'); await A.p.waitForSelector('#cxTnved [data-tq]'); await shot(A.p, '06f_tnved');
       // ставки агентов в сделке: ориентир по прайсу и окно запроса
       await A.p.click('#workView .cx-nav [data-tab=inbox]'); await A.p.click('#crmInbox [data-x=open]:has-text("Документы UI")'); await A.p.waitForSelector('#crmDeal .cx-deal');
@@ -142,7 +149,20 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       const types = await A.p.$$eval('#jrnBox td.ty', els => els.map(e => e.textContent)); if (!types.some(t => /Расчёт/.test(t)) || !types.some(t => /Заявка/.test(t))) throw new Error('в журнале нет расчётов или заявок: ' + types.slice(0, 8).join(', '));
       await shot(A.p, '07c_admin_journal');
     });
-    await step('Админ: аккаунт и состояние сайта', async () => { await A.p.click('.v3-acc'); await A.p.waitForSelector('#v3accBody .v3p-notif'); await shot(A.p, '08_admin_account'); });
+    await step('Админ: робот-помощник — правка текста сайта видна гостю и отменяется', async () => {
+      await A.p.waitForSelector('.rb-btn:not([hidden])'); await A.p.click('.rb-btn'); await A.p.waitForSelector('.rb-panel:not([hidden])');
+      await A.p.fill('.rb-in textarea', 'Замени «Купим в Китае.» на «Найдём и купим в Китае.»'); await A.p.click('.rb-send');
+      await A.p.waitForSelector('.rb-card[data-kind=text] [data-go]', { timeout: 8000 }); await A.p.click('.rb-card[data-kind=text] [data-go]'); await A.p.waitForSelector('.rb-card[data-kind=text].done', { timeout: 8000 }); await shot(A.p, '08b_admin_robot');
+      await p.goto(B + '/', { waitUntil: 'domcontentloaded' }); await p.waitForFunction(() => /Найдём и купим в Китае/.test(document.querySelector('.hx-h1').innerText), null, { timeout: 8000 });
+      if (await p.isVisible('.rb-btn')) throw new Error('гость видит робота');
+      const t = await A.p.evaluate(() => fetch('/api/robot').then(r => r.json())); for (const x of t.texts) await A.p.evaluate(id => fetch('/api/robot/texts/' + id, { method: 'DELETE' }), x.id);
+      await A.p.click('.rb-x');
+    });
+    await step('Админ: меню аккаунта — состояние сайта, профиль, меню закрывается после выбора', async () => {
+      await A.p.click('.v3-acc'); await A.p.waitForSelector('.am-menu:not([hidden]) [data-am=site]'); await shot(A.p, '08a_admin_menu');
+      await A.p.click('.am-menu [data-am=site]'); await A.p.waitForSelector('#v3accBody .v3p-notif'); if (await A.p.isVisible('.am-menu')) throw new Error('меню не закрылось'); await shot(A.p, '08_admin_account');
+      await A.p.click('.v3-acc'); await A.p.click('.am-menu [data-am=profile]'); await A.p.waitForSelector('.am-modal [data-f=pw]'); await A.p.click('.am-modal .cx-x'); await A.p.waitForSelector('.am-modal', { state: 'detached' });
+    });
 
     const C = await ctx();
     await step('Клиент: вход', async () => {
@@ -156,8 +176,10 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await C.p.evaluate(() => window.__v3open('cabinetView')); await C.p.click('#v3cabTabs [data-ctab=quotes]'); await C.p.waitForSelector('#v3cabQuotes .v3p-qrow'); await shot(C.p, '11_client_quotes');
     });
     await step('Клиент: смена пароля в аккаунте', async () => {
-      await C.p.click('.v3-acc'); await C.p.fill('#v3pwForm [name=current]', clientPw); await C.p.fill('#v3pwForm [name=next]', 'ui-new-pass-1');
-      await C.p.click('#v3pwForm [type=submit]'); await C.p.waitForSelector('#v3pwForm .v3p-ok:has-text("Пароль изменён")'); await shot(C.p, '12_client_account');
+      await C.p.click('.v3-acc'); await C.p.click('.am-menu [data-am=profile]'); await C.p.waitForSelector('.am-modal [data-f=prof] [name=name]');
+      await C.p.click('.am-modal .am-pw summary'); await C.p.fill('.am-modal [data-f=pw] [name=current]', clientPw); await C.p.fill('.am-modal [data-f=pw] [name=next]', 'ui-new-pass-1');
+      await C.p.click('.am-modal [data-f=pw] [type=submit]'); await C.p.waitForSelector('.am-modal .am-ok:has-text("Пароль изменён")'); await shot(C.p, '12_client_account');
+      await C.p.click('.am-modal .cx-x');
     });
     const Rg = await ctx();
     await step('Новый клиент сам создаёт кабинет и попадает в «Мои грузы»', async () => {
@@ -167,7 +189,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await Rg.p.waitForSelector('#cabinetView.open', { timeout: 6000 }); await shot(Rg.p, '12c_new_cabinet');
     });
     const M = await ctx({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-    await step('Телефон: главная', async () => { await M.p.waitForSelector('.v3-hero'); await shot(M.p, '13_mobile_home'); });
+    await step('Телефон: главная', async () => { await M.p.waitForSelector('.hx'); await shot(M.p, '13_mobile_home'); });
     await step('Телефон: новости и гид', async () => { await M.p.evaluate(() => window.__iomaOpenView('news')); await M.p.waitForTimeout(1200); await shot(M.p, '14_mobile_news'); await M.p.evaluate(() => window.__v3open('kbView')); await M.p.waitForSelector('#kbBody .kb-pulse'); await shot(M.p, '15_mobile_kb'); });
     await step('Нет ошибок JavaScript на страницах', async () => { if (errors.length) throw new Error(errors.slice(0, 3).join(' | ')); });
   } finally {

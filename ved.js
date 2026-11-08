@@ -1,4 +1,4 @@
-/* IOMASTAVKA — калькулятор ВЭД (перенос calc.js из CRM West Asia) и финансы сделки.
+/* IOMASTAVKA — калькулятор ВЭД (перенос calc.js из прежней CRM) и финансы сделки.
    Один и тот же код работает на сервере (require('./ved')) и в браузере (window.IOMA_VED).
 
    Типы расчёта:
@@ -39,8 +39,8 @@
   function n(v) { if (v == null || v === '') return 0; var x = Number(String(v).replace(/\s| /g, '').replace(',', '.')); return isFinite(x) ? x : 0; }
   function has(v) { return v != null && v !== '' && isFinite(Number(String(v).replace(',', '.'))); }
   function r2(v) { return Math.round((v || 0) * 100) / 100; }
-  function unitOf(u) { u = String(u || 'кг').toLowerCase(); if (u === 'м2' || u === 'м²' || u === 'кв.м' || u === 'm2') return 'м²'; if (u === 'l' || u === 'л') return 'л'; if (u === 'шт' || u === 'pcs') return 'шт'; if (u === 'пар' || u === 'пара' || u === 'pair') return 'пар'; return 'кг'; }
-  function eurRateOf(it) { var u = unitOf(it.eur_unit); return n(u === 'м²' ? it.eur_per_m2 : u === 'л' ? it.eur_per_l : (u === 'шт' || u === 'пар') ? it.eur_per_pcs : it.eur_per_kg); }
+  function unitOf(u) { u = String(u || 'кг').toLowerCase(); if (u === 'м2' || u === 'м²' || u === 'кв.м' || u === 'm2') return 'м²'; if (u === 'l' || u === 'л') return 'л'; if (u === 'шт' || u === 'pcs') return 'шт'; if (u === 'пар' || u === 'пара' || u === 'pair') return 'пар'; if (u === 'см³' || u === 'см3' || u === 'cm3') return 'см³'; return 'кг'; }
+  function eurRateOf(it) { var u = unitOf(it.eur_unit); return n(u === 'м²' ? it.eur_per_m2 : u === 'л' ? it.eur_per_l : (u === 'шт' || u === 'пар' || u === 'см³') ? it.eur_per_pcs : it.eur_per_kg); }
 
   function customsFee(valueRub, scale) {
     scale = scale && scale.length ? scale : DEFAULTS.feeScale;
@@ -50,17 +50,22 @@
 
   /* Разбор текста ставки из справочника ТН ВЭД в поля позиции калькулятора.
      «10%» · «5%, но не менее 0,2 евро/кг» · «15% плюс 0,1 евро за 1 кг» · «0,5 евро/пара» · «0,3 евро за 1 л» */
-  var UNIT_RX = [[/кг|kg/i, 'кг'], [/пар/i, 'пар'], [/шт|pcs|ед(?![а-яё])/i, 'шт'], [/м2|м²|кв\.?\s*м/i, 'м²'], [/^\s*л(?![а-яё])|литр|^l$/i, 'л']];
+  var UNIT_RX = [[/кг|kg/i, 'кг'], [/пар/i, 'пар'], [/шт|pcs|ед(?![а-яё])/i, 'шт'], [/м2|м²|кв\.?\s*м/i, 'м²'], [/см3|см³|куб\.?\s*см/i, 'см³'], [/^\s*т(?![а-яё])|тонн/i, 'т'], [/^\s*л(?![а-яё])|литр|^l$/i, 'л']];
   function parseDuty(text) {
     var s = String(text == null ? '' : text).toLowerCase().replace(/,/g, '.').replace(/\s+/g, ' ');
     var out = { duty_type: 'percent', duty_rate: 0, eur_per_kg: 0, eur_per_l: 0, eur_per_pcs: 0, eur_per_m2: 0, eur_unit: 'кг', text: String(text || '') };
     if (!s.trim()) return out;
     var pct = s.match(/(\d+(?:\.\d+)?)\s*%/); if (pct) out.duty_rate = Number(pct[1]);
-    var sp = s.match(/(\d+(?:\.\d+)?)\s*(?:евро|eur|€)[^\d%]*?(?:\/|за\s*(?:1\s*)?)\s*([а-яa-z²0-9.\s]{1,10})/);
+    var usd = s.match(/(\d+(?:\.\d+)?)\s*(?:usd|\$|долл[а-яё]*)\.?\s*(?:\/|за)\s*(?:1\s*)?(т(?![а-яё])|тонн|кг)/);
+    if (usd) { // доллары: за тонну или за кг — дополнительной составляющей, как в справочнике
+      out.duty_extra_rate = Number(usd[1]); out.duty_extra_unit = /^т/.test(usd[2]) ? 2 : 4; out.duty_type = 'percent'; return out;
+    }
+    var sp = s.match(/(\d+(?:\.\d+)?)\s*(?:евро|eur|€)[^\d%]*?(?:\/|за\s*(?:1\s+(?=\d)|1(?=[а-яa-z]))?)\s*(?:(\d+)\s+)?([а-яa-z²³0-9.\s]{1,10})/);
     if (sp) {
-      var v = Number(sp[1]), un = UNIT_RX.find(function (u) { return u[0].test(sp[2]); }), unit = un ? un[1] : 'кг';
+      var v = Number(sp[1]) / (sp[2] ? Number(sp[2]) : 1), un = UNIT_RX.find(function (u) { return u[0].test(sp[3]); }), unit = un ? un[1] : 'кг';
+      if (unit === 'т') { unit = 'кг'; v = v / 1000; }
       out.eur_unit = unit;
-      if (unit === 'м²') out.eur_per_m2 = v; else if (unit === 'л') out.eur_per_l = v; else if (unit === 'шт' || unit === 'пар') out.eur_per_pcs = v; else out.eur_per_kg = v;
+      if (unit === 'м²') out.eur_per_m2 = v; else if (unit === 'л') out.eur_per_l = v; else if (unit === 'шт' || unit === 'пар' || unit === 'см³') out.eur_per_pcs = v; else out.eur_per_kg = v;
       out.duty_type = out.duty_rate ? (/плюс|\+/.test(s) ? 'plus' : 'min') : 'fixed_eur';
     }
     return out;
