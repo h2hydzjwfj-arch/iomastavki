@@ -16,6 +16,13 @@
     ['/kabinet', 'cabinetView', 'Мои грузы', ''],
     ['/rabota', 'workView', 'Работа', ''],
     ['/akkaunt', 'accountView', 'Аккаунт', ''],
+    ['/otsledit', 'trackView', 'Отследить груз', ''],
+    ['/vlezet', 'fitView', 'Влезет ли груз', ''],
+    ['/obem', 'volumeView', 'Объём груза', ''],
+    ['/terminal', 'terminalView', 'Терминальные в Шереметьево', ''],
+    ['/po-rossii', 'russiaView', 'Доставка по России', ''],
+    ['/telefon', 'phoneView', 'Чей номер и который час', ''],
+    ['/propis', 'propisView', 'Сумма прописью', ''],
   ];
   var byView = {}, byPath = {};
   PAGES.forEach(function (p) { byView[p[1]] = p; byPath[p[0]] = p; });

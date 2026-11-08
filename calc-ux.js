@@ -124,10 +124,32 @@
   // ширина карты на экране: подписи на карте всегда одного размера
   function mapPx() { var m = card && $('.cxr-map', card); if (m && m.clientWidth) return m.clientWidth; var w = card && card.clientWidth > 120 ? card.clientWidth - 52 : 600, px = grid.classList.contains('cx-res') && window.innerWidth > 860 ? w * 1.35 / 2.35 - 15 : w; return px > 120 ? px : 600; }
   function refit() { if (!card) return; $$('.cxr-map[data-r]', card).forEach(function (m) { var svg = $('svg', m); if (!svg || !m.clientWidth) return; var u = parseFloat(svg.style.getPropertyValue('--u')), vb = svg.viewBox.baseVal, want = vb.width / m.clientWidth; if (Math.abs(want - u) / u < .06) return; try { var r = JSON.parse(m.dataset.r); m.innerHTML = window.IOMA_RMAP.routeSvg(r, lang(), { px: m.clientWidth, aspect: aspect() }); } catch (e) {} }); }
+  // как лучше везти: рекомендация по региону отправления, части России и размеру партии (route-advice.js)
+  var CHIP = { auto: 'auto', rail: 'rail', sea: 'sea', air: 'air' };
+  function nval(id) { var e = document.getElementById(id), v = !e ? '' : 'value' in e ? e.value : e.textContent; var n = parseFloat(String(v || '').replace(/\s/g, '').replace(',', '.')); return isFinite(n) ? n : 0; }
+  function adviceHtml(fromT, toT) {
+    var A = window.IOMA_ADVICE, R = window.IOMA_RMAP; if (!A || !fromT) return '';
+    var ll = function (k) { var c = k && R && R.cities && R.cities[k]; return c ? [c[3], c[4]] : null; };
+    var a = A.advise({ from: fromT, to: toT || 'Москва', fromLL: ll(R && R.find(fromT)), toLL: ll(R && R.find(toT || 'Москва')), weight: nval('weight'), volume: nval('autoVolume'), lang: lang() });
+    if (!a.ok) return '';
+    var X = A.text[a.lang], b = a.options[0], cm = ($('.v3c-chips .chip.on') || {}).dataset;
+    var tag = function (o) { return o.tags.indexOf('cheap') >= 0 ? X.cheap : o.tags.indexOf('fast') >= 0 ? X.fast : ''; };
+    var rubs = function (o) { return '<i class="cxa-r" aria-label="цена">' + '₽₽₽₽₽'.slice(0, o.rub) + '<s>' + '₽₽₽₽₽'.slice(o.rub) + '</s></i>'; };
+    var h = '<div class="cxa"><div class="cxa-h"><b>' + esc(a.lang === 'en' ? 'Best way to ship' : 'Как лучше везти') + '</b><span>' + esc(a.from.regionName + ' → ' + a.to.zoneName + ' · ' + a.bandName) + '</span></div>';
+    h += '<button type="button" class="cxa-best' + (cm && cm.m === CHIP[b.mode] ? ' on' : '') + '" data-cxm="' + b.mode + '"><em>' + esc(X.best) + '</em><b>' + esc(b.title) + '</b><span>' + esc(b.via || '') + '</span><strong>' + b.days[0] + '–' + b.days[1] + ' ' + esc(X.days) + rubs(b) + '</strong><small>' + esc(b.why[0] || '') + (b.cons[0] ? ' · ' + esc(b.cons[0]) : '') + '</small></button>';
+    var alt = a.options.slice(1, 4);
+    if (alt.length) h += '<div class="cxa-alt">' + alt.map(function (o) { return '<button type="button" data-cxm="' + o.mode + '" title="' + esc((o.why[0] || '') + (o.cons[0] ? ' · ' + o.cons[0] : '')) + '"><b>' + esc(o.title) + '</b><span>' + o.days[0] + '–' + o.days[1] + ' ' + esc(X.days) + (tag(o) ? ' · ' + esc(tag(o)) : '') + '</span>' + rubs(o) + '</button>'; }).join('') + '</div>';
+    if (a.impossible.length) h += '<p class="cxa-no">' + esc(a.impossible.map(function (n) { return { auto: X.auto, rail: X.rail, sea: X.sea }[n.mode]; }).join(', ')) + ' — ' + esc(a.impossible[0].why) + '</p>';
+    return h + '</div>';
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-cxm]'); if (!b || !window.__v3setMode) return;
+    window.__v3setMode(CHIP[b.dataset.cxm] || 'rail', true); setTimeout(function () { draw(true); }, 30);
+  });
   function draw(force) {
     if (!card || !window.IOMA_RMAP) return;
     var R = window.IOMA_RMAP, fromT = clean(val('fromCity')), toT = clean(val('toCity')), m = mode();
-    var key = [fromT, toT, m, lang(), grid.classList.contains('cx-res')].join('|');
+    var key = [fromT, toT, m, lang(), grid.classList.contains('cx-res'), nval('weight'), nval('autoVolume')].join('|');
     steps();
     if (!force && key === lastKey) return; lastKey = key;
     var from = R.find(fromT), to = R.find(toT) || (toT ? null : 'msk'), notes = [], body; TOTAL = '';
@@ -139,7 +161,7 @@
       else {
         if (!to && toT) notes.push('<b>' + esc(toT) + '</b>: ' + T(W.unknownTo));
         if (r.mode === 'sea' && m !== 'sea' && m !== 'air') notes.push(T(W.oversea));
-        body = routeHtml(r, from, dest, notes);
+        body = routeHtml(r, from, dest, notes).replace('<div class="cxr-map"', adviceHtml(fromT, toT) + '<div class="cxr-map"'); // сначала — как лучше везти, потом карта
       }
     }
     var adv = ADV || (ADV = document.getElementById('v3advice')), more = adv && adv.textContent.trim() ? 1 : 0;
