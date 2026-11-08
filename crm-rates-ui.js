@@ -1,5 +1,5 @@
 /* IOMASTAVKA — вкладка «Ставки» в сделке: запрос ставок агентам, ответы, ставки с подтверждением, ориентиры по прайсам, база агентов.
-   Логика — как в модуле RQ West Asia CRM (rq_rates.js): ИИ предлагает ставку, менеджер подтверждает; лучшая — минимальная в USD внутри единицы. */
+   Логика — как в прежней CRM (rq_rates.js): ИИ предлагает ставку, менеджер подтверждает; лучшая — минимальная в USD внутри единицы. */
 (function () {
   'use strict';
   var K = window.CX; if (!K) return;
@@ -14,24 +14,47 @@
     api('/api/deals/' + deal.id + '/rq').then(function (r) { V = r; draw(); }).catch(function (e) { box.innerHTML = '<p class="v3p-err">' + esc(e.message) + '</p>'; });
   }
 
+  var rub = function (v) { return Math.round(Number(v || 0)).toLocaleString('ru-RU') + ' ₽'; };
   function rateRow(t) {
     var acts = t.status === 'proposed' ? '<button type="button" class="cx-ib ok" data-r="ok" data-id="' + t.id + '" title="Подтвердить">✓</button><button type="button" class="cx-ib" data-r="no" data-id="' + t.id + '" title="Отклонить">✕</button>'
       : t.status === 'confirmed' ? (t.inFinance ? '<span class="cx-mut">в финансах</span>' : '<button type="button" class="cx-link" data-r="fin" data-id="' + t.id + '">в финансы</button>') : '<button type="button" class="cx-link" data-r="back" data-id="' + t.id + '">вернуть</button>';
-    var more = [t.container, t.includes && 'включено: ' + t.includes, t.extras && 'доп.: ' + t.extras, t.valid && 'действует: ' + t.valid].filter(Boolean).join(' · ');
-    return '<div class="cx-tr cx-rt ' + t.status + (t.best ? ' best' : '') + '"><span class="cx-t"><b>' + esc(t.agent) + (t.best ? ' <em class="cx-tag green">лучшая</em>' : '') + (t.status === 'proposed' ? ' <em class="cx-tag amb">' + (t.source === 'ai' ? 'ИИ' : 'авто') + ' — проверьте</em>' : '') + '</b>' + (more ? '<small>' + esc(more) + '</small>' : '') + (t.quote ? '<small class="cx-q">«' + esc(t.quote) + '»</small>' : '') + '</span>'
-      + '<span><b>' + fmt(t.amount) + ' ' + esc(t.currency) + '</b>' + (t.unit ? '<small class="cx-mut"> / ' + esc(t.unit) + '</small>' : '') + '</span>'
-      + '<span class="cx-mut lp">' + (t.usd != null && t.currency !== 'USD' ? '≈ $' + fmt(t.usd) : '') + '</span><span class="cx-mut lp">' + esc(t.transit || '') + '</span><span class="cx-racts">' + acts + '</span></div>';
+    if (t.status !== 'rejected' && !t.expired) acts = (t.inCalc ? '<button type="button" class="cx-link" data-r="opencalc" data-id="' + esc(t.inCalc) + '" title="Открыть расчёт контракта">в расчёте ✓</button>' : '<button type="button" class="cx-btn sm primary" data-r="calc" data-id="' + t.id + '" title="Фрахт, надбавка к курсу, транзит и срок действия уйдут в расчёт контракта сделки">В расчёт</button>') + acts;
+    var more = [t.container, t.fx ? 'курс ЦБ +' + String(t.fx).replace('.', ',') + '%' : '', t.includes && 'включено: ' + t.includes, t.extras && 'доп.: ' + t.extras].filter(Boolean).join(' · ');
+    var left = t.validUntil && !t.expired ? Math.round((Date.parse(t.validUntil) - Date.parse(V.today)) / 864e5) : null;
+    var valid = t.validUntil ? '<span class="cx-valid' + (t.expired ? ' red' : left != null && left <= 3 ? ' amb' : '') + '">' + (t.expired ? 'истекла ' : 'действует до ') + esc(t.validRu) + '</span>' : t.valid ? '<small class="cx-mut">действует: ' + esc(t.valid) + '</small>' : '<small class="cx-mut">срок ставки не указан</small>';
+    var tot = t.totRub != null ? '<b>≈ ' + rub(t.totRub) + '</b>' + (t.qty && t.qty !== 1 ? '<small class="cx-mut"> ' + fmt(t.qty) + ' ' + esc(t.unit) + '</small>' : '') : '<small class="cx-mut">' + (t.unit === 'кг' ? 'нет веса' : t.unit === 'м³' ? 'нет объёма' : 'нет курса') + '</small>';
+    return '<div class="cx-tr cx-rt ' + t.status + (t.best ? ' best' : '') + (t.expired ? ' expired' : '') + '"><span class="cx-t"><b>' + esc(t.agent) + (t.best ? ' <em class="cx-tag green">лучшая</em>' : '') + (t.status === 'proposed' ? ' <em class="cx-tag amb">' + (t.source === 'ai' ? 'ИИ' : 'авто') + ' — проверьте</em>' : '') + '</b>' + (t.contact ? '<small class="cx-who">' + esc(t.contact) + '</small>' : '') + (more ? '<small>' + esc(more) + '</small>' : '') + (t.quote ? '<small class="cx-q">«' + esc(t.quote) + '»</small>' : '') + '</span>'
+      + '<span><b>' + fmt(t.amount) + ' ' + esc(t.currency) + '</b>' + (t.unit ? '<small class="cx-mut"> / ' + esc(t.unit) + '</small>' : '') + (t.usd != null && t.currency !== 'USD' ? '<small class="cx-mut"> ≈ $' + fmt(t.usd) + '</small>' : '') + '</span>'
+      + '<span class="lp">' + tot + '</span><span class="lp cx-terms">' + (t.transit ? '<small class="cx-mut">в пути ' + esc(t.transit) + '</small>' : '') + valid + '</span><span class="cx-racts">' + acts + '</span></div>';
   }
+  // сравнение: лучшая за всю партию и насколько дешевле следующей
+  function compare(list) {
+    var c = list.filter(function (t) { return t.status !== 'rejected' && t.totRub != null; }).sort(function (a, b) { return a.totRub - b.totRub; });
+    if (c.length < 2) return '';
+    var d = c[1].totRub - c[0].totRub, w = [deal.weight ? fmt(deal.weight) + ' кг' : '', deal.volume ? fmt(deal.volume) + ' м³' : ''].filter(Boolean).join(', ');
+    return '<p class="cx-cmp">Сравнение за всю партию' + (w ? ' (' + esc(w) + ')' : '') + ' с надбавками агентов к курсу: дешевле всех — <b>' + esc(c[0].agent) + '</b>, ≈ ' + rub(c[0].totRub) + (d > 0 ? ', на ' + rub(d) + ' дешевле, чем ' + esc(c[1].agent) : ', столько же, сколько ' + esc(c[1].agent)) + '.</p>';
+  }
+  var HEAD = '<div class="cx-tr cx-thd"><span>Агент</span><span>Ставка</span><span class="lp">За партию</span><span class="lp">Сроки</span><span></span></div>';
 
   function draw() {
     var r = V, rates = r.rates.slice().sort(function (a, b) { var o = { confirmed: 0, proposed: 1, rejected: 2 }; return (o[a.status] - o[b.status]) || ((a.usd || 1e12) - (b.usd || 1e12)); });
     var h = '<div class="cx-bar"><button type="button" class="cx-btn primary" data-r="ask">Запросить ставки</button><button type="button" class="cx-btn ghost" data-r="reply"' + (r.requests.length ? '' : ' disabled title="Сначала отправьте запрос"') + '>Вставить ответ агента</button><button type="button" class="cx-btn ghost" data-r="manual"' + (r.requests.length ? '' : ' disabled') + '>+ Ставка вручную</button><button type="button" class="cx-btn ghost" data-r="client">Ставка клиенту</button><button type="button" class="cx-link" data-r="base">База агентов</button></div>';
     if (r.questions.length) h += '<div class="cx-qbox"><b>Агенты спрашивают</b>' + r.questions.map(function (q) { return '<div><span><b>' + esc(q.agent) + ':</b> ' + q.questions.map(esc).join(' · ') + '</span><button type="button" class="cx-link" data-r="ans" data-id="' + q.replyId + '">Ответили</button></div>'; }).join('') + '</div>';
-    h += rates.length ? '<div class="cx-table cx-rates"><div class="cx-tr cx-thd"><span>Агент</span><span>Ставка</span><span class="lp">≈ USD</span><span class="lp">Транзит</span><span></span></div>' + rates.map(rateRow).join('') + '</div>'
+    var act = rates.filter(function (t) { return !t.expired; }), arch = rates.filter(function (t) { return t.expired; });
+    h += act.length ? compare(act) + '<div class="cx-table cx-rates">' + HEAD + act.map(rateRow).join('') + '</div>'
+      : arch.length ? '<p class="cx-empty">Действующих ставок нет — у всех истёк срок. Запросите свежие ставки.</p>'
       : r.requests.length ? '<p class="cx-empty">Ответов пока нет. Когда агент ответит — нажмите «Вставить ответ агента», ставку найдёт ИИ.</p>' : '';
+    if (arch.length) h += '<details class="cx-rqs cx-arch"><summary>Архив — истёк срок действия · ' + arch.length + '</summary><p class="cx-mut cx-small">Ставки не удаляются: видно, кто и сколько предлагал раньше.</p><div class="cx-table cx-rates">' + HEAD + arch.map(rateRow).join('') + '</div></details>';
     if (r.refs.length) h += '<section class="cx-refs"><h4>Ориентир по прайсам агентов</h4>' + r.refs.map(function (p) { return '<div class="cx-ref"><span><b>' + esc(p.agent) + '</b> <small class="cx-mut">' + esc(MODE[p.mode] || '') + ' · ' + esc(p.origin) + (p.dest ? ' → ' + esc(p.dest) : '') + (p.days ? ' · ' + esc(p.days) + ' дн.' : '') + '</small></span><span>' + fmt(p.perKg) + ' ₽/кг' + (p.min ? '<small class="cx-mut">, от ' + fmt(p.min) + ' ₽</small>' : '') + '</span><span>' + (p.est ? '<b>≈ ' + fmt(p.est) + ' ₽</b>' : '<small class="cx-mut">укажите вес</small>') + '</span>' + (p.url ? '<a href="' + esc(p.url) + '" target="_blank" rel="noopener" class="cx-link">сайт ↗</a>' : '<span></span>') + '</div>'; }).join('') + '<p class="cx-mut cx-small">Цены «от» с сайтов агентов; меняются в разделе «Тарифы».</p></section>';
     if (r.requests.length) h += '<details class="cx-rqs"><summary>Запросы · ' + r.requests.length + '</summary>' + r.requests.map(function (q) {
       return '<div class="cx-rq"><div class="cx-rqh"><b>' + esc(q.id) + '</b><span class="cx-mut">' + K.dt(q.createdAt) + ' · ' + esc(q.by || '') + '</span><button type="button" class="cx-link" data-r="copy" data-id="' + q.id + '">Скопировать текст</button><button type="button" class="cx-ib" data-r="delrq" data-id="' + q.id + '" title="Удалить запрос">✕</button></div><div class="cx-rqi">' + q.items.map(function (it) { var s = ST[it.status] || ['', '']; return '<button type="button" class="cx-chip2 ' + s[1] + '" data-r="reply1" data-rq="' + q.id + '" data-id="' + it.id + '" title="' + esc((it.email || it.phone || '') + (it.error ? ' — ' + it.error : '')) + '">' + esc(it.agent) + ' <small>' + s[0] + '</small></button>'; }).join('') + '</div></div>';
+    }).join('') + '</details>';
+    // ответы агентов целиком — читаемо: суммы и сроки подсвечены, подпись мелко, старая переписка свёрнута
+    var reps = []; r.requests.forEach(function (q) { (q.replies || []).forEach(function (p) { reps.push(p); }); });
+    if (reps.length) h += '<details class="cx-rqs cx-reps"><summary>Ответы агентов · ' + reps.length + '</summary>' + reps.sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); }).map(function (p) {
+      var who = [p.sender && p.sender.name, p.sender && p.sender.email, p.sender && p.sender.phone].filter(Boolean).join(' · ');
+      return '<article class="cx-rep"><header><b>' + esc(p.agent) + '</b><small class="cx-mut">' + K.dt(p.at) + (who ? ' · ' + esc(who) : '') + '</small><em class="cx-tag ' + (p.rates_n ? 'green' : 'amb') + '">' + (p.rates_n ? 'ставок: ' + p.rates_n : 'ставок не нашлось') + '</em></header>'
+        + '<div class="fm fm-clamp">' + (window.IOMA_FMT ? window.IOMA_FMT.rich(p.text || '') : esc(p.text || '')) + '</div><button type="button" class="cx-more" data-r="repmore">показать полностью</button></article>';
     }).join('') + '</details>';
     if (!r.requests.length && !r.refs.length) h += '<p class="cx-empty">Запросите ставки у агентов — письмо уйдёт тем, у кого указан email, остальным можно отправить текст в мессенджер.</p>';
     box.innerHTML = h;
@@ -61,19 +84,20 @@
   function replyModal(rqId, itemId) {
     var reqs = V.requests, opts = [];
     reqs.forEach(function (q) { q.items.forEach(function (it) { opts.push('<option value="' + q.id + '|' + it.id + '"' + (it.id === itemId ? ' selected' : '') + '>' + esc(it.agent) + ' — ' + esc(q.id) + '</option>'); }); });
-    var md = K.modal('Ответ агента', '<label class="cx-f"><span>Агент</span><select data-w>' + opts.join('') + '</select></label><label class="cx-f"><span>Текст ответа (из почты, WeChat, Telegram)</span><textarea data-t rows="10" placeholder="Вставьте ответ целиком — ставки и вопросы найдутся сами"></textarea></label>', '<button type="button" class="cx-btn ghost" data-cx="close">Отмена</button><button type="button" class="cx-btn primary" data-go>Разобрать ответ</button>');
+    var md = K.modal('Ответ агента', '<label class="cx-f"><span>Агент</span><select data-w>' + opts.join('') + '</select></label><label class="cx-f"><span>Текст ответа (из почты, WeChat, Telegram)</span><textarea data-t rows="10" placeholder="Вставьте ответ целиком — ставки, срок действия, кто прислал и вопросы найдутся сами"></textarea></label><label class="cx-f"><span>или файл КП агента — Excel, Word, текст</span><input type="file" data-f accept=".xlsx,.xlsm,.docx,.txt,.csv,.eml"></label>', '<button type="button" class="cx-btn ghost" data-cx="close">Отмена</button><button type="button" class="cx-btn primary" data-go>Разобрать ответ</button>');
     var el = md.el;
     $('[data-go]', el).addEventListener('click', function () {
-      var w = $('[data-w]', el).value.split('|'), t = $('[data-t]', el).value.trim(); if (!t) return toast('Вставьте текст ответа', 'err');
+      var w = $('[data-w]', el).value.split('|'), t = $('[data-t]', el).value.trim(), f = $('[data-f]', el).files[0]; if (!t && !f) return toast('Вставьте текст ответа или выберите файл', 'err');
       var b = this; b.disabled = true; b.textContent = 'Разбираю…';
-      api('/api/rq/' + w[0] + '/replies', { method: 'POST', body: { itemId: w[1], text: t } }).then(function (r) { md.close(); toast(r.rates.length ? 'Найдено ставок: ' + r.rates.length + ' — проверьте и подтвердите' : 'Ставок в ответе не нашлось — добавьте вручную', r.rates.length ? '' : 'err'); load(); })
+      var body = { itemId: w[1], text: t }; if (f) { body = new FormData(); body.append('itemId', w[1]); body.append('text', t); body.append('file', f); }
+      api('/api/rq/' + w[0] + '/replies', { method: 'POST', body: body }).then(function (r) { md.close(); toast(r.rates.length ? 'Найдено ставок: ' + r.rates.length + ' — проверьте и подтвердите' : 'Ставок в ответе не нашлось — добавьте вручную', r.rates.length ? '' : 'err'); load(); })
         .catch(function (e) { b.disabled = false; b.textContent = 'Разобрать ответ'; toast(e.message, 'err'); });
     });
   }
 
   function manualModal() {
     var opts = V.requests.map(function (q) { return '<option value="' + q.id + '">' + esc(q.id) + ' · ' + K.d(q.createdAt) + '</option>'; }).join('');
-    var md = K.modal('Ставка вручную', '<div class="cx-grid2"><label class="cx-f"><span>Агент</span><input data-k="agent"></label><label class="cx-f"><span>Запрос</span><select data-k="rqId">' + opts + '</select></label><label class="cx-f"><span>Сумма</span><input data-k="amount" type="number" step="any" min="0"></label><label class="cx-f"><span>Валюта</span><select data-k="currency"><option>USD</option><option>CNY</option><option>RUB</option><option>EUR</option></select></label><label class="cx-f"><span>За что</span><select data-k="unit"><option value="контейнер">контейнер</option><option value="кг">кг</option><option value="м³">м³</option><option value="машина">машина</option><option value="партия">партия</option></select></label><label class="cx-f"><span>Транзит</span><input data-k="transit" placeholder="25 дней"></label></div>', '<button type="button" class="cx-btn ghost" data-cx="close">Отмена</button><button type="button" class="cx-btn primary" data-go>Добавить</button>');
+    var md = K.modal('Ставка вручную', '<div class="cx-grid2"><label class="cx-f"><span>Агент</span><input data-k="agent"></label><label class="cx-f"><span>Запрос</span><select data-k="rqId">' + opts + '</select></label><label class="cx-f"><span>Сумма</span><input data-k="amount" type="number" step="any" min="0"></label><label class="cx-f"><span>Валюта</span><select data-k="currency"><option>USD</option><option>CNY</option><option>RUB</option><option>EUR</option></select></label><label class="cx-f"><span>За что</span><select data-k="unit"><option value="контейнер">контейнер</option><option value="кг">кг</option><option value="м³">м³</option><option value="машина">машина</option><option value="партия">партия</option></select></label><label class="cx-f"><span>Транзит</span><input data-k="transit" placeholder="25 дней"></label><label class="cx-f"><span>Действует до</span><input data-k="valid" placeholder="30.11.2026"></label><label class="cx-f"><span>Надбавка к курсу ЦБ, %</span><input data-k="fx" type="number" step="any" min="0" max="20" placeholder="0"></label><label class="cx-f wide"><span>Кто прислал (имя, почта, телефон)</span><input data-k="contact"></label></div>', '<button type="button" class="cx-btn ghost" data-cx="close">Отмена</button><button type="button" class="cx-btn primary" data-go>Добавить</button>');
     $('[data-go]', md.el).addEventListener('click', function () { var b = {}; $$('[data-k]', md.el).forEach(function (i) { b[i.dataset.k] = i.value; }); api('/api/rq/rates', { method: 'POST', body: b }).then(function () { md.close(); load(); }).catch(function (e) { toast(e.message, 'err'); }); });
   }
 
@@ -131,6 +155,7 @@
   function onClick(e) {
     var b = e.target.closest('[data-r]'); if (!b || !box.contains(b) || b.disabled) return;
     var r = b.dataset.r, id = b.dataset.id;
+    if (r === 'repmore') { var fm = b.previousElementSibling, cl = fm.classList.toggle('fm-clamp'); b.textContent = cl ? 'показать полностью' : 'свернуть'; return; }
     if (r === 'ask') return askModal();
     if (r === 'reply') return replyModal();
     if (r === 'reply1') return replyModal(b.dataset.rq, id);
@@ -140,7 +165,12 @@
     if (r === 'copy') { var q = V.requests.find(function (x) { return x.id === id; }); return api('/api/deals/' + deal.id + '/rq/draft').then(function (d) { copyText((q && q.subject) || d.subject + '\n\n' + d.text); }); }
     if (r === 'delrq') return K.confirm('Удалить запрос вместе с ответами и ставками?').then(function (ok) { if (ok) api('/api/rq/' + id, { method: 'DELETE' }).then(load).catch(function (x) { toast(x.message, 'err'); }); });
     if (r === 'ok' || r === 'no' || r === 'back') return api('/api/rq/rates/' + id, { method: 'PATCH', body: { status: r === 'ok' ? 'confirmed' : r === 'no' ? 'rejected' : 'proposed' } }).then(load).catch(function (x) { toast(x.message, 'err'); });
-    if (r === 'fin') { var t = V.rates.find(function (x) { return x.id === id; }); var qty = t && t.unit && t.unit !== 'партия' && t.unit !== 'контейнер' && t.unit !== 'машина' ? (t.unit === 'кг' ? deal.weight : deal.volume) || 1 : 1;
+    if (r === 'calc') return K.guard(b, function () { return api('/api/rq/rates/' + id + '/to-calc', { method: 'POST', body: {} }).then(function (x) {
+      toast((x.created ? 'Создан расчёт контракта, фрахт записан: ' : 'Фрахт записан в расчёт: ') + fmt(x.freight) + ' ' + x.currency + (x.fx ? ', курс ЦБ +' + String(x.fx).replace('.', ',') + '%' : ''));
+      if (window.IOMA_CRM && window.IOMA_CRM.showTab) window.IOMA_CRM.showTab('calc', x.calcId); else load();
+    }).catch(function (x) { toast(x.message, 'err'); }); });
+    if (r === 'opencalc') return window.IOMA_CRM && window.IOMA_CRM.showTab && window.IOMA_CRM.showTab('calc', id);
+    if (r === 'fin') { var t = V.rates.find(function (x) { return x.id === id; }); var qty = (t && t.qty) || 1;
       return api('/api/rq/rates/' + id + '/finance', { method: 'POST', body: { qty: qty } }).then(function (x) { toast('Добавлено в расходы сделки' + (x.rateMissing ? ' — курс не найден, проверьте во вкладке «Финансы»' : '')); load(); }).catch(function (x) { toast(x.message, 'err'); }); }
     if (r === 'ans') return api('/api/rq/replies/' + id + '/answered', { method: 'POST' }).then(load).catch(function (x) { toast(x.message, 'err'); });
   }

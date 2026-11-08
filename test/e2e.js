@@ -25,7 +25,7 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
   try {
     // --- страницы и файлы
     await check('Главная открывается', async () => { const r = await fetch(B + '/'); ok(r.status === 200); ok((await r.text()).includes('iomastavka')); });
-    for (const f of ['/app.js', '/styles.css', '/theme-v3.css', '/night.css', '/night.js', '/theme-v3.js', '/portal-ui.js', '/palettes.css', '/routes-kb.js', '/i18n-v3.js', '/kb.js', '/v4.css', '/geo-asia.js', '/map-calc.js', '/track.js', '/rates-dyn.js', '/tour.js', '/journal-ui.js', '/ved.js', '/crm.css', '/crm-kit.js', '/crm-ui.js', '/crm-calc-ui.js', '/crm-tasks-ui.js', '/crm-clients-ui.js', '/crm-sys-ui.js', '/tnved-ui.js', '/crm-rates-ui.js'])
+    for (const f of ['/app.js', '/styles.css', '/theme-v3.css', '/night.css', '/night.js', '/theme-v3.js', '/portal-ui.js', '/palettes.css', '/routes-kb.js', '/i18n-v3.js', '/kb.js', '/v4.css', '/geo-asia.js', '/map-calc.js', '/track.js', '/rates-dyn.js', '/tour.js', '/journal-ui.js', '/ved.js', '/crm.css', '/crm-kit.js', '/crm-ui.js', '/crm-calc-ui.js', '/crm-tasks-ui.js', '/crm-clients-ui.js', '/crm-sys-ui.js', '/tnved-ui.js', '/crm-rates-ui.js', '/fact.js', '/crm-fact-ui.js', '/ui.js', '/ui.css', '/home.js', '/home.css', '/routes-map.js', '/calc-ux.js', '/calc.css', '/robot-ui.js', '/robot.css', '/site-custom.js', '/account-menu.js', '/crm-format.js'])
       await check('Файл ' + f, async () => { const r = await fetch(B + f); ok(r.status === 200, 'код ' + r.status); });
     await check('robots.txt и sitemap.xml', async () => { ok((await fetch(B + '/robots.txt')).status === 200); ok((await (await fetch(B + '/sitemap.xml')).text()).includes('<urlset')); });
     await check('Несуществующая страница → 404', async () => { ok((await fetch(B + '/net-takoy')).status === 404); });
@@ -33,7 +33,7 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
 
     // --- гость
     await check('Гость: роль guest', async () => ok((await call('g', 'GET', '/api/me')).role === 'guest'));
-    for (const [m, u] of [['GET', '/api/agents'], ['GET', '/api/rates'], ['POST', '/api/ai'], ['POST', '/api/customs/check'], ['POST', '/api/tnved/check'], ['GET', '/api/leads'], ['GET', '/api/clients'], ['GET', '/api/quotes']])
+    for (const [m, u] of [['GET', '/api/agents'], ['GET', '/api/rates'], ['POST', '/api/ai'], ['POST', '/api/customs/check'], ['GET', '/api/leads'], ['GET', '/api/clients'], ['GET', '/api/quotes']])
       await check(`Гостю закрыто: ${m} ${u}`, async () => { const j = await call('g', m, u, m === 'POST' ? {} : undefined); ok(j._status === 401, 'код ' + j._status); });
     await check('Гость: ориентир ставки без названия агента', async () => {
       const j = await call('g', 'GET', '/api/rates/recommend?from=Shanghai&to=' + encodeURIComponent('Москва') + '&mode=rail');
@@ -51,7 +51,7 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       const q = await call('g', 'POST', '/api/quotes', { from: 'Иу', to: 'Москва', weight: 400, kind: 'ltl_auto' }); ok(q.ok && q.quote.price === j.options.find(o => o.kind === 'ltl_auto').price, 'цена КП не совпала с расчётом');
       const big = await call('g', 'POST', '/api/estimate', { from: 'Shanghai', to: 'Москва', weight: 20000, volume: 60 }); ok(big.options.some(o => o.kind === 'fcl_rail'), 'нет контейнера для 20 т');
     });
-    await check('Статьи для поисковиков и sitemap', async () => { const r = await fetch(B + '/stati/sbornyj-gruz-iz-kitaya'); ok(r.status === 200); ok((await r.text()).includes('<h1>')); const sm = await (await fetch(B + '/sitemap.xml')).text(); ok(sm.includes('/stati/dostavka-cherez-zabaikalsk') && sm.includes('/novosti'), 'нет статей в sitemap'); });
+    await check('Статьи для поисковиков и sitemap', async () => { const r = await fetch(B + '/stati/sbornyj-gruz-iz-kitaya'); ok(r.status === 200); ok((await r.text()).includes('<h1>')); const sm = await (await fetch(B + '/sitemap.xml')).text(); ok(sm.includes('/stati/dostavka-cherez-zabaikalsk') && sm.includes('/novosti') && sm.includes('/raschet</loc>') && sm.includes('/tnved</loc>'), 'нет статей или разделов в sitemap'); ok(!sm.includes('/rabota') && !sm.includes('/kabinet'), 'закрытые разделы в sitemap'); });
     await check('Гость: заявка без контактов отклоняется', async () => ok((await call('g', 'POST', '/api/leads', { name: 'Тест' }))._status === 400));
     await check('Гость: заявка принимается', async () => ok((await call('g', 'POST', '/api/leads', { name: 'Тест CI', contact: '@test', from: 'Шанхай', to: 'Москва', consent: true })).ok));
     await check('Новости: /api/news отвечает', async () => { const j = await call('g', 'GET', '/api/news'); ok(j._status === 200, 'код ' + j._status); ok(Array.isArray(j.items), 'нет списка'); });
@@ -115,6 +115,34 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       const j = await call('c', 'POST', '/api/quotes', { from: 'Shanghai', to: 'Москва', mode: 'rail', weight: 500 }); ok(j.ok); cq = j.quote;
       ok((await call('c', 'GET', '/api/my/quotes')).items.some(q => q.id === cq.id));
     });
+    await check('Кейсы: видят все, добавляет только администратор', async () => {
+      const g = await call('g', 'GET', '/api/cases'); ok(g.ok && g.items.some(c => /Баллистическая ткань/.test(c.goods)), JSON.stringify(g).slice(0, 160));
+      ok((await call('g', 'POST', '/api/cases', { goods: 'Тест' }))._status === 401, 'гость добавил кейс');
+      const a = await call('a', 'POST', '/api/cases', { goods: 'Лампы CI', weight: 1200, transport: 'rail', from: 'Иу', to: 'Москва' }); ok(a.ok && a.item.id, JSON.stringify(a).slice(0, 160));
+      ok((await call('g', 'GET', '/api/cases')).items.some(c => c.goods === 'Лампы CI'), 'новый кейс не виден гостю');
+      // фото кейса: загружает только администратор, смотрят все, удаляется вместе с кейсом
+      const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+      const ph = () => { const fd = new FormData(); fd.append('file', new Blob([png], { type: 'image/png' }), 'photo.png'); return fd; };
+      ok((await call('g', 'POST', '/api/cases/' + a.item.id + '/photo', ph()))._status === 401, 'гость загрузил фото кейса');
+      const bad = new FormData(); bad.append('file', new Blob(['<svg/>'], { type: 'image/svg+xml' }), 'x.svg'); ok((await call('a', 'POST', '/api/cases/' + a.item.id + '/photo', bad))._status === 400, 'принял SVG как фото');
+      const up = await call('a', 'POST', '/api/cases/' + a.item.id + '/photo', ph()); ok(up.ok && /\/api\/cases\/.+\/photo\?v=/.test(up.item.photo || ''), JSON.stringify(up).slice(0, 160));
+      ok((await call('g', 'GET', '/api/cases')).items.find(c => c.id === a.item.id).photo, 'гость не видит фото в списке');
+      const img = await call('g', 'GET', '/api/cases/' + a.item.id + '/photo', null, true); ok(img.status === 200 && img.headers.get('content-type') === 'image/png' && Buffer.from(await img.arrayBuffer()).equals(png), 'фото не отдаётся');
+      ok((await call('a', 'PATCH', '/api/cases/' + a.item.id, { value: 2700000 })).item.photo, 'фото пропало после правки кейса');
+      ok((await call('a', 'DELETE', '/api/cases/' + a.item.id)).ok, 'кейс не удалился');
+      ok((await call('g', 'GET', '/api/cases/' + a.item.id + '/photo', null, true)).status === 404, 'фото удалённого кейса ещё отдаётся');
+    });
+    await check('КП от менеджера появляется в кабинете клиента, внутренние строки не уходят', async () => {
+      const dl = await call('a', 'POST', '/api/deals', { title: 'КП в кабинет CI', clientId: cl.id }); ok(dl.ok, JSON.stringify(dl).slice(0, 160));
+      const html = '<div class="kp"><div class="kp-hero"><div class="kp-sum">151 652 <small>¥</small></div></div></div>';
+      ok((await call('a', 'POST', '/api/deals/' + dl.item.id + '/kp-share', { html: html + '<p>Маржа</p>', total: 151652, currency: 'CNY' }))._status === 400, 'маржа ушла клиенту');
+      ok((await call('a', 'POST', '/api/deals/' + dl.item.id + '/kp-share', { html: '<div class="kp"><img src=x onerror=alert(1)></div>', total: 1, currency: 'CNY' }))._status === 400, 'принят лист со скриптом');
+      const sh = await call('a', 'POST', '/api/deals/' + dl.item.id + '/kp-share', { html, text: 'КП', total: 151652, currency: 'CNY', rub: 1754000, route: 'Гуанчжоу → Москва' }); ok(sh.ok, JSON.stringify(sh).slice(0, 160));
+      const mine = await call('c', 'GET', '/api/my/kps'); ok(mine.items.length === 1 && mine.items[0].total === 151652, JSON.stringify(mine).slice(0, 200));
+      const one = await call('c', 'GET', '/api/my/kps/' + mine.items[0].id); ok(one.item.html === html);
+      ok((await call('g', 'GET', '/api/my/kps'))._status === 401, 'гостю открыты КП клиентов');
+      ok((await call('c', 'POST', '/api/deals/' + dl.item.id + '/kp-share', { html, total: 1 }))._status === 403, 'клиент отправляет КП');
+    });
     await check('Админ: видит КП клиента с агентом', async () => { const j = await call('a', 'GET', '/api/quotes'); const q = j.items.find(x => x.id === cq.id); ok(q && q.ownerName === 'Клиент CI' && q.company); });
     await check('Клиент: смена пароля', async () => {
       ok((await call('c', 'POST', '/api/account/password', { current: 'nope', next: 'new-password-1' }))._status === 403);
@@ -152,7 +180,7 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       ok((await call('g', 'GET', '/api/deals'))._status === 401, 'гостю видны сделки');
     });
     await check('CRM: задачи, финансы, калькулятор ВЭД по курсу ЦБ, коды ТН ВЭД', async () => {
-      const d = await call('a', 'POST', '/api/deals', { title: 'ВЭД CI', contactName: 'Олег', funnel: 'Контракт West Asia', weight: 500 }); ok(d.ok && d.item.funnel === 'Контракт West Asia', JSON.stringify(d).slice(0, 200));
+      const d = await call('a', 'POST', '/api/deals', { title: 'ВЭД CI', contactName: 'Олег', funnel: 'Наш контракт', weight: 500 }); ok(d.ok && d.item.funnel === 'Наш контракт', JSON.stringify(d).slice(0, 200));
       const y = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
       const t = await call('a', 'POST', '/api/tasks', { dealId: d.item.id, type: 'Звонок', desc: 'Перезвонить CI', deadline: y }); ok(t.ok && t.item.overdue, 'задача не просрочена');
       ok((await call('a', 'GET', '/api/crm/badges')).tasksOverdue >= 1, 'нет счётчика просроченных');
@@ -171,6 +199,9 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       const ag = await call('a', 'GET', '/api/crm/agents'); ok(ag.items && ag.items.length > 0, 'нет агентов: ' + JSON.stringify(ag).slice(0, 120));
       const rq = await call('a', 'POST', '/api/deals/' + d.item.id + '/rq', { agentIds: [ag.items[0].id], send: false }); ok(rq.ok && rq.request.items.length === 1, JSON.stringify(rq).slice(0, 160));
       const rp = await call('a', 'POST', '/api/rq/' + rq.request.id + '/replies', { itemId: rq.request.items[0].id, text: 'Rate: USD 3 900 / 40HQ, 28 days' }); ok(rp.rates && rp.rates[0] && rp.rates[0].amount === 3900, 'ставка из ответа: ' + JSON.stringify(rp).slice(0, 160));
+      ok((await call('g', 'POST', '/api/rq/rates/' + rp.rates[0].id + '/to-calc', {}))._status === 401, 'гостю доступна запись ставки в расчёт');
+      const tc = await call('a', 'POST', '/api/rq/rates/' + rp.rates[0].id + '/to-calc', {}); ok(tc.ok && tc.calcId && tc.freight === 3900, 'ставка в расчёт: ' + JSON.stringify(tc).slice(0, 160));
+      const cd = await call('a', 'GET', '/api/calc/' + tc.calcId); ok(cd.doc && cd.doc.freight_total === 3900 && cd.doc.freight_currency === 'USD' && cd.doc.kp_transit === '28 дн.', 'фрахт в расчёте: ' + JSON.stringify(cd.doc || cd).slice(0, 200));
       ok((await call('g', 'GET', '/api/crm/agents'))._status === 401, 'гостю доступна закрытая база агентов');
     });
     await check('Отключённый клиент теряет доступ', async () => { await call('a', 'PATCH', '/api/clients/' + cl.id, { active: false }); ok((await call('c', 'GET', '/api/my/shipments'))._status === 401); });

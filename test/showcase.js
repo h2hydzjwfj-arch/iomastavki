@@ -43,7 +43,7 @@ const tgServer = http.createServer((req, res) => {
   try {
     // ---------- ГОСТЬ ----------
     const G = await ctx('1_guest');
-    await step('Гость открывает сайт', async () => { await G.p.waitForSelector('.v3-hero'); await slow(G.p); await shot(G.p, 'guest_home'); });
+    await step('Гость открывает сайт', async () => { await G.p.waitForSelector('.hx'); await slow(G.p); await shot(G.p, 'guest_home'); });
     await step('Гость считает ставку Шанхай → Москва', async () => {
       await navTo(G.p, 'calculator'); await slow(G.p);
       await G.p.fill('#fromCity', 'Shanghai'); await G.p.fill('#toCity', 'Москва'); await G.p.fill('#weight', '1200');
@@ -73,7 +73,7 @@ const tgServer = http.createServer((req, res) => {
       await A.p.click('#v3loginForm [type=submit]'); await A.p.waitForFunction(() => document.body.classList.contains('role-admin')); await slow(A.p);
     });
     await step('Кнопка «Проверить уведомления» → сообщение пришло вам', async () => {
-      await A.p.click('.v3-acc'); await A.p.waitForSelector('#v3testBtn'); await A.p.click('#v3testBtn');
+      await A.p.evaluate(() => window.__v3open('accountView')); await A.p.waitForSelector('#v3testBtn'); await A.p.click('#v3testBtn');
       await A.p.waitForSelector('#v3testOut .v3p-on'); await slow(A.p); await shot(A.p, 'admin_test_notify');
       await waitMsg(/Проверка iomastavka/, ADMIN_CHAT);
     });
@@ -100,7 +100,7 @@ const tgServer = http.createServer((req, res) => {
       await C.p.click('#v3loginForm [type=submit]'); await C.p.waitForFunction(() => document.body.classList.contains('role-client')); await slow(C.p);
     });
     await step('Клиент подключает Telegram-бота', async () => {
-      await C.p.click('.v3-acc'); await C.p.waitForSelector('#v3tgOn');
+      await C.p.evaluate(() => window.__v3open('accountView')); await C.p.waitForSelector('#v3tgOn');
       await C.p.evaluate(() => { window.open = u => { window.__tgurl = u; }; }); await C.p.click('#v3tgOn');
       const url = await C.p.waitForFunction(() => window.__tgurl).then(h => h.jsonValue());
       ok(/t\.me\/iomastavka_bot\?start=/.test(url), url);
@@ -135,7 +135,7 @@ const tgServer = http.createServer((req, res) => {
       await C.p.waitForSelector('#v3cabList .v3p-docs a'); await slow(C.p); await shot(C.p, 'client_status_doc');
     });
     await step('Клиент забыл пароль → ссылка приходит в Telegram → новый пароль работает', async () => {
-      await C.p.click('#logoutButton'); await C.p.waitForFunction(() => document.body.classList.contains('role-guest'));
+      await C.p.click('.v3-acc'); await C.p.click('.am-menu [data-am=out]'); await C.p.waitForFunction(() => document.body.classList.contains('role-guest'));
       await C.p.click('.v3-loginbtn'); await C.p.click('#v3forgotBtn'); await C.p.fill('#v3forgotForm [name=email]', clientEmail); await C.p.click('#v3forgotForm [type=submit]');
       await C.p.waitForSelector('#v3forgotOk:not(:empty)'); await slow(C.p); await shot(C.p, 'client_forgot');
       const m = await waitMsg(/#reset=/, CLIENT_CHAT); const link = m.text.match(/https?:\/\/\S+#reset=\S+/)[0];

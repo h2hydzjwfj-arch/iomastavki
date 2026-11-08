@@ -161,17 +161,21 @@ function setup(app, opts) {
   const crm2 = require('./crm2').setup(app, { store, admin, upload, str, num, newId, crm, journal, ai: opts.ai,
     rates: opts.rates || (async () => ({ rates: {} })),
     mail: { enabled: () => mail.enabled(), kind: () => mail.kind(), send: (...a) => mail.send(...a) }, tg: { ready: () => tg.ready() } });
-  const tnved = require('./tnved').setup(app, { admin, upload, DATA_DIR, cloud: opts.cloud || null, vedSettings: crm2.vedSettings, affected: crm2.tnvedAffected, who: req => roleOf(req).name || 'Администратор' });
+  const tnved = require('./tnved').setup(app, { admin, upload, DATA_DIR, cloud: opts.cloud || null, vedSettings: crm2.vedSettings, affected: crm2.tnvedAffected, who: req => roleOf(req).name || 'Администратор', fetchTnved: opts.fetchTnved || null });
   // Проверка кода ТН ВЭД по справочнику alta.ru: дерево позиции, пошлина с суммой в ₽, НДС и таможенный сбор.
   // Тот же расчёт, что в tools/tnved_check.py; на сайте — раздел «ТН ВЭД», в Telegram — команда /tnved.
   const TNV = require('./tnved-check');
-  const tnvedDeps = { rates: opts.rates || (async () => ({ rates: {} })), settings: () => crm2.vedSettings(), local: code => tnved.get(code) };
+  const tnvedDeps = { rates: opts.rates || (async () => ({ rates: {} })), settings: () => crm2.vedSettings(), local: code => tnved.get(code), certPrices: () => crm2.certPrices() };
+  // Проверка кода открыта всем (решение владельца): администратору — полный ответ с ценами сертификации,
+  // клиентам и гостям — с пометкой «данные примерные» и строже лимит
   const tnvedLimiter = rateLimit ? rateLimit({ windowMs: 10 * 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много проверок. Подождите несколько минут.' } }) : (q, s, n) => n();
+  const tnvedGuestLimiter = rateLimit ? rateLimit({ windowMs: 10 * 60 * 1000, max: 15, standardHeaders: true, legacyHeaders: false, skip: req => roleOf(req).role === 'admin', message: { ok: false, error: 'Слишком много проверок. Подождите несколько минут или войдите в кабинет.' } }) : (q, s, n) => n();
   const tnvedOut = r => ({ ok: true, code: r.code, report: r.report, url: r.url, levels: r.levels, duty: r.duty, dutyAmount: r.dutyCalc.amount == null ? null : Math.round(r.dutyCalc.amount),
-    dutyDetail: r.dutyCalc.detail, missing: r.dutyCalc.missing, vat: r.vat, excise: r.excise, value: r.value, fee: r.fee, feeSource: r.feeSource, radio: r.radio, ratesDate: r.ratesDate });
-  app.post('/api/tnved/check', admin, tnvedLimiter, async (req, res) => {
-    const b = req.body || {};
-    try { res.json(tnvedOut(await TNV.check({ code: b.code, value: b.value, weight: b.weight, qty: b.qty }, tnvedDeps))); }
+    dutyDetail: r.dutyCalc.detail, missing: r.dutyCalc.missing, vat: r.vat, vatRate: r.vatRate, vatAmount: r.vatAmount, excise: r.excise, value: r.value, fee: r.fee, feeSource: r.feeSource, radio: r.radio,
+    permits: r.permits, ratesDate: r.ratesDate });
+  app.post('/api/tnved/check', tnvedLimiter, tnvedGuestLimiter, async (req, res) => {
+    const b = req.body || {}; const isAdmin = roleOf(req).role === 'admin';
+    try { res.json(tnvedOut(await TNV.check({ code: b.code, value: b.value, currency: b.currency, freight: b.freight, weight: b.weight, qty: b.qty }, { ...tnvedDeps, forClient: !isAdmin }))); }
     catch (e) {
       if (e instanceof TNV.TnvedError) return res.status(e.status).json({ ok: false, error: e.message, kind: e.kind });
       console.error('tnved check', e.message); res.status(500).json({ ok: false, error: 'Не удалось проверить код. Попробуйте позже.' });
@@ -179,9 +183,13 @@ function setup(app, opts) {
   });
   const tnvedBotHits = new Map(); // не больше 10 проверок в минуту из одного чата
   const tnvedBotBusy = chat => { const t = Date.now(), a = (tnvedBotHits.get(chat) || []).filter(x => t - x < 60000); a.push(t); tnvedBotHits.set(chat, a); if (tnvedBotHits.size > 2000) tnvedBotHits.delete(tnvedBotHits.keys().next().value); return a.length > 10; };
-  // агенты и запросы ставок из сделки (перенос модуля RQ West Asia)
+  // агенты и запросы ставок из сделки (модуль запросов ставок)
   const crm3 = require('./crm3').setup(app, { store, admin, upload, str, newId, ai: opts.ai, rates: opts.rates || (async () => ({ rates: {} })),
-    mail: { enabled: () => mail.enabled(), kind: () => mail.kind(), send: (...a) => mail.send(...a) }, who: req => roleOf(req).name || 'Менеджер', publicAgents: opts.agents || null });
+    mail: { enabled: () => mail.enabled(), kind: () => mail.kind(), send: (...a) => mail.send(...a) }, who: req => roleOf(req).name || 'Менеджер', publicAgents: opts.agents || null, newCalcDoc: (d, o) => crm2.newCalcDoc(d, o) });
+  // после сделки: «Факт», «Мои средства», ЭТрН
+  require('./crm4').setup(app, { store, admin, need, upload, str, newId, who: req => roleOf(req).name || 'Менеджер', contractFor: id => crm2.contractFor(id) });
+  // робот-помощник администратора: агенты, КП → ставки, груз → сделка, тексты и цвет сайта
+  require('./robot').setup(app, { store, admin, upload, str, newId, ai: opts.ai, crm, who: req => roleOf(req).name || 'Администратор', mergeRates: opts.mergeRates || null });
   const splitContact = c => { c = String(c || '').trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c) ? { contactEmail: c } : { contactPhone: c }; };
   function dealFromLead(lead, extraText) {
     const text = ['Новая заявка с сайта', `Имя: ${lead.name}`, `Контакт: ${lead.contact}`, `Маршрут: ${lead.from || '—'} → ${lead.to || '—'}`, lead.cargo ? `Груз: ${lead.cargo}` : '', lead.weight != null ? `Вес: ${lead.weight} кг` : '', lead.volume != null ? `Объём: ${lead.volume} м³` : '', lead.estimate ? `Оценка с сайта: ${lead.estimate}` : '', lead.comment ? `Комментарий: ${lead.comment}` : '', extraText || ''].filter(Boolean).join('\n');

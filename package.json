@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "test": "node --test test/security.test.js test/portal.test.js test/journal.test.js test/crm.test.js test/tnved-check.test.js test/resilience.test.js",
+    "test": "node --test test/security.test.js test/portal.test.js test/journal.test.js test/crm.test.js test/tnved-check.test.js test/resilience.test.js test/contract.test.js test/robot.test.js",
     "e2e": "node test/e2e.js"
   },
   "dependencies": {

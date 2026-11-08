@@ -1,0 +1,106 @@
+/* IOMASTAVKA — единый стиль: один шрифт, свои выпадающие списки, одинаковые поля и отступы.
+   Подключается последним, поверх старых таблиц стилей. Цвета — из темы (--v-*), акцент — оранжевый «как в КП». */
+:root{
+  --ui-font:'Inter Tight','Inter',-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;
+  --ui-o1:#F28A3A;--ui-o2:#E06A2C;--ui-o3:#B4562F;
+  --ui-grad:linear-gradient(120deg,var(--ui-o1) 0%,var(--ui-o2) 55%,var(--ui-o3) 100%);
+  --ui-r:12px;--ui-h:42px;--ui-ease:cubic-bezier(.22,1,.36,1);
+}
+/* один шрифт на весь сайт: тексты, кнопки, поля, таблицы, КП */
+html:root body,html:root body :is(button,input,select,textarea,table,th,td,label,small,b,strong,h1,h2,h3,h4,h5,p,li,a,span,div),html:root .kp,html:root .ui-list,html:root .ui-gate{font-family:var(--ui-font)!important}
+html:root body :is(code,pre,kbd,.cx-secret input){font-family:ui-monospace,SFMono-Regular,Menlo,monospace!important}
+
+/* ---------- выпадающий список в стиле сайта ---------- */
+select.ui-native{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;margin:0!important;padding:0!important;border:0!important;clip:rect(0 0 0 0)}
+html:root body .ui-sel{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:space-between;gap:10px;min-height:var(--ui-h);padding:0 12px 0 14px;max-width:100%;
+  border-radius:var(--ui-r);border:1px solid var(--v-bd,rgba(10,18,48,.12));background:var(--v-field,#F2ECE5);color:var(--v-ink,#0A1230);font:500 14px/1.2 var(--ui-font);cursor:pointer;
+  transition:border-color .2s,box-shadow .2s,background .2s;vertical-align:middle;text-align:left}
+html:root body .ui-sel[hidden]{display:none}
+html:root body .ui-sel:hover{border-color:color-mix(in srgb,var(--ui-o2) 45%,transparent)}
+html:root body .ui-sel:focus-visible,html:root body .ui-sel.open{border-color:var(--ui-o2);box-shadow:0 0 0 3px color-mix(in srgb,var(--ui-o2) 18%,transparent)}
+html:root body .ui-sel:disabled{opacity:.55;cursor:not-allowed}
+html:root body .ui-sel.ui-ph .ui-sel-v{color:var(--v-mut,#5B6278)}
+html:root body .ui-sel-v{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+html:root body .ui-sel-chev{flex:none;width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.6;transition:transform .25s var(--ui-ease)}
+html:root body .ui-sel.open .ui-sel-chev{transform:rotate(180deg)}
+.ui-list{position:fixed;z-index:3000;box-sizing:border-box;max-width:min(420px,calc(100vw - 16px));overflow:auto;overscroll-behavior:contain;padding:6px;border-radius:16px;
+  background:var(--v-card,#fff);color:var(--v-ink,#0A1230);border:1px solid var(--v-bd,rgba(10,18,48,.1));box-shadow:0 18px 50px rgba(10,18,48,.18),0 2px 8px rgba(10,18,48,.06);
+  opacity:0;transform:translateY(-4px) scale(.98);transform-origin:top center;transition:opacity .16s var(--ui-ease),transform .2s var(--ui-ease);font:400 14px/1.3 var(--ui-font)}
+.ui-list.up{transform-origin:bottom center;transform:translateY(4px) scale(.98)}
+.ui-list.on{opacity:1;transform:none}
+.ui-opt{display:flex;align-items:center;gap:8px;padding:9px 12px 9px 8px;border-radius:10px;cursor:pointer;user-select:none}
+.ui-opt.act,.ui-opt:hover{background:color-mix(in srgb,var(--ui-o2) 12%,transparent)}
+.ui-opt.on{font-weight:600;color:var(--ui-o3)}
+.ui-opt.off{opacity:.45;cursor:default;background:none}
+.ui-opt-tick{flex:none;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+.ui-opt.on .ui-opt-tick{opacity:1}
+.ui-grp{padding:8px 12px 4px;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--v-mut,#5B6278)}
+body.night.manual-dark .ui-list,body.manual-dark .ui-list{background:#111B44;border-color:rgba(246,241,234,.1);color:#F6F1EA;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+body.manual-dark .ui-opt.on{color:#F2A26B}
+@media (pointer:coarse){.ui-opt{padding:12px 14px 12px 10px;font-size:15px}html:root body .ui-sel{min-height:46px;font-size:15px}}
+
+/* ---------- одинаковые поля ввода в работе и окнах ---------- */
+html:root body :is(.cx-work,.cx-ov,.fx) :is(input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]):not([type=range]),textarea){font:400 14px/1.4 var(--ui-font);border-radius:var(--ui-r)}
+
+/* ---------- «Вы вышли из аккаунта» ---------- */
+.ui-gate{position:fixed;inset:0;z-index:4000;display:grid;place-items:center;padding:16px;background:rgba(6,12,34,.45);backdrop-filter:blur(6px);opacity:0;transition:opacity .2s}
+.ui-gate.on{opacity:1}
+.ui-gate-c{max-width:420px;width:100%;padding:24px;border-radius:22px;background:var(--v-card,#fff);color:var(--v-ink,#0A1230);box-shadow:0 30px 80px rgba(0,0,0,.35)}
+.ui-gate-c b{display:block;font-size:20px;margin-bottom:8px}.ui-gate-c p{margin:0 0 18px;color:var(--v-mut,#5B6278);line-height:1.5}
+.ui-gate-c div{display:flex;gap:10px}
+.ui-gate-go{display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 22px;border-radius:14px;background:var(--ui-grad);color:#fff!important;text-decoration:none;font-weight:600}
+.ui-gate-x{all:unset;cursor:pointer;height:44px;padding:0 18px;border-radius:14px;border:1px solid var(--v-bd,rgba(10,18,48,.12))}
+
+/* ---------- меню аккаунта (account-menu.js) ---------- */
+html:root body.am-on #logoutButton{display:none!important}
+html:root body.am-on .v3-acc{width:auto!important;min-width:44px;height:44px;display:inline-flex!important;align-items:center;gap:8px;padding:0 12px 0 4px!important;border-radius:999px!important;font-weight:600!important;font-size:14px!important;cursor:pointer}
+html:root body.am-on .v3-acc #v3accInit{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:700;color:#fff;background:var(--ui-grad)}
+html:root body.am-on .v3-acc .am-name{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html:root body.am-on .v3-acc .am-name:empty{display:none}
+html:root body.am-on .v3-acc .am-chev{flex:none;width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.65;transition:transform .25s var(--ui-ease)}
+html:root body.am-on .v3-acc.open .am-chev{transform:rotate(180deg)}
+html:root body.am-on .v3-acc:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--ui-o2) 40%,transparent)!important}
+@media (max-width:700px){html:root body.am-on .v3-acc{height:36px;min-width:36px;padding:0 8px 0 2px!important;gap:4px}html:root body.am-on .v3-acc #v3accInit{width:30px;height:30px;font-size:13px}html:root body.am-on .v3-acc .am-name{display:none}}
+.am-menu{position:fixed;z-index:2600;width:290px;max-width:calc(100vw - 16px);padding:8px;border-radius:20px;background:var(--v-card,#fff);color:var(--v-ink,#0A1230);border:1px solid var(--v-bd,rgba(10,18,48,.1));
+  box-shadow:0 24px 60px rgba(10,18,48,.22),0 3px 10px rgba(10,18,48,.06);opacity:0;transform:translateY(-6px) scale(.98);transform-origin:top right;transition:opacity .16s var(--ui-ease),transform .2s var(--ui-ease);font:400 14px/1.35 var(--ui-font)}
+.am-menu[hidden]{display:none}
+.am-menu.on{opacity:1;transform:none}
+.am-h{display:flex;align-items:center;gap:12px;padding:10px 10px 12px;margin-bottom:4px;border-bottom:1px solid var(--v-bd,rgba(10,18,48,.08))}
+.am-ava{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:17px;color:#fff;background:var(--ui-grad)}
+.am-who{min-width:0;display:flex;flex-direction:column;gap:2px}
+.am-who b{font-size:15px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.am-who small{font-size:12.5px;color:var(--v-mut,#5B6278);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.am-i{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border-radius:12px;cursor:pointer;font-size:14px;font-weight:500}
+.am-i svg{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.75}
+.am-i:hover,.am-i:focus-visible{background:color-mix(in srgb,var(--ui-o2) 10%,transparent)}
+.am-i:hover svg,.am-i:focus-visible svg{color:var(--ui-o3);opacity:1}
+.am-out{color:var(--v-mut,#5B6278)}
+.am-sep{display:block;height:1px;margin:6px 8px;background:var(--v-bd,rgba(10,18,48,.08))}
+body.manual-dark .am-menu{background:#111B44;border-color:rgba(246,241,234,.1);color:#F6F1EA;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+/* окно профиля */
+.am-modal .cx-modal{max-width:520px}
+.am-form{display:flex;flex-direction:column;gap:12px}
+.am-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--v-mut)}
+.am-form label[hidden]{display:none}
+html:root body .am-form input{box-sizing:border-box;width:100%;height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--v-bd,rgba(10,18,48,.12));background:var(--v-field,#F2ECE5);color:var(--v-ink);font:500 15px/1.3 var(--ui-font);outline:none;transition:border-color .2s,box-shadow .2s}
+html:root body .am-form input:focus{border-color:var(--ui-o2);box-shadow:0 0 0 3px color-mix(in srgb,var(--ui-o2) 16%,transparent)}
+.am-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.am-go{all:unset;align-self:flex-start;cursor:pointer;height:44px;padding:0 22px;border-radius:14px;display:inline-flex;align-items:center;font-weight:600;color:#fff;background:var(--ui-grad)}
+.am-go:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--ui-o2) 35%,transparent)}
+.am-err{margin:0;color:#C8372D;font-size:13px}.am-err:empty,.am-ok:empty{display:none}.am-ok{margin:0;color:#2E8B57;font-size:13px;font-weight:600}
+.am-note{margin:0 0 6px;color:var(--v-mut);font-size:14px}
+.am-pw{margin-top:16px;padding-top:14px;border-top:1px solid var(--v-bd,rgba(10,18,48,.08))}
+.am-pw summary{cursor:pointer;font-weight:600;margin-bottom:12px;width:max-content}
+@media (max-width:560px){.am-two{grid-template-columns:1fr}}
+
+/* ---------- единый вид: загрузка файлов, главные кнопки, ТН ВЭД ---------- */
+html:root body .view-layer .v3-drop.v3p-drop{background:var(--v-field,#F2ECE5)!important;border:2px dashed color-mix(in srgb,var(--ui-o2) 42%,transparent)!important;color:var(--v-ink)!important;box-shadow:none!important;border-radius:18px!important}
+html:root body .view-layer .v3-drop.v3p-drop:hover{border-color:var(--ui-o2)!important;transform:none}
+html:root body .view-layer .v3-drop.v3p-drop b{color:var(--v-ink)!important}
+html:root body .view-layer .v3-drop.v3p-drop small{color:var(--v-mut)!important}
+html:root body .view-layer .v3-drop.v3p-drop .ic{stroke:var(--ui-o2)!important}
+body.manual-dark .view-layer .v3-drop.v3p-drop{background:rgba(246,241,234,.04)!important}
+html:root body .view-layer button.calculate:not(.v3p-sm),html:root body .view-layer .customs-shell button[type=submit]{font-size:16px!important;font-weight:600!important;letter-spacing:0!important}
+html:root body .customs-head .eyebrow{color:#F2A26B!important;letter-spacing:.14em}
+html:root body .customs-shell .ui-sel{background:rgba(246,241,234,.06);color:#F6F1EA;border-color:rgba(246,241,234,.16)}
+html:root body .customs-shell .ui-sel .ui-sel-v{color:#F6F1EA}

@@ -1,9 +1,10 @@
 'use strict';
 // CRM, часть 2: задачи, финансы сделки, калькулятор ВЭД, аналитика, отгулы, праздники,
 // компания (сотрудники, юрлица, шаблоны), безопасность, почта и очередь менеджеров, бот (база знаний, диалоги).
-// Перенос логики CRM West Asia: tasks.js, activity.js (финансы), calc.js, analytics.js, time_off.js,
+// Перенос логики прежней CRM: tasks.js, activity.js (финансы), calc.js, analytics.js, time_off.js,
 // company_settings.js, security_panel.js, mail.js, bot_panel.js.
 const VED = require('./ved');
+const CONTRACT = require('./contract');
 
 // Производственный календарь РФ на 2026 год и праздники КНР 2026 (распоряжение Госсовета КНР).
 const HOLIDAYS = {
@@ -57,7 +58,9 @@ function setup(app, ctx) {
   const n = v => { const x = Number(String(v == null ? '' : v).replace(/\s/g, '').replace(',', '.')); return Number.isFinite(x) ? x : 0; };
   const db = () => { const d = store.load(); for (const k of ['deals', 'tasks', 'timeoff', 'calcDocs', 'mailLog', 'botKb', 'botLog']) d[k] = d[k] || []; d.settings = d.settings || {}; d.botUsers = d.botUsers || {}; return d; };
   const now = () => new Date().toISOString();
-  const today = () => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; };
+  const ymd = t => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+  const today = () => ymd(new Date());
+  const dayOf = iso => { const t = new Date(iso); return isNaN(t) ? String(iso || '').slice(0, 10) : ymd(t); }; // время в базе — UTC, а «сегодня» — по местному (московскому) времени
   const who = req => (req && req.who && req.who.name) || 'Администратор';
   const dealOf = (d, id) => d.deals.find(x => x.id === id);
   const bad = (res, msg, code) => res.status(code || 400).json({ ok: false, error: msg });
@@ -158,30 +161,42 @@ function setup(app, ctx) {
 
   // ================= КАЛЬКУЛЯТОР ВЭД =================
   const vedSettings = () => { const s = db().settings.ved || {}; return { ...VED.DEFAULTS, ...s }; };
+  // расчёт контракта: шкала сбора и налог — из настроек калькулятора, остальное — из settings.contract (тариф декларанта, проценты)
+  const contractSettings = () => { const v = vedSettings(); return { ...(db().settings.contract || {}), feeScale: v.feeScale, radioFee: v.radioFee, taxPct: v.taxOnExpensesPct }; };
   const NUMF = ['freight_total', 'insurance_amount', 'border_split_percent', 'cargo_rate_value', 'cargo_qty', 'cargo_goods_value', 'cargo_insurance_percent'];
   const ITEM_NUM = ['invoice_amount', 'weight', 'duty_rate', 'duty_extra_rate', 'duty_extra_unit', 'eur_per_kg', 'eur_per_l', 'eur_per_pcs', 'eur_per_m2', 'unit_qty', 'excise_rate', 'excise_qty'];
   const curOk = c => (VED.CURRENCIES.includes(String(c || '').toUpperCase()) ? String(c).toUpperCase() : 'CNY');
   function docBody(b, doc) {
     if (b.name != null) doc.name = str(b.name, 160);
     if (b.transport_mode != null) doc.transport_mode = VED.TRANSPORT[b.transport_mode] ? b.transport_mode : 'sea';
+    if (doc.freight_src && ((b.freight_total !== undefined && n(b.freight_total) !== n(doc.freight_total)) || (b.freight_currency != null && curOk(b.freight_currency) !== doc.freight_currency))) delete doc.freight_src; // фрахт поправили руками — уже не ставка агента
     for (const f of NUMF) if (b[f] !== undefined) doc[f] = n(b[f]);
     for (const f of ['freight_currency', 'insurance_currency', 'cargo_rate_currency', 'cargo_goods_currency']) if (b[f] != null) doc[f] = curOk(b[f]);
     if (b.cargo_rate_basis != null) doc.cargo_rate_basis = b.cargo_rate_basis === 'm3' ? 'm3' : 'kg';
     for (const f of ['border_split_enabled', 'radio_fee']) if (b[f] !== undefined) doc[f] = !!b[f];
+    if (b.payment !== undefined) doc.payment = b.payment === 'bank' ? 'bank' : 'cbr';
+    if (b.declarant !== undefined) doc.declarant = ['ecp', 'broker', 'none'].includes(b.declarant) ? b.declarant : 'ecp';
+    if (b.td !== undefined) doc.td = !!b.td;
+    for (const f of ['declarant_rub', 'margin', 'insurance_pct', 'freight_fx']) if (b[f] !== undefined) doc[f] = b[f] === '' || b[f] == null ? null : n(b[f]);
+    for (const f of ['kp_transit', 'kp_valid', 'kp_note', 'kp_from', 'kp_to', 'kp_terms', 'kp_cargo', 'kp_volume', 'kp_places', 'kp_supplier']) if (b[f] !== undefined) doc[f] = str(b[f], 300);
+    if (Array.isArray(b.markups)) doc.markups = b.markups.slice(0, 20).map(m => ({ label: str(m.label, 120), amount: n(m.amount), currency: curOk(m.currency || 'USD') }));
     if (Array.isArray(b.extra_costs)) doc.extra_costs = b.extra_costs.slice(0, 60).map(ec => ({ label: str(ec.label, 120), amount: n(ec.amount), is_percent_of_invoice: !!ec.is_percent_of_invoice, currency: curOk(ec.currency || 'RUB'), rate_mode: ec.rate_mode === 'manual' ? 'manual' : 'cbr', manual_rate: n(ec.manual_rate) }));
     if (Array.isArray(b.items)) doc.items = b.items.slice(0, 200).map(it => {
       const o = { name: str(it.name, 300), name_is_auto: it.name_is_auto !== false, tnved_code: String(it.tnved_code || '').replace(/\D/g, '').slice(0, 10), invoice_currency: curOk(it.invoice_currency), auto_lookup: it.auto_lookup !== false,
-        duty_type: ['percent', 'min', 'plus', 'fixed_eur'].includes(it.duty_type) ? it.duty_type : 'percent', eur_unit: VED.unitOf(it.eur_unit), excise_type: ['none', 'percent', 'rub_per_unit'].includes(it.excise_type) ? it.excise_type : 'none', radio: !!it.radio };
+        duty_type: ['percent', 'min', 'plus', 'fixed_eur'].includes(it.duty_type) ? it.duty_type : 'percent', duty_text: str(it.duty_text, 160), chz: !!it.chz, eur_unit: VED.unitOf(it.eur_unit), excise_type: ['none', 'percent', 'rub_per_unit'].includes(it.excise_type) ? it.excise_type : 'none', radio: !!it.radio };
       for (const f of ITEM_NUM) o[f] = n(it[f]);
       o.vat_rate = it.vat_rate === '' || it.vat_rate == null ? '' : n(it.vat_rate);
       o.freight_override = it.freight_override === '' || it.freight_override == null ? null : n(it.freight_override);
+      o.net = it.net === '' || it.net == null ? null : n(it.net);
       return o;
     });
     return doc;
   }
   async function docOut(doc) {
     const rt = await currentRates();
-    return { ok: true, doc, result: VED.calcDoc(doc, { rates: rt.rates, rateDate: rt.date, settings: vedSettings() }), rates: rt.rates, rateDate: rt.date || '' };
+    const result = VED.calcDoc(doc, { rates: rt.rates, rateDate: rt.date, settings: vedSettings() });
+    const contract = doc.calc_type === 'cargo' ? null : CONTRACT.calc(CONTRACT.fromVedDoc(doc, rt.rates), { rates: rt.rates, rateDate: rt.date, settings: contractSettings() });
+    return { ok: true, doc, result, contract, rates: rt.rates, rateDate: rt.date || '', cset: db().settings.contract || {} };
   }
   app.get('/api/ved/settings', admin, (req, res) => res.json({ ok: true, settings: vedSettings(), defaults: VED.DEFAULTS, types: VED.TYPES, transport: VED.TRANSPORT }));
   app.put('/api/ved/settings', admin, (req, res) => {
@@ -195,6 +210,58 @@ function setup(app, ctx) {
     if (b.reset) { delete d.settings.ved; store.save(d); return res.json({ ok: true, settings: vedSettings() }); }
     d.settings.ved = s; store.save(d); res.json({ ok: true, settings: vedSettings() });
   });
+  // «Изменить данные»: заблокированные в расчёте значения (ТД, проценты оплаты, страховка, маржа, тариф декларанта…) меняет только администратор,
+  // с причиной; каждое изменение — в истории (кто, когда, что было, что стало). Старые расчёты пересчитываются по новым значениям при открытии.
+  const LOCKED = [
+    ['tdPct', 'Торговый дом, % к инвойсу', 0, 20], ['payPct.cbr', 'Оплата инвойса по курсу ЦБ, +%', 0, 20], ['payPct.bank', 'Оплата по внутреннему курсу банка, +%', 0, 20],
+    ['insurancePct', 'Страхование, % инвойса', 0, 5], ['marginFactor', 'Маржа = налоги ×', 0, 10], ['rubCushion', 'Рублёвые строки: курс ЦБ − ₽', 0, 10],
+    ['declarant.ecp', 'Декларант под ЭЦП клиента, ₽', 0, 1e6], ['declarant.broker', 'Декларант под печать брокера, ₽', 0, 1e6], ['declarant.codesIncluded', 'Кодов ТН ВЭД включено', 0, 100],
+    ['declarant.perCode', 'Каждый следующий код, ₽', 0, 1e5], ['declarant.chzBase', 'Честный знак: база, ₽', 0, 1e5], ['declarant.chzIncluded', 'Честный знак: кодов в базе', 0, 100], ['declarant.chzPerCode', 'Честный знак: следующий код, ₽', 0, 1e5],
+    ['clientMarkupsUSD.exw', 'Контракт клиента: наценка EXW, $', 0, 1e5], ['clientMarkupsUSD.sea', 'Контракт клиента: наценка море, $', 0, 1e5], ['clientMarkupsUSD.rail', 'Контракт клиента: наценка ЖД, $', 0, 1e5], ['clientMarkupsUSD.auto', 'Контракт клиента: наценка авто, $', 0, 1e5], ['clientMarkupsUSD.air', 'Контракт клиента: наценка авиа, $', 0, 1e5],
+  ];
+  const getPath = (o, p) => p.split('.').reduce((a, k) => (a == null ? undefined : a[k]), o);
+  const setPath = (o, p, v) => { const ks = p.split('.'); let a = o; for (const k of ks.slice(0, -1)) { a[k] = a[k] && typeof a[k] === 'object' ? a[k] : {}; a = a[k]; } a[ks[ks.length - 1]] = v; };
+  app.get('/api/contract/settings', admin, (req, res) => {
+    const d = db(), cur = d.settings.contract || {};
+    res.json({ ok: true, fields: LOCKED.map(([key, label, min, max]) => ({ key, label, min, max, value: getPath(cur, key) ?? getPath(CONTRACT.DEFAULTS, key), def: getPath(CONTRACT.DEFAULTS, key), changed: getPath(cur, key) != null && getPath(cur, key) !== getPath(CONTRACT.DEFAULTS, key) })),
+      feeBase: cur.feeBase || CONTRACT.DEFAULTS.feeBase, history: (d.settings.contractHistory || []).slice(0, 100) });
+  });
+  app.put('/api/contract/settings', admin, (req, res) => {
+    const d = db(), b = req.body || {}, reason = str(b.reason, 300);
+    if (reason.length < 3) return bad(res, 'Напишите причину изменения — она попадёт в историю');
+    const next = JSON.parse(JSON.stringify(d.settings.contract || {})), changes = [];
+    for (const [key, label, min, max] of LOCKED) {
+      if (!b.values || b.values[key] === undefined) continue;
+      const raw = b.values[key], was = getPath(next, key) ?? getPath(CONTRACT.DEFAULTS, key);
+      const v = raw === null || raw === '' ? getPath(CONTRACT.DEFAULTS, key) : n(raw);
+      if (!(v >= min && v <= max)) return bad(res, `«${label}»: от ${min} до ${max}`);
+      if (v !== was) { setPath(next, key, v); changes.push({ key, label, from: was, to: v }); }
+    }
+    if (b.feeBase && ['invoice', 'cv'].includes(b.feeBase) && b.feeBase !== (next.feeBase || CONTRACT.DEFAULTS.feeBase)) { changes.push({ key: 'feeBase', label: 'Таможенный сбор считается от', from: next.feeBase || CONTRACT.DEFAULTS.feeBase, to: b.feeBase }); next.feeBase = b.feeBase; }
+    if (!changes.length) return bad(res, 'Ничего не изменилось');
+    d.settings.contract = next;
+    d.settings.contractHistory = [{ at: now(), by: who(req), reason, changes }].concat(d.settings.contractHistory || []).slice(0, 500);
+    store.save(d); res.json({ ok: true, changes });
+  });
+
+  // Таблица цен сертификации владельца (Наименование · Код ТН ВЭД (группа) · ТР ТС / документ · Стоимость Киргизия · Стоимость РФ · Образцы · Примечания)
+  const certPrices = () => db().settings.certPrices || [];
+  app.get('/api/cert-prices', admin, (req, res) => { const d = db(); res.json({ ok: true, items: certPrices(), at: d.settings.certPricesAt || '' }); });
+  if (upload) app.post('/api/cert-prices/import', admin, upload.single('file'), (req, res) => {
+    const f = req.file; if (!f) return bad(res, 'Выберите файл Excel (.xlsx)');
+    let rows; try { rows = require('./docparse').xlsxRows(f.buffer); } catch (e) { return bad(res, 'Не удалось прочитать Excel: ' + e.message); }
+    const head = (rows[0] || []).map(v => String(v || '').toLowerCase());
+    const col = (re, def) => { const i = head.findIndex(h => re.test(h)); return i >= 0 ? i : def; };
+    const ci = { name: col(/наимен/, 0), code: col(/код/, 1), doc: col(/тр\s*тс|документ/, 2), kg: col(/киргиз/, 3), ru: col(/рф|росси/, 4), samples: col(/образц/, 5), note: col(/примеч/, 6) };
+    const items = rows.slice(1).map(r => {
+      const g = k => str(r[ci[k]] == null ? '' : String(r[ci[k]]), 400).replace(/^—$/, '');
+      const codes = (g('code').match(/\d{2,10}/g) || []);
+      return { name: g('name'), codes, doc: g('doc'), priceKg: g('kg'), priceRu: g('ru'), samples: g('samples'), note: g('note') };
+    }).filter(x => x.name && x.codes.length);
+    if (!items.length) return bad(res, 'В таблице не нашлось строк с кодами ТН ВЭД (колонка «Код ТН ВЭД (группа)»)');
+    const d = db(); d.settings.certPrices = items.slice(0, 500); d.settings.certPricesAt = now(); store.save(d);
+    res.json({ ok: true, count: items.length, skipped: rows.length - 1 - items.length });
+  });
   app.get('/api/ved/rates', admin, async (req, res) => { const rt = await currentRates(); res.json({ ok: true, rates: rt.rates, date: rt.date || '' }); });
   app.post('/api/ved/quick', admin, async (req, res) => { const doc = docBody(req.body || {}, VED.newDoc((req.body || {}).calc_type || 'our_contract')); res.json(await docOut(doc)); });
   app.get('/api/calc', admin, (req, res) => {
@@ -202,22 +269,56 @@ function setup(app, ctx) {
     if (req.query.deal) items = items.filter(v => v.dealId === req.query.deal); else if (req.query.standalone) items = items.filter(v => !v.dealId);
     res.json({ ok: true, items: items.map(v => { const x = v.dealId && dealOf(d, v.dealId); return { id: v.id, name: v.name, calc_type: v.calc_type, dealId: v.dealId || '', dealTitle: x ? x.title : '', updatedAt: v.updatedAt, total: v.lastTotal || null }; }) });
   });
+  // новый расчёт (из калькулятора или из ставки агента): условия по умолчанию — оплата по ЦБ, без ТД, декларант под ЭЦП, страховка 0,15%
+  function newCalcDoc(d, o) {
+    o = o || {}; d.calcDocs = d.calcDocs || [];
+    const type = VED.CREATABLE.includes(o.type) ? o.type : 'our_contract';
+    const cur = (d.settings && d.settings.company && d.settings.company.defaultCurrency) || 'CNY';
+    const doc = Object.assign(VED.newDoc(type, cur), { id: newId(5), dealId: o.dealId || '', createdAt: now(), updatedAt: now(), createdBy: o.by || 'Менеджер' });
+    doc.extra_costs = doc.extra_costs.filter(e => !e.is_percent_of_invoice); doc.payment = 'cbr'; doc.td = false; doc.declarant = type === 'our_contract' ? 'ecp' : 'none'; doc.insurance_pct = type === 'our_contract' ? 0.15 : 0; doc.margin = null; doc.freight_fx = 0; doc.markups = [];
+    if (o.name) doc.name = str(o.name, 160);
+    const x = o.dealId && (d.deals || []).find(v => v.id === o.dealId); if (x) { if (x.weight && doc.items[0]) doc.items[0].weight = x.weight; if (x.cargo && doc.items[0]) doc.items[0].name = x.cargo; doc.transport_mode = { auto: 'auto', rail: 'rail', sea: 'sea', air: 'avia', multimodal: 'multimodal' }[x.mode] || 'sea'; }
+    d.calcDocs.unshift(doc); d.calcDocs = d.calcDocs.slice(0, 5000);
+    return doc;
+  }
   app.post('/api/calc', admin, async (req, res) => {
     const d = db(); const b = req.body || {};
     if (b.dealId && !dealOf(d, b.dealId)) return bad(res, 'Сделка не найдена');
-    const type = VED.CREATABLE.includes(b.calc_type) ? b.calc_type : 'our_contract';
-    const cur = (d.settings.company && d.settings.company.defaultCurrency) || 'CNY';
-    const doc = Object.assign(VED.newDoc(type, cur), { id: newId(5), dealId: b.dealId || '', createdAt: now(), updatedAt: now(), createdBy: who(req) });
-    if (b.name) doc.name = str(b.name, 160);
-    const x = b.dealId && dealOf(d, b.dealId); if (x) { if (x.weight && doc.items[0]) doc.items[0].weight = x.weight; if (x.cargo && doc.items[0]) doc.items[0].name = x.cargo; doc.transport_mode = { auto: 'auto', rail: 'rail', sea: 'sea', air: 'avia', multimodal: 'multimodal' }[x.mode] || 'sea'; }
-    d.calcDocs.unshift(doc); d.calcDocs = d.calcDocs.slice(0, 5000); store.save(d);
+    const doc = newCalcDoc(d, { type: b.calc_type, dealId: b.dealId, name: b.name, by: who(req) }); store.save(d);
     res.json({ ...(await docOut(doc)), id: doc.id });
   });
   app.get('/api/calc/:id', admin, async (req, res) => { const doc = db().calcDocs.find(v => v.id === req.params.id); if (!doc) return bad(res, 'Расчёт не найден', 404); res.json(await docOut(doc)); });
+  // история расчёта: кто, когда, что поменял (правки одного человека в течение 10 минут — одной записью, как одно редактирование)
+  const HIST = [['transport_mode', 'Транспорт'], ['freight_total', 'Фрахт'], ['freight_currency', 'Валюта фрахта'], ['freight_fx', 'Надбавка агента к курсу, %'], ['payment', 'Оплата инвойса'], ['td', 'Торговый дом'], ['declarant', 'Декларант'], ['declarant_rub', 'Декларант, ₽'], ['margin', 'Маржа'], ['insurance_pct', 'Страхование, %'], ['border_split_enabled', 'Фрахт до/после границы'], ['radio_fee', 'Особый сбор'], ['calc_type', 'Тип расчёта']];
+  const HIST_IT = [['name', 'товар'], ['tnved_code', 'код ТН ВЭД'], ['invoice_amount', 'инвойс'], ['invoice_currency', 'валюта'], ['weight', 'брутто, кг'], ['net', 'нетто, кг'], ['duty_rate', 'пошлина, %'], ['vat_rate', 'НДС, %'], ['chz', 'Честный знак']];
+  const hv = v => (v == null || v === '' ? '—' : typeof v === 'boolean' ? (v ? 'да' : 'нет') : String(v));
+  function snap(doc) {
+    const o = {}; for (const [k] of HIST) o[k] = hv(doc[k]);
+    (doc.items || []).forEach((it, i) => { for (const [k] of HIST_IT) o['items.' + i + '.' + k] = k === 'chz' ? hv(!!it.chz) : hv(it[k]); });
+    o.extras = (doc.extra_costs || []).filter(e => !e.is_percent_of_invoice).map(e => `${e.label} ${e.amount} ${e.currency}`).join('; ') || '—';
+    o.markups = (doc.markups || []).map(m => `${m.label} ${m.amount} ${m.currency}`).join('; ') || '—';
+    return o;
+  }
+  const histLabel = k => { const h = HIST.find(x => x[0] === k); if (h) return h[1]; const m = k.match(/^items\.(\d+)\.(\w+)$/); if (m) return 'Позиция ' + (+m[1] + 1) + ': ' + ((HIST_IT.find(x => x[0] === m[2]) || [])[1] || m[2]); return k === 'extras' ? 'Доп. расходы' : k === 'markups' ? 'Наценки' : k; };
+  function remember(doc, before, totalBefore, by) {
+    const after = snap(doc), keys = [...new Set(Object.keys(before).concat(Object.keys(after)))];
+    const ch = keys.filter(k => (before[k] || '—') !== (after[k] || '—') && !(/\.vat_rate$/.test(k) && (before[k] || '—') === '—' && before[k.replace(/vat_rate$/, 'name')] != null)).map(k => ({ key: k, label: histLabel(k), from: before[k] || '—', to: after[k] || '—' }));
+    if (!ch.length) return;
+    const total = doc.lastTotal ? `${doc.lastTotal.display} ${doc.lastTotal.currency}` : '', h = doc.history = doc.history || [], last = h[0];
+    if (last && last.by === by && Date.now() - Date.parse(last.at) < 10 * 60 * 1000) {
+      for (const c of ch) { const e = last.changes.find(v => v.key === c.key); if (e) e.to = c.to; else last.changes.push(c); }
+      last.changes = last.changes.filter(c => c.from !== c.to); last.at = now(); last.totalTo = total;
+      if (!last.changes.length) h.shift();
+    } else h.unshift({ at: now(), by, changes: ch, totalFrom: totalBefore, totalTo: total });
+    doc.history = h.slice(0, 300);
+  }
+  app.get('/api/calc/:id/history', admin, (req, res) => { const doc = db().calcDocs.find(v => v.id === req.params.id); if (!doc) return bad(res, 'Расчёт не найден', 404); res.json({ ok: true, items: doc.history || [], createdAt: doc.createdAt, createdBy: doc.createdBy || '' }); });
   app.patch('/api/calc/:id', admin, async (req, res) => {
     const d = db(); const doc = d.calcDocs.find(v => v.id === req.params.id); if (!doc) return bad(res, 'Расчёт не найден', 404);
+    const before = snap(doc), totalBefore = doc.lastTotal ? `${doc.lastTotal.display} ${doc.lastTotal.currency}` : '';
     docBody(req.body || {}, doc); if (req.body && req.body.dealId !== undefined) { if (req.body.dealId && !dealOf(d, req.body.dealId)) return bad(res, 'Сделка не найдена'); doc.dealId = req.body.dealId || ''; }
-    doc.updatedAt = now(); const out = await docOut(doc); doc.lastTotal = { rub: out.result.grand_total_rub, display: out.result.grand_total_display, currency: out.result.display_currency };
+    doc.updatedAt = now(); const out = await docOut(doc); doc.lastTotal = out.contract && out.contract.ok ? { rub: out.contract.totalRub || Math.round(out.contract.total * out.contract.rate), display: out.contract.total, currency: out.contract.currency } : { rub: out.result.grand_total_rub, display: out.result.grand_total_display, currency: out.result.display_currency };
+    remember(doc, before, totalBefore, who(req));
     store.save(d); res.json(out);
   });
   app.delete('/api/calc/:id', admin, (req, res) => { const d = db(); const i = d.calcDocs.findIndex(v => v.id === req.params.id); if (i < 0) return bad(res, 'Расчёт не найден', 404); d.calcDocs.splice(i, 1); store.save(d); res.json({ ok: true }); });
@@ -228,9 +329,18 @@ function setup(app, ctx) {
     const d = db(); const x = dealOf(d, doc.dealId); if (!x) return bad(res, 'Сделка не найдена', 404);
     const tag = doc.name ? ` (${doc.name})` : ''; const rows = [];
     const add = (label, rub) => { if (rub > 0) rows.push({ id: newId(4), kind: 'expense', label: label + tag, currency: 'RUB', amount: Math.round(rub * 100) / 100 }); };
-    add('Фрахт', r.freight_total_rub); add('Страховка', r.insurance_total_rub);
-    if (r.calc_type === 'our_contract') { add('Пошлина', r.duty_sum_rub); add('Акциз', r.excise_sum_rub); add('НДС на ввоз', r.vat_sum_rub); add(r.customs_fee_radio ? 'Таможенный сбор (Прил. №1 к ПП №1637)' : 'Таможенный сбор', r.customs_fee_rub); add('Налог на расходы', r.tax_on_expenses_rub); }
-    for (const ec of r.extra_costs) add(ec.label || 'Доп. расход', ec.amount_rub);
+    const k = out.contract;
+    if (k) {
+      for (const l of k.lines) {
+        if (l.key === 'invoice' || l.key === 'margin' || l.markup) continue;           // инвойс и наша маржа — не расходы сделки
+        if (l.key === 'customs') { add('Пошлина', k.customs.dutyRub); add('НДС на ввоз', k.customs.vatRub); continue; }
+        if (l.key === 'fee') { add(k.customs.feeRadio ? 'Таможенный сбор (Прил. №1 к ПП №1637)' : 'Таможенный сбор', k.customs.feeRub); continue; }
+        add(l.label, l.rub != null ? l.rub : l.amount * k.rate);
+      }
+    } else {
+      add('Фрахт', r.freight_total_rub); add('Страховка', r.insurance_total_rub);
+      for (const ec of r.extra_costs) add(ec.label || 'Доп. расход', ec.amount_rub);
+    }
     x.finance = (x.finance || []).concat(rows); const t = VED.finance(x.finance); x.financeTotals = { income: t.income, expense: t.expense, margin: t.margin, percent: t.percent }; x.financeAt = now();
     x.activity = x.activity || []; x.activity.push({ id: newId(4), at: now(), type: 'calc', by: who(req), text: `Расчёт «${doc.name || VED.TYPES[doc.calc_type]}» перенесён в финансы: ${rows.length} статей, ${Math.round(rows.reduce((s, v) => s + v.amount, 0)).toLocaleString('ru-RU')} ₽` });
     store.save(d); res.json({ ok: true, added: rows.length });
@@ -430,7 +540,7 @@ function setup(app, ctx) {
   app.get('/api/mail/stats', admin, (req, res) => {
     const d = db(); const td = today(); const st = { today: {}, total: {} };
     for (const c of MAIL_CATS) { st.today[c] = 0; st.total[c] = 0; }
-    for (const m of d.mailLog) if (m.dir === 'in') { st.total[m.category] = (st.total[m.category] || 0) + 1; if (String(m.at).slice(0, 10) === td) st.today[m.category] = (st.today[m.category] || 0) + 1; }
+    for (const m of d.mailLog) if (m.dir === 'in') { st.total[m.category] = (st.total[m.category] || 0) + 1; if (dayOf(m.at) === td) st.today[m.category] = (st.today[m.category] || 0) + 1; }
     res.json({ ok: true, ...st, all: d.mailLog.length, sent: d.mailLog.filter(m => m.dir === 'out').length, last_check: d.settings.mailLastCheck || '—', out: ctx.mail ? { enabled: ctx.mail.enabled(), kind: ctx.mail.kind() } : { enabled: false }, inbound: { configured: !!(process.env.IMAP_HOST && process.env.IMAP_USER && process.env.IMAP_PASSWORD) } });
   });
   app.get('/api/mail/entries', admin, (req, res) => {
@@ -517,10 +627,10 @@ function setup(app, ctx) {
     return a;
   }
   app.get('/api/bot/stats', admin, (req, res) => {
-    const d = db(); const td = today(); const yd = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
-    const t = d.botLog.filter(v => String(v.at).slice(0, 10) === td).length, y = d.botLog.filter(v => String(v.at).slice(0, 10) === yd).length;
+    const d = db(); const td = today(); const yd = ymd(new Date(Date.now() - 864e5));
+    const t = d.botLog.filter(v => dayOf(v.at) === td).length, y = d.botLog.filter(v => dayOf(v.at) === yd).length;
     const users = Object.values(d.botUsers);
-    res.json({ ok: true, msgs_today: t, msgs_delta: y ? Math.round((t - y) / y * 100) : (t ? 100 : 0), active_users: new Set(d.botLog.filter(v => String(v.at).slice(0, 10) === td).map(v => v.user_id || v.visitor || v.username)).size, total_users: users.length, site_today: d.botLog.filter(v => v.channel === 'site' && String(v.at).slice(0, 10) === td).length, kb_count: d.botKb.length, enabled: bot(d).enabled !== false, aiReady: !!(ctx.ai && ctx.ai.enabled()), tgReady: !!(ctx.tg && ctx.tg.ready()), feedback_bad: d.botLog.filter(v => v.rating === 'bad').length });
+    res.json({ ok: true, msgs_today: t, msgs_delta: y ? Math.round((t - y) / y * 100) : (t ? 100 : 0), active_users: new Set(d.botLog.filter(v => dayOf(v.at) === td).map(v => v.user_id || v.visitor || v.username)).size, total_users: users.length, site_today: d.botLog.filter(v => v.channel === 'site' && dayOf(v.at) === td).length, kb_count: d.botKb.length, enabled: bot(d).enabled !== false, aiReady: !!(ctx.ai && ctx.ai.enabled()), tgReady: !!(ctx.tg && ctx.tg.ready()), feedback_bad: d.botLog.filter(v => v.rating === 'bad').length });
   });
   app.get('/api/bot/dialogs', admin, (req, res) => {
     const d = db(); let items = d.botLog; if (req.query.channel) items = items.filter(v => v.channel === req.query.channel); if (req.query.rating) items = items.filter(v => v.rating === req.query.rating);
@@ -578,7 +688,12 @@ function setup(app, ctx) {
     }
     return out;
   }
-  return { tnvedAffected, botContext, botLog, telegramMessage, telegramAccess, botFallback, vedSettings, mailAdd, classify, offOn: (name, date) => offOn(db(), name, date), siteBotEnabled: () => bot(db()).answerSite !== false };
+  // последний расчёт «Наш контракт» по сделке — для «Факта» (план) и КП
+  async function contractFor(dealId) {
+    const docs = db().calcDocs.filter(c => c.dealId === dealId && c.calc_type === 'our_contract').sort((a, b) => String(b.updatedAt || b.createdAt).localeCompare(String(a.updatedAt || a.createdAt)));
+    if (!docs.length) return null; const o = await docOut(docs[0]); return { doc: docs[0], contract: o.contract };
+  }
+  return { tnvedAffected, botContext, botLog, telegramMessage, telegramAccess, botFallback, vedSettings, certPrices, mailAdd, classify, newCalcDoc, contractFor, offOn: (name, date) => offOn(db(), name, date), siteBotEnabled: () => bot(db()).answerSite !== false };
 }
 
 module.exports = { setup, HOLIDAYS, expandCn, classify, SECRETS };

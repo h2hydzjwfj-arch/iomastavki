@@ -171,7 +171,7 @@
     var x = r.item, c = r.client, st = r.stages || m.pipelines[x.funnel] || [], closed = x.status !== 'active';
     var tel = String(x.contactPhone || ''), telHref = /^@/.test(tel) ? 'https://t.me/' + encodeURIComponent(tel.slice(1)) : tel.replace(/[^\d+]/g, '').length >= 7 ? 'tel:' + tel.replace(/[^\d+]/g, '') : '';
     var stageOpts = st.concat(closed ? [x.stage] : []); var modes = [['', '—']].concat(Object.keys(m.modes).map(function (k) { return [k, m.modes[k]]; }));
-    var side = '<button type="button" class="cx-back" data-y="back">← Назад ' + (back === 'inbox' ? 'к входящим' : back === 'tasks' ? 'к задачам' : back === 'clients' ? 'к клиентам' : 'к сделкам') + '</button>'
+    var side = '<button type="button" class="cx-back" data-y="back">← Назад ' + (back === 'inbox' ? 'к входящим' : back === 'tasks' ? 'к задачам' : back === 'clients' ? 'к клиентам' : back === 'wallet' ? 'к моим средствам' : 'к сделкам') + '</button>'
       + '<div class="cx-dh"><input class="cx-dname" name="title" form="cxDealForm" value="' + esc(x.title || '') + '" placeholder="Название сделки…" aria-label="Название сделки">'
       + '<small>№ ' + esc(x.number) + ' · создана ' + K.dt(x.createdAt) + (x.source ? ' · <em class="crm-src">' + esc(x.source) + '</em>' : '') + catBadge(x.category) + '</small>'
       + (closed ? '<div class="cx-closed ' + x.status + '"><b>' + ({ won: '✓ Сделка завершена успешно', closed: 'Сделка закрыта', deleted: 'Сделка в архиве' }[x.status]) + '</b>' + (x.closeReason ? '<span>Причина: ' + esc(x.closeReason) + (x.closeComment ? ' — ' + esc(x.closeComment) : '') + '</span>' : '') + '<button type="button" class="cx-btn sm" data-y="' + (x.status === 'deleted' ? 'restore' : 'reopen') + '">' + (x.status === 'deleted' ? 'Восстановить' : 'Вернуть в работу') + '</button></div>'
@@ -198,19 +198,21 @@
       + '<div class="cx-dacts">' + (closed ? '' : '<button type="button" class="cx-btn danger" data-y="close">Закрыть сделку</button><button type="button" class="cx-btn ok" data-y="won">✓ Успешно</button>') + '<button type="submit" class="cx-btn primary">Сохранить</button></div>'
       + (x.status !== 'deleted' ? '<button type="button" class="cx-link danger" data-y="archive">🗑 Перенести в архив</button>' : '') + '</form>';
     var acts = x.activity || [], tasks = r.tasks || [];
-    var main = '<div class="cx-dtabs" role="tablist">' + [['act', 'Активность (' + acts.filter(function (a) { return !a.internal; }).length + ')'], ['tasks', 'Задачи (' + tasks.length + ')'], ['rates', 'Ставки'], ['files', 'Файлы (' + (x.files || []).length + ')'], ['calc', 'Калькулятор ВЭД' + (r.calcs.length ? ' (' + r.calcs.length + ')' : '')], ['kp', 'КП (' + r.quotes.length + ')'], ['fin', 'Финансы']].map(function (t) { return '<button type="button" class="chip' + (lastTab === t[0] ? ' on' : '') + '" data-y="tab" data-t="' + t[0] + '">' + t[1].replace(/ \((\d+)\)$/, function (_, n) { return n === '0' ? '' : ' <small>' + n + '</small>'; }) + '</button>'; }).join('') + '</div>'
-      + '<div class="cx-dpane" data-dp="act"></div><div class="cx-dpane" data-dp="tasks" hidden></div><div class="cx-dpane" data-dp="rates" hidden></div><div class="cx-dpane" data-dp="files" hidden></div><div class="cx-dpane" data-dp="calc" hidden></div><div class="cx-dpane" data-dp="kp" hidden></div><div class="cx-dpane" data-dp="fin" hidden></div>';
+    var main = '<div class="cx-dtabs" role="tablist">' + [['act', 'Активность (' + acts.filter(function (a) { return !a.internal; }).length + ')'], ['tasks', 'Задачи (' + tasks.length + ')'], ['rates', 'Ставки'], ['files', 'Файлы (' + (x.files || []).length + ')'], ['calc', 'Калькулятор ВЭД' + (r.calcs.length ? ' (' + r.calcs.length + ')' : '')], ['kp', 'КП (' + r.quotes.length + ')'], ['fin', 'Финансы']].concat(x.status === 'won' || x.fact ? [['fact', 'Факт']] : [], [['etrn', 'ЭТрН']]).map(function (t) { return '<button type="button" class="chip' + (lastTab === t[0] ? ' on' : '') + '" data-y="tab" data-t="' + t[0] + '">' + t[1].replace(/ \((\d+)\)$/, function (_, n) { return n === '0' ? '' : ' <small>' + n + '</small>'; }) + '</button>'; }).join('') + '</div>'
+      + '<div class="cx-dpane" data-dp="act"></div><div class="cx-dpane" data-dp="tasks" hidden></div><div class="cx-dpane" data-dp="rates" hidden></div><div class="cx-dpane" data-dp="files" hidden></div><div class="cx-dpane" data-dp="calc" hidden></div><div class="cx-dpane" data-dp="kp" hidden></div><div class="cx-dpane" data-dp="fin" hidden></div><div class="cx-dpane" data-dp="fact" hidden></div><div class="cx-dpane" data-dp="etrn" hidden></div>';
     box.innerHTML = '<div class="cx-deal"><aside class="cx-dside k">' + side + '</aside><div class="cx-dmain k">' + main + '</div></div>';
     bindDeal(box);
     showTab(lastTab);
   }
-  function showTab(t) {
+  function showTab(t, openId) {
     var box = $('#crmDeal'); lastTab = t;
     $$('.cx-dtabs .chip', box).forEach(function (c) { c.classList.toggle('on', c.dataset.t === t); });
     $$('.cx-dpane', box).forEach(function (p) { p.hidden = p.dataset.dp !== t; });
     var p = $('.cx-dpane[data-dp="' + t + '"]', box);
     if (t === 'act') actPane(p); if (t === 'tasks') tasksPane(p); if (t === 'files') filesPane(p); if (t === 'kp') kpPane(p); if (t === 'fin') finPane(p); if (t === 'rates' && window.IOMA_RATES) window.IOMA_RATES.mount(p, cur.item);
-    if (t === 'calc' && window.IOMA_CALC) window.IOMA_CALC.mount(p, { dealId: cur.item.id, onChange: function () {} });
+    if (t === 'calc' && window.IOMA_CALC) window.IOMA_CALC.mount(p, { dealId: cur.item.id, onChange: function () {}, openId: openId || '' });
+    if (t === 'fact' && window.IOMA_FACT_UI) window.IOMA_FACT_UI.mount(p, cur.item);
+    if (t === 'etrn' && window.IOMA_ETRN) window.IOMA_ETRN.mount(p, cur.item);
   }
   function bindDeal(box) {
     var form = $('#cxDealForm', box);
@@ -225,7 +227,7 @@
       if (y === 'back') { K.show(back); return; }
       if (y === 'tab') return showTab(t.dataset.t);
       if (y === 'close') return closeDeal();
-      if (y === 'won') return K.confirm('Отметить сделку успешной?', 'Да, успешно').then(function (ok) { if (ok) patch({ status: 'won' }).then(maybeCloseTasks); });
+      if (y === 'won') return K.confirm('Отметить сделку успешной? Откроется «Факт» — внесите приходы и расходы, чтобы посчитать прибыль и ваши средства.', 'Да, успешно').then(function (ok) { if (ok) patch({ status: 'won' }).then(function () { lastTab = 'fact'; if ($('#crmDeal .cx-dtabs [data-t=fact]')) showTab('fact'); return maybeCloseTasks(); }); });
       if (y === 'reopen') return patch({ status: 'active' });
       if (y === 'restore') return api('/api/deals/' + id + '/restore', { method: 'POST' }).then(reload);
       if (y === 'archive') return K.confirm('Перенести сделку в архив? Её можно будет восстановить.', 'В архив', true).then(function (ok) { if (ok) api('/api/deals/' + id, { method: 'DELETE' }).then(function () { K.badges(); K.show(back); }); });
@@ -265,8 +267,10 @@
   function actItem(a, dealId) {
     var L = K.META.labels || {}, T = K.META.actTypes || {};
     if (a.type === 'field') return '<div class="cx-hist" data-aid="' + esc(a.id) + '"><time>' + K.hm(a.at) + '</time> ' + esc(a.by || '') + ' · поле «<b>' + esc(L[a.field] || a.field) + '</b>»: ' + (a.from ? '<s>' + esc(a.from) + '</s> → ' : '') + '<b>' + esc(a.to || '—') + '</b><button type="button" class="cx-ib" data-z="del" title="Удалить запись истории">✕</button></div>';
-    var raw = String(a.text || ''), long = raw.length > CLAMP;
+    var raw = String(a.text || ''), F = window.IOMA_FMT, long = F ? raw.length > 700 || raw.split('\n').length > 14 : raw.length > CLAMP;
+    // заявки, письма, ответы агентов — читаемо: главное сверху, «поле: значение» таблицей, подпись мелко, старая переписка свёрнута
     var body = a.type === 'file' && a.fileId ? '📎 <a href="/api/deals/' + esc(dealId) + '/files/' + esc(a.fileId) + '" target="_blank" rel="noopener">' + esc(raw.replace(/^Добавлен файл:\s*/, '')) + '</a>'
+      : F ? '<div class="fm' + (long ? ' fm-clamp' : '') + '">' + F.rich(raw, { facts: /^(lead|mail|rate|tg|wa|call)$/.test(a.type) }) + '</div>'
       : long ? '<span class="cx-short">' + esc(raw.slice(0, CLAMP)) + '…</span><span class="cx-full" hidden>' + esc(raw) + '</span>' : esc(raw);
     return '<article class="cx-act t-' + esc(a.type) + (a.pinned ? ' pinned' : '') + '" data-aid="' + esc(a.id) + '"><span class="cx-ai">' + (K.ICON[a.type] || '📝') + '</span><div class="cx-ab"><header><b>' + esc(T[a.type] || 'Запись') + '</b><small>' + (a.pinned ? K.d(a.at) + ' ' : '') + K.hm(a.at) + ' · ' + esc(a.by || '') + (a.editedAt ? ' · изм.' : '') + '</small>'
       + (a.type !== 'file' ? '<button type="button" class="cx-ib" data-z="edit" title="Изменить">✎</button><button type="button" class="cx-ib' + (a.pinned ? ' on' : '') + '" data-z="pin" title="' + (a.pinned ? 'Открепить' : 'Закрепить') + '">📌</button>' : '') + '<button type="button" class="cx-ib danger" data-z="del" title="Удалить">✕</button></header>'
@@ -307,7 +311,7 @@
     K.dropzone(p, function (files) { toast('Загружаю файлы…'); K.upload('/api/deals/' + x.id + '/files', files).then(function (n) { if (n) toast('Добавлено файлов: ' + n); reload(); }); });
     p.onclick = function (e) {
       var b = e.target.closest('[data-z]'); if (!b) return; var z = b.dataset.z, art = b.closest('[data-aid]'), pin = b.closest('[data-tid]');
-      if (z === 'more') { var full = $('.cx-full', art), short = $('.cx-short', art), op = full.hidden; full.hidden = !op; short.hidden = op; b.textContent = op ? 'свернуть' : 'показать полностью'; return; }
+      if (z === 'more') { var fm = $('.fm', art); if (fm) { var cl = fm.classList.toggle('fm-clamp'); b.textContent = cl ? 'показать полностью' : 'свернуть'; return; } var full = $('.cx-full', art), short = $('.cx-short', art), op = full.hidden; full.hidden = !op; short.hidden = op; b.textContent = op ? 'свернуть' : 'показать полностью'; return; }
       if (art) { var aid = art.dataset.aid, a = (cur.item.activity || []).find(function (v) { return v.id === aid; }); var url = '/api/deals/' + x.id + '/notes/' + aid;
         if (z === 'pin') return api(url, { method: 'PATCH', body: { pinned: !a.pinned } }).then(reload);
         if (z === 'del') return K.confirm('Удалить запись?', 'Удалить', true).then(function (ok) { if (ok) api(url, { method: 'DELETE' }).then(reload); });
@@ -431,5 +435,5 @@
 
   K.on('inbox', function () { render('inbox'); });
   K.on('deals', function () { render('deals'); });
-  window.IOMA_CRM = { loadDeals: function () { render('deals'); }, loadInbox: function () { render('inbox'); }, openDeal: openDeal, reload: reload, render: render, newDeal: newDeal, get current() { return cur; } };
+  window.IOMA_CRM = { loadDeals: function () { render('deals'); }, loadInbox: function () { render('inbox'); }, openDeal: openDeal, reload: reload, render: render, newDeal: newDeal, showTab: function (t, openId) { if (cur && $('#crmDeal .cx-dtabs')) showTab(t, openId); }, get current() { return cur; } };
 })();

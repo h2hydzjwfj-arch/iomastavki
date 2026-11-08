@@ -34,6 +34,7 @@ function clean(rec) {
   const o = {};
   o.code = digits(rec.code).slice(0, 10);
   for (const f of FIELDS) if (f !== 'code' && f !== 'radio' && rec[f] != null && String(rec[f]).trim() !== '') o[f] = String(rec[f]).replace(/\s+/g, ' ').trim().slice(0, f === 'name' || f === 'note' ? 2000 : 400);
+  if (o.name) o.name = o.name.replace(/\s*🠺\s*/g, ' → ').replace(/:\s*→/g, ' →'); // выгрузки из старых справочников: «группа: 🠺 строка» → «группа → строка»
   if (rec.radio === true || /^(да|yes|1|true|\+|x|✓)$/i.test(String(rec.radio || '').trim())) o.radio = true;
   return o;
 }
@@ -163,15 +164,36 @@ function createTnved(dataDir, cloud) {
   return { init, flush, search, get, lookup, certCheck, importRecords, upsert, remove, stats, diffList, diffGet, all: () => all() };
 }
 
+// Ответ tnved-check (alta.ru или встроенный справочник) → поля калькулятора, как у lookup() своего справочника
+function fromCheck(info, vatDefault) {
+  const d = VED.parseDuty(info.duty.text || '');
+  const rates = (info.vat || []).map(v => v.rate).filter(v => v != null);
+  const general = rates.includes(vatDefault) ? vatDefault : rates.length ? Math.max(...rates) : vatDefault;
+  const lv = info.levels || []; const last = lv[lv.length - 1];
+  return { code: info.code, exact: true, name: last ? String(last.text).replace(/^[–—-\s]+/, '') : '', duty_text: info.duty.text || '', duty_type: d.duty_type, duty_value: d.duty_rate,
+    eur_per_kg: d.eur_per_kg, eur_per_l: d.eur_per_l, eur_per_pcs: d.eur_per_pcs, eur_per_m2: d.eur_per_m2, eur_unit: d.eur_unit,
+    vat_rate: general, vat_options: (info.vat || []).map(v => ({ rate: v.rate, condition: v.condition || '' })), vat_text: rates.map(v => v + '%').join(' / '),
+    excise_text: info.excise || '', unit: '', radio: false, source: info.source === 'local' ? 'base' : 'alta', baseDate: info.baseDate || '' };
+}
+
 function setup(app, ctx) {
   const { admin, upload, DATA_DIR, cloud } = ctx;
   const db = ctx.tnved || createTnved(DATA_DIR, cloud);
   const vatDefault = () => (ctx.vedSettings ? ctx.vedSettings().vatDefault : 22);
   app.get('/api/tnved/diffs', admin, (req, res) => res.json({ ok: true, items: db.diffList() }));
   app.get('/api/tnved/diffs/:id', admin, (req, res) => { const d = db.diffGet(req.params.id); if (!d) return res.status(404).json({ ok: false, error: 'Не найдено' }); res.json({ ok: true, item: d }); });
-  app.get('/api/tnved/stats', admin, (req, res) => res.json({ ok: true, ...db.stats() }));
+  app.get('/api/tnved/stats', admin, (req, res) => res.json({ ok: true, ...db.stats(), builtin: require('./tnved-check').fullStats() }));
   app.get('/api/tnved/search', admin, (req, res) => { const r = db.search(req.query.q, req.query.limit); res.json({ ok: true, ...r }); });
-  app.get('/api/tnved/lookup', admin, (req, res) => { const r = db.lookup(req.query.code, vatDefault()); if (!r) return res.status(404).json({ ok: false, error: 'Кода нет в локальном справочнике' }); res.json({ ok: true, ...r }); });
+  // Данные для расчёта: свой справочник → alta.ru → встроенный справочник (reference/tnved-base.json).
+  // Ставку пошлины и НДС в расчёте нельзя поменять руками — она идёт отсюда.
+  app.get('/api/tnved/lookup', admin, async (req, res) => {
+    const code = digits(req.query.code); const r = db.lookup(code, vatDefault());
+    if (r && r.exact) return res.json({ ok: true, ...r, source: 'own' });
+    if (ctx.fetchTnved && code.length === 10) {
+      try { const info = await ctx.fetchTnved(code); return res.json({ ok: true, ...fromCheck(info, vatDefault()) }); } catch (e) { if (!r && e && e.kind === 'not_found') return res.status(404).json({ ok: false, error: e.message }); }
+    }
+    if (!r) return res.status(404).json({ ok: false, error: 'Кода нет в справочнике' }); res.json({ ok: true, ...r, source: 'own' });
+  });
   app.get('/api/tnved/cert', admin, (req, res) => res.json({ ok: true, ...db.certCheck(req.query.code) }));
   app.get('/api/tnved/code/:code', admin, (req, res) => {
     let r = db.get(req.params.code);
