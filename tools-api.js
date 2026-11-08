@@ -26,11 +26,12 @@ function cleanText(html) {
 // fetch с таймаутом и кукой; для сайтов на сертификатах Минцифры — https с российским корневым сертификатом
 function request(url, opt = {}) {
   const timeout = opt.timeout || 15000;
-  if (opt.ruCa && RU_CA) {
+  // https напрямую: свой корневой сертификат (ruCa) или только IPv4 (ipv4) — некоторые сайты не отвечают по IPv6 из облака
+  if ((opt.ruCa && RU_CA) || opt.ipv4) {
     return new Promise((resolve, reject) => {
       const u = new URL(url);
-      const r = https.request({ hostname: u.hostname, path: u.pathname + u.search, method: opt.method || 'GET', ca: RU_CA, headers: { 'user-agent': UA, accept: 'application/json', ...(opt.headers || {}) }, timeout }, x => {
-        const ch = []; x.on('data', d => ch.push(d)); x.on('end', () => resolve({ status: x.statusCode, buf: Buffer.concat(ch), headers: x.headers }));
+      const r = https.request({ hostname: u.hostname, path: u.pathname + u.search, method: opt.method || 'GET', family: opt.ipv4 ? 4 : undefined, ca: opt.ruCa ? RU_CA : undefined, headers: { 'user-agent': UA, accept: opt.ruCa ? 'application/json' : '*/*', 'accept-language': 'ru-RU,ru;q=0.9', ...(opt.body ? { 'content-length': Buffer.byteLength(opt.body) } : {}), ...(opt.headers || {}) }, timeout }, x => {
+        const ch = []; x.on('data', d => ch.push(d)); x.on('end', () => resolve({ status: x.statusCode, buf: Buffer.concat(ch), headers: x.headers, setCookie: [].concat(x.headers['set-cookie'] || []) }));
       });
       r.on('timeout', () => r.destroy(new Error('Источник не ответил вовремя'))); r.on('error', reject);
       if (opt.body) r.write(opt.body); r.end();
@@ -132,12 +133,12 @@ async function phoneInfo(raw) {
 const MC_URL = 'https://www.moscow-cargo.com/tarify/kalkulyator-stoimosti';
 const MC_TYPES = { general: '', dangerous: 'DGR', perishable: 'COL', valuable: 'VAL', animals: 'AVI' };
 async function moscowCargo(q) {
-  const page = await request(MC_URL, { timeout: 15000 });
+  const page = await request(MC_URL, { timeout: 20000, ipv4: true });
   const html = page.buf.toString('utf8'); const tok = (html.match(/name="_token" type="hidden" value="([^"]+)"/) || [])[1];
   if (!tok) throw new Error('Москва Карго не отдала форму расчёта');
   const cookie = (page.setCookie || []).map(c => c.split(';')[0]).join('; ');
   const body = new URLSearchParams({ _token: tok, tech: 'IMP', avia: q.airline || 'SU', mvl_vvl: q.domestic ? 'vvl' : 'mvl', cargo_type: MC_TYPES[q.category] || '', phys_weight: String(Math.round(q.weight)), weight: String(Math.round(q.chargeable || q.weight)), from: q.from, to: q.to, extra_day: q.after16 ? '1' : '0', load: q.load ? '1' : '0', coordination: '0' });
-  const r = await request('https://www.moscow-cargo.com/intapi/calculate-v2', { method: 'POST', body: body.toString(), timeout: 15000, headers: { cookie, 'content-type': 'application/x-www-form-urlencoded; charset=UTF-8', 'x-requested-with': 'XMLHttpRequest', 'x-csrf-token': tok, referer: MC_URL, origin: 'https://www.moscow-cargo.com' } });
+  const r = await request('https://www.moscow-cargo.com/intapi/calculate-v2', { method: 'POST', body: body.toString(), timeout: 20000, ipv4: true, headers: { cookie, 'content-type': 'application/x-www-form-urlencoded; charset=UTF-8', 'x-requested-with': 'XMLHttpRequest', 'x-csrf-token': tok, referer: MC_URL, origin: 'https://www.moscow-cargo.com' } });
   const j = JSON.parse(r.buf.toString('utf8'));
   if (j.errorcode !== 0 || !Array.isArray(j.data)) throw new Error(j.message || 'Москва Карго не посчитала');
   const lines = j.data.map(x => ({ name: String(x.contrName || '').trim(), sum: Math.round(Number(x.finalSum) * 100) / 100 })).filter(x => x.name);
@@ -298,7 +299,7 @@ function setup(app, opts = {}) {
     const probe = (name, fn) => cached('src:' + name, 10 * 60 * 1000, () => fn().then(r => ({ name, ok: r.status > 0 && r.status < 500, status: r.status })).catch(e => ({ name, ok: false, error: String(e.message || e).slice(0, 80) })));
     const list = await Promise.all([
       probe('kody.su', () => request('https://www.kody.su/check-tel', { timeout: 8000 })),
-      probe('moscow-cargo.com', () => request(MC_URL, { timeout: 8000 })),
+      probe('moscow-cargo.com', () => request(MC_URL, { timeout: 15000, ipv4: true })),
       probe('shercargo.ru', () => request('https://www.shercargo.ru/clients/payment/rates/', { timeout: 8000 })),
       probe('isales.trcont.ru', () => request('https://isales.trcont.ru/api/unauthorized/dislocation?search_type=equipment&term=TKRU', { ruCa: true, timeout: 8000 })),
     ]);
