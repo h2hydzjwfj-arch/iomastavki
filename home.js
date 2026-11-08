@@ -84,10 +84,9 @@
     document.addEventListener('click', function (e) { if (!call.contains(e.target) && !acts.hidden) { acts.hidden = true; call.classList.remove('open'); } });
     // наведение мышью: значки связи всплывают сами (Telegram, WhatsApp, звонок, почта)
     var hoverT = 0, show = function (on) { acts.hidden = !on; call.classList.toggle('open', on); $$('[data-call-open]', call).forEach(function (b) { b.setAttribute('aria-expanded', on); }); };
-    if (window.matchMedia && window.matchMedia('(hover: hover)').matches) {
-      call.addEventListener('mouseenter', function () { clearTimeout(hoverT); show(true); });
-      call.addEventListener('mouseleave', function () { clearTimeout(hoverT); hoverT = setTimeout(function () { show(false); }, 350); });
-    }
+    // только настоящая мышь: на телефоне касание вызывает и «наведение», и щелчок — там значки открываются щелчком
+    call.addEventListener('pointerenter', function (e) { if (e.pointerType !== 'mouse') return; clearTimeout(hoverT); show(true); });
+    call.addEventListener('pointerleave', function (e) { if (e.pointerType !== 'mouse') return; clearTimeout(hoverT); hoverT = setTimeout(function () { show(false); }, 350); });
     var mail = $('[data-mail]', call); if (mail && mail.dataset.mail) { mail.href = 'mailto:' + mail.dataset.mail; mail.hidden = false; }
   }
 
