@@ -13,7 +13,7 @@
   var nav=$('.v3-nav'),pill=$('.v3-pill');
   function movePill(){safe(function(){var b=$('.v3-nav > button.on, .v3-nav .sg:not(.sg-solo) .sg-btn.on, .v3-nav .sg-solo .sg-menu button.on');if(!b||!pill)return;pill.style.left=b.offsetLeft+'px';pill.style.width=b.offsetWidth+'px'})}
   function syncNav(){
-    var open=$('.view-layer.open'),map={servicesView:'servicesView',casesView:'casesView',kbView:'kbView',calculatorView:'calculator',assistantView:'assistant',newsView:'news',forwardersView:'forwarders',customsView:'customsView',loginView:'loginView',leadView:'leadView',cabinetView:'cabinetView',workView:'workView'};
+    var open=$('.view-layer.open'),map={servicesView:'servicesView',casesView:'casesView',kbView:'kbView',calculatorView:'calculator',assistantView:'assistant',newsView:'news',forwardersView:'forwarders',customsView:'customsView',loginView:'loginView',leadView:'leadView',cabinetView:'cabinetView',workView:'workView',trackView:'trackView',fitView:'fitView',volumeView:'volumeView',terminalView:'terminalView',russiaView:'russiaView',phoneView:'phoneView',propisView:'propisView'};
     var key=open?map[open.id]:null;
     // верхний уровень: обычные кнопки и кнопки групп; группа «горит», если открыт один из её пунктов
     $$('.v3-nav > button, .v3-nav .sg-btn').forEach(function(b){var on;if(b.classList.contains('sg-btn')){on=!!key&&!!b.parentNode.querySelector('[data-open-view="'+key+'"]')}else on=key?b.getAttribute('data-open-view')===key:b.dataset.nav==='home';b.classList.toggle('on',on)});

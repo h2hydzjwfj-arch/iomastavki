@@ -161,3 +161,25 @@ html:root body .cx-more-b{all:unset;box-sizing:border-box;grid-column:1 / -1;dis
 
 @media (prefers-reduced-motion:reduce){.cx-ph-t.in,.cx-ph-t.out,html:root body .v3c-hero.cx-in,.cx-anim .rmini .rmini-r,.cx-anim .cxr-bar i,html:root body .v3-calc #calculate.cx-go{animation:none!important}}
 html:root body .v3-calc .field input:focus,html:root body .v3-calc .field input:focus-visible{outline:none!important;box-shadow:none!important}
+/* расчёт: как лучше везти (route-advice.js) — внутри тёмной карточки маршрута */
+.cxa{padding:12px;border-radius:18px;background:rgba(246,241,234,.05);display:flex;flex-direction:column;gap:8px;color:#F6F1EA}
+.cxa-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.cxa-h b{font-size:14.5px}.cxa-h span{font-size:12px;color:rgba(246,241,234,.6)}
+html:root body .cxa-best{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"em em em" "b span strong" "small small small";gap:3px 10px;align-items:baseline;padding:10px 12px;border-radius:14px;background:rgba(242,138,58,.10);border:1.5px solid rgba(242,138,58,.5);color:#F6F1EA;transition:border-color .2s,transform .2s}
+html:root body .cxa-best:hover{transform:translateY(-1px);border-color:#F28A3A}
+.cxa-best em{grid-area:em;font-style:normal;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#F2A26B}
+.cxa-best b{grid-area:b;font-size:16px}.cxa-best span{grid-area:span;font-size:12.5px;color:rgba(246,241,234,.62);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cxa-best strong{grid-area:strong;font-size:14px;white-space:nowrap}
+.cxa-best small{grid-area:small;font-size:12px;line-height:1.4;color:rgba(246,241,234,.66)}
+.cxa-r{font-style:normal;margin-left:8px;font-size:12px;letter-spacing:-.04em;color:#F28A3A}.cxa-r s{text-decoration:none;opacity:.25}
+.cxa-alt{display:flex;flex-wrap:wrap;gap:6px}
+html:root body .cxa-alt button{all:unset;cursor:pointer;display:inline-flex;align-items:baseline;gap:6px;padding:6px 11px;border-radius:999px;background:rgba(246,241,234,.06);border:1px solid rgba(246,241,234,.14);font-size:12.5px;color:#F6F1EA}
+html:root body .cxa-alt button:hover{border-color:#F28A3A}
+.cxa-alt b{font-size:13px}.cxa-alt span{color:rgba(246,241,234,.6)}
+.cxa-no{margin:0;font-size:12px;color:rgba(246,241,234,.6);line-height:1.4}
+/* до расчёта карточка маршрута не выше колонки параметров: остальное прокручивается внутри неё */
+@media (min-width:861px){
+  html:root body .v3-calc-grid.cx-pre .cx-route{height:0;min-height:100%}
+  html:root body .v3-calc-grid.cx-pre .cxr-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(246,241,234,.25) transparent;margin-right:-8px;padding-right:8px}
+  html:root body .v3-calc-grid.cx-pre .cxr-body>*{flex-shrink:0}
+}
