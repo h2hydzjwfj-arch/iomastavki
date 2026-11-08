@@ -79,9 +79,16 @@
       var o = e.target.closest('[data-call-open]');
       if (o) { var show = acts.hidden; acts.hidden = !show; call.classList.toggle('open', show); $$('[data-call-open]', call).forEach(function (b) { b.setAttribute('aria-expanded', show); }); return; }
       var c = e.target.closest('[data-copy]');
-      if (c) { var done = function () { c.textContent = T('Номер скопирован'); setTimeout(function () { c.textContent = T('Скопировать номер'); }, 1600); }; if (navigator.clipboard) navigator.clipboard.writeText(c.dataset.copy).then(done).catch(done); else done(); }
+      if (c) { var done = function () { c.classList.add('ok'); c.title = T('Номер скопирован'); setTimeout(function () { c.classList.remove('ok'); c.title = T('Скопировать номер'); }, 1600); }; if (navigator.clipboard) navigator.clipboard.writeText(c.dataset.copy).then(done).catch(done); else done(); }
     });
     document.addEventListener('click', function (e) { if (!call.contains(e.target) && !acts.hidden) { acts.hidden = true; call.classList.remove('open'); } });
+    // наведение мышью: значки связи всплывают сами (Telegram, WhatsApp, звонок, почта)
+    var hoverT = 0, show = function (on) { acts.hidden = !on; call.classList.toggle('open', on); $$('[data-call-open]', call).forEach(function (b) { b.setAttribute('aria-expanded', on); }); };
+    if (window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+      call.addEventListener('mouseenter', function () { clearTimeout(hoverT); show(true); });
+      call.addEventListener('mouseleave', function () { clearTimeout(hoverT); hoverT = setTimeout(function () { show(false); }, 350); });
+    }
+    var mail = $('[data-mail]', call); if (mail && mail.dataset.mail) { mail.href = 'mailto:' + mail.dataset.mail; mail.hidden = false; }
   }
 
   /* ---------------- карта маршрутов ---------------- */
@@ -92,7 +99,7 @@
   // высота шапки бывает разной (меню переносится на вторую строку) — первый экран считаем от настоящей
   function hdr() { var t = document.querySelector('.topbar'); if (t && t.offsetHeight) document.documentElement.style.setProperty('--hdr', t.offsetHeight + 'px'); }
   hdr(); window.addEventListener('resize', hdr); if (window.ResizeObserver) { var tb = document.querySelector('.topbar'); if (tb) new ResizeObserver(hdr).observe(tb); }
-  function mountMap() { var el = $('#hxMap'); if (!el || !window.IOMA_RMAP || el.dataset.on) return; el.dataset.on = '1'; window.IOMA_RMAP.mount(el, { auto: true, fitTo: el.closest('.hx-r'), onPick: function (k, mode, ru, to, toRu) { openCalc(ru, mode, toRu); } }); }
+  function mountMap() { var el = $('#hxMap'); if (!el || !window.IOMA_RMAP || el.dataset.on) return; el.dataset.on = '1'; (window.IOMA_JMAP || window.IOMA_RMAP).mount(el, { auto: true, fitTo: el.closest('.hx-r'), onPick: function (k, mode, ru, to, toRu) { openCalc(ru, mode, toRu); } }); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountMap); else mountMap();
 
   /* ---------------- язык одной кнопкой ---------------- */

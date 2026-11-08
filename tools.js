@@ -421,7 +421,10 @@
     out.style.maxHeight = Math.max(260, (window.innerHeight - top - 18) / z) + 'px';
   }
   function mount(id) {
-    var v = document.getElementById(id), body = v && $('.tl', v); if (!body || body.dataset.ok) return body; body.dataset.ok = '1';
+    var v = document.getElementById(id), body = v && $('.tl', v); if (!body) return body;
+    // инструменты — для сотрудников компании: гостю и клиенту — только приглашение войти
+    if (!document.body.classList.contains('role-admin')) { body.dataset.ok = ''; body.innerHTML = head('Инструменты', 'Только для сотрудников', 'Эти инструменты доступны сотрудникам iomastavka после входа.') + '<button type="button" class="tl-go tl-login" data-open-view="loginView">Войти</button>'; return null; }
+    if (body.dataset.ok) return body; body.dataset.ok = '1';
     try { TOOLS[id](body); } catch (e) { body.innerHTML = '<p class="tl-err">Не удалось открыть инструмент: ' + esc(e.message) + '</p>'; }
     var out = $('.tl-out', body); if (out) { new MutationObserver(function () { fitOut(out); }).observe(out, { childList: true }); setTimeout(function () { fitOut(out); }, 1300); }
     return body;
@@ -436,5 +439,8 @@
       new MutationObserver(function () { if (v.classList.contains('open')) mount(id); }).observe(v, { attributes: true, attributeFilter: ['class'] });
     });
   }
+  // роль становится известна после загрузки (вход сотрудника) — открытое окно инструмента перерисовываем
+  var lastRole = '';
+  new MutationObserver(function () { var r = document.body.classList.contains('role-admin') ? 'admin' : 'other'; if (r === lastRole) return; lastRole = r; Object.keys(TOOLS).forEach(function (id) { var v = document.getElementById(id); if (v && v.classList.contains('open')) { var b = $('.tl', v); if (b) b.dataset.ok = ''; mount(id); } }); }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watch); else watch();
 })();

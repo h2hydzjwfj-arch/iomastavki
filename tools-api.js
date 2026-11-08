@@ -245,14 +245,15 @@ function ruEstimate(q) {
 
 // ---------- маршруты
 function setup(app, opts = {}) {
+  const staff = opts.admin || ((req, res, next) => next()); // инструменты — только сотрудникам компании
   const limit = opts.rateLimit ? opts.rateLimit({ windowMs: 5 * 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много запросов. Подождите пару минут.' } }) : (req, res, next) => next();
   const wrap = fn => (req, res) => Promise.resolve(fn(req, res)).catch(e => res.status(502).json({ ok: false, error: e && e.message ? e.message : 'Источник не ответил' }));
   const num = (v, d = 0) => { const n = Number(String(v == null ? '' : v).replace(',', '.')); return Number.isFinite(n) ? n : d; };
   const date = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : null;
 
-  app.post('/api/tools/phone', limit, wrap(async (req, res) => res.json(await phoneInfo((req.body || {}).number))));
+  app.post('/api/tools/phone', staff, limit, wrap(async (req, res) => res.json(await phoneInfo((req.body || {}).number))));
 
-  app.post('/api/tools/terminal', limit, wrap(async (req, res) => {
+  app.post('/api/tools/terminal', staff, limit, wrap(async (req, res) => {
     const b = req.body || {}, today = new Date().toISOString().slice(0, 10);
     const q = { airline: /^[A-Z0-9]{2}$/.test(b.airline || '') ? b.airline : 'SU', weight: num(b.weight), chargeable: num(b.chargeable), places: Math.round(num(b.places, 1)), category: MC_TYPES.hasOwnProperty(b.category) ? b.category : 'general',
       from: date(b.from) || today, to: date(b.to) || today, after16: !!b.after16, load: !!b.load, coordination: !!b.coordination };
@@ -264,14 +265,14 @@ function setup(app, opts = {}) {
     catch (e) { const t = mcTariff(q); t.note = 'Калькулятор Москва Карго не ответил (' + e.message + '), посчитано по их тарифам на рейсах других авиакомпаний'; res.json(t); }
   }));
 
-  app.get('/api/tools/awb', limit, wrap(async (req, res) => {
+  app.get('/api/tools/awb', staff, limit, wrap(async (req, res) => {
     const d = String(req.query.no || '').replace(/\D/g, ''); if (d.length !== 11) return res.status(400).json({ ok: false, error: 'Номер авианакладной — 11 цифр: префикс авиакомпании и номер, например 555-12345675' });
     const pr = d.slice(0, 3), no = d.slice(3); const okDigit = +no[7] === +no.slice(0, 7) % 7;
     const tables = await cached('awb:' + d, 10 * 60 * 1000, () => sherAwb(pr, no));
     res.json({ ok: true, awb: pr + '-' + no, checkOk: okDigit, source: 'Шереметьево-Карго', url: 'https://www.shercargo.ru/w/pls/pub/www_pub.awb_info?p_awb_pr=' + pr + '&p_awb_no=' + no, tables });
   }));
 
-  app.get('/api/tools/container', limit, wrap(async (req, res) => {
+  app.get('/api/tools/container', staff, limit, wrap(async (req, res) => {
     const no = String(req.query.no || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (!/^[A-Z]{3}[UJZ]\d{7}$/.test(no)) return res.status(400).json({ ok: false, error: 'Номер контейнера: 4 буквы и 7 цифр, например FESU5011022' });
     const cd = isoCheck(no), valid = cd === +no[10], own = OWNER[no.slice(0, 4)] || null;
@@ -281,7 +282,7 @@ function setup(app, opts = {}) {
     res.json(out);
   }));
 
-  app.post('/api/tools/russia', limit, wrap(async (req, res) => {
+  app.post('/api/tools/russia', staff, limit, wrap(async (req, res) => {
     const b = req.body || {}, q = { from: String(b.from || '').slice(0, 60), to: String(b.to || '').slice(0, 60), weight: num(b.weight), volume: num(b.volume), places: Math.max(1, Math.round(num(b.places, 1))), length: num(b.length), width: num(b.width), height: num(b.height) };
     if (!q.from || !q.to) return res.status(400).json({ ok: false, error: 'Укажите, откуда и куда везём' });
     if (!(q.weight > 0)) return res.status(400).json({ ok: false, error: 'Укажите вес, кг' });
