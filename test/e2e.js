@@ -120,7 +120,17 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       ok((await call('g', 'POST', '/api/cases', { goods: 'Тест' }))._status === 401, 'гость добавил кейс');
       const a = await call('a', 'POST', '/api/cases', { goods: 'Лампы CI', weight: 1200, transport: 'rail', from: 'Иу', to: 'Москва' }); ok(a.ok && a.item.id, JSON.stringify(a).slice(0, 160));
       ok((await call('g', 'GET', '/api/cases')).items.some(c => c.goods === 'Лампы CI'), 'новый кейс не виден гостю');
+      // фото кейса: загружает только администратор, смотрят все, удаляется вместе с кейсом
+      const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+      const ph = () => { const fd = new FormData(); fd.append('file', new Blob([png], { type: 'image/png' }), 'photo.png'); return fd; };
+      ok((await call('g', 'POST', '/api/cases/' + a.item.id + '/photo', ph()))._status === 401, 'гость загрузил фото кейса');
+      const bad = new FormData(); bad.append('file', new Blob(['<svg/>'], { type: 'image/svg+xml' }), 'x.svg'); ok((await call('a', 'POST', '/api/cases/' + a.item.id + '/photo', bad))._status === 400, 'принял SVG как фото');
+      const up = await call('a', 'POST', '/api/cases/' + a.item.id + '/photo', ph()); ok(up.ok && /\/api\/cases\/.+\/photo\?v=/.test(up.item.photo || ''), JSON.stringify(up).slice(0, 160));
+      ok((await call('g', 'GET', '/api/cases')).items.find(c => c.id === a.item.id).photo, 'гость не видит фото в списке');
+      const img = await call('g', 'GET', '/api/cases/' + a.item.id + '/photo', null, true); ok(img.status === 200 && img.headers.get('content-type') === 'image/png' && Buffer.from(await img.arrayBuffer()).equals(png), 'фото не отдаётся');
+      ok((await call('a', 'PATCH', '/api/cases/' + a.item.id, { value: 2700000 })).item.photo, 'фото пропало после правки кейса');
       ok((await call('a', 'DELETE', '/api/cases/' + a.item.id)).ok, 'кейс не удалился');
+      ok((await call('g', 'GET', '/api/cases/' + a.item.id + '/photo', null, true)).status === 404, 'фото удалённого кейса ещё отдаётся');
     });
     await check('КП от менеджера появляется в кабинете клиента, внутренние строки не уходят', async () => {
       const dl = await call('a', 'POST', '/api/deals', { title: 'КП в кабинет CI', clientId: cl.id }); ok(dl.ok, JSON.stringify(dl).slice(0, 160));

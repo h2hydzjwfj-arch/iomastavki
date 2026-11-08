@@ -187,7 +187,7 @@ function setup(app, opts) {
   const crm3 = require('./crm3').setup(app, { store, admin, upload, str, newId, ai: opts.ai, rates: opts.rates || (async () => ({ rates: {} })),
     mail: { enabled: () => mail.enabled(), kind: () => mail.kind(), send: (...a) => mail.send(...a) }, who: req => roleOf(req).name || 'Менеджер', publicAgents: opts.agents || null, newCalcDoc: (d, o) => crm2.newCalcDoc(d, o) });
   // после сделки: «Факт», «Мои средства», ЭТрН
-  require('./crm4').setup(app, { store, admin, need, str, newId, who: req => roleOf(req).name || 'Менеджер', contractFor: id => crm2.contractFor(id) });
+  require('./crm4').setup(app, { store, admin, need, upload, str, newId, who: req => roleOf(req).name || 'Менеджер', contractFor: id => crm2.contractFor(id) });
   // робот-помощник администратора: агенты, КП → ставки, груз → сделка, тексты и цвет сайта
   require('./robot').setup(app, { store, admin, upload, str, newId, ai: opts.ai, crm, who: req => roleOf(req).name || 'Администратор', mergeRates: opts.mergeRates || null });
   const splitContact = c => { c = String(c || '').trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c) ? { contactEmail: c } : { contactPhone: c }; };
