@@ -269,6 +269,7 @@
     [/^≈ ([\d\s ,.]+) км$/, ['≈ $1 km', '≈ $1 公里', '≈ $1 km', '≈ $1 km', '≈ $1 km']],
     [/^([\d\s ,.]+) км$/, ['$1 km', '$1 公里', '$1 km', '$1 km', '$1 km']],
     [/^([\d\s ]+) мест$/, ['$1 pcs', '$1 件', '$1 parça', '$1 Packstücke', '$1 colis']],
+    [/^1 шт\. · (\d+) мест$/, ['1 unit · $1 pcs', '1 个 · $1 件', '1 adet · $1 parça', '1 Stk. · $1 Packstücke', '1 unité · $1 colis']],
     [/^(\d+) шт\. · (\d+) мест$/, ['$1 units · $2 pcs', '$1 个 · $2 件', '$1 adet · $2 parça', '$1 Stk. · $2 Packstücke', '$1 unités · $2 colis']],
     [/^к оплате ([\d\s ,.]+) кг · по объёму$/, ['chargeable $1 kg · by volume', '计费 $1 公斤 · 按体积', 'ücretli $1 kg · hacme göre', 'abgerechnet $1 kg · nach Volumen', 'facturé $1 kg · au volume']],
     [/^к оплате ([\d\s ,.]+) кг · по весу$/, ['chargeable $1 kg · by weight', '计费 $1 公斤 · 按重量', 'ücretli $1 kg · ağırlığa göre', 'abgerechnet $1 kg · nach Gewicht', 'facturé $1 kg · au poids']],

@@ -71,7 +71,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
     });
     await step('Гость: язык одной кнопкой — весь первый экран на английском', async () => {
       await p.click('.lx-btn'); await p.click('.lx-menu [data-lang="en"]'); await p.waitForFunction(() => /We buy in China/.test(document.querySelector('.hx-h1').textContent));
-      await p.waitForFunction(() => /Rail/.test(document.querySelector('.rmap-tabs').textContent));
+      await p.waitForFunction(() => { const e = document.querySelector('.jm-steps'); return e && /From/.test(e.textContent) && /Transport/.test(e.textContent); });
       await p.click('.lx-btn'); await p.click('.lx-menu [data-lang="ru"]'); await p.waitForFunction(() => /Купим в Китае/.test(document.querySelector('.hx-h1').textContent));
     });
     await step('Окно закрывается только крестиком — ни протяжка мышью, ни щелчок мимо его не закрывают', async () => {
