@@ -448,3 +448,6 @@ html:root body.night .ngoods-r span:nth-child(3n+1){border-color:rgba(231,164,12
 html:root body.night .ngoods-r span:nth-child(4n+2){border-color:rgba(224,174,98,.4)}
 @keyframes nMarq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media (prefers-reduced-motion:reduce){html:root body.night .ngoods-r{animation:none;flex-wrap:wrap;width:auto}}
+/* «Инструменты ВЭД»: много пунктов — меню в две колонки */
+html:root body.night .sg-menu.sg-wide{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px;max-width:min(620px,calc(100vw - 24px));width:620px}
+@media (max-width:700px){html:root body.night .sg-menu.sg-wide{grid-template-columns:1fr;width:auto;max-height:70vh;overflow:auto}}

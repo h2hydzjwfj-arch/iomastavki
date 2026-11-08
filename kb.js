@@ -120,7 +120,7 @@
     var l = L(), t = function (o) { return o[l] || o.ru; }, R = window.IOMA_ROUTES;
     var h = '<section class="kb-pulse"><div class="kb-ph"><b>' + t(T.pulse) + '</b><span>' + t(T.upd) + '</span></div><div class="kb-pg">' + PULSE.map(function (p) { return '<div class="kb-p kb-' + p.lv + '"><span class="kb-st">' + ic(p.lv) + t(T.st[p.st || p.lv]) + '</span><b>' + e(t(p.n)) + '</b><em>' + p.d + ' ' + t(T.days) + '</em><small>' + e(t(p.t)) + '</small></div>'; }).join('') + '</div></section>';
     h += '<div class="kb-tabs" role="tablist">' + ['now', 'choose', 'times', 'cross', 'docs'].map(function (k) { return '<button type="button" role="tab" class="chip' + (k === tab ? ' on' : '') + '" aria-selected="' + (k === tab) + '" data-kbt="' + k + '">' + t(T.tabs[k]) + '</button>'; }).join('') + '</div><div class="kb-pane">';
-    if (tab === 'now') h += '<div class="kb-news">' + NOW.map(function (x) { return '<article class="k kb-n kb-' + x.lv + '"><span class="kb-ni">' + ic(x.lv) + '</span><div><b>' + e(t(x.h)) + '</b><p>' + e(x[l] || x.ru) + '</p><span class="kb-src">' + link(x.s) + '</span></div></article>'; }).join('') + '</div>';
+    if (tab === 'now') h += '<div class="kb-news">' + NOW.map(function (x) { return '<article class="k kb-n kb-' + x.lv + '" tabindex="0" aria-expanded="false"><span class="kb-ni">' + ic(x.lv) + '</span><div><b>' + e(t(x.h)) + '</b><p>' + e(x[l] || x.ru) + '</p><span class="kb-src">' + link(x.s) + '</span></div></article>'; }).join('') + '</div>';
     if (tab === 'choose') {
       var txt = (CHOOSE[l] || CHOOSE.ru)[reg].replace(/^[^:：]+[:：]\s*/, '');
       h += '<div class="k kb-choose"><b class="kb-q">' + t(T.where) + '</b><div class="kb-regs">' + REG.map(function (r, i) { return '<button type="button" class="chip' + (i === reg ? ' on' : '') + '" data-kbr="' + i + '">' + e(t(r[0])) + '</button>'; }).join('') + '</div><div class="kb-ans"><p>' + e(txt) + '</p><button type="button" class="calculate kb-go" data-kbcalc="' + reg + '">' + t(T.calc) + ' →</button></div></div>';
@@ -134,6 +134,11 @@
     box.innerHTML = h;
     var hd = document.querySelector('#kbView .v3-head'); if (hd) { hd.querySelector('h1').textContent = t(T.title); hd.querySelector('p').textContent = t(T.sub); }
   }
+  // новость рынка: коротко в три строки, по нажатию — целиком
+  document.addEventListener('click', function (ev) {
+    var n = ev.target.closest && ev.target.closest('.kb-n'); if (!n || ev.target.closest('a')) return;
+    n.classList.toggle('open'); n.setAttribute('aria-expanded', n.classList.contains('open'));
+  });
   document.addEventListener('click', function (ev) {
     var x = ev.target.closest && ev.target.closest('[data-kbt],[data-kbr],[data-kbcalc]'); if (!x) return;
     if (x.dataset.kbt) { tab = x.dataset.kbt; render(); }
