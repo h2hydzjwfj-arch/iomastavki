@@ -49,7 +49,7 @@ const cloud = require('./cloud').createCloud();
 function bestRate({ from, to, mode, distance }) {
   const db = ensureRateDb();
   const m = db.records.map(r => ({ ...r, _score: routeScore(r, from, to, mode, Number.isFinite(distance) ? distance : null) }))
-    .filter(r => r._score > 0 && Number.isFinite(Number(r.rate)))
+    .filter(r => rateRouteMatches(r, from, to, mode) && r.rate != null && Number.isFinite(Number(r.rate)) && Number(r.rate) > 0)
     .sort((a, b) => b._score - a._score || new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
   return m[0] || null;
 }
@@ -82,15 +82,48 @@ function ensureRateDb() {
   }
   return { version: 2, updatedAt: null, records };
 }
-function normalizeText(s='') { return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+function normalizeText(s='') { return String(s).toLowerCase().replace(/ё/g,'е').normalize('NFD').replace(/([a-z])[\u0300-\u036f]+/g,'$1').normalize('NFC').trim(); }
+
+// Синонимы названий городов из ставок. В интерфейсе город выбирают на русском,
+// английском или китайском, а ставки могут храниться на другом языке.
+const RATE_CITY_ALIASES = Object.freeze({
+  'шанхай': 'shanghai', '上海': 'shanghai', 'shanghai': 'shanghai',
+  'циндао': 'qingdao', '青岛': 'qingdao', 'qingdao': 'qingdao',
+  'нинбо': 'ningbo', '宁波': 'ningbo', 'ningbo': 'ningbo',
+  'наньша': 'nansha', '南沙': 'nansha', 'nansha': 'nansha',
+  'сямэнь': 'xiamen', '厦门': 'xiamen', 'xiamen': 'xiamen',
+  'москва': 'moscow', '莫斯科': 'moscow', 'moscow': 'moscow',
+  'санкт-петербург': 'saint petersburg', 'saint petersburg': 'saint petersburg',
+  'st petersburg': 'saint petersburg', '圣彼得堡': 'saint petersburg',
+  'екатеринбург': 'yekaterinburg', 'yekaterinburg': 'yekaterinburg', '叶卡捷琳堡': 'yekaterinburg',
+  'новосибирск': 'novosibirsk', 'novosibirsk': 'novosibirsk', '新西伯利亚': 'novosibirsk',
+  'минск': 'minsk', 'minsk': 'minsk', '明斯克': 'minsk'
+});
+function canonicalRateCity(value) {
+  const s = normalizeText(value).split(/[;,]/, 1)[0].trim().replace(/\s+/g, ' ');
+  return RATE_CITY_ALIASES[s] || s;
+}
+function rateCityMatches(recordCity, requestedCity) {
+  const a = canonicalRateCity(recordCity), b = canonicalRateCity(requestedCity);
+  return !!a && !!b && a === b;
+}
+function canonicalRateMode(value) {
+  const s = normalizeText(value);
+  return s === 'auto' || s === 'road' ? 'road' : s;
+}
+function rateRouteMatches(record, from, to, mode) {
+  return !!String(from || '').trim() && !!String(to || '').trim() &&
+    rateCityMatches(record.from, from) && rateCityMatches(record.to, to) &&
+    (!mode || canonicalRateMode(record.mode) === canonicalRateMode(mode));
+}
 function routeScore(record, from, to, mode, distance) {
-  const a=normalizeText(from), b=normalizeText(to), rf=normalizeText(record.from), rt=normalizeText(record.to);
+  const a=canonicalRateCity(from), b=canonicalRateCity(to), rf=canonicalRateCity(record.from), rt=canonicalRateCity(record.to);
   let score=0;
   if (rf && (rf===a || rf.includes(a) || a.includes(rf))) score+=8;
   else if (rf && a && (rf.split(/\s+/)[0]===a.split(/\s+/)[0])) score+=3;
   if (rt && (rt===b || rt.includes(b) || b.includes(rt))) score+=8;
   else if (rt && b && (rt.split(/\s+/)[0]===b.split(/\s+/)[0])) score+=3;
-  if (mode && record.mode && normalizeText(record.mode)===normalizeText(mode)) score+=5;
+  if (mode && record.mode && canonicalRateMode(record.mode)===canonicalRateMode(mode)) score+=5;
   if (Number.isFinite(distance) && Number(record.distanceKm)) score += Math.max(0,5-Math.abs(distance-Number(record.distanceKm))/1200);
   if (record.validUntil){const t=Date.parse(record.validUntil);if(Number.isFinite(t)&&t>=Date.now())score+=1;} else if(record.approximateAfterValidity) score+=0.25;
   return score;
@@ -566,7 +599,7 @@ app.get('/api/agents', (req,res) => { try { const file=path.join(DATA_DIR,'agent
 app.get('/api/rates', (req,res) => res.json(ensureRateDb()));
 app.get('/api/rates/recommend', (req,res) => {
   const db=ensureRateDb(); const from=String(req.query.from||''), to=String(req.query.to||''), mode=String(req.query.mode||''); const distance=Number(req.query.distance);
-  const matches=db.records.map(r=>({...r,_score:routeScore(r,from,to,mode,Number.isFinite(distance)?distance:null)})).filter(r=>r._score>0).sort((a,b)=>b._score-a._score||new Date(b.updatedAt||0)-new Date(a.updatedAt||0)).slice(0,8);
+  const matches=db.records.map(r=>({...r,_score:routeScore(r,from,to,mode,Number.isFinite(distance)?distance:null)})).filter(r=>rateRouteMatches(r,from,to,mode)&&r.rate!=null&&Number.isFinite(Number(r.rate))&&Number(r.rate)>0).sort((a,b)=>b._score-a._score||new Date(b.updatedAt||0)-new Date(a.updatedAt||0)).slice(0,8);
   const prices=matches.filter(r=>Number.isFinite(Number(r.rate))).map(r=>Number(r.rate));
   const isAdmin = portal.roleOf(req).role === 'admin';
   // Гостям и клиентам — только ориентир: без названий агентов, контактов и внутренних заметок.

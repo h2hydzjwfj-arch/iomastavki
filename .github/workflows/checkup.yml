@@ -16,6 +16,8 @@ jobs:
         with:
           node-version: 20
       - run: npm install --no-audit --no-fund
+      - name: Аудит зависимостей (high / critical)
+        run: npm audit --omit=dev --audit-level=high
       - name: Модульные тесты
         run: npm test
       - uses: actions/setup-python@v5
