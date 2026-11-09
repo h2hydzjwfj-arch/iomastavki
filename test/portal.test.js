@@ -157,14 +157,16 @@ test('КП: считается на сервере, сохраняется, бе
   const c = await clientWith(app, admin);
   assert.strictEqual((await app.call('POST', '/api/quotes', { body: { from: 'Урюпинск', to: 'Москва' } })).code, 404);
   const q = await app.call('POST', '/api/quotes', { cookie: c.sess, body: { from: 'Шанхай', to: 'Москва', weight: 1200, price: 1 } });
-  assert.strictEqual(q.out.quote.price, 9600); assert.strictEqual(q.out.quote.company, undefined); assert.strictEqual(q.out.quote.notes, undefined);
+  assert.strictEqual(q.out.quote.price, 9600); assert.strictEqual(q.out.quote.company, undefined); assert.strictEqual(q.out.quote.notes, undefined); assert.strictEqual(q.out.quote.baseRate, undefined); assert.strictEqual(q.out.quote.commission, 0);
   assert.match(q.out.quote.number, /^КП-\d{6}-[A-F0-9]{4}$/);
   assert.ok(q.out.delivered.email); assert.match(mailSent[0][2], /9[\s\u00a0]?600 USD/);
   const pub = await app.call('GET', '/api/quotes/' + q.out.quote.id);
   assert.strictEqual(pub.out.quote.company, undefined);
-  assert.strictEqual((await app.call('GET', '/api/quotes/' + q.out.quote.id, { cookie: admin })).out.quote.company, 'Ruscargo');
+  assert.strictEqual(pub.out.quote.baseRate, undefined);
+  const adminQuote = (await app.call('GET', '/api/quotes/' + q.out.quote.id, { cookie: admin })).out.quote;
+  assert.strictEqual(adminQuote.company, 'Ruscargo'); assert.strictEqual(adminQuote.baseRate, 9600);
   const mine = await app.call('GET', '/api/my/quotes', { cookie: c.sess });
-  assert.strictEqual(mine.out.items.length, 1);
+  assert.strictEqual(mine.out.items.length, 1); assert.strictEqual(mine.out.items[0].baseRate, undefined);
   assert.strictEqual((await app.call('GET', '/api/quotes/zzz')).code, 404);
 });
 

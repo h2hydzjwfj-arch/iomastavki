@@ -576,7 +576,7 @@ function setup(app, opts) {
   const quoteLimiter = rateLimit ? rateLimit({ windowMs: 60 * 60 * 1000, max: 40, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Слишком много расчётов. Попробуйте позже.' } }) : (q, s, n) => n();
   const MODE_RU = { road: 'Авто', auto: 'Авто', rail: 'ЖД', sea: 'Море', air: 'Авиа', multimodal: 'Море + ЖД' };
   function publicQuote(q) {
-    const { company, notes, source, ownerUid, guestEmail, ...pub } = q; return pub;
+    const { company, notes, source, ownerUid, guestEmail, baseRate, ...pub } = q; return pub;
   }
   function quoteText(q) {
     return `${q.number} · iomastavka\n${q.from} → ${q.to}${q.mode ? ' · ' + (MODE_RU[q.mode] || q.mode) : ''}\n` +

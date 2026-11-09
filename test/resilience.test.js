@@ -19,6 +19,19 @@ test('окружение: что задано, чего нет и что с ош
   assert.ok(R.checkEnv({}).problems.some(p => /SESSION_SECRET/.test(p)));
 });
 
+test('окружение: альтернативные имена Supabase распознаются как включённое хранилище', () => {
+  const r = R.checkEnv({
+    SESSION_SECRET: 'x'.repeat(40),
+    SUPABASE_PROJECT_URL: 'https://p.supabase.co',
+    SUPABASE_SECRET_KEY: 'sb_secret_example_only',
+  });
+  const st = n => r.items.find(i => i.name === n).state;
+  assert.strictEqual(st('SUPABASE_URL'), 'alt');
+  assert.strictEqual(st('SUPABASE_SERVICE_KEY'), 'alt');
+  assert.strictEqual(r.flags.storage, true);
+  assert.ok(!r.problems.some(p => /SUPABASE/.test(p)), JSON.stringify(r.problems));
+});
+
 test('маршруты: ошибка async-обработчика уходит в next, а не роняет процесс', async () => {
   const reg = {};
   const app = { get(...a) { reg.get = a; return 'setting'; }, post(...a) { reg.post = a; }, put() {}, patch() {}, delete() {}, all() {}, use(...a) { reg.use = a; } };
