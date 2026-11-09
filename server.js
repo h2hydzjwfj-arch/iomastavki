@@ -82,7 +82,7 @@ function ensureRateDb() {
   }
   return { version: 2, updatedAt: null, records };
 }
-function normalizeText(s='') { return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+function normalizeText(s='') { return String(s).toLowerCase().replace(/ё/g,'е').normalize('NFD').replace(/([a-z])[\u0300-\u036f]+/g,'$1').normalize('NFC').trim(); }
 
 // Синонимы названий городов из ставок. В интерфейсе город выбирают на русском,
 // английском или китайском, а ставки могут храниться на другом языке.
