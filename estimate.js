@@ -74,7 +74,8 @@ function estimate(q, t, baseRate) {
     }
     const noteParts = [n > 1 ? `${n} контейнера 40'` : 'Контейнер 40HC целиком', b && b.incotermNote, !b ? incotermWarning : ''].filter(Boolean);
     const option = { kind: 'fcl_rail', mode: 'rail', price: r10(price * n * dgK), currency: 'USD', days, source, units: n, note: noteParts.join('. ') };
-    if (!b && incotermWarning) option.publicWarning = incotermWarning;
+    if (b && b.incotermNote) option.publicWarning = b.incotermNote;
+    else if (!b && incotermWarning) option.publicWarning = incotermWarning;
     out.push(option);
   }
   if (V >= 25 || W >= 8000) {
