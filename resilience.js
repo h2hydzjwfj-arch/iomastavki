@@ -15,8 +15,8 @@ const ENV_SPEC = [
   { name: 'OPENAI_API_KEY', kind: 'optional', what: 'ИИ-ассистент и разбор документов', check: v => /^sk-[\w-]{20,}$/.test(v), hint: 'ключ OpenAI начинается с sk-' },
   { name: 'TELEGRAM_BOT_TOKEN', kind: 'optional', what: 'Telegram-бот', check: v => /^\d{5,}:[\w-]{30,}$/.test(v), hint: 'формат 123456789:AA…' },
   { name: 'TELEGRAM_WEBHOOK_SECRET', kind: 'optional', what: 'приём сообщений ботом', check: v => /^[\w-]{16,256}$/.test(v), hint: 'буквы, цифры, _ и -, от 16 символов', needs: 'TELEGRAM_BOT_TOKEN' },
-  { name: 'SUPABASE_URL', kind: 'optional', what: 'постоянное хранилище', check: v => /^https:\/\/[\w.-]+$/.test(v.replace(/\/+$/, '')), hint: 'https://<проект>.supabase.co', pair: 'SUPABASE_SERVICE_KEY' },
-  { name: 'SUPABASE_SERVICE_KEY', kind: 'optional', what: 'постоянное хранилище', pair: 'SUPABASE_URL' },
+  { name: 'SUPABASE_URL', kind: 'optional', what: 'постоянное хранилище', alt: ['SUPABASE_PROJECT_URL', 'SUPABASE_API_URL', 'NEXT_PUBLIC_SUPABASE_URL'], check: v => /^https:\/\/[\w.-]+$/.test(v.replace(/\/+$/, '')), hint: 'https://<проект>.supabase.co', pair: 'SUPABASE_SERVICE_KEY' },
+  { name: 'SUPABASE_SERVICE_KEY', kind: 'optional', what: 'постоянное хранилище', alt: ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SERVICE_ROLE', 'SUPABASE_SECRET_KEY', 'SUPABASE_SECRET', 'SUPABASE_KEY'], pair: 'SUPABASE_URL' },
   { name: 'RESEND_API_KEY', kind: 'optional', what: 'отправка писем', alt: ['SMTP_URL'] },
   { name: 'SITE_URL', kind: 'optional', what: 'адрес сайта в ссылках и вебхуке', check: v => /^https?:\/\/[^\s/]+/.test(v), hint: 'https://…' },
 ];
@@ -29,25 +29,29 @@ function checkEnv(env) {
   env = env || process.env;
   const items = ENV_SPEC.map(s => {
     const raw = env[s.name]; const v = typeof raw === 'string' ? raw.trim() : '';
-    let state = v ? 'set' : 'missing';
-    if (v && s.check && !s.check(v)) state = 'invalid';
-    if (state === 'missing' && s.alt && s.alt.some(a => String(env[a] || '').trim())) state = 'alt';
+    const altValue = (s.alt || []).map(a => String(env[a] || '').trim()).find(Boolean) || '';
+    const effective = v || altValue;
+    let state = v ? 'set' : (altValue ? 'alt' : 'missing');
+    if (effective && s.check && !s.check(effective)) state = 'invalid';
+    return { name: s.name, kind: s.kind, state, what: s.what, hint: state === 'invalid' ? s.hint : '' };
     return { name: s.name, kind: s.kind, state, what: s.what, hint: state === 'invalid' ? s.hint : '' };
   });
   const val = n => String(env[n] || '').trim();
+  const spec = n => ENV_SPEC.find(x => x.name === n);
+  const isSet = s => !!s && [s.name, ...(s.alt || [])].some(n => !!val(n));
   const problems = [];
   for (const s of ENV_SPEC) {
     const it = items.find(i => i.name === s.name);
     if (s.kind === 'required' && it.state !== 'set') problems.push(`${s.name}: ${it.state === 'invalid' ? 'неверный формат (' + s.hint + ')' : 'не задана'} — ${s.what}`);
     else if (it.state === 'invalid') problems.push(`${s.name}: похоже на ошибку (${s.hint}) — ${s.what}`);
-    if (s.pair && val(s.name) && !val(s.pair)) problems.push(`${s.name} задана, а ${s.pair} — нет: ${s.what} не включится`);
-    if (s.needs && val(s.name) && !val(s.needs)) problems.push(`${s.name} без ${s.needs} не нужна`);
+    if (s.pair && isSet(s) && !isSet(spec(s.pair))) problems.push(`${s.name} задана, а ${s.pair} — нет: ${s.what} не включится`);
+    if (s.needs && isSet(s) && !isSet(spec(s.needs))) problems.push(`${s.name} без ${s.needs} не нужна`);
   }
   const flags = {
     ai: !!val('OPENAI_API_KEY'),
     telegram: !!val('TELEGRAM_BOT_TOKEN'),
     telegramWebhook: !!(val('TELEGRAM_BOT_TOKEN') && val('TELEGRAM_WEBHOOK_SECRET')),
-    storage: !!(val('SUPABASE_URL') && val('SUPABASE_SERVICE_KEY')),
+    storage: !!(isSet(spec('SUPABASE_URL')) && isSet(spec('SUPABASE_SERVICE_KEY'))),
     mail: !!(val('RESEND_API_KEY') || val('SMTP_URL')),
   };
   return { ok: !problems.length, problems, items, flags };
