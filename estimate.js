@@ -41,8 +41,16 @@ function estimate(q, t, baseRate) {
   if (assumedVolume) V = Math.max(0.05, Math.round(W / 250 * 100) / 100); // нет габаритов: ~250 кг в 1 м³
   if (!W && !V) return { ok: false, error: 'Укажите вес груза' };
   const dg = !!q.dangerous, dgK = dg ? 1 + t.dangerousPct / 100 : 1;
+  const incoterms = String(q.incoterms || 'FOB').trim().toUpperCase();
+  const incotermWarning = incoterms !== 'FOB' ? \`Дополнительные расходы по \${incoterms} не подтверждены этим тарифом; уточните их у менеджера.\` : '';
   const out = [];
-  const add = (kind, price, extra) => out.push({ kind, mode: MODE[kind], price: r10(price * dgK), currency: 'USD', days: t[kind].days.slice(), source: 'tariff', ...extra });
+  const add = (kind, price, extra = {}) => {
+    const note = [extra.note, incotermWarning].filter(Boolean).join('. ');
+    const option = { kind, mode: MODE[kind], price: r10(price * dgK), currency: 'USD', days: t[kind].days.slice(), source: 'tariff', ...extra };
+    if (note) option.note = note;
+    if (incotermWarning) option.publicWarning = incotermWarning;
+    out.push(option);
+  };
 
   if (W <= 3000 && V <= 15) {
     const cw = Math.max(W, V * t.air.factor);
@@ -58,13 +66,16 @@ function estimate(q, t, baseRate) {
   if (V >= 15 || W >= 7000) {
     const n = Math.max(1, Math.ceil(Math.max(V / t.fcl_rail.capM3, W / t.fcl_rail.capKg)));
     let price = t.fcl_rail.price, source = 'tariff', days = t.fcl_rail.days.slice();
-    const b = baseRate && baseRate(q.from, q.to, 'rail');
+    const b = baseRate && baseRate(q.from, q.to, 'rail', incoterms);
     if (b && Number.isFinite(Number(b.rate)) && String(b.currency || 'USD').toUpperCase() === 'USD') {
       const chinese = /中国|china|chinese|\.cn$/i.test(`${b.company || ''} ${b.source || ''} ${b.notes || ''}`);
       price = Number(b.rate) * (chinese ? 1.05 : 1); source = 'base';
       const m = String(b.transitDays || '').match(/(\d+)\D+(\d+)/); if (m) days = [+m[1], +m[2]];
     }
-    out.push({ kind: 'fcl_rail', mode: 'rail', price: r10(price * n * dgK), currency: 'USD', days, source, units: n, note: n > 1 ? `${n} контейнера 40'` : 'Контейнер 40\' целиком' });
+    const noteParts = [n > 1 ? `${n} контейнера 40'` : 'Контейнер 40HC целиком', b && b.incotermNote, !b ? incotermWarning : ''].filter(Boolean);
+    const option = { kind: 'fcl_rail', mode: 'rail', price: r10(price * n * dgK), currency: 'USD', days, source, units: n, note: noteParts.join('. ') };
+    if (!b && incotermWarning) option.publicWarning = incotermWarning;
+    out.push(option);
   }
   if (V >= 25 || W >= 8000) {
     const n = Math.max(1, Math.ceil(Math.max(V / t.ftl_auto.capM3, W / t.ftl_auto.capKg)));
@@ -78,7 +89,7 @@ function estimate(q, t, baseRate) {
   const best = out.reduce((a, b) => (score(b) < score(a) ? b : a));
   out.forEach(o => { o.tags = []; if (o === best) o.tags.push('best'); if (o === cheapest) o.tags.push('cheap'); if (o === fastest) o.tags.push('fast'); });
   out.sort((a, b) => (b === best) - (a === best) || a.price - b.price);
-  return { ok: true, weight: W, volume: V, assumedVolume, dangerous: dg, recommended: best.kind, options: out };
+  return { ok: true, weight: W, volume: V, assumedVolume, dangerous: dg, incoterms, recommended: best.kind, options: out };
 }
 
 module.exports = { estimate, mergeTariffs, DEFAULT_TARIFFS, KINDS, MODE };
