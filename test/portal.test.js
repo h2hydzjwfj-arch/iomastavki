@@ -271,3 +271,15 @@ test('ADMIN_PASSWORD в окружении — запасной вход адм�
   try { const { portal } = make(); assert.ok(portal.adminPasswordOk('zapasnoy-vhod-1')); assert.ok(!portal.adminPasswordOk('drugoy')); }
   finally { delete process.env.ADMIN_PASSWORD; }
 });
+
+test('Nodemailer 10: CommonJS transport и отправка письма совместимы', async () => {
+  const nodemailer = require('nodemailer');
+  assert.strictEqual(typeof nodemailer.createTransport, 'function');
+  const transport = nodemailer.createTransport({ jsonTransport: true });
+  const info = await transport.sendMail({
+    from: 'noreply@example.com', to: 'client@example.com',
+    subject: 'IOMASTAVKA test', text: 'Compatibility check',
+  });
+  assert.ok(info.messageId);
+  assert.ok(info.message);
+});
