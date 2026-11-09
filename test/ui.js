@@ -60,6 +60,16 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await p.evaluate(() => window.__iomaCloseViews());
       await p.hover('.hx-num'); await p.waitForSelector('#hxCallActs:not([hidden]) .hx-i-tg');
     });
+    await step('Гость: глобус — город можно написать; авто Пекин → Нижний Новгород по этапам через Забайкальск и Москву', async () => {
+      await p.click('#hxMap .jm-reset'); await p.fill('#hxMap .jm-in[data-side=from]', 'Пек'); await p.waitForSelector('#hxMap .jm-sug:not([hidden]) [data-k="bj"]'); await p.keyboard.press('Enter');
+      await p.waitForFunction(() => document.querySelector('#hxMap .jm-in[data-side=from]').value === 'Пекин');
+      await p.fill('#hxMap .jm-in[data-side=to]', 'нижн'); await p.keyboard.press('Enter'); await p.waitForSelector('#hxMap [data-jm="road"]');
+      const drawn = await p.evaluate(() => { const c = document.querySelector('#hxMap .jm-cv'), d = c.getContext('2d').getImageData(c.width / 2 - 20, c.height / 2 - 20, 40, 40).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++; return n; });
+      if (drawn < 100) throw new Error('глобус не нарисован');
+      await p.click('#hxMap [data-jm="road"]'); await p.waitForSelector('#hxMap .jm-cap b'); await shot(p, '03b3_home_globe_story');
+      const tl = await p.textContent('#hxMap .jm-tl'); if (!/Маньчжурия — Забайкальск/.test(tl) || !/Москва → Нижний Новгород/.test(tl)) throw new Error('этапы пути: ' + tl.slice(0, 300));
+      await p.click('#hxMap .jm-skip'); await p.waitForSelector('#hxMap .jm-sum'); await p.click('#hxMap .jm-reset');
+    });
     await step('Гость: «Услуги» и «Кейсы» — отдельные страницы, кейс открывается по клику', async () => {
       await p.goto(B + '/uslugi'); await p.waitForSelector('#servicesView.open .sv-c');
       await p.goto(B + '/kejsy'); await p.waitForSelector('#casesView.open [data-case]'); await p.click('[data-case]'); await p.waitForSelector('.cx-ov .cs-m');
