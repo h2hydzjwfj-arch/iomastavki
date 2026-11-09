@@ -39,6 +39,16 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       const j = await call('g', 'GET', '/api/rates/recommend?from=Shanghai&to=' + encodeURIComponent('Москва') + '&mode=rail');
       ok(j.matches && j.matches.length > 0, 'нет совпадений — база ставок не читается'); ok(j.matches.every(m => !m.company && !m.notes), 'видны названия агентов');
     });
+    await check('Ставки: город на русском сопоставляется с названием в базе', async () => {
+      const x = await call('g', 'GET', '/api/rates/recommend?from=' + encodeURIComponent('Шанхай') + '&to=' + encodeURIComponent('Москва') + '&mode=rail');
+      ok(x.matches && x.matches.length === 1, JSON.stringify(x.matches));
+      ok(x.matches[0].from === 'Shanghai', JSON.stringify(x.matches[0]));
+    });
+    await check('Ставки: не подменять направление и транспорт', async () => {
+      const x = await call('g', 'GET', '/api/rates/recommend?from=Shanghai&to=Vladivostok&mode=rail');
+      const y = await call('g', 'GET', '/api/rates/recommend?from=Shanghai&to=' + encodeURIComponent('Москва') + '&mode=air');
+      ok(x.matches.length === 0 && y.matches.length === 0, JSON.stringify([x.matches,y.matches]));
+    });
     let gq;
     await check('Гость: сохраняет расчёт (КП по ссылке)', async () => {
       const j = await call('g', 'POST', '/api/quotes', { from: 'Shanghai', to: 'Москва', mode: 'rail', weight: 1200 });
