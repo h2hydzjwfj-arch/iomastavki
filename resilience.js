@@ -23,7 +23,7 @@ const ENV_SPEC = [
 
 /**
  * Проверяет process.env и возвращает сводку { ok, items: [{ name, state, what, hint }], flags }.
- * state: set | missing | invalid. Значения не возвращаются и не печатаются.
+ * state: set | alt | missing | invalid. Значения не возвращаются и не печатаются.
  */
 function checkEnv(env) {
   env = env || process.env;
@@ -33,7 +33,6 @@ function checkEnv(env) {
     const effective = v || altValue;
     let state = v ? 'set' : (altValue ? 'alt' : 'missing');
     if (effective && s.check && !s.check(effective)) state = 'invalid';
-    return { name: s.name, kind: s.kind, state, what: s.what, hint: state === 'invalid' ? s.hint : '' };
     return { name: s.name, kind: s.kind, state, what: s.what, hint: state === 'invalid' ? s.hint : '' };
   });
   const val = n => String(env[n] || '').trim();
