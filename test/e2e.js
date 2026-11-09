@@ -57,6 +57,30 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       ok(a._status === 404, 'ставка ЖД использована для авиа: ' + JSON.stringify(a));
       ok(d._status === 404, 'ставка до Москвы использована для Владивостока: ' + JSON.stringify(d));
     });
+    await check('Incoterms: FOB ставка не выдаётся за EXW или DAP', async () => {
+      const url = '/api/rates/recommend?from=Shanghai&to=' + encodeURIComponent('Москва') + '&mode=rail&incoterms=';
+      const fob = await call('g', 'GET', url + 'FOB');
+      const exw = await call('g', 'GET', url + 'EXW');
+      const dap = await call('g', 'GET', url + 'DAP');
+      ok(fob.matches.length === 1 && fob.matches[0].rate === 9600, JSON.stringify(fob.matches));
+      ok(exw.matches.length === 1 && exw.matches[0].rate === 10200 && /EXW.*600 USD/.test(exw.matches[0].incotermNote), JSON.stringify(exw.matches));
+      ok(dap.matches.length === 0, 'FOB ставка попала в DAP: ' + JSON.stringify(dap.matches));
+    });
+    await check('Incoterms: надбавка EXW учитывается в калькуляторе и КП', async () => {
+      const fob = await call('g', 'POST', '/api/estimate', { from: 'Шанхай', to: 'Москва', weight: 20000, volume: 60, incoterms: 'FOB' });
+      const exw = await call('g', 'POST', '/api/estimate', { from: 'Шанхай', to: 'Москва', weight: 20000, volume: 60, incoterms: 'EXW' });
+      const fobRail = fob.options.find(o => o.kind === 'fcl_rail');
+      const exwRail = exw.options.find(o => o.kind === 'fcl_rail');
+      ok(fobRail && fobRail.price === 9600, JSON.stringify(fobRail));
+      ok(exwRail && exwRail.price === 10200 && /EXW.*600 USD/.test(exwRail.publicWarning), JSON.stringify(exwRail));
+      const q = await call('g', 'POST', '/api/quotes', { from: 'Шанхай', to: 'Москва', weight: 20000, volume: 60, kind: 'fcl_rail', incoterms: 'EXW' });
+      ok(q.ok && q.quote.price === 10200 && /EXW.*600 USD/.test(q.quote.publicWarning), JSON.stringify(q));
+    });
+    await check('Incoterms: неподтверждённые условия помечаются в оценке', async () => {
+      const d = await call('g', 'POST', '/api/estimate', { from: 'Шанхай', to: 'Москва', weight: 20000, volume: 60, incoterms: 'DAP' });
+      const rail = d.options.find(o => o.kind === 'fcl_rail');
+      ok(rail && rail.source === 'tariff' && /DAP/.test(rail.publicWarning), JSON.stringify(rail));
+    });
     let gq;
     await check('Гость: сохраняет расчёт (КП по ссылке)', async () => {
       const j = await call('g', 'POST', '/api/quotes', { from: 'Shanghai', to: 'Москва', mode: 'rail', weight: 1200 });
