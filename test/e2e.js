@@ -49,6 +49,14 @@ function ok(c, msg) { if (!c) throw new Error(msg || 'условие не вып
       const y = await call('g', 'GET', '/api/rates/recommend?from=Shanghai&to=' + encodeURIComponent('Москва') + '&mode=air');
       ok(x.matches.length === 0 && y.matches.length === 0, JSON.stringify([x.matches,y.matches]));
     });
+    await check('КП: используется только ставка точного маршрута и выбранного транспорта', async () => {
+      const q = await call('g', 'POST', '/api/quotes', { from: 'Шанхай', to: 'Москва', mode: 'rail', weight: 1200 });
+      ok(q.ok && q.quote.mode === 'rail' && q.quote.price === 9600, JSON.stringify(q));
+      const a = await call('g', 'POST', '/api/quotes', { from: 'Шанхай', to: 'Москва', mode: 'air', weight: 1200 });
+      const d = await call('g', 'POST', '/api/quotes', { from: 'Шанхай', to: 'Владивосток', mode: 'rail', weight: 1200 });
+      ok(a._status === 404, 'ставка ЖД использована для авиа: ' + JSON.stringify(a));
+      ok(d._status === 404, 'ставка до Москвы использована для Владивостока: ' + JSON.stringify(d));
+    });
     let gq;
     await check('Гость: сохраняет расчёт (КП по ссылке)', async () => {
       const j = await call('g', 'POST', '/api/quotes', { from: 'Shanghai', to: 'Москва', mode: 'rail', weight: 1200 });
