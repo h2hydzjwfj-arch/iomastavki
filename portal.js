@@ -583,7 +583,7 @@ function setup(app, opts) {
       `${q.weight != null ? 'Вес ' + q.weight + ' кг' : ''}${q.volume ? ' · объём ' + q.volume + ' м³' : ''}\n` +
       `Ставка: ${Number(q.price).toLocaleString('ru-RU')} ${q.currency}${q.transitDays ? ' · срок ' + q.transitDays + ' дн.' : ''}\n` +
       `${q.publicWarning ? 'Внимание: ' + q.publicWarning + '\n' : ''}` +
-      `Действует до ${new Date(q.validUntil).toLocaleDateString('ru-RU')}. Терминальные расходы в пункте прибытия уточняются.${q.publicWarning ? '\\nВнимание: ' + q.publicWarning : ''}\n${SITE}/#kp=${q.id}`;
+      `Действует до ${new Date(q.validUntil).toLocaleDateString('ru-RU')}. Терминальные расходы в пункте прибытия уточняются.\n${SITE}/#kp=${q.id}`;
   }
   // ---------- сравнение видов транспорта (ориентир) ----------
   const EST = require('./estimate');
