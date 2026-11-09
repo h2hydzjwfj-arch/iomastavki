@@ -42,7 +42,7 @@ function estimate(q, t, baseRate) {
   if (!W && !V) return { ok: false, error: 'Укажите вес груза' };
   const dg = !!q.dangerous, dgK = dg ? 1 + t.dangerousPct / 100 : 1;
   const incoterms = String(q.incoterms || 'FOB').trim().toUpperCase();
-  const incotermWarning = incoterms !== 'FOB' ? \`Дополнительные расходы по \${incoterms} не подтверждены этим тарифом; уточните их у менеджера.\` : '';
+  const incotermWarning = incoterms !== 'FOB' ? 'Дополнительные расходы по ' + incoterms + ' не подтверждены этим тарифом; уточните их у менеджера.' : '';
   const out = [];
   const add = (kind, price, extra = {}) => {
     const note = [extra.note, incotermWarning].filter(Boolean).join('. ');
