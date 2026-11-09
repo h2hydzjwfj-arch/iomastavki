@@ -82,7 +82,7 @@ function ensureRateDb() {
   }
   return { version: 2, updatedAt: null, records };
 }
-function normalizeText(s='') { return String(s).toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').trim(); }
+function normalizeText(s='') { return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
 
 // Синонимы названий городов из ставок. В интерфейсе город выбирают на русском,
 // английском или китайском, а ставки могут храниться на другом языке.
@@ -97,10 +97,10 @@ const RATE_CITY_ALIASES = Object.freeze({
   'st petersburg': 'saint petersburg', '圣彼得堡': 'saint petersburg',
   'екатеринбург': 'yekaterinburg', 'yekaterinburg': 'yekaterinburg', '叶卡捷琳堡': 'yekaterinburg',
   'новосибирск': 'novosibirsk', 'novosibirsk': 'novosibirsk', '新西伯利亚': 'novosibirsk',
-  'минск': 'minsk', 'minsk': 'minsk', '明斯к': 'minsk'
+  'минск': 'minsk', 'minsk': 'minsk', '明斯克': 'minsk'
 });
 function canonicalRateCity(value) {
-  const s = normalizeText(value).split(/[;,]/, 1)[0].trim().replace(/\\s+/g, ' ');
+  const s = normalizeText(value).split(/[;,]/, 1)[0].trim().replace(/\s+/g, ' ');
   return RATE_CITY_ALIASES[s] || s;
 }
 function rateCityMatches(recordCity, requestedCity) {
@@ -120,9 +120,9 @@ function routeScore(record, from, to, mode, distance) {
   const a=canonicalRateCity(from), b=canonicalRateCity(to), rf=canonicalRateCity(record.from), rt=canonicalRateCity(record.to);
   let score=0;
   if (rf && (rf===a || rf.includes(a) || a.includes(rf))) score+=8;
-  else if (rf && a && (rf.split(/\\s+/)[0]===a.split(/\\s+/)[0])) score+=3;
+  else if (rf && a && (rf.split(/\s+/)[0]===a.split(/\s+/)[0])) score+=3;
   if (rt && (rt===b || rt.includes(b) || b.includes(rt))) score+=8;
-  else if (rt && b && (rt.split(/\\s+/)[0]===b.split(/\\s+/)[0])) score+=3;
+  else if (rt && b && (rt.split(/\s+/)[0]===b.split(/\s+/)[0])) score+=3;
   if (mode && record.mode && canonicalRateMode(record.mode)===canonicalRateMode(mode)) score+=5;
   if (Number.isFinite(distance) && Number(record.distanceKm)) score += Math.max(0,5-Math.abs(distance-Number(record.distanceKm))/1200);
   if (record.validUntil){const t=Date.parse(record.validUntil);if(Number.isFinite(t)&&t>=Date.now())score+=1;} else if(record.approximateAfterValidity) score+=0.25;
