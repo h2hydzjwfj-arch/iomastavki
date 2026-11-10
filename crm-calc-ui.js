@@ -399,18 +399,20 @@
   /* ---------- страница «Калькулятор ВЭД» в рабочем месте: отдельные расчёты + настройки ставок ---------- */
   var page = null;
   function settingsHtml(s, def) {
-    return '<details class="cv-set"><summary>Настройки расчёта: НДС, шкала таможенных сборов, особый сбор, налог на расходы</summary><form class="cv-setf" data-vs>'
+    var html = '<details class="cv-set"><summary>Настройки расчёта: НДС, шкала таможенных сборов, особый сбор, налог на расходы</summary><form class="cv-setf" data-vs>'
       + '<div class="cv-row">' + fld('НДС по умолчанию, %', numIn('name="vatDefault"', s.vatDefault, '22', '80px')) + fld('Налог на расходы, %', numIn('name="taxOnExpensesPct"', s.taxOnExpensesPct, '2.2', '80px')) + fld('Фрахт до границы, %', numIn('name="borderSplitPercent"', s.borderSplitPercent, '30', '80px')) + fld('Сбор по Прил. № 1, ₽', numIn('name="radioFee"', s.radioFee, '73860', '110px')) + '</div>'
       + '<label class="cx-f"><span>Коды из Приложения № 1 к ПП № 1637 (начало кода, через запятую) — для них сбор считается фиксированным</span><input name="radioPrefixes" value="' + esc((s.radioPrefixes || []).join(', ')) + '" placeholder="например: 8517 13, 8471 30"></label>'
       + '<div class="cv-scale"><b>Шкала таможенных сборов при ввозе</b><small>' + esc(def.feeSource) + '</small>' + s.feeScale.map(function (r, i) { return '<div class="cv-sr"><span>' + (r[0] == null ? 'свыше' : 'до') + '</span>' + (r[0] == null ? '<i>' + K.money(s.feeScale[i - 1] ? s.feeScale[i - 1][0] : 0, 'RUB') + '</i>' : numIn('data-lim="' + i + '"', r[0], '', '140px')) + '<span>₽ ТС →</span>' + numIn('data-fee="' + i + '"', r[1], '', '110px') + '<span>₽</span></div>'; }).join('') + '</div>'
-      + '<div class="cv-setb"><button type="button" class="cx-link" data-vreset>Вернуть значения по умолчанию</button><button type="submit" class="cx-btn primary">Сохранить настройки</button></div></form></details>';
+      + '<div class="cv-setb"><button type="button" class="cx-btn sm" data-v-edit aria-pressed="false">✎ Изменить значения</button><button type="button" class="cx-link" data-vreset>Вернуть значения по умолчанию</button><button type="submit" class="cx-btn primary">Сохранить настройки</button></div></form></details>';
+    return html.replace(/<input\b/g, '<input readonly');
   }
   function loadPage() {
     var box = $('#cxVed'); if (!box) return;
     api('/api/ved/settings').then(function (r) {
       box.innerHTML = '<div class="cx-intro"><p>Расчёт таможенных платежей при ввозе в РФ: пошлина (%, € за кг/шт/л/м², «но не менее» и «плюс»), антидемпинг, акциз, НДС 22/10/0%, таможенный сбор по шкале 2026 года. Валюты — по курсу ЦБ на сегодня или своему курсу. Коды ТН ВЭД подставляются из собственного справочника — без платных сервисов.</p></div>'
         + settingsHtml(r.settings, r.defaults) + '<div id="cxVedCalc" class="cv-root"></div>';
-      var f = $('[data-vs]', box);
+      var f = $('[data-vs]', box), edit = $('[data-v-edit]', box);
+      if (edit) edit.addEventListener('click', function () { var enabled = f.classList.toggle('cv-editing'); $('input', f).forEach(function (el) { el.readOnly = !enabled; }); edit.textContent = enabled ? 'Заблокировать значения' : '✎ Изменить значения'; edit.setAttribute('aria-pressed', String(enabled)); });
       f.addEventListener('submit', function (e) { e.preventDefault(); var b = {}; $$('[name]', f).forEach(function (i) { b[i.name] = i.value; }); var sc = r.settings.feeScale.map(function (row, i) { var lim = $('[data-lim="' + i + '"]', f), fee = $('[data-fee="' + i + '"]', f); return [lim ? lim.value : null, fee.value]; }); b.feeScale = sc;
         api('/api/ved/settings', { method: 'PUT', body: b }).then(function () { toast('Настройки расчёта сохранены'); page && (page.settings = null); loadPage(); }).catch(function (er) { toast(er.message, 'err'); }); });
       $('[data-vreset]', f).addEventListener('click', function () { K.confirm('Вернуть ставки и шкалу сборов по умолчанию?', 'Вернуть').then(function (ok) { if (ok) api('/api/ved/settings', { method: 'PUT', body: { reset: true } }).then(function () { loadPage(); }); }); });
