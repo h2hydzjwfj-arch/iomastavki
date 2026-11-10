@@ -140,6 +140,10 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await A.p.click('#workView .cx-nav [data-tab=tasks]'); await A.p.waitForSelector('#cxTasks .cx-search', { timeout: 8000 });
       await A.p.click('#workView .cx-nav [data-tab=ved]'); await A.p.click('#cxVed [data-c=create][data-t=our_contract]'); await A.p.waitForSelector('#cxVed .cv-layout');
       await A.p.fill('#cxVed [data-k=invoice_amount]', '10000'); await A.p.waitForFunction(() => { const b = document.querySelector('#cxVed .cv-total b'); return b && /[1-9]/.test(b.textContent); }, null, { timeout: 6000 }); await shot(A.p, '06e_ved_calc');
+      await A.p.waitForSelector('#cxVed [data-v-edit]');
+      if (await A.p.isVisible('#cxVed [data-vs]')) throw new Error('постоянные параметры открыты для редактирования без карандаша');
+      await A.p.click('#cxVed [data-v-edit]'); await A.p.waitForSelector('#cxVed [data-vs]:not([hidden])');
+      await A.p.click('#cxVed [data-v-cancel]'); await A.p.waitForFunction(() => document.querySelector('#cxVed [data-vs]') && document.querySelector('#cxVed [data-vs]').hidden);
       // расчёт контракта по рабочей таблице: условия, итог вверх до юаня, текст КП без маржи
       await A.p.selectOption('#cxVed [data-d=payment]', 'bank'); await A.p.waitForFunction(() => /по внутреннему курсу банка/.test(document.querySelector('#cxVed [data-r=result]').textContent), null, { timeout: 6000 });
       await A.p.click('#cxVed [data-c=kp]'); await A.p.waitForSelector('.cx-modal .kp'); const kp = await A.p.textContent('.cx-modal .kp');
@@ -149,6 +153,16 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       // ставки агентов в сделке: ориентир по прайсу и окно запроса
       await A.p.click('#workView .cx-nav [data-tab=inbox]'); await A.p.click('#crmInbox [data-x=open]:has-text("Документы UI")'); await A.p.waitForSelector('#crmDeal .cx-deal');
       await A.p.click('#crmDeal [data-t=rates]'); await A.p.waitForSelector('#crmDeal [data-r=ask]'); await A.p.click('#crmDeal [data-r=ask]'); await A.p.waitForSelector('.cx-asks .cx-ag'); await shot(A.p, '06g_rates_ask'); await A.p.keyboard.press('Escape');
+      await A.p.click('#crmDeal [data-r=base]'); await A.p.waitForSelector('.cx-ov [data-add]');
+      await A.p.click('.cx-ov [data-add]'); await A.p.waitForSelector('.cx-ov .cx-modal [data-k=company]');
+      const addModal = A.p.locator('.cx-ov').last();
+      await addModal.locator('[data-k=company]').fill('IOMA UI Test Agent'); await addModal.locator('[data-k=contact]').fill('Test Contact');
+      await addModal.locator('[data-k=email]').fill('ui-agent@ioma-test.example'); await addModal.locator('[data-go]').click();
+      await A.p.waitForSelector('.cx-ov .cx-agents .cx-tr:has-text("IOMA UI Test Agent")');
+      const agentRow = A.p.locator('.cx-ov .cx-agents .cx-tr').filter({ hasText: 'IOMA UI Test Agent' }).last();
+      await agentRow.locator('[data-edit]').click(); const editModal = A.p.locator('.cx-ov').last();
+      await editModal.locator('[data-k=contact]').fill('Edited Contact'); await editModal.locator('[data-go]').click();
+      await A.p.waitForSelector('.cx-ov .cx-agents .cx-tr:has-text("Edited Contact")'); await A.p.keyboard.press('Escape');
     });
     await step('Админ: база клиентов с сортировкой', async () => {
       await A.p.click('#workView .cx-nav [data-tab=clients]'); await A.p.waitForSelector('#crmClients [data-cli]'); await A.p.selectOption('#crmCliSort', 'frequency'); await A.p.waitForTimeout(400); await shot(A.p, '06d_clients');
@@ -197,6 +211,19 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await p.goto(B + '/');
       for (const id of ['trackView', 'terminalView', 'phoneView']) { await p.evaluate(() => window.__iomaCloseViews()); await p.click('.sg-btn >> text=Инструменты ВЭД').catch(() => {}); await p.evaluate(v => document.querySelector('.sg-menu [data-open-view="' + v + '"]').click(), id); await p.waitForSelector('#' + id + '.open .tl-go'); }
       await p.evaluate(() => window.__iomaCloseViews());
+    });
+    await step('Админ: трекинг B/L и вагона, подробный гид ЭТРН', async () => {
+      const p = A.p;
+      await p.evaluate(() => window.__v3open('trackView')); await p.waitForSelector('#trackView .tl-go');
+      await p.click('#trackView [data-t=bl]'); await p.selectOption('#trackView [data-k=line]', 'maersk');
+      await p.fill('#trackView [data-k=no]', 'MAEU1234567'); await p.click('#trackView .tl-go');
+      await p.waitForSelector('#trackView [data-provider-url]'); if (!/Maersk/.test(await p.textContent('#trackView .tl-out'))) throw new Error('B/L не выбрал линию Maersk');
+      await p.click('#trackView [data-t=wagon]'); await p.fill('#trackView [data-k=no]', '12345678'); await p.click('#trackView .tl-go');
+      await p.waitForFunction(() => document.querySelectorAll('#trackView [data-provider-url]').length === 2);
+      await p.evaluate(() => window.__v3open('etrnView')); await p.waitForSelector('#etrnView .et-card');
+      await p.click('#etrnView [data-et-tab=t12]'); const et = await p.textContent('#etrnRoot');
+      if (!/Титул 1/.test(et) || !/Титул 2/.test(et) || !/QR-код/.test(et)) throw new Error('в гиде ЭТРН отсутствует алгоритм титулов 1–2');
+      await shot(p, '08c_etrn_guide');
     });
     await step('Админ: меню аккаунта — состояние сайта, профиль, меню закрывается после выбора', async () => {
       await A.p.click('.v3-acc'); await A.p.waitForSelector('.am-menu:not([hidden]) [data-am=site]'); await shot(A.p, '08a_admin_menu');

@@ -399,19 +399,28 @@
   /* ---------- страница «Калькулятор ВЭД» в рабочем месте: отдельные расчёты + настройки ставок ---------- */
   var page = null;
   function settingsHtml(s, def) {
-    return '<details class="cv-set"><summary>Настройки расчёта: НДС, шкала таможенных сборов, особый сбор, налог на расходы</summary><form class="cv-setf" data-vs>'
-      + '<div class="cv-row">' + fld('НДС по умолчанию, %', numIn('name="vatDefault"', s.vatDefault, '22', '80px')) + fld('Налог на расходы, %', numIn('name="taxOnExpensesPct"', s.taxOnExpensesPct, '2.2', '80px')) + fld('Фрахт до границы, %', numIn('name="borderSplitPercent"', s.borderSplitPercent, '30', '80px')) + fld('Сбор по Прил. № 1, ₽', numIn('name="radioFee"', s.radioFee, '73860', '110px')) + '</div>'
+    var values = [
+      ['НДС по умолчанию', K.num(s.vatDefault) + '%'],
+      ['Налог на расходы', K.num(s.taxOnExpensesPct) + '%'],
+      ['Фрахт до границы', K.num(s.borderSplitPercent) + '%'],
+      ['Особый таможенный сбор', K.money(s.radioFee, 'RUB')]
+    ];
+    return '<section class="cv-set"><div class="cv-set-head"><div><b>Постоянные параметры калькулятора</b><small>Значения зафиксированы. Для изменения нажмите на карандаш.</small></div><button type="button" class="cx-btn ghost sm" data-v-edit aria-label="Изменить постоянные параметры">✎ Изменить</button></div>'
+      + '<div class="cv-set-summary" data-v-summary>' + values.map(function (x) { return '<div class="cv-set-value"><span>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b></div>'; }).join('') + '</div>'
+      + '<form class="cv-setf" data-vs hidden><div class="cv-row">' + fld('НДС по умолчанию, %', numIn('name="vatDefault"', s.vatDefault, '22', '80px')) + fld('Налог на расходы, %', numIn('name="taxOnExpensesPct"', s.taxOnExpensesPct, '2.2', '80px')) + fld('Фрахт до границы, %', numIn('name="borderSplitPercent"', s.borderSplitPercent, '30', '80px')) + fld('Сбор по Прил. № 1, ₽', numIn('name="radioFee"', s.radioFee, '73860', '110px')) + '</div>'
       + '<label class="cx-f"><span>Коды из Приложения № 1 к ПП № 1637 (начало кода, через запятую) — для них сбор считается фиксированным</span><input name="radioPrefixes" value="' + esc((s.radioPrefixes || []).join(', ')) + '" placeholder="например: 8517 13, 8471 30"></label>'
       + '<div class="cv-scale"><b>Шкала таможенных сборов при ввозе</b><small>' + esc(def.feeSource) + '</small>' + s.feeScale.map(function (r, i) { return '<div class="cv-sr"><span>' + (r[0] == null ? 'свыше' : 'до') + '</span>' + (r[0] == null ? '<i>' + K.money(s.feeScale[i - 1] ? s.feeScale[i - 1][0] : 0, 'RUB') + '</i>' : numIn('data-lim="' + i + '"', r[0], '', '140px')) + '<span>₽ ТС →</span>' + numIn('data-fee="' + i + '"', r[1], '', '110px') + '<span>₽</span></div>'; }).join('') + '</div>'
-      + '<div class="cv-setb"><button type="button" class="cx-link" data-vreset>Вернуть значения по умолчанию</button><button type="submit" class="cx-btn primary">Сохранить настройки</button></div></form></details>';
+      + '<div class="cv-setb"><button type="button" class="cx-link" data-vreset>Вернуть значения по умолчанию</button><span><button type="button" class="cx-btn ghost" data-v-cancel>Отмена</button> <button type="submit" class="cx-btn primary">Сохранить настройки</button></span></div></form></section>';
   }
   function loadPage() {
     var box = $('#cxVed'); if (!box) return;
     api('/api/ved/settings').then(function (r) {
       box.innerHTML = '<div class="cx-intro"><p>Расчёт таможенных платежей при ввозе в РФ: пошлина (%, € за кг/шт/л/м², «но не менее» и «плюс»), антидемпинг, акциз, НДС 22/10/0%, таможенный сбор по шкале 2026 года. Валюты — по курсу ЦБ на сегодня или своему курсу. Коды ТН ВЭД подставляются из собственного справочника — без платных сервисов.</p></div>'
         + settingsHtml(r.settings, r.defaults) + '<div id="cxVedCalc" class="cv-root"></div>';
-      var f = $('[data-vs]', box);
-      f.addEventListener('submit', function (e) { e.preventDefault(); var b = {}; $$('[name]', f).forEach(function (i) { b[i.name] = i.value; }); var sc = r.settings.feeScale.map(function (row, i) { var lim = $('[data-lim="' + i + '"]', f), fee = $('[data-fee="' + i + '"]', f); return [lim ? lim.value : null, fee.value]; }); b.feeScale = sc;
+      var f = $('[data-vs]', box), summary = $('[data-v-summary]', box), edit = $('[data-v-edit]', box);
+      edit.addEventListener('click', function () { f.hidden = false; summary.hidden = true; edit.hidden = true; var first = $('[name="vatDefault"]', f); if (first) first.focus(); });
+      $('[data-v-cancel]', f).addEventListener('click', function () { f.reset(); f.hidden = true; summary.hidden = false; edit.hidden = false; });
+      f.addEventListener('submit', function (e) { e.preventDefault(); var b = {}; $('[name]', f).forEach(function (i) { b[i.name] = i.value; }); var sc = r.settings.feeScale.map(function (row, i) { var lim = $('[data-lim="' + i + '"]', f), fee = $('[data-fee="' + i + '"]', f); return [lim ? lim.value : null, fee.value]; }); b.feeScale = sc;
         api('/api/ved/settings', { method: 'PUT', body: b }).then(function () { toast('Настройки расчёта сохранены'); page && (page.settings = null); loadPage(); }).catch(function (er) { toast(er.message, 'err'); }); });
       $('[data-vreset]', f).addEventListener('click', function () { K.confirm('Вернуть ставки и шкалу сборов по умолчанию?', 'Вернуть').then(function (ok) { if (ok) api('/api/ved/settings', { method: 'PUT', body: { reset: true } }).then(function () { loadPage(); }); }); });
       page = new Calc($('#cxVedCalc'), { standalone: true }); page.load();

@@ -102,18 +102,45 @@
   }
 
   function baseModal() {
-    var md = K.modal('База агентов', '<div class="cx-bar"><div class="cx-search"><input type="search" data-q placeholder="Компания, контакт, вид транспорта" aria-label="Поиск агента"></div><label class="cx-btn ghost">Загрузить Excel<input type="file" accept=".xlsx,.xlsm,.csv" data-f hidden></label><button type="button" class="cx-btn primary" data-add>+ Агент</button></div><p class="cx-mut cx-small">Колонки файла: Компания, Виды транспорта, Email, Контакт, Телефон. Ваша база закрыта — её видит только администратор; общий справочник «Экспедиторы» тоже здесь.</p><div data-l><p class="cx-load">Загружаю…</p></div>', '', { wide: true });
+    var md = K.modal('База агентов', '<div class="cx-bar"><div class="cx-search"><input type="search" data-q placeholder="Компания, контакт, вид транспорта" aria-label="Поиск агента"></div><label class="cx-btn ghost">Загрузить Excel<input type="file" accept=".xlsx,.xlsm,.csv" data-f hidden></label><button type="button" class="cx-btn primary" data-add>+ Агент</button></div><p class="cx-mut cx-small">Колонки файла: Компания, Виды транспорта, Email, Контакт, Телефон, Сайт, Примечание. Импорт обновляет совпадающие записи; похожие дубли не создаются. Общий справочник доступен для просмотра.</p><div data-l><p class="cx-load">Загружаю…</p></div>', '', { wide: true });
     var el = md.el, all = [];
-    var draw2 = function (q) { q = String(q || '').toLowerCase(); var l = all.filter(function (a) { return !q || (a.company + ' ' + a.contact + ' ' + a.email + ' ' + (a.transport || []).join(' ')).toLowerCase().indexOf(q) >= 0; }); $('[data-l]', el).innerHTML = '<div class="cx-table cx-agents"><div class="cx-tr cx-thd"><span>Компания · ' + l.length + '</span><span>Транспорт</span><span class="lp">Контакт</span><span></span></div>' + l.slice(0, 400).map(function (a) { return '<div class="cx-tr"><span class="cx-t"><b>' + esc(a.company) + (a.own ? '' : ' <em class="cx-tag">справочник</em>') + '</b><small>' + esc(a.email || a.phone || '') + '</small></span><span class="cx-mut">' + esc((a.transport || []).join(', ') || (a.modes || []).map(function (m) { return MODE[m]; }).join(', ')) + '</span><span class="cx-mut lp">' + esc(a.contact || '') + '</span><span>' + (a.own ? '<button type="button" class="cx-ib" data-del="' + esc(a.id) + '" title="Удалить">✕</button>' : '') + '</span></div>'; }).join('') + '</div>'; };
-    var reload = function () { api('/api/crm/agents').then(function (r) { all = r.items; draw2($('[data-q]', el).value); }).catch(function (e) { toast(e.message, 'err'); }); };
+    var draw2 = function (q) {
+      q = String(q || '').toLowerCase();
+      var l = all.filter(function (a) { return !q || (a.company + ' ' + a.contact + ' ' + a.email + ' ' + a.phone + ' ' + (a.transport || []).join(' ') + ' ' + (a.notes || '')).toLowerCase().indexOf(q) >= 0; });
+      $('[data-l]', el).innerHTML = '<div class="cx-table cx-agents"><div class="cx-tr cx-thd"><span>Компания · ' + l.length + '</span><span>Транспорт</span><span class="lp">Контакт</span><span>Управление</span></div>' + l.slice(0, 400).map(function (a) {
+        return '<div class="cx-tr"><span class="cx-t"><b>' + esc(a.company) + (a.own ? '' : ' <em class="cx-tag">справочник</em>') + '</b><small>' + esc(a.email || a.phone || '') + '</small></span><span class="cx-mut">' + esc((a.transport || []).join(', ') || (a.modes || []).map(function (m) { return MODE[m]; }).join(', ')) + '</span><span class="cx-mut lp">' + esc(a.contact || '') + '</span><span>' + (a.own ? '<button type="button" class="cx-ib" data-edit="' + esc(a.id) + '" title="Редактировать" aria-label="Редактировать агента">✎</button><button type="button" class="cx-ib" data-del="' + esc(a.id) + '" title="Удалить" aria-label="Удалить агента">✕</button>' : '—') + '</span></div>';
+      }).join('') + '</div>';
+    };
+    var reload = function () { api('/api/crm/agents').then(function (r) { all = r.items || []; draw2($('[data-q]', el).value); }).catch(function (e) { toast(e.message, 'err'); }); };
+    function editor(agent) {
+      var edit = !!agent, title = edit ? 'Редактировать агента' : 'Новый агент';
+      var fields = [['company', 'Компания'], ['contact', 'Контакт'], ['email', 'Email'], ['phone', 'Телефон / WeChat'], ['site', 'Сайт'], ['transport', 'Виды транспорта'], ['notes', 'Заметка']];
+      var body = '<div class="cx-grid2">' + fields.map(function (f) {
+        var val = f[0] === 'transport' ? (agent && (agent.transport || []).join(', ')) : agent && agent[f[0]] || '';
+        return '<label class="cx-f"><span>' + f[1] + '</span><input data-k="' + f[0] + '" value="' + esc(val) + '"' + (f[0] === 'transport' ? ' placeholder="Авиа, ЖД, Авто, Море"' : '') + '></label>';
+      }).join('') + '</div>';
+      var m2 = K.modal(title, body, '<button type="button" class="cx-btn ghost" data-cx="close">Отмена</button><button type="button" class="cx-btn primary" data-go>' + (edit ? 'Сохранить' : 'Добавить') + '</button>');
+      $('[data-go]', m2.el).addEventListener('click', function () {
+        var data = {}; $$('[data-k]', m2.el).forEach(function (i) { data[i.dataset.k] = i.value; });
+        if (!String(data.company || '').trim()) return toast('Укажите компанию', 'err');
+        api(edit ? '/api/crm/agents/' + encodeURIComponent(agent.id) : '/api/crm/agents', { method: edit ? 'PATCH' : 'POST', body: data })
+          .then(function () { m2.close(); reload(); toast(edit ? 'Данные агента обновлены' : 'Агент добавлен'); })
+          .catch(function (e) { toast(e.message, 'err'); });
+      });
+    }
     reload();
     $('[data-q]', el).addEventListener('input', function () { draw2(this.value); });
-    $('[data-f]', el).addEventListener('change', function () { var f = this.files[0]; if (!f) return; var fd = new FormData(); fd.append('file', f); api('/api/crm/agents/import', { method: 'POST', body: fd }).then(function (r) { toast('Загружено: новых ' + r.added + ', обновлено ' + r.updated); reload(); }).catch(function (e) { toast(e.message, 'err'); }); this.value = ''; });
-    $('[data-add]', el).addEventListener('click', function () {
-      var m2 = K.modal('Новый агент', '<div class="cx-grid2">' + [['company', 'Компания'], ['contact', 'Контакт'], ['email', 'Email'], ['phone', 'Телефон / WeChat'], ['transport', 'Виды транспорта'], ['notes', 'Заметка']].map(function (f) { return '<label class="cx-f"><span>' + f[1] + '</span><input data-k="' + f[0] + '"' + (f[0] === 'transport' ? ' placeholder="Авиа, ЖД, Авто, Море"' : '') + '></label>'; }).join('') + '</div>', '<button type="button" class="cx-btn ghost" data-cx="close">Отмена</button><button type="button" class="cx-btn primary" data-go>Добавить</button>');
-      $('[data-go]', m2.el).addEventListener('click', function () { var b = {}; $$('[data-k]', m2.el).forEach(function (i) { b[i.dataset.k] = i.value; }); api('/api/crm/agents', { method: 'POST', body: b }).then(function () { m2.close(); reload(); }).catch(function (e) { toast(e.message, 'err'); }); });
+    $('[data-f]', el).addEventListener('change', function () {
+      var f = this.files[0]; if (!f) return; var fd = new FormData(); fd.append('file', f);
+      api('/api/crm/agents/import', { method: 'POST', body: fd }).then(function (r) { toast('Импорт: новых ' + r.added + ', обновлено ' + r.updated); reload(); }).catch(function (e) { toast(e.message, 'err'); }); this.value = '';
     });
-    el.addEventListener('click', function (e) { var d = e.target.closest('[data-del]'); if (!d) return; K.confirm('Удалить агента из вашей базы?').then(function (ok) { if (ok) api('/api/crm/agents/' + d.dataset.del, { method: 'DELETE' }).then(reload).catch(function (x) { toast(x.message, 'err'); }); }); });
+    $('[data-add]', el).addEventListener('click', function () { editor(null); });
+    el.addEventListener('click', function (e) {
+      var edit = e.target.closest('[data-edit]');
+      if (edit) { var item = all.find(function (a) { return a.own && String(a.id) === String(edit.dataset.edit); }); if (item) editor(item); return; }
+      var del = e.target.closest('[data-del]'); if (!del) return;
+      K.confirm('Удалить агента из вашей базы?').then(function (ok) { if (ok) api('/api/crm/agents/' + encodeURIComponent(del.dataset.del), { method: 'DELETE' }).then(reload).catch(function (x) { toast(x.message, 'err'); }); });
+    });
   }
 
   /* «Ставка клиенту» — тексты по рабочим шаблонам: под контракт клиента (EXW / фрахт / авто / декларант) и под наш контракт (всё включено) */

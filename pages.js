@@ -17,6 +17,7 @@
     ['/rabota', 'workView', 'Работа', ''],
     ['/akkaunt', 'accountView', 'Аккаунт', ''],
     ['/otsledit', 'trackView', 'Отследить груз', ''],
+    ['/etrn', 'etrnView', 'Электронная транспортная накладная', ''],
     ['/vlezet', 'fitView', 'Влезет ли груз', ''],
     ['/obem', 'volumeView', 'Объём груза', ''],
     ['/terminal', 'terminalView', 'Терминальные в Шереметьево', ''],
