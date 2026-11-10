@@ -98,6 +98,7 @@
     'Управление грузом': ['Cargo', '货物管理', 'Kargo yönetimi'],
     'Инструменты ВЭД': ['Trade tools', '外贸工具', 'Dış ticaret araçları'],
     'ЭТРН — порядок оформления': ['e-CMR — how to issue', '电子运输单据 — 办理流程', 'e-CMR — düzenleme adımları'],
+    'Схема маршрута · не live-трекинг': ['Route illustration · not live tracking', '路线示意 · 非实时追踪', 'Güzergâh şeması · canlı takip değil'],
     'Титулы 1–8, роли и контрольные точки': ['Titles 1–8, roles and checkpoints', '第1–8栏、参与方与检查点', 'Başlık 1–8, roller ve kontrol noktaları'],
     // инструменты логиста
     'Отследить груз': ['Track cargo', '货物追踪', 'Kargo takibi'],
