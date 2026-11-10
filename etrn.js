@@ -70,7 +70,7 @@
   function roleField(label,name,placeholder) { return '<label class="et-role-field"><span>'+esc(label)+'</span><input name="'+name+'" autocomplete="off" placeholder="'+esc(placeholder)+'"></label>'; }\n  function render() {
     var root = document.getElementById(rootId); if (!root) return;
     var active = root.getAttribute('data-active') || 'start';
-    if (!sections[active]) active = 'start';
+    if (!sections[active] && active !== 'roles-check') active = 'start';
     var s = sections[active];
     if (active === 'roles-check') {
       root.innerHTML = '<div class="et-shell"><div class="et-head"><div><span class="et-eyebrow">ПРАКТИЧЕСКИЙ ИНСТРУМЕНТ</span><h2>Кто есть кто в перевозке</h2><p>Заполни стороны — получишь роли и кому направлять поручение или транспортную заявку</p></div><button type="button" class="et-print" data-et-print>Печать / PDF</button></div>'
