@@ -226,8 +226,8 @@
     var state = { mode: opts.mode || 'rail', from: opts.from || 'yw', to: opts.to || 'msk', auto: !!opts.auto, timer: 0, demo: 0 };
     var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     el.classList.add('rmap');
-    el.innerHTML = '<div class="rmap-top"><div class="rmap-tabs" role="tablist"></div><p class="rmap-hint"></p></div><div class="rmap-stage"><svg class="rmap-svg" viewBox="' + VB.join(' ') + '" preserveAspectRatio="xMidYMid meet" role="img"></svg></div><div class="rmap-info" aria-live="polite"></div>';
-    var svg = el.querySelector('svg'), tabs = el.querySelector('.rmap-tabs'), info = el.querySelector('.rmap-info'), hint = el.querySelector('.rmap-hint');
+    el.innerHTML = '<div class="rmap-top"><div class="rmap-fields"><label><span>' + kmT('from', lang()) + '</span><select class="rmap-from" aria-label="' + kmT('from', lang()) + '">' + ORIGINS.map(function(k){return '<option value="' + k + '"' + (k === state.from ? ' selected' : '') + '>' + nm(k, lang()) + '</option>';}).join('') + '</select></label><label><span>' + kmT('to', lang()) + '</span><select class="rmap-to" aria-label="' + kmT('to', lang()) + '">' + RU_DOTS.map(function(k){return '<option value="' + k + '"' + (k === state.to ? ' selected' : '') + '>' + nm(k, lang()) + '</option>';}).join('') + '</select></label></div><div class="rmap-tabs" role="tablist"></div></div><div class="rmap-stage"><svg class="rmap-svg" viewBox="' + VB.join(' ') + '" preserveAspectRatio="xMidYMid meet" role="img"></svg></div><div class="rmap-info" aria-live="polite"></div>';
+    var svg = el.querySelector('svg'), tabs = el.querySelector('.rmap-tabs'), info = el.querySelector('.rmap-info'), fromSelect = el.querySelector('.rmap-from'), toSelect = el.querySelector('.rmap-to');
     var U = 1;
     // единиц карты на пиксель экрана — с учётом того, что карта может упираться в высоту
     function unit() { var r = svg.getBoundingClientRect(); if (!r.width) return U; return Math.max(W / r.width, H / (r.height || r.width * H / W)); }
@@ -238,8 +238,13 @@
       var other = el.getBoundingClientRect().height - svg.getBoundingClientRect().height, avail = Math.floor(box.clientHeight - other - 2); if (avail > 0) svg.style.maxHeight = Math.max(180, avail) + 'px';
     }
     function scale() { fit(); var u = unit(); el.style.setProperty('--u', u.toFixed(3)); el.classList.toggle('rmap-sm', svg.getBoundingClientRect().width < 520); if (Math.abs(u - U) / U > .1) { U = u; draw(); } }
-    function drawTabs() { var l = lang(); tabs.innerHTML = ['rail', 'road', 'air', 'sea'].map(function (m) { return '<button type="button" role="tab" data-m="' + m + '" aria-selected="' + (m === state.mode) + '"' + (m === state.mode ? ' class="on"' : '') + '>' + pa(MODE_NAME[m], l) + '</button>'; }).join('') + '<i class="rmap-ind"></i>'; moveInd(); hint.textContent = kmT('pick', l); }
-    function moveInd() { var b = tabs.querySelector('.on'), i = tabs.querySelector('.rmap-ind'); if (b && i) { i.style.width = b.offsetWidth + 'px'; i.style.transform = 'translateX(' + b.offsetLeft + 'px)'; } }
+    function drawTabs() { var l = lang(); tabs.innerHTML = ['rail', 'road', 'air', 'sea'].map(function (m) { return '<button type="button" role="tab" data-m="' + m + '" aria-selected="' + (m === state.mode) + '"' + (m === state.mode ? ' class="on"' : '') + '>' + pa(MODE_NAME[m], l) + '</button>'; }).join('') + '<i class="rmap-ind"></i>'; moveInd(); syncFields(); }
+    function moveInd() { var b = tabs.querySelector('.on'), i = tabs.querySelector('.rmap-ind'); if (b && i) { i.style.width = b.offsetWidth + 'px'; i.style.transform = 'translateX(' + b.offsetLeft + 'px)'; }  }
+    function syncFields(){
+      var l=lang();
+      if(fromSelect){if(fromSelect.dataset.lang!==l){fromSelect.innerHTML=ORIGINS.map(function(k){return '<option value="' + k + '">' + nm(k,l) + '</option>';}).join('');fromSelect.dataset.lang=l;}fromSelect.value=state.from;}
+      if(toSelect){if(toSelect.dataset.lang!==l){toSelect.innerHTML=RU_DOTS.map(function(k){return '<option value="' + k + '">' + nm(k,l) + '</option>';}).join('');toSelect.dataset.lang=l;}toSelect.value=state.to;}
+    }
     function f(n) { return n.toFixed(1); }
     var NEAR = {};
     function near(k) { if (NEAR[k] != null) return NEAR[k]; var p = xy(k), m = Infinity; RU_DOTS.concat(CN_DOTS).forEach(function (o) { if (o === k) return; var q = xy(o), d = Math.hypot(p[0] - q[0], p[1] - q[1]); if (d < m) m = d; }); return (NEAR[k] = m); }
@@ -273,7 +278,7 @@
       h += land();
       // все точки: Россия — куда, Китай — откуда. Зона нажатия не больше половины расстояния до соседа,
       // чтобы соседние города (Гуанчжоу и Шэньчжэнь, Шанхай и Ханчжоу) не перекрывали друг друга
-      function dot(k, side, on) { var p = xy(k), r = Math.max(3.2 * U, Math.min(9 * U, near(k) / 2)); return '<g class="rm-pt rm-' + side + (on ? ' on' : '') + '" data-' + side + '="' + k + '" tabindex="0" role="button" aria-label="' + nm(k, l) + '"><circle class="rm-hit" cx="' + f(p[0]) + '" cy="' + f(p[1]) + '" r="' + f(r) + '"/><circle class="rm-c" cx="' + f(p[0]) + '" cy="' + f(p[1]) + '" r="' + f((on ? 5 : 2.6) * U) + '"/></g>'; }
+      function dot(k, side, on) { var p = xy(k), r = Math.max(3.2 * U, Math.min(9 * U, near(k) / 2)); return '<g class="rm-pt rm-' + side + (on ? ' on' : '') + '" aria-hidden="true"><circle class="rm-hit" cx="' + f(p[0]) + '" cy="' + f(p[1]) + '" r="' + f(r) + '"/><circle class="rm-c" cx="' + f(p[0]) + '" cy="' + f(p[1]) + '" r="' + f((on ? 5 : 2.6) * U) + '"/></g>'; }
       // выбранные точки рисуем последними — они поверх соседних
       RU_DOTS.filter(function (k) { return k !== state.to; }).forEach(function (k) { h += dot(k, 'to', false); });
       CN_DOTS.filter(function (k) { return k !== state.from; }).forEach(function (k) { h += dot(k, 'from', false); });
@@ -315,13 +320,12 @@
       return '<div class="rmap-rec"><span>' + (en ? 'Best way' : 'Как лучше') + '</span>' + one(en ? 'Groupage' : 'Сборный груз', a.options[0]) + one(en ? 'Full container' : 'Контейнер', b.options[0]) + '</div>';
     }
     function setMode(m, user) { if (!MODES[m]) return; state.mode = m; if (user) stopAuto(); drawTabs(); draw(); if (opts.onMode) opts.onMode(m); }
-    function setFrom(k, user) { if (!C[k]) return; state.from = k; if (user) stopAuto(); draw(); }
-    function setTo(k, user) { if (!C[k]) return; state.to = k; if (user) stopAuto(); draw(); }
+    function setFrom(k, user) { if (!C[k]) return; state.from = k; if (user) stopAuto(); syncFields(); draw(); }
+    function setTo(k, user) { if (!C[k]) return; state.to = k; if (user) stopAuto(); syncFields(); draw(); }
     function stopAuto() { state.auto = false; clearInterval(state.timer); el.classList.add('rmap-user'); }
     tabs.addEventListener('click', function (e) { var b = e.target.closest('[data-m]'); if (b) setMode(b.dataset.m, true); });
-    function pick(t) { var g = t.closest && t.closest('.rm-pt'); if (!g) return false; if (g.dataset.from) setFrom(g.dataset.from, true); else setTo(g.dataset.to, true); return true; }
-    svg.addEventListener('click', function (e) { pick(e.target); });
-    svg.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && pick(e.target)) e.preventDefault(); });
+    fromSelect.addEventListener('change', function(){ setFrom(this.value, true); });
+    toSelect.addEventListener('change', function(){ setTo(this.value, true); });
     // подсказка с названием — одна, у точки под курсором
     svg.addEventListener('mouseover', function (e) {
       var g = e.target.closest && e.target.closest('.rm-pt'), t = svg.querySelector('.rm-hov'); if (!t) return;
@@ -336,7 +340,7 @@
     if (window.ResizeObserver) new ResizeObserver(function () { scale(); moveInd(); }).observe(svg);
     drawTabs(); U = unit() || 1; draw(); scale();
     // пока гость не выбрал сам — раз в 6 секунд показываем другой город Китая
-    if (state.auto) state.timer = setInterval(function () { if (document.hidden || el.matches(':hover')) return; state.demo = (state.demo + 1) % DEMO.length; state.from = DEMO[state.demo]; draw(); }, 6500);
+    // Route endpoints are changed only through the explicit From / To fields.
     return { setMode: setMode, setFrom: setFrom, setTo: setTo, stopAuto: stopAuto, get state() { return state; } };
   }
 
