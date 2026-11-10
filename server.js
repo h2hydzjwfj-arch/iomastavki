@@ -33,6 +33,30 @@ app.use((req, res, next) => {
 if (compression) app.use(compression());
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
+// Safe visual preview: no live customer/vendor data, no indexation, no write-side business operations.
+if (process.env.IOMA_PREVIEW_MODE === '1') {
+  app.use((req, res, next) => {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+    if (req.method === 'GET' && req.path === '/api/agents') {
+      return res.json({ ok: true, records: [] });
+    }
+    if (req.method === 'GET' && req.path === '/api/rates') {
+      return res.json({ version: 2, updatedAt: null, records: [] });
+    }
+    const blockedPrefixes = [
+      '/api/leads', '/api/clients', '/api/shipments', '/api/account',
+      '/api/password', '/api/telegram', '/api/agents/import',
+      '/api/rates/import', '/api/rates/import-text', '/api/rates/import-local',
+      '/api/tariffs'
+    ];
+    const blockedExact = new Set(['/api/login', '/api/register', '/api/rates']);
+    if (blockedExact.has(req.path) || blockedPrefixes.some(p => req.path === p || req.path.startsWith(p + '/')) ||
+        req.path === '/api/quotes' && req.method !== 'GET') {
+      return res.status(503).json({ ok: false, error: 'Операция отключена в демонстрационной версии.' });
+    }
+    next();
+  });
+}
 // Общий лимит — только на API: статика (скрипты, стили, картинки) не считается, а работа в CRM делает много коротких запросов.
 app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, max: 1500, standardHeaders: true, legacyHeaders: false }));
 // Перебор пароля администратора: не более 8 попыток за 15 минут с одного IP.
@@ -66,9 +90,9 @@ require('./tools-api').setup(app, { rateLimit, admin: portal.admin }); // инс
 app.get('/api/rates', portal.admin);
 app.put('/api/rates', portal.admin);
 
-const fallbackHash = 'scrypt$16384$8$1$bd186dac2105a3d050c5f769e28d25a2$51e731def6ff02e823b43cb8cfce55adcad745c5c72935ce68d875f583096288';
-
 function safeReadRates() {
+  // A public preview never reads agent/vendor rate data from either storage path.
+  if (process.env.IOMA_PREVIEW_MODE === '1') return {};
   // Сначала рабочая база (DATA_DIR, туда пишет импорт), иначе — стартовая база из репозитория.
   try { return JSON.parse(fs.readFileSync(RATES_FILE, 'utf8')); } catch {}
   try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'rates.json'), 'utf8')); } catch { return {}; }
@@ -192,7 +216,8 @@ function saveRates(data) {
   fs.writeFileSync(RATES_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
 function verifyPassword(password) {
-  const raw = process.env.ADMIN_PASSWORD_HASH || fallbackHash;
+  const raw = String(process.env.ADMIN_PASSWORD_HASH || '').trim();
+  if (!raw) return false; // No embedded/default administrator credential in preview.
   const p = raw.split('$');
   if (p.length !== 6 || p[0] !== 'scrypt') return false;
   const N = Number(p[1]), r = Number(p[2]), salt = Buffer.from(p[4], 'hex'), expected = p[5];
