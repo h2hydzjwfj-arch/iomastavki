@@ -282,6 +282,13 @@ function setup(app, opts = {}) {
     res.json(out);
   }));
 
+  app.get('/api/tools/wagon', staff, limit, wrap(async (req, res) => {
+    const no = String(req.query.no || '').replace(/\\D/g, '');
+    if (!/^\\d{8,12}$/.test(no)) return res.status(400).json({ ok: false, error: 'Укажите номер вагона: 8–12 цифр' });
+    const rows = await cached('trc-wagon:' + no, 15 * 60 * 1000, () => trcont(no));
+    res.json({ ok: true, number: no, source: 'ТрансКонтейнер (isales.trcont.ru)', rows });
+  }));
+
   app.post('/api/tools/russia', staff, limit, wrap(async (req, res) => {
     const b = req.body || {}, q = { from: String(b.from || '').slice(0, 60), to: String(b.to || '').slice(0, 60), weight: num(b.weight), volume: num(b.volume), places: Math.max(1, Math.round(num(b.places, 1))), length: num(b.length), width: num(b.width), height: num(b.height) };
     if (!q.from || !q.to) return res.status(400).json({ ok: false, error: 'Укажите, откуда и куда везём' });
