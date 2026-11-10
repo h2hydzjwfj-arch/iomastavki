@@ -373,7 +373,7 @@ const CITY_ALIASES = {
 };
 app.get('/api/cities', async (req,res) => {
   const q=String(req.query.q||'').trim(), country=String(req.query.country||'CN').toUpperCase(), limit=Math.min(100,Math.max(1,Number(req.query.limit)||30));
-  const ASIA_CODES_SERVER=new Set(['CN','JP','KR','KP','MN','IN','PK','BD','NP','BT','LK','MV','AF','ID','TH','VN','MY','SG','PH','MM','KH','LA','BN','TL','KZ','UZ','KG','TJ','TM']);
+  const ASIA_CODES_SERVER=new Set(['CN','KR','IN']);
   const isAsiaScope=country==='ASIA';
   const allowedCodes=isAsiaScope?ASIA_CODES_SERVER:new Set([country]);
   if(!q) return res.json({ok:true,results:[]});
@@ -384,17 +384,17 @@ app.get('/api/cities', async (req,res) => {
     if(q.length>=1){try{const cc=isAsiaScope?[...ASIA_CODES_SERVER].map(x=>x.toLowerCase()).join(','):country.toLowerCase(); const u=`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=100&countrycodes=${cc}&q=${encodeURIComponent(q)}`;const r=await fetch(u,{headers:{'User-Agent':'iomastavka/1.1'}});if(r.ok){const d=await r.json();for(const x of d)add(x)}}catch{}}
     if(alias && (isAsiaScope||country===alias[1])) add({name:alias[0],nameEn:alias[0],nameZh:alias[3],admin1:alias[2],country:'China',country_code:'CN',latitude:null,longitude:null});
     const seen=new Set(); const clean=results.filter(x=>{if(x.country_code&&((isAsiaScope&&!ASIA_CODES_SERVER.has(String(x.country_code).toUpperCase()))||(!isAsiaScope&&x.country_code!==country)))return false;const k=normalizeText(`${x.name}|${x.admin1}|${x.country_code}`);if(seen.has(k))return false;seen.add(k);return true});
-    clean.sort((a,b)=>{const aa=normalizeText(`${a.name} ${a.nameEn} ${a.nameZh}`),bb=normalizeText(`${b.name} ${b.nameEn} ${b.nameZh}`),qq=normalizeText(q);const sa=aa.startsWith(qq)?0:aa.includes(qq)?1:2,sb=bb.startsWith(qq)?0:bb.includes(qq)?1:2;return sa-sb});
+    clean.sort((a,b)=>{const aa=normalizeText(`${a.name} ${a.nameEn} ${a.nameZh}`),bb=normalizeText(`${b.name} ${b.nameEn} ${b.nameZh}`),qq=normalizeText(q);const sa=aa.startsWith(qq)?0:aa.includes(qq)?1:2,sb=bb.startsWith(qq)?0:bb.includes(qq)?1:2;const rank={CN:0,KR:1,IN:2};return sa-sb||(rank[a.country_code]??9)-(rank[b.country_code]??9)});
     res.json({ok:true,results:clean.slice(0,limit)});
   }catch{res.status(502).json({ok:false,error:'city search unavailable',results:[]});}
 });
 
 app.get('/api/geocode', async (req,res) => {
   const q=String(req.query.q||'').trim(), country=String(req.query.country||'').toLowerCase(), scope=String(req.query.scope||'').toLowerCase();
-  const asiaCodes=new Set(['cn','jp','kr','kp','mn','in','pk','bd','np','bt','lk','mv','af','id','th','vn','my','sg','ph','mm','kh','la','bn','tl','kz','uz','kg','tj','tm']);
+  const asiaCodes=new Set(['cn','kr','in']);
   if(!q)return res.json({ok:true,results:[]});
   try{
-    const cc=scope==='asia'||scope==='china'?'cn,jp,kr,kp,mn,in,pk,bd,np,bt,lk,mv,af,id,th,vn,my,sg,ph,mm,kh,la,bn,tl,kz,uz,kg,tj,tm':country;
+    const cc=scope==='asia'||scope==='china'?'cn,kr,in':country;
     const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=20${cc?`&countrycodes=${encodeURIComponent(cc)}`:''}&q=${encodeURIComponent(q)}`;
     const r=await fetch(url,{headers:{'User-Agent':'iomastavka/1.3 (logistics calculator)'}}); if(!r.ok)throw new Error('geocode unavailable');
     const data=await r.json();
