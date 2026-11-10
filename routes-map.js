@@ -42,6 +42,16 @@
   var RU_MINOR = ['spb', 'nnov', 'kzn', 'ekb', 'nsk', 'khb', 'vvo', 'krd'];
   var TS_RU = ['chita', 'ulu', 'irk', 'krs', 'nsk', 'omsk', 'ekb', 'kzn', 'msk']; // Транссиб от Читы до Москвы
   var KZ_RU = ['akt', 'ast', 'chel', 'sam', 'msk'];
+  // Географический допуск для коридора Маньчжурия—Забайкальск: не используем его как универсальный fallback.
+  // Для остальных городов ищем иной коридор или явно возвращаем отсутствие схемы.
+  var ZAB_ORIGINS = { bj: 1, tj: 1, sy: 1, hrb: 1, dl: 1, qqh: 1, hlr: 1 };
+  // По сообщению Росгранстроя от 30.10.2026 грузовое направление Благовещенск—Хэйхэ приостановлено с 02.11.2026.
+  // Не включать этот переход в расчёт, пока статус не будет подтверждён новым официальным сообщением.
+  function corridorAllowed(cor, fromKey) {
+    if (cor.id === 'zab' && !ZAB_ORIGINS[fromKey]) return false;
+    if (cor.id === 'blg') return false;
+    return true;
+  }
   // коридоры по видам: переход (gw — две точки пары), путь по Китаю для каждого города, путь от перехода до Москвы
   var MODES = {
     rail: [
@@ -114,14 +124,15 @@
     if (mode === 'air') { var c0 = MODES.air[0]; if (!C[fromKey]) return null; var d = Math.round(hav(ll(fromKey), ll('msk')) / 10) * 10; return { mode: mode, path: [fromKey, 'msk'], legs: [{ kind: 'air', km: d }], km: d, gw: null }; }
     var cors = MODES[mode];
     for (var i = 0; i < cors.length; i++) {
-      var cor = cors[i], p = chain(cor, fromKey); if (p.length < 2 && fromKey !== cor.gw[0]) continue;
+      var cor = cors[i]; if (!corridorAllowed(cor, fromKey)) continue;
+      var p = chain(cor, fromKey); if (p.length < 2 && fromKey !== cor.gw[0]) continue;
       var legs = [], china = p.slice(), mid = cor.mid ? cor.mid.slice() : null;
       var ruKm = (mode !== 'road' && TRUNK_KM[cor.id]) || km(cor.ru, 1.25);
       if (cor.sea) { legs.push({ kind: 'sea', km: km(china, 1.08) }); legs.push({ kind: 'rail', km: ruKm }); }
       else { legs.push({ kind: 'china', km: km(china, 1.25) }); if (mid) legs.push({ kind: 'transit', km: km(mid, 1.25) }); legs.push({ kind: 'ru', km: ruKm }); }
       var path = china.concat(mid ? mid.slice(1) : []).concat(cor.ru.slice(cor.sea ? 1 : (mid ? 1 : 0)));
       path = path.filter(function (k, i) { return !i || k !== path[i - 1]; });
-      return { mode: mode, path: path, legs: legs, km: legs.reduce(function (s, l) { return s + l.km; }, 0), gw: cor.id };
+      return { mode: mode, path: path, legs: legs, km: legs.reduce(function (s, l) { return s + l.km; }, 0), gw: cor.id, status: 'candidate', viaConfirmed: false };
     }
     return null;
   }
@@ -150,11 +161,12 @@
       var path = p.concat(mid ? mid.slice(1) : []).concat(ruPath.slice(cor.sea || mid ? 1 : 0));
       path = path.filter(function (k, i) { return !i || k !== path[i - 1]; });
       var w = total * (PREF[cor.id] || 1) * (fromKey === 'urc' && (cor.id === 'dos' || cor.id === 'hor') ? 0.6 : 1);
-      if (!best || w < best.w) best = { mode: mode, path: path, legs: legs, km: total, gw: cor.id, to: toKey, w: w };
+      if (!best || w < best.w) best = { mode: mode, path: path, legs: legs, km: total, gw: cor.id, to: toKey, w: w, status: 'candidate', viaConfirmed: false };
     }
-    MODES[mode].forEach(each);
-    if (!best) { far = true; MODES[mode].forEach(each); }
-    return best || routeFor(fromKey, mode);
+    MODES[mode].forEach(function (cor) { if (corridorAllowed(cor, fromKey)) each(cor); });
+    if (!best) { far = true; MODES[mode].forEach(function (cor) { if (corridorAllowed(cor, fromKey)) each(cor); }); }
+    // A route to the wrong destination is worse than no route: never fall back to a Moscow route for another city.
+    return best || null;
   }
   // поиск города по названию на любом языке
   var ALIAS = { yw: ['yiwu', 'иу', 'iwu'], tpe: ['taibei', 'тайпей'], tyo: ['токио', 'tokio', 'yokohama', 'йокогама'], sel: ['seoul', 'сеул'], icn: ['incheon', 'инчон'], spb: ['спб', 'питер', 'saint petersburg', 'санкт петербург'], msk: ['мск'], sh: ['shanghai', 'шанхай'], sz: ['shenzhen', 'шэньчжэнь', 'шеньчжень', 'шэньжэнь'], gz: ['guangzhou', 'гуанчжоу', 'кантон', 'canton'], xa: ['xian', "xi'an", 'сиань'], qz: ['qinzhou', 'циньчжоу'], pus: ['busan', 'pusan', 'пусан'], erl: ['erenhot', 'erlianhot', 'erlian', 'эрлианхот', 'эрэн-хото', 'эрэн хото', 'эренхот', 'эрен-хото', 'эрлянь', 'ерлянь'] };
@@ -213,7 +225,9 @@
   };
   var ICON_I = { rail: 'rail', road: 'road', air: 'air', sea: 'sea' };
   var KM = { kz: ['Казахстан и Россия', 'Kazakhstan and Russia', '哈萨克斯坦和俄罗斯'], all: ['всего', 'total', '合计'], pick: ['Выберите город в Китае и город в России — маршрут построится сам', 'Pick a city in China and a city in Russia — the route builds itself', '在地图上选择中国城市和俄罗斯城市，即可显示路线'],
-    via2: ['Путь', 'Route', '路径'], from: ['Откуда', 'From', '起运地'], to: ['Куда', 'To', '目的地'] };
+    via2: ['Путь', 'Route', '路径'], from: ['Откуда', 'From', '起运地'], to: ['Куда', 'To', '目的地'],
+    candidate: ['Предварительная схема по географии. Доступность сервиса, расписание и КПП необходимо подтвердить у перевозчика; это не подтверждённая перевозка.', 'Geographic candidate only. Confirm the carrier service, schedule and border-crossing availability before quoting; this is not a confirmed shipment.', '仅为地理路线候选。报价前须向承运人确认运输服务、班期及口岸通行状态。'],
+    noRoute: ['Не удалось выбрать подходящий коридор без неподтверждённого перехода. Требуется уточнение у перевозчика.', 'No suitable corridor could be selected without relying on an unconfirmed crossing. Check with the carrier.', '无法在不依赖未经确认口岸的情况下选择合适路线，请向承运人核实。'] };
   function kmT(k, l) { return pa(KM[k], l); }
   function legLabel(r, x, l) {
     if (x.kind === 'china') return ui('china', l); if (x.kind === 'transit') return ui('transit', l) + (r.gw === 'nau' || r.gw === 'kya' ? ' · ' + nm('uba', l) : '');
@@ -299,13 +313,14 @@
     }
     function panel(r) {
       var l = lang(), loc = l === 'ru' ? 'ru-RU' : 'en-US';
-      if (!r) { info.innerHTML = '<div class="rmap-od"><b>' + nm(state.from, l) + ' → ' + nm(state.to, l) + '</b><small>—</small></div>'; return; }
+      if (!r) { info.innerHTML = '<div class="rmap-od"><b>' + nm(state.from, l) + ' → ' + nm(state.to, l) + '</b><small>—</small></div><p class="rmap-path">' + kmT('noRoute', l) + '</p>'; return; }
       var g = r.gw && GW_NAME[r.gw] ? GW_NAME[r.gw].map(function (x) { return nm(x, l); }).join(' · ') : '';
       var sub = pa(MODE_NAME[r.mode], l) + (r.mode === 'air' ? ' · ' + ui('direct', l) : g ? ' · ' + ui('via', l) + ' ' + g : '');
       var hubs = r.path.filter(function (k) { return C[k]; }).map(function (k) { return nm(k, l); }).join(' — ');
       info.innerHTML = '<div class="rmap-od"><b>' + nm(state.from, l) + ' <i>→</i> ' + nm(state.to, l) + '</b><small>' + sub + '</small></div>'
         + '<div class="rmap-km">' + r.legs.filter(function (x) { return x.km > 0; }).map(function (x) { return '<span class="k-' + x.kind + '"><small>' + legLabel(r, x, l) + '</small><b>≈ ' + x.km.toLocaleString(loc) + ' ' + ui('km', l) + '</b></span>'; }).join('')
         + (r.legs.length > 1 ? '<span class="tot"><small>' + kmT('all', l) + '</small><b>≈ ' + r.km.toLocaleString(loc) + ' ' + ui('km', l) + '</b></span>' : '') + '</div>'
+        + (r.status === 'candidate' ? '<p class="rmap-path">' + kmT('candidate', l) + '</p>' : '')
         + '<button type="button" class="rmap-go">' + ui('calc', l) + '</button>' + rec(l)
         + (r.mode !== 'air' ? '<p class="rmap-path" title="' + hubs + '">' + kmT('via2', l) + ': ' + hubs + '</p>' : '');
     }
