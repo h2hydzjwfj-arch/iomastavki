@@ -132,8 +132,8 @@ function setup(app, ctx) {
     return !!(ca && ca === cb && pa && pb && pa === pb && (!ta || !tb || ta === tb));
   }
   function allAgents(d) {
-    const own = d.crmAgents.map(a => ({ ...a, own: true })), keys = new Set(own.map(agentKey));
-    const pub = pubAgents().filter(a => a && a.company && !keys.has(agentKey(a))).map(a => ({ id: 'pub' + a.id, company: a.company, contact: a.contact || '', phone: a.phone || '', email: a.email || '', site: a.site || '', modes: (a.modes || []).map(m => m === 'auto' ? 'road' : m), transport: a.transport || [], notes: a.notes || '', own: false }));
+    const own = d.crmAgents.map(a => ({ ...a, own: true }));
+    const pub = pubAgents().filter(a => a && a.company && !own.some(x => sameAgent(x, a))).map(a => ({ id: 'pub' + a.id, company: a.company, contact: a.contact || '', phone: a.phone || '', email: a.email || '', site: a.site || '', modes: (a.modes || []).map(m => m === 'auto' ? 'road' : m), transport: a.transport || [], notes: a.notes || '', own: false }));
     return own.concat(pub);
   }
 
