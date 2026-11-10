@@ -116,7 +116,7 @@
     var st = { step: 1, from: null, to: null, mode: null, plan: null };
     el.classList.add('rmap', 'jm', 'jm-g');
     el.innerHTML = '<div class="jm-top"><ol class="jm-steps"></ol><button type="button" class="jm-reset" hidden></button><div class="jm-sug" role="listbox" hidden></div></div>' +
-      '<div class="jm-stage"><canvas class="jm-cv" role="img"></canvas><div class="jm-hud" aria-live="polite"></div><div class="jm-cap" aria-live="polite"></div>' +
+      '<div class="jm-stage"><span class="jm-disclaimer">Схема маршрута · не live-трекинг</span><canvas class="jm-cv" role="img"></canvas><div class="jm-hud" aria-live="polite"></div><div class="jm-cap" aria-live="polite"></div>' +
       '<span class="jm-hint" aria-hidden="true"></span><button type="button" class="jm-skip" hidden></button></div><div class="jm-panel" aria-live="polite"></div>';
     var q = function (s) { return el.querySelector(s); };
     var stage = q('.jm-stage'), cv = q('.jm-cv'), ctx = cv.getContext('2d'), hud = q('.jm-hud'), cap = q('.jm-cap'), hint = q('.jm-hint'), skip = q('.jm-skip'),
@@ -307,7 +307,7 @@
       });
       var lbl = {}; pl.stages.forEach(function (s) { if (s.t === 'stop' && s.at) lbl[s.at] = 1; }); if (pl.stages[0]) lbl[st.from] = 1; lbl[st.to] = 1;
       labels(Object.keys(lbl), P);
-      if (story && story.veh) vehicle(story.veh, P);
+      // Не рисуем движущийся транспорт: положение груза не является live-данными.
     }
     // значок того, что происходит на остановке (погрузка, граница, порт, хаб)
     function badge(xy, ic, P) {
