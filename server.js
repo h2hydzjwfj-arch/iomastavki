@@ -46,10 +46,13 @@ app.use(['/api/rates/import', '/api/rates/import-text', '/api/agents/import'], i
 // контакты и ставки агентов, — только администратору.
 const cloud = require('./cloud').createCloud();
 // Лучшая ставка из базы для КП (тот же подбор, что и в /api/rates/recommend).
-function bestRate({ from, to, mode, distance }) {
+function bestRate({ from, to, mode, distance, incoterms }) {
   const db = ensureRateDb();
-  const m = db.records.map(r => ({ ...r, _score: routeScore(r, from, to, mode, Number.isFinite(distance) ? distance : null) }))
-    .filter(r => r._score > 0 && Number.isFinite(Number(r.rate)))
+  const wanted = String(incoterms || 'FOB').trim().toUpperCase();
+  const m = db.records.map(r => {
+    const adjusted = rateWithIncoterm(r, wanted);
+    return adjusted ? { ...adjusted, _score: routeScore(adjusted, from, to, mode, Number.isFinite(distance) ? distance : null) } : null;
+  }).filter(r => r && r._score > 0 && Number.isFinite(Number(r.rate)) && Number(r.rate) > 0)
     .sort((a, b) => b._score - a._score || new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
   return m[0] || null;
 }
