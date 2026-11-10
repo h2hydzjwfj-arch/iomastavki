@@ -420,7 +420,7 @@ function cityMatches(q,target){
    fields.forEach((f,i)=>{const n=normalize(f); if(n===x)score=Math.min(score,0); else if(n.startsWith(x))score=Math.min(score,1+i*.1); else if(n.includes(x))score=Math.min(score,3+i*.1); else {const d=editDistance(x,n); const limit=Math.max(1,Math.floor(Math.max(x.length,n.length)*.35)); if(d<=limit){score=Math.min(score,6+d);fuzzy=true; if(!correction||d<editDistance(x,normalize(correction)))correction=f;}}});
    if(fuzzy&&correction){c=[...c];c[8]={correction}}
    return {c,score};
- }).filter(o=>o.score<99).sort((a,b)=>a.score-b.score||a.c[0].localeCompare(b.c[0],'ru')).slice(0,20).map(o=>o.c)
+ }).filter(o=>o.score<99).sort((a,b)=>a.score-b.score||({cn:0,kr:1,in:2}[String(a.c[5]||'').toLowerCase()]??9)-({cn:0,kr:1,in:2}[String(b.c[5]||'').toLowerCase()]??9)||a.c[0].localeCompare(b.c[0],'ru')).slice(0,20).map(o=>o.c)
 }
 function renderSuggestions(box,list,input,target){
  box.innerHTML='';
