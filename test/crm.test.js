@@ -235,6 +235,14 @@ test('агенты: импорт базы, запрос ставок, ответ
   const csv = 'Компания;Виды транспорта;Email;Контакт;Телефон\nAir Star;Авиа;ops@airstar.example;Лиза;+86 1\nRail Go;ЖД, Авто;sales@railgo.example;Том;+86 2\nAir Star;Авиа;ops@airstar.example;Лиза Ван;+86 1\n';
   const im = await call('POST', '/api/crm/agents/import', {}, { file: { originalname: 'agents.csv', buffer: Buffer.from(csv) } });
   assert.equal(im.body.added, 2); assert.equal(im.body.updated, 1);
+  const manual = await call('POST', '/api/crm/agents', { company: 'IOMA Test Freight', contact: 'Roman Test', email: 'manual@ioma-test.example', phone: '+7 999 000-11-22', transport: 'Авто, ЖД' });
+  assert.equal(manual.status, 200); assert.ok(manual.body.item.id);
+  const duplicate = await call('POST', '/api/crm/agents', { company: 'IOMA Test Freight', contact: 'Roman Test', email: 'manual@ioma-test.example', phone: '+7 999 000-11-22' });
+  assert.equal(duplicate.status, 409);
+  const edited = await call('PATCH', '/api/crm/agents/' + manual.body.item.id, { contact: 'Roman Updated', notes: 'updated from test' });
+  assert.equal(edited.body.item.contact, 'Roman Updated');
+  const duplicateEdit = await call('PATCH', '/api/crm/agents/' + manual.body.item.id, { email: 'ops@airstar.example' });
+  assert.equal(duplicateEdit.status, 409);
   const all = await call('GET', '/api/crm/agents?mode=rail'); assert.ok(all.body.items.some(a => a.company === 'Rail Go') && all.body.items.some(a => a.company === 'Multiwell') && !all.body.items.some(a => a.company === 'Air Star'));
   const deal = (await call('POST', '/api/deals', { title: 'Станки', from: 'Иу', to: 'Москва', mode: 'rail', weight: 8000, volume: 30, funnel: 'Наш контракт' })).body.item;
   const draft = await call('GET', '/api/deals/' + deal.id + '/rq/draft'); assert.match(draft.body.text, /Иу → Москва/);
