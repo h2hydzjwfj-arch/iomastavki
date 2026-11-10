@@ -369,45 +369,110 @@
 
   /* =================================================================== 7. ОТСЛЕДИТЬ ГРУЗ */
   var KEYRU = { station: 'Станция', station_name: 'Станция', dislocation_station: 'Станция дислокации', operation: 'Операция', operation_name: 'Операция', date: 'Дата', datetime: 'Дата и время', wagon: 'Вагон', wagon_number: 'Вагон', departure_station: 'Станция отправления', destination_station: 'Станция назначения', distance_left: 'Осталось, км', status: 'Статус' };
+  var BL_LINES = {
+    maersk: ['Maersk', 'https://www.maersk.com/tracking/'],
+    msc: ['MSC', 'https://www.msc.com/en/track-a-shipment'],
+    cosco: ['COSCO', 'https://elines.coscoshipping.com/ebusiness/cargoTracking'],
+    cma: ['CMA CGM', 'https://www.cma-cgm.com/ebusiness/tracking'],
+    hapag: ['Hapag-Lloyd', 'https://www.hapag-lloyd.com/en/online-business/track/track-by-container-solution.html'],
+    one: ['ONE', 'https://ecomm.one-line.com/one-ecom/manage-shipment/cargo-tracking'],
+    evergreen: ['Evergreen', 'https://www.shipmentlink.com/'],
+    zim: ['ZIM', 'https://www.zim.com/tools/track-a-shipment'],
+    fesco: ['FESCO', 'https://www.fesco.ru/'],
+    sitc: ['SITC', 'https://www.sitcline.com/'],
+    pil: ['PIL', 'https://www.pilship.com/'],
+    yangming: ['Yang Ming', 'https://www.yangming.com/']
+  };
   function renderTrack(root) {
-    var s = store('track') || { t: 'cont' };
-    root.innerHTML = head('Инструменты', 'Отследить груз', 'Номер контейнера или авианакладной — проверим номер, найдём линию и покажем, где груз сейчас.') +
-      '<div class="tl-grid"><form class="tl-card tl-form" novalidate><div class="tl-seg" role="tablist"><button type="button" role="tab" data-t="cont">Контейнер · море и ЖД</button><button type="button" role="tab" data-t="awb">Авианакладная · SVO</button></div>' +
-      field('Номер', '<input data-k="no" autocomplete="off" spellcheck="false" placeholder="FESU5011022">', 'tl-wide') + '<button class="tl-go" type="submit">Отследить</button><div class="tl-hist"></div></form>' +
-      '<div class="tl-card tl-out" aria-live="polite"><p class="tl-empty">Контейнер: 4 буквы и 7 цифр. Авианакладная: 11 цифр, например 555-12345675.</p></div></div>';
-    var f = $('form', root), out = $('.tl-out', root), inp = $('[data-k="no"]', f), t = s.t, hist = $('.tl-hist', f);
-    function seg() { $$('[data-t]', f).forEach(function (b) { b.classList.toggle('on', b.dataset.t === t); b.setAttribute('aria-selected', b.dataset.t === t); }); inp.placeholder = t === 'awb' ? '555-12345675' : 'FESU5011022'; }
-    function drawHist() { var h = (store('trackHist') || []).filter(function (x) { return x.t === t; }); hist.innerHTML = h.length ? '<small>Недавние</small>' + h.map(function (x) { return '<button type="button" class="chip" data-no="' + esc(x.n) + '">' + esc(x.n) + '</button>'; }).join('') : ''; }
-    seg(); drawHist();
-    f.addEventListener('click', function (e) { var b = e.target.closest('[data-t]'); if (b) { t = b.dataset.t; store('track', { t: t }); seg(); drawHist(); } var n = e.target.closest('[data-no]'); if (n) { inp.value = n.dataset.no; f.requestSubmit ? f.requestSubmit() : f.dispatchEvent(new Event('submit')); } });
-    function remember(n) { var h = (store('trackHist') || []).filter(function (x) { return x.n !== n; }); h.unshift({ t: t, n: n }); store('trackHist', h.slice(0, 8)); drawHist(); }
+    var saved = store('track') || { t: 'cont', line: 'maersk' };
+    var t = saved.t || 'cont', line = saved.line || 'maersk';
+    root.innerHTML = head('Инструменты', 'Отследить груз', 'Один экран для контейнера, коносамента B/L, номера вагона и авианакладной. Живые данные показываем там, где источник их действительно предоставляет.') +
+      '<div class="tl-grid"><form class="tl-card tl-form" novalidate><div class="tl-seg" role="tablist" aria-label="Тип номера">' +
+      '<button type="button" role="tab" data-t="cont">Контейнер</button><button type="button" role="tab" data-t="bl">Коносамент B/L</button><button type="button" role="tab" data-t="wagon">Вагон</button><button type="button" role="tab" data-t="awb">Авианакладная</button></div>' +
+      '<div class="tl-bl-line" hidden>' + field('Морская линия', '<select data-k="line"><option value="maersk">Maersk</option><option value="msc">MSC</option><option value="cosco">COSCO</option><option value="cma">CMA CGM</option><option value="hapag">Hapag-Lloyd</option><option value="one">ONE</option><option value="evergreen">Evergreen</option><option value="zim">ZIM</option><option value="fesco">FESCO</option><option value="sitc">SITC</option><option value="pil">PIL</option><option value="yangming">Yang Ming</option></select>', 'tl-wide') + '</div>' +
+      field('Номер', '<input data-k="no" autocomplete="off" spellcheck="false" placeholder="FESU5011022">', 'tl-wide') +
+      '<button class="tl-go" type="submit">Найти отправление</button><div class="tl-hist"></div>' +
+      '<p class="tl-src">Контейнер и авианакладная проверяются через доступные источники. Для B/L и вагона откроется официальный или специализированный сервис; наличие данных и доступ зависят от перевозчика.</p></form>' +
+      '<div class="tl-card tl-out" aria-live="polite"><p class="tl-empty">Выберите тип номера и введите идентификатор отправления.</p></div></div>';
+    var f = $('form', root), out = $('.tl-out', root), inp = $('[data-k="no"]', f), hist = $('.tl-hist', f), lineSel = $('[data-k="line"]', f), lineWrap = $('.tl-bl-line', f);
+    function seg() {
+      $$('[data-t]', f).forEach(function (b) { b.classList.toggle('on', b.dataset.t === t); b.setAttribute('aria-selected', b.dataset.t === t ? 'true' : 'false'); });
+      lineWrap.hidden = t !== 'bl';
+      inp.placeholder = t === 'awb' ? '555-12345675' : t === 'wagon' ? '8 цифр, например 12345678' : t === 'bl' ? 'Номер коносамента / B/L' : 'FESU5011022';
+      inp.inputMode = t === 'wagon' || t === 'awb' ? 'numeric' : 'text';
+      lineSel.value = line;
+      store('track', { t: t, line: line });
+    }
+    function drawHist() {
+      var h = (store('trackHist') || []).filter(function (x) { return x.t === t; });
+      hist.innerHTML = h.length ? '<small>Недавние запросы</small>' + h.map(function (x) { return '<button type="button" class="chip" data-no="' + esc(x.n) + '">' + esc(x.n) + '</button>'; }).join('') : '';
+    }
+    function remember(n) {
+      var h = (store('trackHist') || []).filter(function (x) { return !(x.n === n && x.t === t); });
+      h.unshift({ t: t, n: n }); store('trackHist', h.slice(0, 12)); drawHist();
+    }
+    function providerButton(label, url, number) {
+      return '<div class="tl-acts"><button type="button" class="tl-btn" data-provider-url="' + esc(url) + '" data-provider-no="' + esc(number) + '">' + esc(label) + ' ↗</button>' + copyBtn(number) + '</div>';
+    }
     function table(rows) {
-      if (!rows.length) return '';
+      if (!rows || !rows.length) return '';
       var keys = Object.keys(rows[0]).filter(function (k) { return rows.some(function (r) { return r[k] != null && typeof r[k] !== 'object' && String(r[k]).trim() !== ''; }); }).slice(0, 7);
       return '<div class="tl-scroll"><table class="tl-tbl"><thead><tr>' + keys.map(function (k) { return '<th>' + esc(KEYRU[k] || k.replace(/_/g, ' ')) + '</th>'; }).join('') + '</tr></thead><tbody>' + rows.map(function (r) { return '<tr>' + keys.map(function (k) { return '<td>' + esc(r[k]) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
     }
+    seg(); drawHist();
+    f.addEventListener('change', function (e) { if (e.target === lineSel) { line = lineSel.value; store('track', { t: t, line: line }); } });
+    f.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-t]');
+      if (b) { t = b.dataset.t; store('track', { t: t, line: line }); seg(); drawHist(); out.innerHTML = '<p class="tl-empty">Введите номер и нажмите «Найти отправление».</p>'; }
+      var n = e.target.closest('[data-no]');
+      if (n) { inp.value = n.dataset.no; f.requestSubmit ? f.requestSubmit() : f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }
+      var p = e.target.closest('[data-provider-url]');
+      if (p) { var url = p.dataset.providerUrl, no = p.dataset.providerNo || inp.value.trim(); if (navigator.clipboard) navigator.clipboard.writeText(no).catch(function () {}); window.open(url, '_blank', 'noopener'); }
+    });
     f.addEventListener('submit', function (e) {
-      e.preventDefault(); var v = inp.value.trim(); if (!v) return;
-      var btn = $('.tl-go', f); busy(btn, true); out.innerHTML = '<p class="tl-load">Ищем…</p>';
+      e.preventDefault();
+      var v = inp.value.trim(); if (!v) { out.innerHTML = '<p class="tl-err">Введите номер для поиска.</p>'; inp.focus(); return; }
+      var btn = $('.tl-go', f); busy(btn, true); out.innerHTML = '<p class="tl-load">Проверяем номер…</p>';
+      if (t === 'bl') {
+        if (v.length < 5) { busy(btn, false); out.innerHTML = '<p class="tl-err">Проверьте номер коносамента B/L.</p>'; return; }
+        line = lineSel.value || line; store('track', { t: t, line: line }); remember(v);
+        var chosen = BL_LINES[line] || BL_LINES.maersk;
+        out.innerHTML = '<div class="tl-big"><b>' + esc(v) + '</b><span>Коносамент · ' + esc(chosen[0]) + '</span></div><p class="tl-note">Откроется система выбранной морской линии. Если номер не подставится автоматически, вставьте его в поле поиска на сайте перевозчика. События и ETA предоставляет сама линия.</p>' + providerButton('Открыть отслеживание ' + chosen[0], chosen[1], v);
+        busy(btn, false); return;
+      }
+      if (t === 'wagon') {
+        var wn = v.replace(/\D/g, '');
+        if (!/^\d{8}$/.test(wn)) { busy(btn, false); out.innerHTML = '<p class="tl-err">Номер вагона должен содержать 8 цифр.</p>'; return; }
+        remember(wn); busy(btn, false);
+        out.innerHTML = '<div class="tl-big"><b>' + esc(wn) + '</b><span>Железнодорожный вагон</span></div><p class="tl-note">Для поиска по номеру вагона используйте специализированный сервис. Часть сервисов требует регистрации или оплаты; мы не показываем выдуманную дислокацию и не выдаём ссылку за live-данные.</p>' +
+          providerButton('Открыть поиск вагонов · Контейнеры.ру', 'https://containers.ru/project/tracking/', wn) +
+          providerButton('Альтернативный поиск · Pacific Trans', 'https://www.pacifictrans.ru/dislokatsiya', wn);
+        return;
+      }
       if (t === 'awb') return api('/api/tools/awb?no=' + encodeURIComponent(v)).then(function (r) {
         busy(btn, false); if (!r.ok) { out.innerHTML = '<p class="tl-err">' + esc(r.error) + '</p>'; return; } remember(r.awb);
         var tabs = (r.tables || []).filter(function (tb) { return tb.length > 1; });
         out.innerHTML = '<div class="tl-big"><b>' + esc(r.awb) + '</b><span>Шереметьево-Карго (SVO-2)' + (r.checkOk ? '' : ' · контрольная цифра не сходится — проверьте номер') + '</span></div>' +
           (tabs.length ? tabs.map(function (tb) { return '<div class="tl-scroll"><table class="tl-tbl"><tbody>' + tb.map(function (row, i) { return '<tr>' + row.map(function (c) { return (i ? '<td>' : '<th>') + esc(c) + (i ? '</td>' : '</th>'); }).join('') + '</tr>'; }).join('') + '</tbody></table></div>'; }).join('') : '<p class="tl-empty">Терминал пока не знает эту накладную.</p>') +
-          '<p class="tl-src">Данные Шереметьево-Карго. Если груз прилетает в SVO-1 (Москва Карго), статус смотрите у Москва Карго — у них нет открытого доступа без кабинета.</p>';
-      });
-      api('/api/tools/container?no=' + encodeURIComponent(v)).then(function (r) {
-        busy(btn, false); if (!r.ok) { out.innerHTML = '<p class="tl-err">' + esc(r.error) + '</p>'; return; } remember(r.number);
-        var o = r.owner || {}, kind = { line: 'морская линия', leasing: 'лизинговая компания — линия по номеру не определяется', rail: 'железнодорожный оператор' }[o.kind] || 'владелец не найден в нашем справочнике';
-        var h = '<div class="tl-big"><b>' + esc(r.number.slice(0, 4) + ' ' + r.number.slice(4, 10) + ' ' + r.number.slice(10)) + '</b><span>' + (r.valid ? ICON.ok + ' номер верный' : ICON.warn + ' контрольная цифра должна быть ' + r.checkDigit + ' — проверьте номер') + '</span></div>';
-        h += '<dl class="tl-dl"><dt>Владелец</dt><dd>' + esc(o.name || o.code) + '</dd><dt>Кто это</dt><dd>' + esc(kind) + '</dd></dl>';
-        if (r.rail && r.rail.ok && r.rail.rows && r.rail.rows.length) h += '<h3 class="tl-sub">По железной дороге (ТрансКонтейнер)</h3>' + table(r.rail.rows);
-        else if (r.rail && r.rail.ok) h += '<p class="tl-note">По ЖД в системе ТрансКонтейнера этого контейнера сейчас нет: он в море, в порту или едет не по их перевозке.</p>';
-        else if (r.rail) h += '<p class="tl-note">ЖД-дислокация сейчас недоступна: ' + esc(r.rail.error) + '</p>';
-        if (o.url) h += '<div class="tl-acts"><a class="tl-btn" href="' + esc(o.url) + '" target="_blank" rel="noopener">Открыть отслеживание ' + esc(o.name) + ' ↗</a></div><p class="tl-src">Морские линии показывают путь судна только у себя на сайте — откроем нужную страницу, номер уже скопирован.</p>';
-        out.innerHTML = h;
-        if (o.url && navigator.clipboard) navigator.clipboard.writeText(r.number).catch(function () {});
-      });
+          '<p class="tl-src">Данные Шереметьево-Карго. Для SVO-1 (Москва Карго) может потребоваться отдельный кабинет перевозчика.</p>';
+      }).catch(function (err) { busy(btn, false); out.innerHTML = '<p class="tl-err">' + esc(err.message) + '</p>'; });
+      if (t === 'cont') {
+        var no = v.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (!/^[A-Z]{3}[UJZ]\d{7}$/.test(no)) { busy(btn, false); out.innerHTML = '<p class="tl-err">Номер контейнера: 4 буквы и 7 цифр, например FESU5011022.</p>'; return; }
+        return api('/api/tools/container?no=' + encodeURIComponent(no)).then(function (r) {
+          busy(btn, false); if (!r.ok) { out.innerHTML = '<p class="tl-err">' + esc(r.error) + '</p>'; return; } remember(r.number);
+          var o = r.owner || {}, kind = { line: 'морская линия', leasing: 'лизинговая компания — линия по номеру не определяется', rail: 'железнодорожный оператор' }[o.kind] || 'владелец не найден в нашем справочнике';
+          var h = '<div class="tl-big"><b>' + esc(r.number.slice(0, 4) + ' ' + r.number.slice(4, 10) + ' ' + r.number.slice(10)) + '</b><span>' + (r.valid ? ICON.ok + ' номер верный' : ICON.warn + ' контрольная цифра должна быть ' + r.checkDigit + ' — проверьте номер') + '</span></div>';
+          h += '<dl class="tl-dl"><dt>Владелец</dt><dd>' + esc(o.name || o.code) + '</dd><dt>Кто это</dt><dd>' + esc(kind) + '</dd></dl>';
+          if (r.rail && r.rail.ok && r.rail.rows && r.rail.rows.length) h += '<h3 class="tl-sub">По железной дороге (ТрансКонтейнер)</h3>' + table(r.rail.rows);
+          else if (r.rail && r.rail.ok) h += '<p class="tl-note">В системе ТрансКонтейнера контейнер сейчас не найден: он может быть в море, порту или перевозиться другим оператором.</p>';
+          else if (r.rail) h += '<p class="tl-note">ЖД-дислокация сейчас недоступна: ' + esc(r.rail.error) + '</p>';
+          if (o.url) h += providerButton('Открыть отслеживание ' + (o.name || 'линии'), o.url, r.number);
+          else h += providerButton('Открыть поиск контейнера', 'https://containers.ru/project/tracking/', r.number);
+          h += '<p class="tl-src">Проверка номера и данные ЖД — доступные ответы ТрансКонтейнера. Морские события предоставляет линия-владелец контейнера.</p>';
+          out.innerHTML = h;
+        }).catch(function (err) { busy(btn, false); out.innerHTML = '<p class="tl-err">' + esc(err.message) + '</p>'; });
+      }
     });
   }
 
