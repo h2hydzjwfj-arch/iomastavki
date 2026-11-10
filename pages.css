@@ -37,3 +37,29 @@ body:not(.manual-dark):not(.night) .directory-search{border-color:rgba(10,18,48,
 html:root body.view-open .ccur{display:none!important}
 html.has-ccur body.night.view-open{cursor:auto}
 html.has-ccur body.night.view-open :is(a,button,[role=button],label,summary,.k,.ncard-a){cursor:pointer}
+
+
+/* На телефонах разделы должны открываться поверх страницы.
+   В общем потоке после скрытия главной сохранялся scrollY, из-за чего
+   открытый раздел оказывался вне видимой области, а касания попадали в фон. */
+@media (max-width: 900px) {
+  html:root body .view-layer.open {
+    position: fixed !important;
+    inset: var(--hdr, 112px) 0 0 !important;
+    z-index: 1490 !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    pointer-events: auto !important;
+    transform: none !important;
+  }
+  html:root body .view-layer.open > .pg-shell {
+    min-height: 100% !important;
+  }
+}
