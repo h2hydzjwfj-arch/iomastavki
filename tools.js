@@ -391,7 +391,7 @@
       '<button type="button" role="tab" data-t="cont">Контейнер</button><button type="button" role="tab" data-t="bl">Коносамент B/L</button><button type="button" role="tab" data-t="wagon">Вагон</button><button type="button" role="tab" data-t="awb">Авианакладная</button></div>' +
       field('Номер', '<input data-k="no" autocomplete="off" spellcheck="false" placeholder="FESU5011022">', 'tl-wide') +
       '<button class="tl-go" type="submit">Найти отправление</button><div class="tl-hist"></div>' +
-      '<p class="tl-src">Контейнер и авианакладная проверяются через доступные источники. Для B/L и вагона откроется официальный или специализированный сервис; наличие данных и доступ зависят от перевозчика.</p></form>' +
+      '<p class="tl-src">Контейнеры и B/L проверяются через бесплатный морской источник. Для вагона и авианакладной используются доступные профильные системы; наличие данных зависит от перевозчика.</p></form>' +
       '<div class="tl-card tl-out" aria-live="polite"><p class="tl-empty">Выберите тип номера и введите идентификатор отправления.</p></div></div>';
     var f = $('form', root), out = $('.tl-out', root), inp = $('[data-k="no"]', f), hist = $('.tl-hist', f);
     function seg() {
