@@ -36,7 +36,10 @@ jobs:
           node test/ui.js
       - name: Наглядная проверка (видео + переписка бота)
         if: always()
-        run: node test/showcase.js
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.48.2
+          npx playwright install --with-deps chromium
+          node test/showcase.js
       - name: Отчёт в ветку checkup-report
         if: always() && github.event_name != 'pull_request'
         run: |
