@@ -1,0 +1,56 @@
+/* Responsive layout system — phone, tablet, laptop and desktop */
+:root { --ioma-safe-top: env(safe-area-inset-top, 0px); --ioma-safe-bottom: env(safe-area-inset-bottom, 0px); }
+html { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+body { padding-bottom:var(--ioma-safe-bottom); }
+button,input,select,textarea,a { touch-action:manipulation; }
+button,[role="button"],[role="menuitem"] { min-height:42px; }
+.sg { position:relative; }
+.sg-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; }
+.sg-menu { display:none; position:absolute; z-index:12000; top:calc(100% + 8px); left:0; min-width:260px; max-width:min(360px,calc(100vw - 24px)); max-height:min(70vh,560px); overflow:auto; overscroll-behavior:contain; padding:8px; border:1px solid var(--v-bd,rgba(0,0,0,.12)); border-radius:16px; background:var(--v-card,#fff); color:var(--v-ink,#17202a); box-shadow:0 18px 48px rgba(15,30,45,.2); }
+.sg.is-open>.sg-menu { display:grid; gap:4px; }
+.sg-menu>button { width:100%; min-height:48px; display:grid; gap:3px; text-align:left; align-content:center; padding:9px 12px; border:0; border-radius:10px; background:transparent; color:inherit; cursor:pointer; }
+.sg-menu>button:hover,.sg-menu>button:focus-visible { background:color-mix(in srgb,var(--v-acc,#267d88) 11%,transparent); outline:none; }
+.sg-menu small { opacity:.72; line-height:1.35; white-space:normal; }
+.sg-wide { min-width:290px; }
+.view-layer { overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; padding-top:max(12px,var(--ioma-safe-top)); padding-bottom:max(20px,var(--ioma-safe-bottom)); }
+.view-layer .pg-shell { width:min(100% - 24px,1200px); margin-inline:auto; }
+img,video,iframe,canvas,svg { max-width:100%; }
+input,select,textarea { max-width:100%; font-size:16px; }
+@media(max-width:900px) {
+ .v3-nav { max-width:100%; overflow-x:auto; overflow-y:visible; -webkit-overflow-scrolling:touch; scrollbar-width:none; white-space:nowrap; gap:6px; padding-inline:12px; }
+ .v3-nav::-webkit-scrollbar { display:none; }
+ .sg { flex:0 0 auto; }
+ .sg-menu { position:fixed; left:12px; right:12px; top:auto; width:auto; min-width:0; max-width:none; max-height:min(68dvh,560px); }
+ .sg-wide { min-width:0; }
+ .view-layer .pg-shell { width:calc(100% - 20px); }
+}
+@media(max-width:600px) {
+ :root { --rail-size:0px; --rail-gap:0px; }
+ body { overflow-x:hidden; }
+ .v3-nav { gap:5px; padding:6px 10px; }
+ .v3-nav>button,.sg-btn { min-height:44px; padding:9px 12px; font-size:14px; }
+ .sg-menu { left:8px; right:8px; border-radius:14px; }
+ .sg-menu>button { min-height:54px; padding:10px 12px; }
+ .view-layer { padding-left:0; padding-right:0; }
+ .view-layer .pg-shell { width:calc(100% - 16px); padding-left:0; padding-right:0; }
+ .view-layer .pg-x { position:sticky; top:max(6px,var(--ioma-safe-top)); z-index:5; margin-left:auto; }
+ .tl-grid,.cv-grid,.crm-grid,.v3p-grid { grid-template-columns:minmax(0,1fr)!important; }
+ .tl-card,.crm-card,.v3p-card,.k { min-width:0; }
+ .tl-seg { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .tl-seg button { min-height:46px; }
+ .tl-scroll,.table-wrap,.crm-table-wrap { max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+ .tl-tbl { min-width:520px; }
+ .cv-set-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .cv-set-head { flex-wrap:wrap; }
+ .form-grid,.calc-grid,.customs-result-grid { grid-template-columns:minmax(0,1fr)!important; }
+ .form-grid>*,.calc-grid>* { min-width:0; }
+ .tl-go,.calculate,.v3p-cta,.v3p-savebtn { min-height:48px; }
+ .modal,.dialog,.popup { max-width:calc(100vw - 16px); }
+}
+@media(min-width:601px) and (max-width:1024px) {
+ .view-layer .pg-shell { width:calc(100% - 32px); }
+ .tl-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .crm-grid,.v3p-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(min-width:1025px) { .view-layer .pg-shell { width:min(100% - 48px,1280px); } }
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; transition-duration:.01ms!important; } }
