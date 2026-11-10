@@ -14,11 +14,11 @@
     s1: ['Откуда', 'From', '起点', 'Von', 'Départ', 'Nereden'], s2: ['Куда', 'To', '终点', 'Nach', 'Arrivée', 'Nereye'], s3: ['Транспорт', 'Transport', '运输方式', 'Transport', 'Transport', 'Taşıma'],
     phFrom: ['Город в Китае или Азии', 'City in China or Asia', '中国或亚洲城市', 'Stadt in China oder Asien', 'Ville en Chine ou en Asie', 'Çin’de veya Asya’da şehir'],
     phTo: ['Город в России', 'City in Russia', '俄罗斯城市', 'Stadt in Russland', 'Ville en Russie', 'Rusya’da şehir'],
-    askFrom: ['Откуда везём? Напишите город или нажмите его на глобусе', 'Where from? Type a city or tap it on the globe', '从哪里发货？输入城市或在地球上点击', 'Woher? Stadt eingeben oder auf dem Globus antippen', 'D’où ? Saisissez une ville ou touchez-la sur le globe', 'Nereden? Şehri yazın veya küre üzerinde dokunun'],
-    askTo: ['Куда везём? Напишите город в России или нажмите его на глобусе', 'Where to? Type a city in Russia or tap it on the globe', '运往哪里？输入俄罗斯城市或在地球上点击', 'Wohin? Stadt in Russland eingeben oder antippen', 'Vers où ? Saisissez une ville en Russie ou touchez-la', 'Nereye? Rusya’da bir şehir yazın veya dokunun'],
+    askFrom: ['Откуда везём? Напишите город или нажмите его на карте', 'Where from? Type a city or tap it on the map', '从哪里发货？输入城市或在地图上点击', 'Woher? Stadt eingeben oder auf der Karte antippen', 'D’où ? Saisissez une ville ou touchez-la sur la carte', 'Nereden? Şehri yazın veya küre üzerinde dokunun'],
+    askTo: ['Куда везём? Напишите город в России или нажмите его на карте', 'Where to? Type a city in Russia or tap it on the map', '运往哪里？输入俄罗斯城市或在地图上点击', 'Wohin? Stadt in Russland eingeben oder antippen', 'Vers où ? Saisissez une ville en Russie ou touchez-la', 'Nereye? Rusya’da bir şehir yazın veya dokunun'],
     askMode: ['Каким транспортом предпочитаете?', 'Which transport do you prefer?', '您希望选择哪种运输方式？', 'Welches Transportmittel bevorzugen Sie?', 'Quel transport préférez-vous ?', 'Hangi taşımayı tercih edersiniz?'],
     none: ['Нет в списке — выберите ближайший крупный город', 'Not in the list — choose the nearest major city', '列表中没有——请选择最近的大城市', 'Nicht in der Liste — wählen Sie die nächste Großstadt', 'Absente de la liste — choisissez la grande ville la plus proche', 'Listede yok — en yakın büyük şehri seçin'],
-    drag: ['Глобус можно крутить', 'Drag to turn the globe', '可拖动旋转地球', 'Globus lässt sich drehen', 'Faites tourner le globe', 'Küreyi çevirebilirsiniz'],
+    drag: ['Карту можно перемещать', 'Drag to move the map', '可拖动地图', 'Karte lässt sich verschieben', 'Déplacez la carte', 'Haritayı sürükleyebilirsiniz'],
     rec: ['Рекомендуем', 'Recommended', '推荐', 'Empfohlen', 'Recommandé', 'Önerilen'], no: ['нельзя', 'not possible', '不可行', 'nicht möglich', 'impossible', 'mümkün değil'],
     skip: ['Пропустить', 'Skip', '跳过', 'Überspringen', 'Passer', 'Geç'], again: ['Новый маршрут', 'New route', '新路线', 'Neue Route', 'Nouvel itinéraire', 'Yeni rota'],
     other: ['Другой транспорт', 'Other transport', '其他运输方式', 'Anderer Transport', 'Autre transport', 'Başka taşıma'], calc: ['Рассчитать ставку', 'Get a rate', '计算运费', 'Preis berechnen', 'Calculer le tarif', 'Fiyat hesapla'],
@@ -112,7 +112,7 @@
   function mount(el, opts) {
     opts = opts || {};
     var d3 = window.d3, R = window.IOMA_RMAP, G = R.geo;
-    if (!d3 || !d3.geoOrthographic) { el.textContent = ''; return { state: {}, setFrom: function () {}, setTo: function () {}, setMode: function () {}, stopAuto: function () {} }; }
+    if (!d3 || !d3.geoMercator) { el.textContent = ''; return { state: {}, setFrom: function () {}, setTo: function () {}, setMode: function () {}, stopAuto: function () {} }; }
     var st = { step: 1, from: null, to: null, mode: null, plan: null };
     el.classList.add('rmap', 'jm', 'jm-g');
     el.innerHTML = '<div class="jm-top"><ol class="jm-steps"></ol><button type="button" class="jm-reset" hidden></button><div class="jm-sug" role="listbox" hidden></div></div>' +
@@ -239,15 +239,15 @@
     // ---------- камера и глобус
     var W = 0, H = 0, DPR = 1, R0 = 100;
     var cam = { lon: 92, lat: 42, g: 0, k: 1.12 }, fly = null, auto = !reduce, idleAt = 0, inertia = null, drag = null, hover = null, dirty = true, raf = 0, visible = true;
-    var proj = d3.geoOrthographic().clipAngle(90).precision(0.4), path = d3.geoPath(proj, ctx), grat = d3.geoGraticule10();
+    var proj = d3.geoMercator().precision(0.4), path = d3.geoPath(proj, ctx), grat = d3.geoGraticule10();
     // в рассказе сверху полоса пути, снизу подпись этапа — глобус кадрируем в просвете между ними
     function area() { return st.step === 4 ? [W < 560 ? 70 : 58, H - (W < 560 ? 96 : 84)] : [0, H]; }
     function cy() { var a = area(); return (a[0] + a[1]) / 2; }
-    function setProj(c) { c = c || cam; proj.rotate([-c.lon, -c.lat, c.g]).scale(R0 * c.k).translate([W / 2, cy()]); }
-    function visibleP(p) { return d3.geoDistance(p, [cam.lon, cam.lat]) < Math.PI / 2 - 0.02; }
+    function setProj(c) { c = c || cam; proj.rotate([-c.lon, 0, 0]).scale(R0 * c.k).translate([W / 2, cy()]); }
+    function visibleP(p) { return !!p && isFinite(p[0]) && isFinite(p[1]) && Math.abs(p[1]) < 84; }
     function size() {
       var r = stage.getBoundingClientRect(); if (!r.width || !r.height) return; DPR = Math.min(2, window.devicePixelRatio || 1);
-      W = r.width; H = r.height; cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); R0 = Math.min(W, H) * 0.46; dirty = true; wake();
+      W = r.width; H = r.height; cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); R0 = Math.min(W / (2 * Math.PI), Math.max(80, H - 24) / 3.2) * 0.94; dirty = true; wake();
     }
     // рамка: какие центр и приближение покажут все точки
     function frame(pts, pad, gm) {
@@ -281,16 +281,11 @@
     function draw() {
       if (!W) return; var P = pal(), Ld = land(); setProj(); placed = [];
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.clearRect(0, 0, W, H);
-      var X = W / 2, Y = cy(), r = R0 * cam.k;
-      if (P.star !== 'none') { ctx.fillStyle = P.star; STARS.forEach(function (s) { ctx.globalAlpha = s[3]; ctx.beginPath(); ctx.arc(s[0] * W, s[1] * H, s[2], 0, 6.283); ctx.fill(); }); ctx.globalAlpha = 1; }
-      var gl = ctx.createRadialGradient(X, Y, r * 0.96, X, Y, r * 1.12); gl.addColorStop(0, P.glow); gl.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(X, Y, r * 1.12, 0, 6.283); ctx.fill();
-      var sg = ctx.createRadialGradient(X - r * 0.35, Y - r * 0.4, r * 0.1, X, Y, r * 1.05); sg.addColorStop(0, P.sea1); sg.addColorStop(1, P.sea2);
-      ctx.beginPath(); path({ type: 'Sphere' }); ctx.fillStyle = sg; ctx.fill();
-      ctx.beginPath(); path(grat); ctx.strokeStyle = P.grat; ctx.lineWidth = 0.6; ctx.stroke();
+      ctx.fillStyle = P.sea2; ctx.fillRect(0, 0, W, H);
+      ctx.beginPath(); path(grat); ctx.strokeStyle = P.grat; ctx.lineWidth = 0.7; ctx.stroke();
       [['far', P.far], ['near', P.near], ['hot', P.hot], ['focus', P.focus]].forEach(function (x) { if (!Ld[x[0]]) return; ctx.beginPath(); path(Ld[x[0]]); ctx.fillStyle = x[1]; ctx.fill(); });
       if (Ld.lakes) { ctx.beginPath(); path(Ld.lakes); ctx.fillStyle = P.lake; ctx.fill(); }
       if (Ld.hot) { ctx.beginPath(); path(Ld.hot); path(Ld.focus); ctx.strokeStyle = P.line; ctx.lineWidth = 0.7; ctx.stroke(); }
-      var sh = ctx.createRadialGradient(X - r * 0.3, Y - r * 0.35, r * 0.5, X, Y, r); sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, P.shade); ctx.beginPath(); path({ type: 'Sphere' }); ctx.fillStyle = sh; ctx.fill();
       drawRoute(P); drawDots(P);
     }
     function lineTo(L, upto, P, color, width, dash) {
