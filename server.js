@@ -52,7 +52,7 @@ function bestRate({ from, to, mode, distance, incoterms }) {
   const m = db.records.map(r => {
     const adjusted = rateWithIncoterm(r, wanted);
     return adjusted ? { ...adjusted, _score: routeScore(adjusted, from, to, mode, Number.isFinite(distance) ? distance : null) } : null;
-  }).filter(r => r && r._score > 0 && Number.isFinite(Number(r.rate)) && Number(r.rate) > 0)
+  }).filter(r => r && r._score > 0 && rateRouteMatches(r, from, to, mode) && Number.isFinite(Number(r.rate)) && Number(r.rate) > 0)
     .sort((a, b) => b._score - a._score || new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
   return m[0] || null;
 }
@@ -86,6 +86,34 @@ function ensureRateDb() {
   return { version: 2, updatedAt: null, records };
 }
 function normalizeText(s='') { return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+const RATE_CITY_ALIASES = Object.freeze({
+  'шанхай': 'shanghai', '上海': 'shanghai', 'shanghai': 'shanghai',
+  'циндао': 'qingdao', '青岛': 'qingdao', 'qingdao': 'qingdao',
+  'нинбо': 'ningbo', '宁波': 'ningbo', 'ningbo': 'ningbo',
+  'наньша': 'nansha', '南沙': 'nansha', 'nansha': 'nansha',
+  'сямэнь': 'xiamen', '厦门': 'xiamen', 'xiamen': 'xiamen',
+  'москва': 'moscow', '莫斯科': 'moscow', 'moscow': 'moscow',
+  'санкт-петербург': 'saint petersburg', 'saint petersburg': 'saint petersburg',
+  'st petersburg': 'saint petersburg', '圣彼得堡': 'saint petersburg',
+  'екатеринбург': 'yekaterinburg', 'yekaterinburg': 'yekaterinburg', '叶卡捷琳堡': 'yekaterinburg',
+  'новосибирск': 'novosibirsk', 'novosibirsk': 'novosibirsk', '新西伯利亚': 'novosibirsk',
+  'минск': 'minsk', 'minsk': 'minsk', '明斯克': 'minsk'
+});
+function canonicalRateCity(value) {
+  const s = normalizeText(value).split(/[;,]/, 1)[0].trim().replace(/\s+/g, ' ');
+  return RATE_CITY_ALIASES[s] || s;
+}
+function canonicalRateMode(value) {
+  const s = normalizeText(value);
+  return s === 'auto' || s === 'road' ? 'road' : s;
+}
+function rateRouteMatches(record, from, to, mode) {
+  return !!String(from || '').trim() && !!String(to || '').trim() &&
+    canonicalRateCity(record.from) === canonicalRateCity(from) &&
+    canonicalRateCity(record.to) === canonicalRateCity(to) &&
+    (!mode || canonicalRateMode(record.mode) === canonicalRateMode(mode));
+}
+
 function rateWithIncoterm(record, requested) {
   if (!record || record.rate == null || !Number.isFinite(Number(record.rate)) || Number(record.rate) <= 0) return null;
   const wanted = String(requested || 'FOB').trim().toUpperCase();
@@ -589,7 +617,7 @@ app.get('/api/agents', (req,res) => { try { const file=path.join(DATA_DIR,'agent
 app.get('/api/rates', (req,res) => res.json(ensureRateDb()));
 app.get('/api/rates/recommend', (req,res) => {
   const db=ensureRateDb(); const from=String(req.query.from||''), to=String(req.query.to||''), mode=String(req.query.mode||''), incoterms=String(req.query.incoterms||'FOB'); const distance=Number(req.query.distance);
-  const matches=db.records.map(r=>{const adjusted=rateWithIncoterm(r,incoterms);return adjusted?{...adjusted,_score:routeScore(adjusted,from,to,mode,Number.isFinite(distance)?distance:null)}:null;}).filter(r=>r&&r._score>0&&Number.isFinite(Number(r.rate))&&Number(r.rate)>0).sort((a,b)=>b._score-a._score||new Date(b.updatedAt||0)-new Date(a.updatedAt||0)).slice(0,8);
+  const matches=db.records.map(r=>{const adjusted=rateWithIncoterm(r,incoterms);return adjusted?{...adjusted,_score:routeScore(adjusted,from,to,mode,Number.isFinite(distance)?distance:null)}:null;}).filter(r=>r&&r._score>0&&rateRouteMatches(r,from,to,mode)&&Number.isFinite(Number(r.rate))&&Number(r.rate)>0).sort((a,b)=>b._score-a._score||new Date(b.updatedAt||0)-new Date(a.updatedAt||0)).slice(0,8);
   const prices=matches.map(r=>Number(r.rate));
   const isAdmin = portal.roleOf(req).role === 'admin';
   // Гостям и клиентам — только ориентир: без названий агентов, контактов и внутренних заметок.
