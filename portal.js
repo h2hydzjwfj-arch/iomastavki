@@ -587,8 +587,8 @@ function setup(app, opts) {
   // ---------- сравнение видов транспорта (ориентир) ----------
   const EST = require('./estimate');
   const tariffs = () => EST.mergeTariffs((store.load().settings || {}).tariffs);
-  const baseRate = (from, to, mode) => { try { const b = engine({ from, to, mode }); return b && b.mode === mode && (b._score || 0) >= 13 && /container/i.test(b.basis || 'container') ? b : null; } catch { return null; } };
-  function runEstimate(b) { return EST.estimate({ from: str(b.from, 120), to: str(b.to, 120), weight: num(b.weight), volume: num(b.volume), places: num(b.places), dangerous: b.dangerous === true || b.dangerous === 'true' || b.dangerous === '1' }, tariffs(), baseRate); }
+  const baseRate = (from, to, mode, incoterms) => { try { const b = engine({ from, to, mode, incoterms: incoterms || 'FOB' }); return b && b.mode === mode && (b._score || 0) >= 13 && /container/i.test(b.basis || 'container') ? b : null; } catch { return null; } };
+  function runEstimate(b) { return EST.estimate({ from: str(b.from, 120), to: str(b.to, 120), weight: num(b.weight), volume: num(b.volume), places: num(b.places), incoterms: str(b.incoterms || 'FOB', 10), dangerous: b.dangerous === true || b.dangerous === 'true' || b.dangerous === '1' }, tariffs(), baseRate); }
   const KIND_RU = { air: 'Авиа', ltl_auto: 'Авто, сборный', lcl_rail: 'ЖД, сборный', lcl_sea: 'Море + ЖД, сборный', fcl_rail: "ЖД, контейнер 40'", ftl_auto: 'Авто, машина целиком' };
   app.post('/api/estimate', quoteLimiter, (req, res) => {
     const b = req.body || {}; const r = runEstimate(b);
@@ -616,8 +616,8 @@ function setup(app, opts) {
       const e = runEstimate(b); const o = e.ok && e.options.find(x => x.kind === b.kind);
       if (!o) return res.status(400).json({ ok: false, error: 'Этот вариант не подходит для такого груза — пересчитайте' });
       const NAMES = { air: 'Авиа', ltl_auto: 'Авто, сборный груз', lcl_rail: 'ЖД, сборный груз', lcl_sea: 'Море + ЖД, сборный груз', fcl_rail: 'ЖД, контейнер 40\'', ftl_auto: 'Авто, машина целиком' };
-      best = { rate: o.price, currency: 'USD', mode: o.mode, transitDays: o.days.join('–'), basis: NAMES[o.kind], container: o.kind === 'fcl_rail' ? '40HC' : '', company: o.source === 'base' ? 'база ставок' : 'ориентир по рынку', notes: [o.note, e.assumedVolume ? 'Объём не указан — принят ~1 м³ на 250 кг.' : '', e.dangerous ? 'Опасный груз — с надбавкой.' : ''].filter(Boolean).join(' '), _noCommission: true };
-    } else best = await engine({ from, to, mode: str(b.mode, 20), distance: num(b.distance) });
+      best = { rate: o.price, currency: 'USD', mode: o.mode, transitDays: o.days.join('–'), basis: NAMES[o.kind], container: o.kind === 'fcl_rail' ? '40HC' : '', company: o.source === 'base' ? 'база ставок' : 'ориентир по рынку', notes: [o.note, e.assumedVolume ? 'Объём не указан — принят ~1 м³ на 250 кг.' : '', e.dangerous ? 'Опасный груз — с надбавкой.' : ''].filter(Boolean).join(' '), publicWarning: o.publicWarning || '', _noCommission: true };
+    } else best = await engine({ from, to, mode: str(b.mode, 20), distance: num(b.distance), incoterms: str(b.incoterms || 'FOB', 10) });
     if (!best || !Number.isFinite(Number(best.rate))) return res.status(404).json({ ok: false, error: 'В базе нет ставки для этого маршрута — оставьте заявку, посчитаем вручную' });
     const now = Date.now(); const id = newId(8);
     const chinese = !best._noCommission && /中国|china|chinese|\.cn$/i.test(`${best.company || ''} ${best.source || ''} ${best.notes || ''}`);
@@ -628,7 +628,7 @@ function setup(app, opts) {
       from, to, mode: best.mode || str(b.mode, 20), weight: num(b.weight), volume: num(b.volume), places: num(b.places), incoterms: str(b.incoterms, 10),
       price: Math.round((base + commission) * 100) / 100, baseRate: base, commission, currency: str(best.currency || 'USD', 5).toUpperCase(),
       transitDays: str(best.transitDays, 20), basis: str(best.basis, 40), container: str(best.container, 40),
-      company: str(best.company, 120), notes: str(best.notes, 600), ownerUid: who.role === 'client' ? who.uid : null,
+      company: str(best.company, 120), notes: str(best.notes, 600), publicWarning: str(best.publicWarning || best.incotermNote || '', 300), ownerUid: who.role === 'client' ? who.uid : null,
     };
     const db = store.load(); db.quotes = db.quotes || []; db.quotes.unshift(q); db.quotes = db.quotes.slice(0, 5000);
     if (who.role === 'admin' && b.dealId) { const deal = (db.deals || []).find(x => x.id === str(b.dealId, 40)); if (deal) { q.dealId = deal.id; deal.activity = deal.activity || []; deal.activity.push({ id: newId(4), at: q.createdAt, type: 'quote', by: 'Администратор', text: `${q.number}: ${q.price} ${q.currency}${q.basis ? ' · ' + q.basis : ''}${q.transitDays ? ' · ' + q.transitDays + ' дн.' : ''}` }); deal.updatedAt = q.createdAt; if (['Новая заявка', 'Запрос', 'Расчёт'].includes(deal.stage)) deal.stage = 'КП отправлено'; } }
