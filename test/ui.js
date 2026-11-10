@@ -143,7 +143,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
       await A.p.waitForSelector('#cxVed [data-v-edit]');
       if (await A.p.isVisible('#cxVed [data-vs]')) throw new Error('постоянные параметры открыты для редактирования без карандаша');
       await A.p.click('#cxVed [data-v-edit]'); await A.p.waitForSelector('#cxVed [data-vs]:not([hidden])');
-      await A.p.click('#cxVed [data-v-cancel]'); await A.p.waitForSelector('#cxVed [data-vs][hidden]');
+      await A.p.click('#cxVed [data-v-cancel]'); await A.p.waitForFunction(() => document.querySelector('#cxVed [data-vs]') && document.querySelector('#cxVed [data-vs]').hidden);
       // расчёт контракта по рабочей таблице: условия, итог вверх до юаня, текст КП без маржи
       await A.p.selectOption('#cxVed [data-d=payment]', 'bank'); await A.p.waitForFunction(() => /по внутреннему курсу банка/.test(document.querySelector('#cxVed [data-r=result]').textContent), null, { timeout: 6000 });
       await A.p.click('#cxVed [data-c=kp]'); await A.p.waitForSelector('.cx-modal .kp'); const kp = await A.p.textContent('.cx-modal .kp');
