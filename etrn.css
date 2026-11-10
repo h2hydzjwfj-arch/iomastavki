@@ -8,7 +8,7 @@
 .et-head p { margin:5px 0 0; color:var(--ioma-muted,#718195); font-size:13px; }
 .et-print { flex:0 0 auto; border:1px solid rgba(34,88,132,.18); background:rgba(255,255,255,.7); color:#24577f; border-radius:12px; padding:10px 14px; font-weight:700; cursor:pointer; }
 .et-tabs { display:flex; gap:7px; overflow-x:auto; flex:0 0 auto; padding:2px 0 6px; scrollbar-width:thin; }
-.et-tabs button { border:1px solid rgba(38,83,120,.14); background:var(--ioma-card,#fff); color:var(--ioma-muted,#63778c); border-radius:999px; padding:9px 13px; white-space:nowrap; font:600 12px/1.2 inherit; cursor:pointer; transition:.18s ease; }
+.et-tabs button { border:1px solid rgba(38,83,120,.14); background:var(--ioma-card,#fff); color:var(--ioma-muted,#63778c); border-radius:999px; padding:9px 13px; white-space:nowrap; font-family:inherit; font-size:12px; font-weight:600; line-height:1.2; cursor:pointer; transition:.18s ease; }
 .et-tabs button.on { background:#174a73; border-color:#174a73; color:#fff; box-shadow:0 5px 16px rgba(23,74,115,.16); }
 .et-content { min-height:0; flex:1 1 auto; overflow:auto; padding:0 3px 12px 0; scrollbar-width:thin; }
 .et-intro { display:flex; align-items:center; min-height:44px; padding:10px 14px; margin-bottom:12px; border-left:3px solid #e88b3e; border-radius:10px; background:rgba(232,139,62,.09); color:var(--ioma-text,#28445e); font-size:13px; font-weight:650; }
