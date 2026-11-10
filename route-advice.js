@@ -49,7 +49,7 @@
     tokyo: 'токио', yokohama: 'йокогама', osaka: 'осака', nagoya: 'нагоя', taipei: 'тайбэй', kaohsiung: 'гаосюн', hanoi: 'ханой', haiphong: 'хайфон', 'ho chi minh': 'хошимин', saigon: 'хошимин',
     moscow: 'москва', 'st petersburg': 'санкт-петербург', 'saint petersburg': 'санкт-петербург', yekaterinburg: 'екатеринбург', chelyabinsk: 'челябинск', novosibirsk: 'новосибирск', kazan: 'казань', vladivostok: 'владивосток', khabarovsk: 'хабаровск' };
 
-  function norm(s) { return String(s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/ё/g, 'е').replace(/[‐‑‒–—−]/g, ' ').split(/[,(（，]/)[0].replace(/^(г\.|город)\s*/, '').replace(/[^\p{L}\p{N}\s-]/gu, ' ').replace(/\s+/g, ' ').trim(); }
+  function norm(s) { return String(s || '').normalize('NFC').toLowerCase().replace(/ё/g, 'е').replace(/[‐‑‒–—−]/g, ' ').split(/[,(（，]/)[0].replace(/^(г\.|город)\s*/, '').replace(/[^\p{L}\p{N}\s-]/gu, ' ').replace(/\s+/g, ' ').trim(); }
   function lookup(s) {
     var n = norm(s); if (!n) return null;
     var ALIAS = { 'эрлианхот': 'эрлянь', 'эрэн хото': 'эрлянь', 'эрэн хот': 'эрлянь', 'эрен хот': 'эрлянь', 'эрен хото': 'эрлянь', 'erlian hot': 'эрлянь' };
