@@ -98,7 +98,7 @@
   // высота шапки бывает разной (меню переносится на вторую строку) — первый экран считаем от настоящей
   function hdr() { var t = document.querySelector('.topbar'); if (t && t.offsetHeight) document.documentElement.style.setProperty('--hdr', t.offsetHeight + 'px'); }
   hdr(); window.addEventListener('resize', hdr); if (window.ResizeObserver) { var tb = document.querySelector('.topbar'); if (tb) new ResizeObserver(hdr).observe(tb); }
-  function mountMap() { var el = $('#hxMap'); if (!el || !window.IOMA_RMAP || el.dataset.on) return; el.dataset.on = '1'; (window.IOMA_JMAP || window.IOMA_RMAP).mount(el, { auto: true, fitTo: el.closest('.hx-r'), onPick: function (k, mode, ru, to, toRu) { openCalc(ru, mode, toRu); } }); }
+  function mountMap() { var el = $('#hxMap'); if (!el || !window.IOMA_RMAP || el.dataset.on) return; el.dataset.on = '1'; window.IOMA_RMAP.mount(el, { auto: true, fitTo: el.closest('.hx-r'), onPick: function (k, mode, ru, to, toRu) { openCalc(ru, mode, toRu); } }); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountMap); else mountMap();
 
   /* ---------------- язык одной кнопкой ---------------- */
