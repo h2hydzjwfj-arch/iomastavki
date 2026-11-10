@@ -378,5 +378,7 @@
   }
 
   var GEO_API = { xy: xy, VB: VB, land: land, smooth: smooth, arc: arc, dots: { cn: CN_DOTS, ru: RU_DOTS }, gwNames: GW_NAME, lang: lang, ll: ll, hav: hav };
-  window.IOMA_RMAP = { geo: GEO_API, mount: mount, routeFor: routeFor, routeTo: routeTo, find: find, name: nm, cities: C, origins: ORIGINS, routeSvg: routeSvg, gwNames: function (id, l) { return (GW_NAME[id] || []).map(function (k) { return nm(k, l); }); }, gwKeys: function (id) { return (GW_NAME[id] || []).slice(); }, modeName: function (m, l) { return MODE_NAME[m] ? pa(MODE_NAME[m], l) : m; }, ui: ui };
+  var API = { geo: GEO_API, mount: mount, routeFor: routeFor, routeTo: routeTo, find: find, name: nm, cities: C, origins: ORIGINS, routeSvg: routeSvg, gwNames: function (id, l) { return (GW_NAME[id] || []).map(function (k) { return nm(k, l); }); }, gwKeys: function (id) { return (GW_NAME[id] || []).slice(); }, modeName: function (m, l) { return MODE_NAME[m] ? pa(MODE_NAME[m], l) : m; }, ui: ui };
+  window.IOMA_RMAP = API;
+  if (typeof module === 'object' && module.exports) module.exports = API;
 })();
