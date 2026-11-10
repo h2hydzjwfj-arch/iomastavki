@@ -159,14 +159,21 @@
   var LX = { ru: 0, en: 1, zh: 2, tr: 3, de: 4, fr: 5 };
   function gw(k, l) { return GW[k][LX[l] || 0]; }
   function autoVia(reg, zone, toName, l) {
-    if (zone === 'FE') return gw(/благовещ/.test(toName) ? 'heihe' : 'sfPog', l);
-    if (reg === 'XJ') return gw('khorgos', l);
-    return gw('zab', l);
+    var t = TX[l] || TX.ru;
+    if (zone === 'FE') {
+      if (/благовещ/.test(toName)) return t.heiheSuspended;
+      return gw('sfPog', l) + ' — ' + t.routeCandidate;
+    }
+    if (reg === 'XJ') return gw('khorgos', l) + ' — ' + t.kzCandidate;
+    if (reg === 'NE') return gw('sfPog', l) + ' — ' + t.routeCandidate;
+    return t.zabMain;
   }
   function railVia(reg, zone, l) {
-    if (zone === 'FE') return gw('sfGrod', l);
-    if (reg === 'XJ') return gw('kzRail', l);
-    return gw('zab', l);
+    var t = TX[l] || TX.ru;
+    if (zone === 'FE') return gw('sfGrod', l) + ' — ' + t.routeCandidate;
+    if (reg === 'XJ') return gw('kzRail', l) + ' — ' + t.kzCandidate;
+    if (reg === 'NE') return gw('sfGrod', l) + ' — ' + t.routeCandidate;
+    return t.zabMain;
   }
 
   // ---------- размер партии
@@ -207,7 +214,10 @@
       bigAir: 'для такого объёма авиа неоправданно дорого',
       ltlAuto: 'сборное авто — самый удобный способ для партии до 10–12 м³: оплата за объём, без целой машины',
       yiwuHub: 'Иу — главный хаб сборных грузов: машины на Россию уходят ежедневно',
-      zabMain: 'один из основных сухопутных коридоров — Маньчжурия — Забайкальск; выбор зависит от города, транспорта и доступного сервиса',
+      zabMain: "Погранпереход не выбирается автоматически: наличие услуги, расписание и доступность КПП подтверждаются под конкретную отправку.",
+      routeCandidate: "кандидат по географии; подтвердите услугу, расписание и режим работы КПП у перевозчика.",
+      kzCandidate: "транзит через Казахстан требует проверки груза, сторон, документов и конкретного сервиса перевозчика.",
+      heiheSuspended: "Благовещенск — Хэйхэ: грузовое направление временно приостановлено с 02.11.2026 по сообщению Росгранстроя от 30.10.2026; этот КПП не используется как доступный.",
       zabShort: 'до Сибири и Дальнего Востока ближе всего через Забайкальск и Приморье',
       neShort: 'северо-восток Китая граничит с Россией — путь самый короткий',
       seaCheap: 'контейнер морем до Владивостока и дальше по ЖД — самый дешёвый способ для полного контейнера',
@@ -240,7 +250,10 @@
       bigAir: 'air is unreasonably expensive for this volume',
       ltlAuto: 'groupage truck is the handiest way for up to 10–12 m³: you pay per m³, no full truck needed',
       yiwuHub: 'Yiwu is the main groupage hub: trucks to Russia leave daily',
-      zabMain: 'one of the main land corridors is Manzhouli — Zabaikalsk; the choice depends on origin, mode and available service',
+      zabMain: "A border crossing is not selected automatically: carrier service, schedule and crossing availability must be confirmed for the specific shipment.",
+      routeCandidate: "geographic candidate only; confirm the service, schedule and border-crossing operating status with the carrier.",
+      kzCandidate: "Kazakhstan transit requires checks of the cargo, parties, documents and the specific carrier service.",
+      heiheSuspended: "Blagoveshchensk — Heihe freight operations were suspended from 2 Nov 2026 per Rosgranstroy notice of 30 Oct 2026; this crossing is not treated as available.",
       zabShort: 'Siberia and the Far East are closest via Zabaikalsk and Primorye',
       neShort: 'Northeast China borders Russia — the shortest way',
       seaCheap: 'container by sea to Vladivostok and on by rail is the cheapest way for a full container',
@@ -273,7 +286,10 @@
       bigAir: '这么大的体积空运过于昂贵',
       ltlAuto: '10–12 立方米以内，公路拼车最方便：按体积付费，无需整车',
       yiwuHub: '义乌是拼货的主要枢纽：发往俄罗斯的卡车每天出发',
-      zabMain: '满洲里—后贝加尔斯克是主要陆路通道之一；具体选择取决于起运城市、运输方式和可用服务',
+      zabMain: "不会自动选择口岸：必须针对具体货物向承运人确认服务、班期和口岸通行状态。",
+      routeCandidate: "仅为地理路线候选；须向承运人确认运输服务、班期及口岸运行状态。",
+      kzCandidate: "经哈萨克斯坦转运须核查货物、相关方、单证及具体承运服务。",
+      heiheSuspended: "根据俄罗斯边境管理机构2026年10月30日公告，布拉戈维申斯克—黑河货运自2026年11月2日起暂停；不将该口岸视为可用。",
       zabShort: '去西伯利亚和远东，经后贝加尔斯克和滨海边疆区最近',
       neShort: '中国东北与俄罗斯接壤 — 路线最短',
       seaCheap: '集装箱海运至符拉迪沃斯托克再转铁路 — 整箱最便宜的方式',
@@ -306,7 +322,10 @@
       bigAir: 'bu hacim için hava yolu gereksiz derecede pahalı',
       ltlAuto: 'parsiyel kamyon 10–12 m³’e kadar en pratik yol: hacme göre ödeme, tam araç gerekmez',
       yiwuHub: 'Yiwu parsiyel yüklerin ana merkezi: Rusya’ya kamyonlar her gün çıkıyor',
-      zabMain: 'ana kara koridorlarından biri Manzhouli — Zabaykalsk’tır; seçim çıkış şehrine, taşıma türüne ve hizmete bağlıdır',
+      zabMain: "Sınır kapısı otomatik seçilmez: taşıyıcı hizmeti, sefer takvimi ve geçiş durumu her gönderi için doğrulanmalıdır.",
+      routeCandidate: "yalnızca coğrafi adaydır; taşıyıcıdan hizmeti, takvimi ve sınır kapısının çalışma durumunu doğrulayın.",
+      kzCandidate: "Kazakistan transitinde yük, taraflar, belgeler ve belirli taşıyıcı hizmeti ayrıca kontrol edilmelidir.",
+      heiheSuspended: "Rosgranstroy’un 30.10.2026 tarihli duyurusuna göre Blagoveşçensk—Heihe yük geçişi 02.11.2026 itibarıyla durdurulmuştur; bu kapı kullanılabilir sayılmaz.",
       zabShort: 'Sibirya ve Uzak Doğu’ya en kısa yol Zabaykalsk ve Primorye üzerinden',
       neShort: 'Kuzeydoğu Çin Rusya ile komşu — en kısa yol',
       seaCheap: 'Vladivostok’a deniz yoluyla konteyner, sonra demiryolu — tam konteyner için en ucuz yol',
@@ -339,7 +358,10 @@
       bigAir: 'für dieses Volumen ist Luftfracht unverhältnismäßig teuer',
       ltlAuto: 'Sammelgut per Lkw ist bis 10–12 m³ am praktischsten: Bezahlung nach Volumen, kein ganzer Lkw nötig',
       yiwuHub: 'Yiwu ist der wichtigste Sammelgut-Hub: Lkw nach Russland fahren täglich ab',
-      zabMain: 'Manzhouli — Sabaikalsk ist einer der wichtigen Landkorridore; die Wahl hängt von Startort, Verkehrsmittel und verfügbarem Service ab',
+      zabMain: "Ein Grenzübergang wird nicht automatisch ausgewählt: Dienst, Fahrplan und Verfügbarkeit müssen für jede Sendung beim Frachtführer bestätigt werden.",
+      routeCandidate: "nur ein geografischer Kandidat; Dienst, Fahrplan und Betriebsstatus des Grenzübergangs beim Frachtführer bestätigen.",
+      kzCandidate: "Kasachstan-Transit erfordert die Prüfung von Ware, Beteiligten, Dokumenten und konkretem Frachtservice.",
+      heiheSuspended: "Laut Rosgranstroy-Mitteilung vom 30.10.2026 wurde der Güterverkehr Blagoweschtschensk—Heihe ab 02.11.2026 ausgesetzt; dieser Übergang gilt nicht als verfügbar.",
       zabShort: 'nach Sibirien und Fernost ist der Weg über Sabaikalsk und Primorje am kürzesten',
       neShort: 'Nordostchina grenzt an Russland — der kürzeste Weg',
       seaCheap: 'Container per Schiff nach Wladiwostok und weiter per Bahn — der günstigste Weg für einen vollen Container',
@@ -372,7 +394,10 @@
       bigAir: 'pour ce volume, l’aérien est déraisonnablement cher',
       ltlAuto: 'le groupage routier est le plus pratique jusqu’à 10–12 m³ : paiement au volume, sans camion complet',
       yiwuHub: 'Yiwu est le principal hub de groupage : des camions partent chaque jour vers la Russie',
-      zabMain: 'Manzhouli — Zabaïkalsk est l’un des principaux corridors terrestres ; le choix dépend de l’origine, du mode et du service disponible',
+      zabMain: "Le poste-frontière n’est pas choisi automatiquement : le service, l’horaire et sa disponibilité doivent être confirmés pour chaque expédition auprès du transporteur.",
+      routeCandidate: "simple candidat géographique ; confirmer le service, l’horaire et le statut du poste-frontière auprès du transporteur.",
+      kzCandidate: "Le transit par le Kazakhstan exige une vérification de la marchandise, des parties, des documents et du service du transporteur.",
+      heiheSuspended: "Selon l’avis de Rosgranstroy du 30/10/2026, le fret Blagovechtchensk—Heihe est suspendu depuis le 02/11/2026 ; ce poste n’est pas considéré disponible.",
       zabShort: 'vers la Sibérie et l’Extrême-Orient, le plus court passe par Zabaïkalsk et le Primorié',
       neShort: 'le nord-est de la Chine borde la Russie — le trajet le plus court',
       seaCheap: 'conteneur par mer jusqu’à Vladivostok puis par rail — le moyen le moins cher pour un conteneur complet',
@@ -420,7 +445,7 @@
     var a = cc === 'CN' ? adj(reg, zone) : [0, 0];
     var opts = [], no = [];
     var fromN = q.fromLabel || cap(fo.name), toN = q.toLabel || cap(to.name);
-    function opt(id, mode, days, why, extra) { var o = { id: id, mode: mode, title: T[id] || T[mode], days: days, cost: cost[id] != null ? cost[id] : cost[mode], why: why.filter(Boolean), cons: [] }; for (var k in extra) o[k] = extra[k]; opts.push(o); return o; }
+    function opt(id, mode, days, why, extra) { var o = { id: id, mode: mode, title: T[id] || T[mode], days: days, cost: cost[id] != null ? cost[id] : cost[mode], why: why.filter(Boolean), cons: [] }; for (var k in extra) o[k] = extra[k]; if (extra && extra.via && mode !== 'air') { o.viaStatus = 'requires_confirmation'; o.viaConfirmed = false; } opts.push(o); return o; }
 
     // --- авто
     if (island) no.push({ mode: 'auto', why: cc === 'KR' ? T.noLand : cc === 'JP' ? T.noLandJP : T.noLandTW });
