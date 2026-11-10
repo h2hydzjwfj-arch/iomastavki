@@ -299,9 +299,9 @@ function setup(app, opts = {}) {
     });
   }
   app.post('/api/tools/ocean-track', staff, limit, wrap(async (req, res) => {
-    const b = req.body || {}, reference = String(b.reference || '').toUpperCase().replace(/\\s+/g, '').slice(0, 80);
+    const b = req.body || {}, reference = String(b.reference || '').toUpperCase().replace(/\s+/g, '').slice(0, 80);
     const type = b.type === 'bl' ? 'bill_of_lading' : 'container_id';
-    if (type === 'container_id' && !/^[A-Z]{3}[UJZ]\\d{7}$/.test(reference)) return res.status(400).json({ ok: false, error: 'Номер контейнера должен содержать 4 буквы и 7 цифр.' });
+    if (type === 'container_id' && !/^[A-Z]{3}[UJZ]\d{7}$/.test(reference)) return res.status(400).json({ ok: false, error: 'Номер контейнера должен содержать 4 буквы и 7 цифр.' });
     if (type === 'bill_of_lading' && (reference.length < 5 || reference.length > 80)) return res.status(400).json({ ok: false, error: 'Проверьте номер коносамента B/L.' });
     res.json(await navoPublicTrack(reference, type));
   }));
