@@ -273,7 +273,7 @@
       h += land();
       // все точки: Россия — куда, Китай — откуда. Зона нажатия не больше половины расстояния до соседа,
       // чтобы соседние города (Гуанчжоу и Шэньчжэнь, Шанхай и Ханчжоу) не перекрывали друг друга
-      function dot(k, side, on) { var p = xy(k), r = Math.max(3.2 * U, Math.min(9 * U, near(k) / 2)); return '<g class="rm-pt rm-' + side + (on ? ' on' : '') + '" data-' + side + '="' + k + '" tabindex="0" role="button" aria-label="' + nm(k, l) + '"><circle class="rm-hit" cx="' + f(p[0]) + '" cy="' + f(p[1]) + '" r="' + f(r) + '"/><circle class="rm-c" cx="' + f(p[0]) + '" cy="' + f(p[1]) + '" r="' + f((on ? 5 : 2.6) * U) + '"/></g>'; }
+      function dot(k, side, on) { var p = xy(k), r = Math.max(3.2 * U, Math.min(9 * U, near(k) / 2)); return '<g class="rm-pt rm-' + side + (on ? ' on' : '') + '" aria-hidden="true"><circle class="rm-hit" cx="' + f(p[0]) + '" cy="' + f(p[1]) + '" r="' + f(r) + '"/><circle class="rm-c" cx="' + f(p[0]) + '" cy="' + f(p[1]) + '" r="' + f((on ? 5 : 2.6) * U) + '"/></g>'; }
       // выбранные точки рисуем последними — они поверх соседних
       RU_DOTS.filter(function (k) { return k !== state.to; }).forEach(function (k) { h += dot(k, 'to', false); });
       CN_DOTS.filter(function (k) { return k !== state.from; }).forEach(function (k) { h += dot(k, 'from', false); });
