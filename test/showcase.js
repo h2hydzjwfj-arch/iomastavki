@@ -33,7 +33,7 @@ const tgServer = http.createServer((req, res) => {
   const errors = [];
   async function ctx(name, opts = {}) {
     const c = await browser.newContext({ viewport: { width: 1280, height: 800 }, recordVideo: { dir: path.join(OUT, 'video', name), size: { width: 1280, height: 800 } }, ...opts });
-    const p = await c.newPage(); p.on('pageerror', e => errors.push(e.message));
+    const p = await c.newPage(); p.on('pageerror', e => errors.push(e.stack || e.message));
     await p.goto(B + '/', { waitUntil: 'domcontentloaded' }); await p.waitForFunction(() => /role-/.test(document.body.className)); await p.waitForTimeout(800);
     return { c, p };
   }
