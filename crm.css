@@ -303,6 +303,7 @@ body.manual-dark .cv-warns p{color:#F0C27A}
 .cv-scale{display:flex;flex-direction:column;gap:6px;margin:6px 0 10px}.cv-scale small{color:var(--v-mut)}
 .cv-sr{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13.5px}.cv-sr span{color:var(--v-mut)}.cv-sr i{font-style:normal;width:140px}
 .cv-setb{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.cv-setf input[readonly]{cursor:default;opacity:.82;background:var(--v-bg,rgba(120,140,155,.06));border-style:dashed}.cv-setf.cv-editing input[readonly]{cursor:text;opacity:1;background:var(--v-card);border-style:solid}.cv-setf [data-v-edit]{min-width:170px}
 
 /* ---------- задачи */
 .cx-task{all:unset;box-sizing:border-box;color:var(--v-ink);display:flex;flex-direction:column;gap:4px;padding:11px 13px;border-radius:14px;background:var(--v-card);border:1px solid var(--v-bd);border-left:4px solid var(--v-acc);cursor:pointer}
