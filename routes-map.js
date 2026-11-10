@@ -158,7 +158,7 @@
   }
   // поиск города по названию на любом языке
   var ALIAS = { yw: ['yiwu', 'иу', 'iwu'], tpe: ['taibei', 'тайпей'], tyo: ['токио', 'tokio', 'yokohama', 'йокогама'], sel: ['seoul', 'сеул'], icn: ['incheon', 'инчон'], spb: ['спб', 'питер', 'saint petersburg', 'санкт петербург'], msk: ['мск'], sh: ['shanghai', 'шанхай'], sz: ['shenzhen', 'шэньчжэнь', 'шеньчжень', 'шэньжэнь'], gz: ['guangzhou', 'гуанчжоу', 'кантон', 'canton'], xa: ['xian', "xi'an", 'сиань'], qz: ['qinzhou', 'циньчжоу'], pus: ['busan', 'pusan', 'пусан'], erl: ['erenhot', 'erlianhot', 'erlian', 'эрлианхот', 'эрэн-хото', 'эрэн хото', 'эренхот', 'эрен-хото', 'эрлянь', 'ерлянь'] };
-  function cityNorm(s) { return String(s || '').normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().replace(/ё/g, 'е').replace(/[‐‑‒–—−]/g, ' ').replace(/[^\\p{L}\\p{N}\\s]/gu, ' ').replace(/\\s+/g, ' ').trim(); }
+  function cityNorm(s) { return String(s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/ё/g, 'е').replace(/[‐‑‒–—−]/g, ' ').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim(); }
   function find(q) {
     q = cityNorm(q); if (!q) return null;
     var keys = Object.keys(C);
