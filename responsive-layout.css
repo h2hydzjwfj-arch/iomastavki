@@ -67,3 +67,10 @@ img,video,iframe,canvas,svg{max-width:100%}
 }
 @media(min-width:1025px){.view-layer .pg-shell{width:min(calc(100% - 48px),1280px)}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+
+/* Portalled dropdowns escape the clipping boundary of the mobile horizontal nav */
+body>.sg-menu-portal{display:grid!important;gap:4px!important;padding:8px!important;border:1px solid var(--v-bd,rgba(0,0,0,.14))!important;border-radius:16px!important;background:var(--v-card,#fff)!important;color:var(--v-ink,#17202a)!important;box-shadow:0 18px 48px rgba(15,30,45,.28)!important;transform:none!important;isolation:isolate}
+body>.sg-menu-portal>button{width:100%!important;min-height:48px!important;display:grid!important;gap:3px!important;text-align:left!important;align-content:center!important;padding:10px 12px!important;border:0!important;border-radius:10px!important;background:transparent!important;color:inherit!important;white-space:normal!important}
+body>.sg-menu-portal>button:hover,body>.sg-menu-portal>button:focus-visible{background:color-mix(in srgb,var(--v-acc,#267d88) 12%,transparent)!important;outline:none}
+body>.sg-menu-portal small{display:block;white-space:normal;line-height:1.35;opacity:.72}
