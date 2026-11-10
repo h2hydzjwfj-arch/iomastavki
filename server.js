@@ -46,10 +46,13 @@ app.use(['/api/rates/import', '/api/rates/import-text', '/api/agents/import'], i
 // контакты и ставки агентов, — только администратору.
 const cloud = require('./cloud').createCloud();
 // Лучшая ставка из базы для КП (тот же подбор, что и в /api/rates/recommend).
-function bestRate({ from, to, mode, distance }) {
+function bestRate({ from, to, mode, distance, incoterms }) {
   const db = ensureRateDb();
-  const m = db.records.map(r => ({ ...r, _score: routeScore(r, from, to, mode, Number.isFinite(distance) ? distance : null) }))
-    .filter(r => r._score > 0 && Number.isFinite(Number(r.rate)))
+  const wanted = String(incoterms || 'FOB').trim().toUpperCase();
+  const m = db.records.map(r => {
+    const adjusted = rateWithIncoterm(r, wanted);
+    return adjusted ? { ...adjusted, _score: routeScore(adjusted, from, to, mode, Number.isFinite(distance) ? distance : null) } : null;
+  }).filter(r => r && r._score > 0 && rateRouteMatches(r, from, to, mode) && Number.isFinite(Number(r.rate)) && Number(r.rate) > 0)
     .sort((a, b) => b._score - a._score || new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
   return m[0] || null;
 }
@@ -83,6 +86,54 @@ function ensureRateDb() {
   return { version: 2, updatedAt: null, records };
 }
 function normalizeText(s='') { return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+const RATE_CITY_ALIASES = Object.freeze({
+  'шанхай': 'shanghai', '上海': 'shanghai', 'shanghai': 'shanghai',
+  'циндао': 'qingdao', '青岛': 'qingdao', 'qingdao': 'qingdao',
+  'нинбо': 'ningbo', '宁波': 'ningbo', 'ningbo': 'ningbo',
+  'наньша': 'nansha', '南沙': 'nansha', 'nansha': 'nansha',
+  'сямэнь': 'xiamen', '厦门': 'xiamen', 'xiamen': 'xiamen',
+  'москва': 'moscow', '莫斯科': 'moscow', 'moscow': 'moscow',
+  'санкт-петербург': 'saint petersburg', 'saint petersburg': 'saint petersburg',
+  'st petersburg': 'saint petersburg', '圣彼得堡': 'saint petersburg',
+  'екатеринбург': 'yekaterinburg', 'yekaterinburg': 'yekaterinburg', '叶卡捷琳堡': 'yekaterinburg',
+  'новосибирск': 'novosibirsk', 'novosibirsk': 'novosibirsk', '新西伯利亚': 'novosibirsk',
+  'минск': 'minsk', 'minsk': 'minsk', '明斯克': 'minsk'
+});
+function canonicalRateCity(value) {
+  const s = normalizeText(value).split(/[;,]/, 1)[0].trim().replace(/\s+/g, ' ');
+  return RATE_CITY_ALIASES[s] || s;
+}
+function canonicalRateMode(value) {
+  const s = normalizeText(value);
+  return s === 'auto' || s === 'road' ? 'road' : s;
+}
+function rateRouteMatches(record, from, to, mode) {
+  return !!String(from || '').trim() && !!String(to || '').trim() &&
+    canonicalRateCity(record.from) === canonicalRateCity(from) &&
+    canonicalRateCity(record.to) === canonicalRateCity(to) &&
+    (!mode || canonicalRateMode(record.mode) === canonicalRateMode(mode));
+}
+
+function rateWithIncoterm(record, requested) {
+  if (!record || record.rate == null || !Number.isFinite(Number(record.rate)) || Number(record.rate) <= 0) return null;
+  const wanted = String(requested || 'FOB').trim().toUpperCase();
+  const source = String(record.incoterms || '').trim().toUpperCase();
+  const base = Number(record.rate);
+  if (wanted === source) return { ...record, incoterms: wanted, incotermAdjustment: 0, incotermNote: '' };
+  if (wanted === 'EXW' || wanted === 'FCA') {
+    const note = String(record.notes || '');
+    const m = note.match(/EXW\s*\/\s*FCA\s*:\s*\+\s*([\d\s]+(?:[.,]\d+)?)\s*(USD|EUR|RUB)\s*к\s*FOB/i);
+    if (m) {
+      const amount = Number(m[1].replace(/\s/g, '').replace(',', '.'));
+      const currency = m[2].toUpperCase();
+      if (Number.isFinite(amount) && amount > 0 && currency === String(record.currency || '').toUpperCase() && source === 'FOB') {
+        return { ...record, rate: base + amount, incoterms: wanted, incotermAdjustment: amount, incotermNote: wanted + ': +' + amount + ' ' + currency + ' к ' + source };
+      }
+    }
+  }
+  return null;
+}
+
 function routeScore(record, from, to, mode, distance) {
   const a=normalizeText(from), b=normalizeText(to), rf=normalizeText(record.from), rt=normalizeText(record.to);
   let score=0;
@@ -565,14 +616,15 @@ const BUILTIN_AGENTS = [{"id":1,"company":"Multiwell","contact":"Kane","phone":"
 app.get('/api/agents', (req,res) => { try { const file=path.join(DATA_DIR,'agents.json'); const records=JSON.parse(fs.readFileSync(file,'utf8')); const out=Array.isArray(records)&&records.length?records:BUILTIN_AGENTS; res.json({ok:true,records:out}); } catch { res.json({ok:true,records:BUILTIN_AGENTS}); } });
 app.get('/api/rates', (req,res) => res.json(ensureRateDb()));
 app.get('/api/rates/recommend', (req,res) => {
-  const db=ensureRateDb(); const from=String(req.query.from||''), to=String(req.query.to||''), mode=String(req.query.mode||''); const distance=Number(req.query.distance);
-  const matches=db.records.map(r=>({...r,_score:routeScore(r,from,to,mode,Number.isFinite(distance)?distance:null)})).filter(r=>r._score>0).sort((a,b)=>b._score-a._score||new Date(b.updatedAt||0)-new Date(a.updatedAt||0)).slice(0,8);
-  const prices=matches.filter(r=>Number.isFinite(Number(r.rate))).map(r=>Number(r.rate));
+  const db=ensureRateDb(); const from=String(req.query.from||''), to=String(req.query.to||''), mode=String(req.query.mode||''), incoterms=String(req.query.incoterms||'FOB'); const distance=Number(req.query.distance);
+  const matches=db.records.map(r=>{const adjusted=rateWithIncoterm(r,incoterms);return adjusted?{...adjusted,_score:routeScore(adjusted,from,to,mode,Number.isFinite(distance)?distance:null)}:null;}).filter(r=>r&&r._score>0&&rateRouteMatches(r,from,to,mode)&&Number.isFinite(Number(r.rate))&&Number(r.rate)>0).sort((a,b)=>b._score-a._score||new Date(b.updatedAt||0)-new Date(a.updatedAt||0)).slice(0,8);
+  const prices=matches.map(r=>Number(r.rate));
   const isAdmin = portal.roleOf(req).role === 'admin';
   // Гостям и клиентам — только ориентир: без названий агентов, контактов и внутренних заметок.
-  const shown = isAdmin ? matches : matches.map(r => ({ from: r.from, to: r.to, mode: r.mode, rate: r.rate, currency: r.currency, basis: r.basis, container: r.container, transitDays: r.transitDays, company: '', notes: '', approximate: true }));
-  res.json({ok:true,matches:shown,range:prices.length?{min:Math.min(...prices),max:Math.max(...prices),currency:matches.find(r=>Number.isFinite(Number(r.rate)))?.currency||'RUB'}:null});
+  const shown = isAdmin ? matches : matches.map(r => ({ from: r.from, to: r.to, mode: r.mode, rate: r.rate, currency: r.currency, basis: r.basis, container: r.container, transitDays: r.transitDays, incoterms: r.incoterms, incotermAdjustment: r.incotermAdjustment || 0, incotermNote: r.incotermNote || '', company: '', notes: '', approximate: true }));
+  res.json({ok:true,matches:shown,range:prices.length?{min:Math.min(...prices),max:Math.max(...prices),currency:matches[0]?.currency||'RUB'}:null});
 });
+
 app.put('/api/rates', auth, (req,res) => {
   const data=req.body;
   if(!data || typeof data!=='object' || Array.isArray(data)) return res.status(400).json({ok:false,error:'Некорректные данные'});
