@@ -330,7 +330,7 @@
       '<button class="tl-go" type="submit">Рассчитать</button></form><div class="tl-card tl-out" aria-live="polite"><p class="tl-empty">Укажите вес и даты — посчитаем по тарифам терминала.</p></div></div>';
     var f = $('form', root), out = $('.tl-out', root), t = saved.t;
     if (saved.airline) $('[data-k="airline"]', f).value = saved.airline; if (saved.category) $('[data-k="category"]', f).value = saved.category;
-    function seg() { $$('[data-t]', f).forEach(function (b) { b.classList.toggle('on', b.dataset.t === t); b.setAttribute('aria-selected', b.dataset.t === t); }); f.classList.toggle('is-sher', t === 'sher'); }
+    function seg() { $('[data-t]', f).forEach(function (b) { b.classList.toggle('on', b.dataset.t === t); b.setAttribute('aria-selected', b.dataset.t === t); }); f.classList.toggle('is-sher', t === 'sher'); }
     seg();
     f.addEventListener('click', function (e) { var b = e.target.closest('[data-t]'); if (b) { t = b.dataset.t; seg(); out.innerHTML = '<p class="tl-empty">Нажмите «Рассчитать».</p>'; } });
     f.addEventListener('submit', function (e) {
