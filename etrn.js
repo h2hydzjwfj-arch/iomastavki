@@ -8,7 +8,7 @@
     ['order', 'Электронная заявка'],
     ['t12', 'Титулы 1–2'],
     ['t34', 'Титулы 3–4'],
-    ['extra', 'Титулы 5–8 и спорные случаи']
+    ['extra', 'Титулы 5–8 и спорные случаи'], ['roles-check', 'Кто есть кто · разбор']
   ];
   var sections = {
     start: {
@@ -67,11 +67,54 @@
     }
   };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-  function render() {
+  function roleField(label,name,placeholder) { return '<label class="et-role-field"><span>'+esc(label)+'</span><input name="'+name+'" autocomplete="off" placeholder="'+esc(placeholder)+'"></label>'; }\n  function render() {
     var root = document.getElementById(rootId); if (!root) return;
     var active = root.getAttribute('data-active') || 'start';
-    if (!sections[active]) active = 'start';
+    if (!sections[active] && active !== 'roles-check') active = 'start';
     var s = sections[active];
+    if (active === 'roles-check') {
+      root.innerHTML = '<div class="et-shell"><div class="et-head"><div><span class="et-eyebrow">ПРАКТИЧЕСКИЙ ИНСТРУМЕНТ</span><h2>Кто есть кто в перевозке</h2><p>Заполни стороны — получишь роли и кому направлять поручение или транспортную заявку</p></div><button type="button" class="et-print" data-et-print>Печать / PDF</button></div>'
+        + '<div class="et-tabs" role="tablist">' + tabs.map(function (t) { return '<button type="button" role="tab" aria-selected="' + (t[0] === active) + '" class="' + (t[0] === active ? 'on' : '') + '" data-et-tab="' + t[0] + '">' + esc(t[1]) + '</button>'; }).join('') + '</div>'
+        + '<div class="et-content"><div class="et-intro">Указывай названия так, как они стоят в договоре, заявке или транспортных документах. Неизвестные поля можно оставить пустыми.</div><form class="et-role-form" data-et-role-form><div class="et-role-grid">'
+        + roleField('Кто твой клиент / кто заказал перевозку?', 'client', 'Например, ООО «Импортёр»')
+        + roleField('С кем у клиента договор на организацию перевозки?', 'clientContract', 'Сторона договора с клиентом')
+        + roleField('Кто заключил договор или заявку с фактическим перевозчиком?', 'carrierContract', 'Компания, нанявшая перевозчика')
+        + roleField('Кто фактически везёт груз?', 'carrier', 'Транспортная компания')
+        + roleField('Кто указан грузоотправителем?', 'shipper', 'По транспортным документам')
+        + roleField('Кто указан грузополучателем?', 'consignee', 'По транспортным документам')
+        + roleField('Кто принял груз во владение / выдаёт экспедиторскую расписку?', 'custody', 'Если такого нет — оставь пустым')
+        + roleField('Кто платит и кому?', 'payment', 'Например: клиент платит нашей компании')
+        + '</div><label class="et-role-field et-role-wide"><span>Дополнительный текст / цепочка договоров</span><textarea name="details" rows="3" placeholder="Клиент → наша компания → экспедитор → перевозчик"></textarea></label><button class="et-role-submit" type="submit">Определить роли и документы</button></form><div class="et-role-result" data-et-role-result aria-live="polite"><p>Заполни известные поля и нажми кнопку.</p></div>'
+        + '<div class="et-note"><b>Важно</b><p>Разбор основан на введённых фактах. Само название компании или факт оплаты не доказывают юридический статус экспедитора или перевозчика. Перед подписанием сверяй договор, заявку, фактическое принятие груза и полномочия.</p></div></div></div>';
+      var roleForm = root.querySelector('[data-et-role-form]');
+      roleForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var d = Object.fromEntries(new FormData(roleForm).entries());
+        var v = function(k){ return String(d[k] || '').trim(); };
+        var client=v('client'), cc=v('clientContract'), fc=v('carrierContract'), carrier=v('carrier'), shipper=v('shipper'), consignee=v('consignee'), custody=v('custody'), payment=v('payment'), details=v('details');
+        var rows=[], advice=[];
+        function row(label,value,note){ if(value) rows.push('<div class="et-role-row"><b>'+esc(label)+'</b><strong>'+esc(value)+'</strong><small>'+esc(note||'')+'</small></div>'); }
+        row('Клиент / заказчик',client,'Кто заказал услугу; это не обязательно грузоотправитель.');
+        row('Сторона договора с клиентом',cc,'Кто несёт договорные обязательства перед клиентом.');
+        row('Экспедитор перед клиентом',cc,'Если по договору эта компания обязалась организовать перевозку, она выступает экспедитором перед клиентом.');
+        row('Кто нанял перевозчика',fc,'Сторона, заключившая договор или транспортную заявку с фактическим перевозчиком.');
+        row('Фактический перевозчик',carrier,'Компания, которая непосредственно выполняет перевозку.');
+        row('Грузоотправитель',shipper,'Берётся из транспортных документов; не обязательно совпадает с клиентом.');
+        row('Грузополучатель',consignee,'Берётся из транспортных документов; не обязательно совпадает с плательщиком.');
+        row('Принятие груза во владение',custody,'Проверь, оформляет ли эта компания экспедиторскую расписку.');
+        row('Денежный поток',payment,'Оплата сама по себе не определяет роль в ЭТРН.');
+        if(fc && carrier) advice.push('Транспортную заявку / заказ перевозки перевозчику '+carrier+' направляет '+fc+'.');
+        else advice.push('Укажи, кто заключает договор или заявку с фактическим перевозчиком: без этого нельзя назвать отправителя транспортной заявки.');
+        if(client && cc && client!==cc) advice.push('Клиент и сторона договора — разные компании. Проверь договорную цепочку между ними и кто именно принял обязательство организовать перевозку.');
+        if(client && cc && client===cc) advice.push('Клиент и сторона договора совпадают. Если он поручает организацию перевозки твоей компании, поручение экспедитору направляет клиент твоей компании.');
+        if(cc && fc && cc!==fc) advice.push('Договор с клиентом и договор с перевозчиком заключают разные стороны. Проверь договор между '+cc+' и '+fc+' — по нему определяется следующий участник цепочки.');
+        if(custody) advice.push('Проверь факт принятия груза во владение и экспедиторскую расписку от '+custody+' — это влияет на распределение ролей.');
+        if(!shipper || !consignee) advice.push('Для заполнения ЭТРН дополнительно нужны точные грузоотправитель и грузополучатель.');
+        var out=root.querySelector('[data-et-role-result]');
+        out.innerHTML='<h3>Кто есть кто</h3>'+(rows.length?rows.join(''):'<p>Недостаточно данных.</p>')+'<div class="et-role-advice"><b>Что делать дальше</b><ul>'+advice.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>'+(details?'<details><summary>Исходный комментарий</summary><p>'+esc(details)+'</p></details>':'');
+      });
+      return;
+    }
     root.innerHTML = '<div class="et-shell"><div class="et-head"><div><span class="et-eyebrow">ПРАКТИЧЕСКИЙ ГИД · ЭДО / ЭПД</span><h2>Электронная транспортная накладная</h2><p>Пошаговый порядок работы с ЭТРН — от подготовки до закрытия перевозки</p></div><button type="button" class="et-print" data-et-print>Печать / PDF</button></div>'
       + '<div class="et-tabs" role="tablist">' + tabs.map(function (t) { return '<button type="button" role="tab" aria-selected="' + (t[0] === active) + '" class="' + (t[0] === active ? 'on' : '') + '" data-et-tab="' + t[0] + '">' + esc(t[1]) + '</button>'; }).join('') + '</div>'
       + '<div class="et-content"><div class="et-intro">' + esc(s.intro) + '</div><div class="et-grid">' + s.blocks.map(function (b, i) { return '<section class="et-card"><h3><span>' + String(i + 1).padStart(2, '0') + '</span>' + esc(b[0]) + '</h3><ul>' + b[1].map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></section>'; }).join('') + '</div>'

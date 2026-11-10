@@ -28,3 +28,20 @@ html.dark #etrnView .et-tabs button.on, body.dark #etrnView .et-tabs button.on {
 html.dark #etrnView .et-print, body.dark #etrnView .et-print { background:#1a334a; color:#d7e8f6; border-color:#31536d; }
 @media(max-width:850px) { #etrnView .pg-shell { width:calc(100vw - 20px); height:calc(100vh - 82px); } .et-grid { grid-template-columns:1fr; } .et-head { align-items:center; } }
 @media print { body * { visibility:hidden !important; } #etrnView, #etrnView * { visibility:visible !important; } #etrnView { position:absolute; inset:0; width:100%; height:auto; } #etrnView .pg-x, .et-tabs, .et-print { display:none !important; } #etrnView .pg-shell, #etrnRoot, .et-shell, .et-content { height:auto !important; max-height:none !important; overflow:visible !important; } .et-grid { grid-template-columns:1fr 1fr; } }
+
+/* Structured ETRN role analyzer */
+#etrnRoot .et-role-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#etrnRoot .et-role-field{display:grid;gap:6px;min-width:0;color:var(--ioma-text,#17324d);font-size:12px;font-weight:700}
+#etrnRoot .et-role-field input,#etrnRoot .et-role-field textarea{width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--ioma-line,rgba(35,75,112,.18));border-radius:10px;padding:12px;background:var(--ioma-card,#fff);color:var(--ioma-text,#17324d);font:inherit;font-weight:450;font-size:14px}
+#etrnRoot .et-role-wide{grid-column:1/-1;margin-top:12px}
+#etrnRoot .et-role-submit{margin-top:14px;border:0;border-radius:11px;padding:13px 18px;background:#174a73;color:#fff;font:inherit;font-weight:750;cursor:pointer}
+#etrnRoot .et-role-result{margin-top:14px;padding:16px;border:1px solid var(--ioma-line,rgba(35,75,112,.14));border-radius:14px;background:var(--ioma-card,#fff)}
+#etrnRoot .et-role-result h3{margin:0 0 12px;font-size:16px}
+#etrnRoot .et-role-row{display:grid;grid-template-columns:minmax(130px,.7fr) minmax(0,1fr);gap:4px 12px;padding:10px 0;border-bottom:1px solid var(--ioma-line,rgba(35,75,112,.1))}
+#etrnRoot .et-role-row b{font-size:12px;color:var(--ioma-muted,#718195)}
+#etrnRoot .et-role-row strong{font-size:14px;overflow-wrap:anywhere}
+#etrnRoot .et-role-row small{grid-column:2;color:var(--ioma-muted,#718195);font-size:11px;line-height:1.4}
+#etrnRoot .et-role-advice{margin-top:14px;padding:12px;border-radius:10px;background:rgba(232,139,62,.09)}
+#etrnRoot .et-role-advice ul{margin:8px 0 0;padding-left:19px}
+#etrnRoot .et-role-advice li{margin:7px 0;line-height:1.45;font-size:13px}
+@media(max-width:650px){#etrnRoot .et-role-grid{grid-template-columns:1fr}#etrnRoot .et-role-wide{grid-column:auto}#etrnRoot .et-role-row{grid-template-columns:1fr;gap:3px}#etrnRoot .et-role-row small{grid-column:1}}

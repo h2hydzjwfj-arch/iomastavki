@@ -147,7 +147,7 @@ const ASIA_CITY_SEED = [
 ['Алматы','Almaty','Алматы','Almaty','Kazakhstan','asia'],['Астана','Astana','Астана','Astana','Kazakhstan','asia'],['Шымкент','Shymkent','Шымкент','Shymkent','Kazakhstan','asia'],['Ташкент','Tashkent','Toshkent','Tashkent','Uzbekistan','asia'],['Самарканд','Samarkand','Samarqand','Samarkand','Uzbekistan','asia'],['Бишкек','Bishkek','Бишкек','Bishkek','Kyrgyzstan','asia'],['Ош','Osh','Ош','Osh','Kyrgyzstan','asia'],['Душанбе','Dushanbe','Душанбе','Dushanbe','Tajikistan','asia'],['Худжанд','Khujand','Хуҷанд','Sughd','Tajikistan','asia'],['Ашхабад','Ashgabat','Aşgabat','Ahal','Turkmenistan','asia'],['Туркменабад','Turkmenabat','Türkmenabat','Lebap','Turkmenistan','asia']
 ];
 for(const c of ASIA_CITY_SEED){ if(!cities.some(x=>String(x[1]).toLowerCase()===String(c[1]).toLowerCase())) cities.push(c); }
-const ASIA_CODES = new Set(['cn','jp','kr','kp','mn','in','pk','bd','np','bt','lk','mv','af','id','th','vn','my','sg','ph','mm','kh','la','bn','tl','kz','uz','kg','tj','tm','asia']);
+const ASIA_CODES = new Set(['cn','kr','in']);
 
 const CITY_COORDS={'Пекин':[39.9042,116.4074],'北京':[39.9042,116.4074],'Beijing':[39.9042,116.4074],'Шанхай':[31.2304,121.4737],'上海':[31.2304,121.4737],'Shanghai':[31.2304,121.4737],'Нинбо':[29.8683,121.5440],'宁波':[29.8683,121.5440],'Ningbo':[29.8683,121.5440],'Гуанчжоу':[23.1291,113.2644],'广州':[23.1291,113.2644],'Guangzhou':[23.1291,113.2644],'Циндао':[36.0671,120.3826],'青岛':[36.0671,120.3826],'Qingdao':[36.0671,120.3826],'Сямэнь':[24.4798,118.0894],'厦门':[24.4798,118.0894],'Xiamen':[24.4798,118.0894],'Чэнду':[30.5728,104.0668],'成都':[30.5728,104.0668],'Chengdu':[30.5728,104.0668],'Москва':[55.7558,37.6173],'Moscow':[55.7558,37.6173],'Санкт-Петербург':[59.9311,30.3609],'Saint Petersburg':[59.9311,30.3609],'圣彼得堡':[59.9311,30.3609],'Екатеринбург':[56.8389,60.6057],'Yekaterinburg':[56.8389,60.6057],'Новосибирск':[55.0084,82.9357],'Novosibirsk':[55.0084,82.9357],'Нижний Новгород':[56.2965,43.9361],'Nizhny Novgorod':[56.2965,43.9361],'Казань':[55.7879,49.1233],'Kazan':[55.7879,49.1233],'Самара':[53.1959,50.1002],'Samara':[53.1959,50.1002],'Владивосток':[43.1155,131.8855],'Vladivostok':[43.1155,131.8855]};
 for(const c of cities){for(const n of [c[0],c[1],c[2]])if(CITY_COORDS[n]){c[6]=CITY_COORDS[n][0];c[7]=CITY_COORDS[n][1];break;}}
@@ -420,7 +420,7 @@ function cityMatches(q,target){
    fields.forEach((f,i)=>{const n=normalize(f); if(n===x)score=Math.min(score,0); else if(n.startsWith(x))score=Math.min(score,1+i*.1); else if(n.includes(x))score=Math.min(score,3+i*.1); else {const d=editDistance(x,n); const limit=Math.max(1,Math.floor(Math.max(x.length,n.length)*.35)); if(d<=limit){score=Math.min(score,6+d);fuzzy=true; if(!correction||d<editDistance(x,normalize(correction)))correction=f;}}});
    if(fuzzy&&correction){c=[...c];c[8]={correction}}
    return {c,score};
- }).filter(o=>o.score<99).sort((a,b)=>a.score-b.score||a.c[0].localeCompare(b.c[0],'ru')).slice(0,20).map(o=>o.c)
+ }).filter(o=>o.score<99).sort((a,b)=>a.score-b.score||({cn:0,kr:1,in:2}[String(a.c[5]||'').toLowerCase()]??9)-({cn:0,kr:1,in:2}[String(b.c[5]||'').toLowerCase()]??9)||a.c[0].localeCompare(b.c[0],'ru')).slice(0,20).map(o=>o.c)
 }
 function renderSuggestions(box,list,input,target){
  box.innerHTML='';
