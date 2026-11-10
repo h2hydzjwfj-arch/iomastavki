@@ -43,7 +43,7 @@
   function city(k, c) { return function () { var R = window.IOMA_RMAP, n = R ? R.name(k, lang()) : k; return c ? n + (lang() === 'zh' ? '，' : ', ') + T(c) : n; }; }
   function txt(a) { return function () { return T(a); }; }
   var PH = {
-    fromCity: [city('yw', CN), city('sh', CN), city('tpe', TW), city('gz', CN), city('tyo', JP), city('sz', CN), city('sel', KR), city('nb', CN), city('osa', JP), city('qd', CN), city('pus', KR), city('bj', CN)],
+    fromCity: [city('yw', CN), city('sh', CN), city('gz', CN), city('sz', CN), city('nb', CN), city('qd', CN), city('bj', CN), city('sel', KR), city('pus', KR), city('mumbai', IN)],
     toCity: [city('msk'), city('spb'), city('ekb'), city('kzn'), city('nsk'), city('krd'), city('vvo')],
     weight: [txt(['Введите вес, кг', 'Enter weight, kg', '输入重量，公斤']), txt(['например, 1 200', 'e.g. 1,200', '例如 1200']), txt(['например, 350', 'e.g. 350', '例如 350'])],
     pieces: [txt(['Укажите количество мест', 'Number of packages', '填写件数']), txt(['например, 6 коробок', 'e.g. 6 boxes', '例如 6 箱']), txt(['например, 2 паллеты', 'e.g. 2 pallets', '例如 2 托盘'])]
