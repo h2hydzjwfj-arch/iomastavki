@@ -122,7 +122,7 @@ function setup(app, ctx) {
   const prices = d => Array.isArray(d.settings.agentPrices) ? d.settings.agentPrices : DEFAULT_PRICES;
   const pubAgents = () => { try { return (ctx.publicAgents && ctx.publicAgents()) || []; } catch { return []; } };
   const agentKey = a => low(a.email) || low(a.company) + '|' + low(a.contact);
-  const phoneKey = a => String(a.phone || '').replace(/\\D/g, '');
+  const phoneKey = a => String(a.phone || '').replace(/[^0-9]/g, '');
   function sameAgent(a, b) {
     const ea = low(a.email), eb = low(b.email);
     if (ea && eb && ea === eb) return true;
