@@ -45,14 +45,15 @@
   };
   var EN = { yiwu: 'иу', shanghai: 'шанхай', ningbo: 'нинбо', hangzhou: 'ханчжоу', suzhou: 'сучжоу', nanjing: 'нанкин', qingdao: 'циндао', beijing: 'пекин', tianjin: 'тяньцзинь', shenyang: 'шэньян', dalian: 'далянь',
     harbin: 'харбин', zhengzhou: 'чжэнчжоу', wuhan: 'ухань', changsha: 'чанша', "xi'an": 'сиань', xian: 'сиань', urumqi: 'урумчи', chengdu: 'чэнду', chongqing: 'чунцин', guangzhou: 'гуанчжоу', shenzhen: 'шэньчжэнь',
-    foshan: 'фошань', dongguan: 'дунгуань', xiamen: 'сямэнь', fuzhou: 'фучжоу', qinzhou: 'циньчжоу', kunming: 'куньмин', 'hong kong': 'гонконг', busan: 'пусан', pusan: 'пусан', seoul: 'сеул', incheon: 'инчхон',
+    foshan: 'фошань', dongguan: 'дунгуань', xiamen: 'сямэнь', fuzhou: 'фучжоу', qinzhou: 'циньчжоу', kunming: 'куньмин', 'hong kong': 'гонконг', busan: 'пусан', pusan: 'пусан', seoul: 'сеул', incheon: 'инчхон', erenhot: 'эрлянь', erlianhot: 'эрлянь', erlian: 'эрлянь',
     tokyo: 'токио', yokohama: 'йокогама', osaka: 'осака', nagoya: 'нагоя', taipei: 'тайбэй', kaohsiung: 'гаосюн', hanoi: 'ханой', haiphong: 'хайфон', 'ho chi minh': 'хошимин', saigon: 'хошимин',
     moscow: 'москва', 'st petersburg': 'санкт-петербург', 'saint petersburg': 'санкт-петербург', yekaterinburg: 'екатеринбург', chelyabinsk: 'челябинск', novosibirsk: 'новосибирск', kazan: 'казань', vladivostok: 'владивосток', khabarovsk: 'хабаровск' };
 
-  function norm(s) { return String(s || '').toLowerCase().replace(/ё/g, 'е').split(/[,(（，]/)[0].replace(/^(г\.|город)\s*/, '').replace(/\s+/g, ' ').trim(); }
+  function norm(s) { return String(s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/ё/g, 'е').replace(/[‐‑‒–—−]/g, ' ').split(/[,(（，]/)[0].replace(/^(г\.|город)\s*/, '').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim(); }
   function lookup(s) {
     var n = norm(s); if (!n) return null;
-    var k = CITY[n] ? n : EN[n] && CITY[EN[n]] ? EN[n] : CITY[n.replace(/е/g, 'ё')] ? n.replace(/е/g, 'ё') : null;
+    var ALIAS = { 'эрлианхот': 'эрлянь', 'эрэн хото': 'эрлянь', 'эрэн хот': 'эрлянь', 'эрен хот': 'эрлянь', 'эрен хото': 'эрлянь', 'erlian hot': 'эрлянь' };
+    var k = CITY[n] ? n : ALIAS[n] && CITY[ALIAS[n]] ? ALIAS[n] : EN[n] && CITY[EN[n]] ? EN[n] : CITY[n.replace(/е/g, 'ё')] ? n.replace(/е/g, 'ё') : null;
     if (!k) { var ks = Object.keys(CITY); for (var i = 0; i < ks.length; i++) if (ks[i].length > 3 && (n.indexOf(ks[i]) === 0 || ks[i].indexOf(n) === 0 && n.length > 3)) { k = ks[i]; break; } }
     return k ? { name: k, lon: CITY[k][0], lat: CITY[k][1], cc: CITY[k][2] } : null;
   }
@@ -145,8 +146,8 @@
   function add(r, d) { return [Math.max(1, r[0] + d), Math.max(2, r[1] + d)]; }
 
   // ---------- коридоры (подписи)
-  // так возит компания: авто и ЖД — через Маньчжурию и Забайкальск (главный коридор), на Дальний Восток — через Приморье и Приамурье,
-  // через Казахстан — только из Синьцзяна; море — до Владивостока
+  // Коридор выбирается по городу отправления, виду транспорта, городу назначения и доступности сервиса.
+  // Забайкальск, Приморье и Приамурье — разные рабочие направления; Казахстан — только при подтверждённом сервисе и проверке ограничений по товару/сторонам.
   var GW = { // погранпереходы на всех языках сайта: ru, en, zh, tr, de, fr
     heihe: ['Хэйхэ — Благовещенск', 'Heihe — Blagoveshchensk', '黑河 — 布拉戈维申斯克', 'Heihe — Blagoveşçensk', 'Heihe — Blagoweschtschensk', 'Heihe — Blagovechtchensk'],
     sfPog: ['Суйфэньхэ — Пограничный', 'Suifenhe — Pogranichny', '绥芬河 — 波格拉尼奇内', 'Suifenhe — Pograniçnıy', 'Suifenhe — Pogranitschny', 'Suifenhe — Pogranitchny'],
@@ -206,7 +207,7 @@
       bigAir: 'для такого объёма авиа неоправданно дорого',
       ltlAuto: 'сборное авто — самый удобный способ для партии до 10–12 м³: оплата за объём, без целой машины',
       yiwuHub: 'Иу — главный хаб сборных грузов: машины на Россию уходят ежедневно',
-      zabMain: 'главный коридор — Маньчжурия — Забайкальск: так везём большинство грузов',
+      zabMain: 'один из основных сухопутных коридоров — Маньчжурия — Забайкальск; выбор зависит от города, транспорта и доступного сервиса',
       zabShort: 'до Сибири и Дальнего Востока ближе всего через Забайкальск и Приморье',
       neShort: 'северо-восток Китая граничит с Россией — путь самый короткий',
       seaCheap: 'контейнер морем до Владивостока и дальше по ЖД — самый дешёвый способ для полного контейнера',
@@ -239,7 +240,7 @@
       bigAir: 'air is unreasonably expensive for this volume',
       ltlAuto: 'groupage truck is the handiest way for up to 10–12 m³: you pay per m³, no full truck needed',
       yiwuHub: 'Yiwu is the main groupage hub: trucks to Russia leave daily',
-      zabMain: 'main corridor — Manzhouli — Zabaikalsk: most of our cargo goes this way',
+      zabMain: 'one of the main land corridors is Manzhouli — Zabaikalsk; the choice depends on origin, mode and available service',
       zabShort: 'Siberia and the Far East are closest via Zabaikalsk and Primorye',
       neShort: 'Northeast China borders Russia — the shortest way',
       seaCheap: 'container by sea to Vladivostok and on by rail is the cheapest way for a full container',
@@ -272,7 +273,7 @@
       bigAir: '这么大的体积空运过于昂贵',
       ltlAuto: '10–12 立方米以内，公路拼车最方便：按体积付费，无需整车',
       yiwuHub: '义乌是拼货的主要枢纽：发往俄罗斯的卡车每天出发',
-      zabMain: '主要通道 — 满洲里 — 后贝加尔斯克：我们的大部分货物走这条线',
+      zabMain: '满洲里—后贝加尔斯克是主要陆路通道之一；具体选择取决于起运城市、运输方式和可用服务',
       zabShort: '去西伯利亚和远东，经后贝加尔斯克和滨海边疆区最近',
       neShort: '中国东北与俄罗斯接壤 — 路线最短',
       seaCheap: '集装箱海运至符拉迪沃斯托克再转铁路 — 整箱最便宜的方式',
@@ -305,7 +306,7 @@
       bigAir: 'bu hacim için hava yolu gereksiz derecede pahalı',
       ltlAuto: 'parsiyel kamyon 10–12 m³’e kadar en pratik yol: hacme göre ödeme, tam araç gerekmez',
       yiwuHub: 'Yiwu parsiyel yüklerin ana merkezi: Rusya’ya kamyonlar her gün çıkıyor',
-      zabMain: 'ana koridor — Mançuli — Zabaykalsk: yüklerimizin çoğu bu yoldan gider',
+      zabMain: 'ana kara koridorlarından biri Manzhouli — Zabaykalsk’tır; seçim çıkış şehrine, taşıma türüne ve hizmete bağlıdır',
       zabShort: 'Sibirya ve Uzak Doğu’ya en kısa yol Zabaykalsk ve Primorye üzerinden',
       neShort: 'Kuzeydoğu Çin Rusya ile komşu — en kısa yol',
       seaCheap: 'Vladivostok’a deniz yoluyla konteyner, sonra demiryolu — tam konteyner için en ucuz yol',
@@ -338,7 +339,7 @@
       bigAir: 'für dieses Volumen ist Luftfracht unverhältnismäßig teuer',
       ltlAuto: 'Sammelgut per Lkw ist bis 10–12 m³ am praktischsten: Bezahlung nach Volumen, kein ganzer Lkw nötig',
       yiwuHub: 'Yiwu ist der wichtigste Sammelgut-Hub: Lkw nach Russland fahren täglich ab',
-      zabMain: 'Hauptkorridor — Manzhouli — Sabaikalsk: so transportieren wir die meisten Sendungen',
+      zabMain: 'Manzhouli — Sabaikalsk ist einer der wichtigen Landkorridore; die Wahl hängt von Startort, Verkehrsmittel und verfügbarem Service ab',
       zabShort: 'nach Sibirien und Fernost ist der Weg über Sabaikalsk und Primorje am kürzesten',
       neShort: 'Nordostchina grenzt an Russland — der kürzeste Weg',
       seaCheap: 'Container per Schiff nach Wladiwostok und weiter per Bahn — der günstigste Weg für einen vollen Container',
@@ -371,7 +372,7 @@
       bigAir: 'pour ce volume, l’aérien est déraisonnablement cher',
       ltlAuto: 'le groupage routier est le plus pratique jusqu’à 10–12 m³ : paiement au volume, sans camion complet',
       yiwuHub: 'Yiwu est le principal hub de groupage : des camions partent chaque jour vers la Russie',
-      zabMain: 'corridor principal — Manzhouli — Zabaïkalsk : c’est par là que passent la plupart de nos envois',
+      zabMain: 'Manzhouli — Zabaïkalsk est l’un des principaux corridors terrestres ; le choix dépend de l’origine, du mode et du service disponible',
       zabShort: 'vers la Sibérie et l’Extrême-Orient, le plus court passe par Zabaïkalsk et le Primorié',
       neShort: 'le nord-est de la Chine borde la Russie — le trajet le plus court',
       seaCheap: 'conteneur par mer jusqu’à Vladivostok puis par rail — le moyen le moins cher pour un conteneur complet',

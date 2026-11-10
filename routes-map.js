@@ -157,12 +157,13 @@
     return best || routeFor(fromKey, mode);
   }
   // поиск города по названию на любом языке
-  var ALIAS = { yw: ['yiwu', 'иу', 'iwu'], tpe: ['taibei', 'тайпей'], tyo: ['токио', 'tokio', 'yokohama', 'йокогама'], sel: ['seoul', 'сеул'], icn: ['incheon', 'инчон'], spb: ['спб', 'питер', 'saint petersburg', 'санкт петербург'], msk: ['мск'], sh: ['shanghai', 'шанхай'], sz: ['shenzhen', 'шэньчжэнь', 'шеньчжень', 'шэньжэнь'], gz: ['guangzhou', 'гуанчжоу', 'кантон', 'canton'], xa: ['xian', "xi'an", 'сиань'], qz: ['qinzhou', 'циньчжоу'], pus: ['busan', 'pusan', 'пусан'] };
+  var ALIAS = { yw: ['yiwu', 'иу', 'iwu'], tpe: ['taibei', 'тайпей'], tyo: ['токио', 'tokio', 'yokohama', 'йокогама'], sel: ['seoul', 'сеул'], icn: ['incheon', 'инчон'], spb: ['спб', 'питер', 'saint petersburg', 'санкт петербург'], msk: ['мск'], sh: ['shanghai', 'шанхай'], sz: ['shenzhen', 'шэньчжэнь', 'шеньчжень', 'шэньжэнь'], gz: ['guangzhou', 'гуанчжоу', 'кантон', 'canton'], xa: ['xian', "xi'an", 'сиань'], qz: ['qinzhou', 'циньчжоу'], pus: ['busan', 'pusan', 'пусан'], erl: ['erenhot', 'erlianhot', 'erlian', 'эрлианхот', 'эрэн-хото', 'эрэн хото', 'эренхот', 'эрен-хото', 'эрлянь', 'ерлянь'] };
+  function cityNorm(s) { return String(s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/ё/g, 'е').replace(/[‐‑‒–—−]/g, ' ').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim(); }
   function find(q) {
-    q = String(q || '').trim().toLowerCase().replace(/ё/g, 'е'); if (!q) return null;
+    q = cityNorm(q); if (!q) return null;
     var keys = Object.keys(C);
-    for (var i = 0; i < keys.length; i++) { var c = C[keys[i]]; if ([c[0], c[1], c[2]].some(function (n) { return String(n).toLowerCase().replace(/ё/g, 'е') === q; }) || (ALIAS[keys[i]] || []).indexOf(q) >= 0) return keys[i]; }
-    for (var j = 0; j < keys.length; j++) { var c2 = C[keys[j]]; if (q.length >= 3 && [c2[0], c2[1]].some(function (n) { return String(n).toLowerCase().indexOf(q) === 0; })) return keys[j]; }
+    for (var i = 0; i < keys.length; i++) { var c = C[keys[i]]; if ([c[0], c[1], c[2]].some(function (n) { return cityNorm(n) === q; }) || (ALIAS[keys[i]] || []).some(function (n) { return cityNorm(n) === q; })) return keys[i]; }
+    for (var j = 0; j < keys.length; j++) { var c2 = C[keys[j]]; if (q.length >= 3 && [c2[0], c2[1]].some(function (n) { var v = cityNorm(n); return v.indexOf(q) === 0 || q.indexOf(v) === 0 && v.length >= 4; })) return keys[j]; }
     return null;
   }
 
