@@ -282,6 +282,30 @@ function setup(app, opts = {}) {
     res.json(out);
   }));
 
+
+  // ---------- бесплатный разовый морской трекинг Navo24 (без ключа)
+  async function navoPublicTrack(reference, referenceType) {
+    return cached('navo-public:' + referenceType + ':' + reference, 10 * 60 * 1000, async () => {
+      const r = await request('https://api.navo24.com/v1/tracking/track/public', {
+        method: 'POST', body: JSON.stringify({ reference, reference_type: referenceType }),
+        headers: { 'content-type': 'application/json', accept: 'application/json' }, timeout: 20000
+      });
+      let j = {}; try { j = JSON.parse(r.buf.toString('utf8')); } catch (_) {}
+      if (r.status === 429) return { ok: false, limited: true, error: 'Бесплатный лимит Navo24 на этот IP временно исчерпан. Попробуйте позже или воспользуйтесь поиском TraceContainer.' };
+      if (r.status === 404) return { ok: false, notFound: true, error: (j && (j.message || j.error)) || 'Отправление не найдено у подключённых перевозчиков.' };
+      if (r.status < 200 || r.status >= 300) return { ok: false, error: 'Navo24 временно недоступен (HTTP ' + r.status + ').' };
+      if (!j || j.ok !== true || !j.data) return { ok: false, notFound: true, error: (j && (j.message || j.recommendation)) || 'По этому номеру пока нет данных от перевозчика.', diagnosis: j && j.diagnosis || null, suggestions: j && j.suggestions || [] };
+      return { ok: true, source: 'Navo24', data: j.data, lineCorrection: j.line_correction || null };
+    });
+  }
+  app.post('/api/tools/ocean-track', staff, limit, wrap(async (req, res) => {
+    const b = req.body || {}, reference = String(b.reference || '').toUpperCase().replace(/\s+/g, '').slice(0, 80);
+    const type = b.type === 'bl' ? 'bill_of_lading' : 'container_id';
+    if (type === 'container_id' && !/^[A-Z]{3}[UJZ]\d{7}$/.test(reference)) return res.status(400).json({ ok: false, error: 'Номер контейнера должен содержать 4 буквы и 7 цифр.' });
+    if (type === 'bill_of_lading' && (reference.length < 5 || reference.length > 80)) return res.status(400).json({ ok: false, error: 'Проверьте номер коносамента B/L.' });
+    res.json(await navoPublicTrack(reference, type));
+  }));
+
   app.post('/api/tools/russia', staff, limit, wrap(async (req, res) => {
     const b = req.body || {}, q = { from: String(b.from || '').slice(0, 60), to: String(b.to || '').slice(0, 60), weight: num(b.weight), volume: num(b.volume), places: Math.max(1, Math.round(num(b.places, 1))), length: num(b.length), width: num(b.width), height: num(b.height) };
     if (!q.from || !q.to) return res.status(400).json({ ok: false, error: 'Укажите, откуда и куда везём' });

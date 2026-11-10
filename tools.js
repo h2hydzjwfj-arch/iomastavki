@@ -384,24 +384,21 @@
     yangming: ['Yang Ming', 'https://www.yangming.com/']
   };
   function renderTrack(root) {
-    var saved = store('track') || { t: 'cont', line: 'maersk' };
-    var t = saved.t || 'cont', line = saved.line || 'maersk';
+    var saved = store('track') || { t: 'cont' };
+    var t = saved.t || 'cont';
     root.innerHTML = head('Инструменты', 'Отследить груз', 'Один экран для контейнера, коносамента B/L, номера вагона и авианакладной. Живые данные показываем там, где источник их действительно предоставляет.') +
       '<div class="tl-grid"><form class="tl-card tl-form" novalidate><div class="tl-seg" role="tablist" aria-label="Тип номера">' +
       '<button type="button" role="tab" data-t="cont">Контейнер</button><button type="button" role="tab" data-t="bl">Коносамент B/L</button><button type="button" role="tab" data-t="wagon">Вагон</button><button type="button" role="tab" data-t="awb">Авианакладная</button></div>' +
-      '<div class="tl-bl-line" hidden>' + field('Морская линия', '<select data-k="line"><option value="maersk">Maersk</option><option value="msc">MSC</option><option value="cosco">COSCO</option><option value="cma">CMA CGM</option><option value="hapag">Hapag-Lloyd</option><option value="one">ONE</option><option value="evergreen">Evergreen</option><option value="zim">ZIM</option><option value="fesco">FESCO</option><option value="sitc">SITC</option><option value="pil">PIL</option><option value="yangming">Yang Ming</option></select>', 'tl-wide') + '</div>' +
       field('Номер', '<input data-k="no" autocomplete="off" spellcheck="false" placeholder="FESU5011022">', 'tl-wide') +
       '<button class="tl-go" type="submit">Найти отправление</button><div class="tl-hist"></div>' +
-      '<p class="tl-src">Контейнер и авианакладная проверяются через доступные источники. Для B/L и вагона откроется официальный или специализированный сервис; наличие данных и доступ зависят от перевозчика.</p></form>' +
+      '<p class="tl-src">Контейнеры и B/L проверяются через бесплатный морской источник. Для вагона и авианакладной используются доступные профильные системы; наличие данных зависит от перевозчика.</p></form>' +
       '<div class="tl-card tl-out" aria-live="polite"><p class="tl-empty">Выберите тип номера и введите идентификатор отправления.</p></div></div>';
-    var f = $('form', root), out = $('.tl-out', root), inp = $('[data-k="no"]', f), hist = $('.tl-hist', f), lineSel = $('[data-k="line"]', f), lineWrap = $('.tl-bl-line', f);
+    var f = $('form', root), out = $('.tl-out', root), inp = $('[data-k="no"]', f), hist = $('.tl-hist', f);
     function seg() {
       $$('[data-t]', f).forEach(function (b) { b.classList.toggle('on', b.dataset.t === t); b.setAttribute('aria-selected', b.dataset.t === t ? 'true' : 'false'); });
-      lineWrap.hidden = t !== 'bl';
       inp.placeholder = t === 'awb' ? '555-12345675' : t === 'wagon' ? '8 цифр, например 12345678' : t === 'bl' ? 'Номер коносамента / B/L' : 'FESU5011022';
       inp.inputMode = t === 'wagon' || t === 'awb' ? 'numeric' : 'text';
-      lineSel.value = line;
-      store('track', { t: t, line: line });
+      store('track', { t: t });
     }
     function drawHist() {
       var h = (store('trackHist') || []).filter(function (x) { return x.t === t; });
@@ -414,16 +411,41 @@
     function providerButton(label, url, number) {
       return '<div class="tl-acts"><button type="button" class="tl-btn" data-provider-url="' + esc(url) + '" data-provider-no="' + esc(number) + '">' + esc(label) + ' ↗</button>' + copyBtn(number) + '</div>';
     }
+
+    function oceanHtml(r, number, type) {
+      if (!r || !r.ok || !r.data) {
+        var msg = r && r.error ? r.error : 'Источник не вернул данные.';
+        var hint = type === 'container' ? '<p class="tl-note">Попробуйте бесплатное определение линии через TraceContainer. Оно распознаёт перевозчика и открывает официальный трекинг, но не показывает историю событий внутри IOMASTAVKA.</p>' + providerButton('Определить линию · TraceContainer', 'https://www.tracecontainer.com/', number) : '<p class="tl-note">Для House B/L данные могут отсутствовать в системе морской линии. Проверьте, является ли номер Master B/L (MBL).</p>';
+        return '<h3 class="tl-sub">Морской трекинг</h3><p class="tl-note">' + esc(msg) + '</p>' + hint;
+      }
+      var d = r.data, statuses = { in_transit: 'В пути', loaded: 'Погружен на судно', departed: 'Отправлен', arrived: 'Прибыл', discharged: 'Выгружен', available: 'Доступен к выдаче', delivered: 'Доставлен', returned_empty: 'Порожний контейнер возвращён' };
+      var eta = d.eta ? new Date(d.eta).toLocaleString('ru-RU', { dateStyle: 'medium', timeStyle: 'short' }) : 'не опубликована';
+      var h = '<h3 class="tl-sub">Морской трекинг · Navo24</h3><div class="tl-big"><b>' + esc(statuses[d.status] || d.status || 'Статус не указан') + '</b><span>' + esc(d.carrier_name || d.carrier_code || 'Перевозчик не определён') + '</span></div>';
+      h += '<dl class="tl-dl">';
+      if (d.origin) h += '<dt>Отправление</dt><dd>' + esc(d.origin) + '</dd>';
+      if (d.destination) h += '<dt>Назначение</dt><dd>' + esc(d.destination) + '</dd>';
+      h += '<dt>ETA</dt><dd>' + esc(eta) + (d.eta_is_estimated === true ? ' · прогноз' : d.eta_is_estimated === false ? ' · фактическая' : '') + '</dd>';
+      if (d.vessel && d.vessel.name) h += '<dt>Судно</dt><dd>' + esc(d.vessel.name) + '</dd>';
+      h += '</dl>';
+      if (r.lineCorrection) h += '<p class="tl-note">Линия автоматически уточнена: ' + esc(r.lineCorrection.found_name || r.lineCorrection.found_code || '') + '.</p>';
+      var events = Array.isArray(d.events) ? d.events : [];
+      if (events.length) h += '<h3 class="tl-sub">История движения</h3><div class="tl-timeline">' + events.slice().reverse().map(function (ev) {
+        var dt = ev.datetime ? new Date(ev.datetime).toLocaleString('ru-RU', { dateStyle: 'medium', timeStyle: 'short' }) : 'Время не указано';
+        return '<div class="tl-note"><b>' + esc(ev.description || ev.event_code || 'Событие') + '</b><br>' + esc(ev.location || ev.unlocode || '') + ' · ' + esc(dt) + (ev.actual === false ? ' · план' : '') + '</div>';
+      }).join('') + '</div>';
+      else h += '<p class="tl-note">Перевозчик пока не опубликовал события движения.</p>';
+      h += '<p class="tl-src">Источник: Navo24, данные подключённых систем перевозчиков. ETA может быть прогнозной.</p>';
+      return h;
+    }
     function table(rows) {
       if (!rows || !rows.length) return '';
       var keys = Object.keys(rows[0]).filter(function (k) { return rows.some(function (r) { return r[k] != null && typeof r[k] !== 'object' && String(r[k]).trim() !== ''; }); }).slice(0, 7);
       return '<div class="tl-scroll"><table class="tl-tbl"><thead><tr>' + keys.map(function (k) { return '<th>' + esc(KEYRU[k] || k.replace(/_/g, ' ')) + '</th>'; }).join('') + '</tr></thead><tbody>' + rows.map(function (r) { return '<tr>' + keys.map(function (k) { return '<td>' + esc(r[k]) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
     }
     seg(); drawHist();
-    f.addEventListener('change', function (e) { if (e.target === lineSel) { line = lineSel.value; store('track', { t: t, line: line }); } });
     f.addEventListener('click', function (e) {
       var b = e.target.closest('[data-t]');
-      if (b) { t = b.dataset.t; store('track', { t: t, line: line }); seg(); drawHist(); out.innerHTML = '<p class="tl-empty">Введите номер и нажмите «Найти отправление».</p>'; }
+      if (b) { t = b.dataset.t; store('track', { t: t }); seg(); drawHist(); out.innerHTML = '<p class="tl-empty">Введите номер и нажмите «Найти отправление».</p>'; }
       var n = e.target.closest('[data-no]');
       if (n) { inp.value = n.dataset.no; f.requestSubmit ? f.requestSubmit() : f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }
       var p = e.target.closest('[data-provider-url]');
@@ -435,10 +457,11 @@
       var btn = $('.tl-go', f); busy(btn, true); out.innerHTML = '<p class="tl-load">Проверяем номер…</p>';
       if (t === 'bl') {
         if (v.length < 5) { busy(btn, false); out.innerHTML = '<p class="tl-err">Проверьте номер коносамента B/L.</p>'; return; }
-        line = lineSel.value || line; store('track', { t: t, line: line }); remember(v);
-        var chosen = BL_LINES[line] || BL_LINES.maersk;
-        out.innerHTML = '<div class="tl-big"><b>' + esc(v) + '</b><span>Коносамент · ' + esc(chosen[0]) + '</span></div><p class="tl-note">Откроется система выбранной морской линии. Если номер не подставится автоматически, вставьте его в поле поиска на сайте перевозчика. События и ETA предоставляет сама линия.</p>' + providerButton('Открыть отслеживание ' + chosen[0], chosen[1], v);
-        busy(btn, false); return;
+        remember(v);
+        return api('/api/tools/ocean-track', { reference: v, type: 'bl' }).then(function (r) {
+          busy(btn, false);
+          out.innerHTML = '<div class="tl-big"><b>' + esc(v) + '</b><span>Коносамент B/L · автоматический поиск линии</span></div>' + oceanHtml(r, v, 'bl');
+        }).catch(function (err) { busy(btn, false); out.innerHTML = '<p class="tl-err">' + esc(err.message) + '</p>'; });
       }
       if (t === 'wagon') {
         var wn = v.replace(/\D/g, '');
@@ -459,8 +482,12 @@
       if (t === 'cont') {
         var no = v.toUpperCase().replace(/[^A-Z0-9]/g, '');
         if (!/^[A-Z]{3}[UJZ]\d{7}$/.test(no)) { busy(btn, false); out.innerHTML = '<p class="tl-err">Номер контейнера: 4 буквы и 7 цифр, например FESU5011022.</p>'; return; }
-        return api('/api/tools/container?no=' + encodeURIComponent(no)).then(function (r) {
-          busy(btn, false); if (!r.ok) { out.innerHTML = '<p class="tl-err">' + esc(r.error) + '</p>'; return; } remember(r.number);
+        return Promise.all([
+          api('/api/tools/container?no=' + encodeURIComponent(no)),
+          api('/api/tools/ocean-track', { reference: no, type: 'container' })
+        ]).then(function (pair) {
+          var r = pair[0], ocean = pair[1];
+          busy(btn, false); if (!r.ok) { out.innerHTML = '<p class="tl-err">' + esc(r.error) + '</p>' + oceanHtml(ocean, no, 'container'); return; } remember(r.number);
           var o = r.owner || {}, kind = { line: 'морская линия', leasing: 'лизинговая компания — линия по номеру не определяется', rail: 'железнодорожный оператор' }[o.kind] || 'владелец не найден в нашем справочнике';
           var h = '<div class="tl-big"><b>' + esc(r.number.slice(0, 4) + ' ' + r.number.slice(4, 10) + ' ' + r.number.slice(10)) + '</b><span>' + (r.valid ? ICON.ok + ' номер верный' : ICON.warn + ' контрольная цифра должна быть ' + r.checkDigit + ' — проверьте номер') + '</span></div>';
           h += '<dl class="tl-dl"><dt>Владелец</dt><dd>' + esc(o.name || o.code) + '</dd><dt>Кто это</dt><dd>' + esc(kind) + '</dd></dl>';
@@ -469,7 +496,8 @@
           else if (r.rail) h += '<p class="tl-note">ЖД-дислокация сейчас недоступна: ' + esc(r.rail.error) + '</p>';
           if (o.url) h += providerButton('Открыть отслеживание ' + (o.name || 'линии'), o.url, r.number);
           else h += providerButton('Открыть поиск контейнера', 'https://containers.ru/project/tracking/', r.number);
-          h += '<p class="tl-src">Проверка номера и данные ЖД — доступные ответы ТрансКонтейнера. Морские события предоставляет линия-владелец контейнера.</p>';
+          h += oceanHtml(ocean, r.number, 'container');
+          h += '<p class="tl-src">Проверка ISO 6346 и ЖД-дислокация — доступные ответы ТрансКонтейнера. Морские события — Navo24 и данные подключённых перевозчиков.</p>';
           out.innerHTML = h;
         }).catch(function (err) { busy(btn, false); out.innerHTML = '<p class="tl-err">' + esc(err.message) + '</p>'; });
       }
