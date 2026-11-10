@@ -408,3 +408,14 @@ html:root body .hx-acts .hx-i-copy.ok{background:rgba(52,168,108,.25)}
 .hx-acts::after{content:"";position:absolute;left:0;right:0;top:100%;height:12px}
 
 .jm-disclaimer{position:absolute;right:10px;top:10px;z-index:4;padding:5px 9px;border:1px solid rgba(242,138,58,.3);border-radius:999px;background:rgba(9,22,42,.72);color:rgba(246,241,234,.82);font-size:10px;letter-spacing:.02em;pointer-events:none;backdrop-filter:blur(8px)}
+
+/* Route map: select endpoints in fields; the map itself is display-only */
+.rmap-top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:12px}
+.rmap-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
+.rmap-fields label{display:grid;gap:5px;min-width:0}
+.rmap-fields label span{font-size:11px;font-weight:650;color:var(--hx-mut)}
+.rmap-fields select{width:100%;min-width:0;height:40px;padding:0 32px 0 12px;border:1px solid var(--hx-line);border-radius:12px;background:var(--rm-tab);color:var(--hx-ink);font:inherit;font-size:13px;outline:none}
+.rmap-fields select:focus-visible{border-color:var(--ui-o1,#F28A3A);box-shadow:0 0 0 3px color-mix(in srgb,var(--ui-o1,#F28A3A) 18%,transparent)}
+.rmap-svg,.rmap-svg *{pointer-events:none!important}
+@media(max-width:900px){.rmap-top{grid-template-columns:1fr}.rmap-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.rmap-tabs{max-width:100%;overflow-x:auto}}
+@media(max-width:420px){.rmap-fields{grid-template-columns:1fr}}
