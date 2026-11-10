@@ -24,7 +24,7 @@ test('Yiwu rail and road schemes do not silently default to Manzhouli', () => {
 test('routeTo does not replace a missing destination route with a route to Moscow', () => {
   const route = map.routeTo('yw', 'msk', 'rail');
   assert.ok(route);
-  assert.equal(route.to, 'msk');
+  assert.equal(route.path.at(-1), 'msk');
   assert.notEqual(route.gw, 'zab');
   assert.equal(route.status, 'candidate');
 });
