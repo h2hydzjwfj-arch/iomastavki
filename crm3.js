@@ -122,6 +122,15 @@ function setup(app, ctx) {
   const prices = d => Array.isArray(d.settings.agentPrices) ? d.settings.agentPrices : DEFAULT_PRICES;
   const pubAgents = () => { try { return (ctx.publicAgents && ctx.publicAgents()) || []; } catch { return []; } };
   const agentKey = a => low(a.email) || low(a.company) + '|' + low(a.contact);
+  const phoneKey = a => String(a.phone || '').replace(/\\D/g, '');
+  function sameAgent(a, b) {
+    const ea = low(a.email), eb = low(b.email);
+    if (ea && eb && ea === eb) return true;
+    const ca = low(a.company), cb = low(b.company), ta = low(a.contact), tb = low(b.contact);
+    if (ca && ca === cb && ((ta && tb && ta === tb) || (!ta && !tb))) return true;
+    const pa = phoneKey(a), pb = phoneKey(b);
+    return !!(ca && ca === cb && pa && pb && pa === pb);
+  }
   function allAgents(d) {
     const own = d.crmAgents.map(a => ({ ...a, own: true })), keys = new Set(own.map(agentKey));
     const pub = pubAgents().filter(a => a && a.company && !keys.has(agentKey(a))).map(a => ({ id: 'pub' + a.id, company: a.company, contact: a.contact || '', phone: a.phone || '', email: a.email || '', site: a.site || '', modes: (a.modes || []).map(m => m === 'auto' ? 'road' : m), transport: a.transport || [], notes: a.notes || '', own: false }));
@@ -139,14 +148,18 @@ function setup(app, ctx) {
   app.post('/api/crm/agents', admin, (req, res) => {
     const b = req.body || {}; if (!str(b.company, 160)) return bad(res, 'Укажите компанию');
     const d = db(); const a = { id: newId(5), company: str(b.company, 160), contact: str(b.contact, 120), phone: str(b.phone, 60), email: str(b.email, 160).toLowerCase(), site: str(b.site, 160), modes: Array.isArray(b.modes) ? b.modes.filter(m => MODES[m]) : modesFrom(b.transport), transport: Array.isArray(b.transport) ? b.transport.map(t => str(t, 40)).filter(Boolean) : String(b.transport || '').split(/[,;/]/).map(t => str(t, 40)).filter(Boolean), notes: str(b.notes, 500), createdAt: now() };
+    const duplicate = d.crmAgents.find(x => sameAgent(x, a));
+    if (duplicate) return bad(res, 'Похожий агент уже есть: ' + duplicate.company + (duplicate.contact ? ' · ' + duplicate.contact : '') + '. Откройте запись и отредактируйте её.', 409);
     d.crmAgents.push(a); store.save(d); res.json({ ok: true, item: a });
   });
   app.patch('/api/crm/agents/:id', admin, (req, res) => {
     const d = db(), a = d.crmAgents.find(x => x.id === req.params.id); if (!a) return bad(res, 'Агент не найден (общий справочник правится в «Экспедиторах»)', 404);
-    const b = req.body || {};
-    for (const [k, m] of [['company', 160], ['contact', 120], ['phone', 60], ['email', 160], ['site', 160], ['notes', 500]]) if (b[k] != null) a[k] = str(b[k], m);
-    if (b.transport != null) { a.transport = (Array.isArray(b.transport) ? b.transport : String(b.transport).split(/[,;/]/)).map(t => str(t, 40)).filter(Boolean); a.modes = modesFrom(a.transport.join(' ')); }
-    store.save(d); res.json({ ok: true, item: a });
+    const b = req.body || {}, next = { ...a };
+    for (const [k, m] of [['company', 160], ['contact', 120], ['phone', 60], ['email', 160], ['site', 160], ['notes', 500]]) if (b[k] != null) next[k] = str(b[k], m);
+    if (b.transport != null) { next.transport = (Array.isArray(b.transport) ? b.transport : String(b.transport).split(/[,;/]/)).map(t => str(t, 40)).filter(Boolean); next.modes = modesFrom(next.transport.join(' ')); }
+    const duplicate = d.crmAgents.find(x => x.id !== a.id && sameAgent(x, next));
+    if (duplicate) return bad(res, 'Эти данные совпадают с агентом «' + duplicate.company + '». Проверьте базу перед сохранением.', 409);
+    Object.assign(a, next); store.save(d); res.json({ ok: true, item: a });
   });
   app.delete('/api/crm/agents/:id', admin, (req, res) => { const d = db(); const i = d.crmAgents.findIndex(x => x.id === req.params.id); if (i < 0) return bad(res, 'Не найдено', 404); d.crmAgents.splice(i, 1); store.save(d); res.json({ ok: true }); });
   if (upload) app.post('/api/crm/agents/import', admin, upload.single('file'), (req, res) => {
@@ -161,15 +174,15 @@ function setup(app, ctx) {
     const hi = rows.findIndex(r => r.some(c => /компан|company|агент/i.test(String(c || '')))); if (hi < 0) return bad(res, 'Нужна строка заголовков с колонкой «Компания»');
     const H = rows[hi].map(c => low(c)), col = rx => H.findIndex(h => rx.test(h));
     const C = { company: col(/компан|company|агент|назван/), transport: col(/транспорт|вид|transport|mode/), email: col(/mail|почт/), contact: col(/контакт|contact|имя|лицо/), phone: col(/телеф|phone|тел\.|wechat|whatsapp/), site: col(/сайт|site|web/), notes: col(/примеч|коммент|note|направлен/) };
-    const d = db(), byKey = new Map(d.crmAgents.map(a => [agentKey(a), a])); let added = 0, updated = 0;
+    const d = db(); let added = 0, updated = 0;
     for (const r of rows.slice(hi + 1)) {
       const g = k => C[k] >= 0 ? String(r[C[k]] == null ? '' : r[C[k]]).trim() : '';
       if (!g('company')) continue;
       const a = { company: str(g('company'), 160), contact: str(g('contact'), 120), phone: str(g('phone'), 60), email: str(g('email'), 160).toLowerCase(), site: str(g('site'), 160), notes: str(g('notes'), 500), transport: g('transport').split(/[,;/]/).map(t => str(t, 40)).filter(Boolean) };
       a.modes = modesFrom(a.transport.join(' ') + ' ' + a.notes);
-      const k = agentKey(a), ex = byKey.get(k);
+      const ex = d.crmAgents.find(x => sameAgent(x, a));
       if (ex) { for (const [kk, v] of Object.entries(a)) if (v && !(Array.isArray(v) && !v.length)) ex[kk] = v; updated++; }
-      else { const rec = { id: newId(5), ...a, createdAt: now() }; d.crmAgents.push(rec); byKey.set(k, rec); added++; }
+      else { const rec = { id: newId(5), ...a, createdAt: now() }; d.crmAgents.push(rec); added++; }
     }
     store.save(d); res.json({ ok: true, added, updated, total: d.crmAgents.length });
   });
