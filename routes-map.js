@@ -157,7 +157,7 @@
     return best || routeFor(fromKey, mode);
   }
   // поиск города по названию на любом языке
-  var ALIAS = { yw: ['yiwu', 'иу', 'iwu'], tpe: ['taibei', 'тайпей'], tyo: ['токио', 'tokio', 'yokohama', 'йокогама'], sel: ['seoul', 'сеул'], icn: ['incheon', 'инчон'], spb: ['спб', 'питер', 'saint petersburg', 'санкт петербург'], msk: ['мск'], sh: ['shanghai', 'шанхай'], sz: ['shenzhen', 'шэньчжэнь', 'шеньчжень', 'шэньжэнь'], gz: ['guangzhou', 'гуанчжоу', 'кантон', 'canton'], xa: ['xian', "xi'an", 'сиань'], qz: ['qinzhou', 'циньчжоу'], pus: ['busan', 'pusan', 'пусан'] };
+  var ALIAS = { yw: ['yiwu', 'иу', 'iwu'], tpe: ['taibei', 'тайпей'], tyo: ['токио', 'tokio', 'yokohama', 'йокогама'], sel: ['seoul', 'сеул'], icn: ['incheon', 'инчон'], spb: ['спб', 'питер', 'saint petersburg', 'санкт петербург'], msk: ['мск'], sh: ['shanghai', 'шанхай'], sz: ['shenzhen', 'шэньчжэнь', 'шеньчжень', 'шэньжэнь'], gz: ['guangzhou', 'гуанчжоу', 'кантон', 'canton'], xa: ['xian', "xi'an", 'сиань'], qz: ['qinzhou', 'циньчжоу'], pus: ['busan', 'pusan', 'пусан'], erl: ['erenhot', 'erlianhot', 'erlian', 'эрлианхот', 'эрэн-хото', 'эрэн хото', 'эренхот', 'эрен-хото', 'эрлянь', 'ерлянь'] };
   function find(q) {
     q = String(q || '').trim().toLowerCase().replace(/ё/g, 'е'); if (!q) return null;
     var keys = Object.keys(C);
