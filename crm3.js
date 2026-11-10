@@ -129,7 +129,7 @@ function setup(app, ctx) {
     const ca = low(a.company), cb = low(b.company), ta = low(a.contact), tb = low(b.contact);
     if (ca && ca === cb && ((ta && tb && ta === tb) || (!ta && !tb))) return true;
     const pa = phoneKey(a), pb = phoneKey(b);
-    return !!(ca && ca === cb && pa && pb && pa === pb);
+    return !!(ca && ca === cb && pa && pb && pa === pb && (!ta || !tb || ta === tb));
   }
   function allAgents(d) {
     const own = d.crmAgents.map(a => ({ ...a, own: true })), keys = new Set(own.map(agentKey));
