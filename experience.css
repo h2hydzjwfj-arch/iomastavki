@@ -1,0 +1,33 @@
+/* IOMASTAVKA — контраст меню языков в светлой и тёмной темах. */
+html:root body .lx-menu{
+  background:#101b46!important;
+  border:1px solid rgba(255,255,255,.16)!important;
+  box-shadow:0 22px 60px rgba(8,17,48,.28)!important;
+}
+html:root body .lx-menu .lang,
+html:root body .lx-menu .lang b,
+html:root body .lx-menu .lang small{
+  color:#f4f6ff!important;
+  opacity:1!important;
+}
+html:root body .lx-menu .lang{
+  background:transparent!important;
+  border:1px solid transparent!important;
+}
+html:root body .lx-menu .lang:hover{
+  background:rgba(255,255,255,.12)!important;
+  border-color:rgba(255,255,255,.12)!important;
+}
+html:root body .lx-menu .lang.active{
+  background:#fff!important;
+  border-color:#fff!important;
+  box-shadow:0 4px 16px rgba(0,0,0,.12)!important;
+}
+html:root body .lx-menu .lang.active,
+html:root body .lx-menu .lang.active b,
+html:root body .lx-menu .lang.active small{
+  color:#142044!important;
+}
+html:root body.manual-dark .lx-menu .lang.active{
+  background:#fff!important;
+}
