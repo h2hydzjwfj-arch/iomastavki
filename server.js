@@ -152,7 +152,7 @@ function saveRates(data) {
 function verifyPassword(password) {
   const raw = String(process.env.ADMIN_PASSWORD_HASH || '').trim();
   if (!raw) return false; // No default administrator credential in isolated preview environments.
-  const p = raw.split('
+  const p = raw.split('$');
   if (p.length !== 6 || p[0] !== 'scrypt') return false;
   const N = Number(p[1]), r = Number(p[2]), salt = Buffer.from(p[4], 'hex'), expected = p[5];
   try {
