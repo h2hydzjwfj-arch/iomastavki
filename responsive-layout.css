@@ -74,3 +74,24 @@ body>.sg-menu-portal{display:grid!important;gap:4px!important;padding:8px!import
 body>.sg-menu-portal>button{width:100%!important;min-height:48px!important;display:grid!important;gap:3px!important;text-align:left!important;align-content:center!important;padding:10px 12px!important;border:0!important;border-radius:10px!important;background:transparent!important;color:inherit!important;white-space:normal!important}
 body>.sg-menu-portal>button:hover,body>.sg-menu-portal>button:focus-visible{background:color-mix(in srgb,var(--v-acc,#267d88) 12%,transparent)!important;outline:none}
 body>.sg-menu-portal small{display:block;white-space:normal;line-height:1.35;opacity:.72}
+
+/* Root-level dropdown layer: intentionally stronger than legacy menu visibility rules */
+html>.sg-menu-portal{
+ display:grid!important;position:fixed!important;z-index:2147483647!important;
+ visibility:visible!important;opacity:1!important;pointer-events:auto!important;
+ gap:4px!important;padding:8px!important;
+ border:1px solid var(--v-bd,rgba(0,0,0,.16))!important;border-radius:16px!important;
+ background:var(--v-card,#fff)!important;color:var(--v-ink,#17202a)!important;
+ box-shadow:0 20px 60px rgba(10,25,40,.38)!important;
+ transform:none!important;isolation:isolate!important;contain:none!important;
+}
+html>.sg-menu-portal>button{
+ width:100%!important;min-height:50px!important;display:grid!important;gap:3px!important;
+ text-align:left!important;align-content:center!important;padding:10px 12px!important;
+ border:0!important;border-radius:10px!important;background:transparent!important;
+ color:inherit!important;white-space:normal!important;
+}
+html>.sg-menu-portal>button:hover,html>.sg-menu-portal>button:focus-visible{
+ background:color-mix(in srgb,var(--v-acc,#267d88) 12%,transparent)!important;outline:none!important;
+}
+html>.sg-menu-portal small{display:block!important;white-space:normal!important;line-height:1.35!important;opacity:.76!important}
