@@ -377,7 +377,8 @@ async function showRecommendation(name){
  const from=$('#fromCity')?.value?.trim()||'',to=$('#toCity')?.value?.trim()||'',distance=Number($('#distance')?.value)||0;
  if(!from||!to){el.classList.add('hidden');return;}
  try{
-  const q=new URLSearchParams({from,to,mode:selectedMode||'',distance:String(distance)});
+  const incoterms=$('#incotermBtn span')?.textContent||'FOB';
+  const q=new URLSearchParams({from,to,mode:selectedMode||'',distance:String(distance),incoterms});
   const d=await fetch('/api/rates/recommend?'+q.toString()).then(r=>r.json());
   const pool=(d.matches||[]).filter(x=>Number.isFinite(Number(x.rate)));
   const best=pool[0];
