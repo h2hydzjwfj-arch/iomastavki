@@ -243,7 +243,7 @@
     // в рассказе сверху полоса пути, снизу подпись этапа — глобус кадрируем в просвете между ними
     function area() { return st.step === 4 ? [W < 560 ? 70 : 58, H - (W < 560 ? 96 : 84)] : [0, H]; }
     function cy() { var a = area(); return (a[0] + a[1]) / 2; }
-    function setProj(c) { c = c || cam; proj.rotate([-c.lon, 0, 0]).scale(R0 * c.k).translate([W / 2, cy()]); }
+    function setProj(c) { c = c || cam; proj.rotate([-c.lon, 0, 0]).center([0, c.lat]).scale(R0 * c.k).translate([W / 2, cy()]); }
     function visibleP(p) { return !!p && isFinite(p[0]) && isFinite(p[1]) && Math.abs(p[1]) < 84; }
     function size() {
       var r = stage.getBoundingClientRect(); if (!r.width || !r.height) return; DPR = Math.min(2, window.devicePixelRatio || 1);
