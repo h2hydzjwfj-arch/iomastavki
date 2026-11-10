@@ -283,8 +283,8 @@ function setup(app, opts = {}) {
   }));
 
   app.get('/api/tools/wagon', staff, limit, wrap(async (req, res) => {
-    const no = String(req.query.no || '').replace(/\\D/g, '');
-    if (!/^\\d{8,12}$/.test(no)) return res.status(400).json({ ok: false, error: 'Укажите номер вагона: 8–12 цифр' });
+    const no = String(req.query.no || '').replace(/\D/g, '');
+    if (!/^\d{8,12}$/.test(no)) return res.status(400).json({ ok: false, error: 'Укажите номер вагона: 8–12 цифр' });
     const rows = await cached('trc-wagon:' + no, 15 * 60 * 1000, () => trcont(no));
     res.json({ ok: true, number: no, source: 'ТрансКонтейнер (isales.trcont.ru)', rows });
   }));
