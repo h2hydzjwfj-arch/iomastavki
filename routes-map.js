@@ -239,7 +239,12 @@
     }
     function scale() { fit(); var u = unit(); el.style.setProperty('--u', u.toFixed(3)); el.classList.toggle('rmap-sm', svg.getBoundingClientRect().width < 520); if (Math.abs(u - U) / U > .1) { U = u; draw(); } }
     function drawTabs() { var l = lang(); tabs.innerHTML = ['rail', 'road', 'air', 'sea'].map(function (m) { return '<button type="button" role="tab" data-m="' + m + '" aria-selected="' + (m === state.mode) + '"' + (m === state.mode ? ' class="on"' : '') + '>' + pa(MODE_NAME[m], l) + '</button>'; }).join('') + '<i class="rmap-ind"></i>'; moveInd(); syncFields(); }
-    function moveInd() { var b = tabs.querySelector('.on'), i = tabs.querySelector('.rmap-ind'); if (b && i) { i.style.width = b.offsetWidth + 'px'; i.style.transform = 'translateX(' + b.offsetLeft + 'px)'; } }\n    function syncFields(){ if(fromSelect)fromSelect.value=state.from; if(toSelect)toSelect.value=state.to; }
+    function moveInd() { var b = tabs.querySelector('.on'), i = tabs.querySelector('.rmap-ind'); if (b && i) { i.style.width = b.offsetWidth + 'px'; i.style.transform = 'translateX(' + b.offsetLeft + 'px)'; }  }
+    function syncFields(){
+      var l=lang();
+      if(fromSelect){if(fromSelect.dataset.lang!==l){fromSelect.innerHTML=ORIGINS.map(function(k){return '<option value="' + k + '">' + nm(k,l) + '</option>';}).join('');fromSelect.dataset.lang=l;}fromSelect.value=state.from;}
+      if(toSelect){if(toSelect.dataset.lang!==l){toSelect.innerHTML=RU_DOTS.map(function(k){return '<option value="' + k + '">' + nm(k,l) + '</option>';}).join('');toSelect.dataset.lang=l;}toSelect.value=state.to;}
+    }
     function f(n) { return n.toFixed(1); }
     var NEAR = {};
     function near(k) { if (NEAR[k] != null) return NEAR[k]; var p = xy(k), m = Infinity; RU_DOTS.concat(CN_DOTS).forEach(function (o) { if (o === k) return; var q = xy(o), d = Math.hypot(p[0] - q[0], p[1] - q[1]); if (d < m) m = d; }); return (NEAR[k] = m); }
