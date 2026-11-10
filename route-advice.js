@@ -52,7 +52,8 @@
   function norm(s) { return String(s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/ё/g, 'е').replace(/[‐‑‒–—−]/g, ' ').split(/[,(（，]/)[0].replace(/^(г\.|город)\s*/, '').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim(); }
   function lookup(s) {
     var n = norm(s); if (!n) return null;
-    var ALIAS = { 'эрлианхот': 'эрлянь', 'эрэн хото': 'эрлянь', 'эрэн хот': 'эрлянь', 'эрен хот': 'эрлянь', 'эрен хото': 'эрлянь', 'erlian hot': 'эрлянь' };\n    var k = CITY[n] ? n : ALIAS[n] && CITY[ALIAS[n]] ? ALIAS[n] : EN[n] && CITY[EN[n]] ? EN[n] : CITY[n.replace(/е/g, 'ё')] ? n.replace(/е/g, 'ё') : null;
+    var ALIAS = { 'эрлианхот': 'эрлянь', 'эрэн хото': 'эрлянь', 'эрэн хот': 'эрлянь', 'эрен хот': 'эрлянь', 'эрен хото': 'эрлянь', 'erlian hot': 'эрлянь' };
+    var k = CITY[n] ? n : ALIAS[n] && CITY[ALIAS[n]] ? ALIAS[n] : EN[n] && CITY[EN[n]] ? EN[n] : CITY[n.replace(/е/g, 'ё')] ? n.replace(/е/g, 'ё') : null;
     if (!k) { var ks = Object.keys(CITY); for (var i = 0; i < ks.length; i++) if (ks[i].length > 3 && (n.indexOf(ks[i]) === 0 || ks[i].indexOf(n) === 0 && n.length > 3)) { k = ks[i]; break; } }
     return k ? { name: k, lon: CITY[k][0], lat: CITY[k][1], cc: CITY[k][2] } : null;
   }
