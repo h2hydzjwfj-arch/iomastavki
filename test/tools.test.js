@@ -10,9 +10,15 @@ function tools() { // браузерный модуль инструментов
   delete require.cache[require.resolve('../tools.js')]; require('../tools.js'); return global.IOMA_TOOLS;
 }
 
-test('маршрут: Иу → Челябинск сборным — авто через Маньчжурию и Забайкальск (главный коридор)', () => {
+test('маршрут: Иу → Челябинск — кандидат по географии без автоматического Маньчжурия–Забайкальск', () => {
   const r = A.advise({ from: 'Иу', to: 'Челябинск', weight: 500, volume: 3 });
-  assert.ok(r.ok); assert.strictEqual(r.best, 'auto'); assert.match(r.options[0].via, /Забайкальск/); assert.strictEqual(r.to.zone, 'UR'); assert.strictEqual(r.hub.via, 'direct');
+  assert.ok(r.ok); assert.strictEqual(r.best, 'auto'); assert.strictEqual(r.to.zone, 'UR'); assert.strictEqual(r.hub.via, 'direct');
+  const road = r.options.find(o => o.id === 'auto');
+  assert.ok(road, 'автомобильный вариант должен существовать как кандидат');
+  assert.match(road.via, /Погранпереход не выбирается автоматически/);
+  assert.doesNotMatch(road.via, /Маньчжурия|Забайкальск/);
+  assert.strictEqual(road.viaConfirmed, false);
+  assert.strictEqual(road.viaStatus, 'requires_confirmation');
   assert.strictEqual(A.advise({ from: 'Иу', to: 'Нижний Новгород' }).hub.via, 'msk');
 });
 test('маршрут: Шэньчжэнь → Москва контейнером — море + ЖД через Владивосток', () => {
