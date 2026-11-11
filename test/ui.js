@@ -13,7 +13,7 @@ async function step(name, fn) { try { await fn(); results.push('✅ ' + name); }
   const errors = [];
   async function ctx(opts = {}) {
     const c = await browser.newContext({ viewport: { width: 1350, height: 860 }, ...opts });
-    const p = await c.newPage(); p.on('pageerror', e => errors.push(e.message));
+    const p = await c.newPage(); const cdp = await c.newCDPSession(p); await cdp.send('Debugger.enable'); await cdp.send('Runtime.enable'); cdp.on('Debugger.scriptFailedToParse', e => { if (/Invalid or unexpected token/i.test(e.errorMessage || '')) errors.push((e.errorMessage || 'Script parse failed') + ' [script] ' + (e.url || 'inline') + ':' + ((e.startLine || 0) + 1) + ':' + ((e.startColumn || 0) + 1)); }); cdp.on('Runtime.exceptionThrown', e => { const d=e.exceptionDetails||{}; const st=d.stackTrace&&d.stackTrace.callFrames&&d.stackTrace.callFrames[0]; errors.push((d.text||'Runtime exception')+' [runtime] '+(d.url||st&&st.url||'inline')+':'+((d.lineNumber||st&&st.lineNumber||0)+1)+':'+((d.columnNumber||st&&st.columnNumber||0)+1)+(d.exception&&d.exception.description?' '+d.exception.description:'')); }); p.on('pageerror', e => errors.push((e.stack || ((e.name || 'Error') + ': ' + e.message)) + ' [pageerror]'));
     await p.goto(B + '/', { waitUntil: 'domcontentloaded' }); await p.waitForFunction(() => /role-/.test(document.body.className));
     global.__pages = [p]; return { c, p };
   }

@@ -67,7 +67,8 @@
     }
   };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-  function roleField(label,name,placeholder) { return '<label class="et-role-field"><span>'+esc(label)+'</span><input name="'+name+'" autocomplete="off" placeholder="'+esc(placeholder)+'"></label>'; }\n  function render() {
+  function roleField(label,name,placeholder) { return '<label class="et-role-field"><span>'+esc(label)+'</span><input name="'+name+'" autocomplete="off" placeholder="'+esc(placeholder)+'"></label>'; }
+  function render() {
     var root = document.getElementById(rootId); if (!root) return;
     var active = root.getAttribute('data-active') || 'start';
     if (!sections[active] && active !== 'roles-check') active = 'start';
