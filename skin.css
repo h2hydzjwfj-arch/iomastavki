@@ -43,11 +43,11 @@ html:root body.night.manual-light .sg-menu{background:#fff!important;box-shadow:
 html:root body.night.manual-light .sg-menu button{color:var(--sk-ink)}
 html:root body.night.manual-light .sg-menu button small{color:var(--sk-mut)}
 html:root body.night.manual-light .sg-solo .sg-menu button{color:var(--sk-mut)}
-html:root body.night.manual-light .lx-menu{background:#fff;box-shadow:0 20px 50px -20px rgba(30,60,120,.45),0 0 0 1px rgba(22,32,46,.06)}
-html:root body.night.manual-light .lx-menu .lang{color:var(--sk-ink)}
-html:root body.night.manual-light .lx-menu .lang small{color:var(--sk-mut)}
+html:root body.night.manual-light .lx-menu{background:#fff!important;border:0!important;box-shadow:0 20px 50px -20px rgba(30,60,120,.45),0 0 0 1px rgba(22,32,46,.06)}
+html:root body.night.manual-light .lx-menu .lang,html:root body.night.manual-light .lx-menu .lang b{color:var(--sk-ink)!important}
+html:root body.night.manual-light .lx-menu .lang small{color:var(--sk-mut)!important}
 html:root body.night.manual-light .lx-menu .lang.active{background:rgba(140,203,255,.3)}
-html:root body.night.manual-light .lx-menu .lang.active b{color:var(--sk-blued)}
+html:root body.night.manual-light .lx-menu .lang.active b{color:var(--sk-blued)!important}
 
 /* ---------- первый экран и глобус: белая суша, голубое море ---------- */
 html:root body.night.manual-light .hx{--hx-ink:#16202E;--hx-mut:#5A6678;--hx-line:rgba(22,32,46,.1);--hx-soft:rgba(22,32,46,.04);--hx-soft2:rgba(22,32,46,.07);--hx-say:#2A3648;--hx-chip:#1E4FCB;--hx-pop:#FFFFFF;
