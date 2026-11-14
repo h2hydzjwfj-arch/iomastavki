@@ -76,7 +76,7 @@ function themeEdit(text, current) {
   if (/(верни|сбрось|сброс|как было|по умолчанию|исходн|reset|default)/i.test(t)) return { reset: true };
   const h = (t.match(/#[0-9a-f]{6}\b|#[0-9a-f]{3}\b/i) || [])[0];
   if (h) return { accent: hex(h) };
-  const base = (current && current.accent) || '#E06A2C';
+  const base = (current && current.accent) || '#2B66F0';
   if (/темнее|darker|насыщенн/i.test(t)) return { accent: shade(base, -0.18) };
   if (/светлее|lighter|мягче|спокойн/i.test(t)) return { accent: shade(base, 0.18) };
   const c = COLORS.find(([rx]) => rx.test(t)); return c ? { accent: c[1] } : null;

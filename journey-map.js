@@ -273,8 +273,8 @@
     function pal() {
       if (PAL) return PAL; var cs = getComputedStyle(el), v = function (n, d) { return (cs.getPropertyValue(n) || '').trim() || d; };
       return (PAL = { sea1: v('--gl-sea1', '#18285A'), sea2: v('--gl-sea2', '#0A1331'), far: v('--gl-far', '#17244B'), near: v('--gl-near', '#1C2A57'), hot: v('--gl-land', '#24366A'), focus: v('--gl-focus', '#2E4384'),
-        line: v('--gl-line', 'rgba(246,241,234,.16)'), grat: v('--gl-grat', 'rgba(246,241,234,.05)'), glow: v('--gl-glow', 'rgba(120,150,255,.22)'), lake: v('--gl-lake', '#0E1A40'), shade: v('--gl-shade', 'rgba(3,7,22,.35)'),
-        txt: v('--rm-txt', '#F6F1EA'), halo: v('--rm-halo', '#0B1433'), dot: v('--rm-dot', 'rgba(246,241,234,.55)'), o1: '#F28A3A', o2: '#E06A2C', sea: '#4FB3C4', star: v('--gl-star', 'rgba(246,241,234,.5)'), font: cs.fontFamily || 'system-ui' });
+        line: v('--gl-line', 'rgba(244,248,255,.16)'), grat: v('--gl-grat', 'rgba(244,248,255,.05)'), glow: v('--gl-glow', 'rgba(120,150,255,.22)'), lake: v('--gl-lake', '#0E1A40'), shade: v('--gl-shade', 'rgba(3,7,22,.35)'),
+        txt: v('--rm-txt', '#F4F8FF'), halo: v('--rm-halo', '#0B1433'), dot: v('--rm-dot', 'rgba(244,248,255,.55)'), o1: '#5D95FF', o2: '#2B66F0', sea: '#4FB3C4', star: v('--gl-star', 'rgba(244,248,255,.5)'), font: cs.fontFamily || 'system-ui' });
     }
     var STARS = []; (function () { var s = 7; function rnd() { s = (s * 16807) % 2147483647; return s / 2147483647; } for (var i = 0; i < 70; i++) STARS.push([rnd(), rnd(), rnd() * 1.1 + 0.3, rnd() * 0.6 + 0.2]); })();
 
@@ -297,7 +297,7 @@
       var pts = L.pts; if (upto < 1) { var a = along(L, upto); pts = L.pts.slice(0, a.i).concat([a.p]); }
       if (pts.length < 2) return; ctx.beginPath(); path({ type: 'LineString', coordinates: pts }); ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.setLineDash(dash || []); ctx.stroke(); ctx.setLineDash([]);
     }
-    function legColor(s, P) { return s.kind === 'sea' ? P.sea : s.kind === 'carrier' ? '#E8BE7A' : P.o1; }
+    function legColor(s, P) { return s.kind === 'sea' ? P.sea : s.kind === 'carrier' ? '#8CCBFF' : P.o1; }
     function drawRoute(P) {
       var pl = st.plan;
       if (!pl) { if (st.from && st.to && st.step === 3) lineTo(line([st.from, st.to], true), 1, P, P.o2, 1.6, [5, 5]); return; }

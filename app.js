@@ -241,7 +241,7 @@ $('#menuButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagat
 $('#agentImportButton')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openAgentImporter()});
 $('#logoutButton')?.addEventListener('click',async()=>{try{await fetch('/api/logout',{method:'POST'})}finally{location.href='/'}});
 $('#themeToggleButton')?.addEventListener('click',()=>setTheme(document.body.classList.contains('manual-dark')?'light':'dark'));
-setTheme(localStorage.getItem('iomastavka_theme2')||'dark');
+setTheme(localStorage.getItem('iomastavka_theme3')||'light');
 
 function showTarot(){
   showView('tarotView');
@@ -355,7 +355,7 @@ function openAgentImporter(){
   document.querySelectorAll('.view-layer').forEach(x=>{x.classList.remove('open');x.setAttribute('aria-hidden','true')}); v.classList.add('open'); v.setAttribute('aria-hidden','false'); document.body.classList.add('view-open'); window.scrollTo(0,0);
 }
 
-function setTheme(mode){document.body.classList.toggle('manual-dark',mode==='dark');document.body.classList.toggle('manual-light',mode==='light');localStorage.setItem('iomastavka_theme2',mode);const b=$('#themeToggleButton'),i=$('#themeIcon');if(i)i.textContent=mode==='dark'?'☾':'☀';if(b){b.title=mode==='dark'?tr('themeLight'):tr('themeDark');b.setAttribute('aria-label',b.title);}}
+function setTheme(mode){document.body.classList.toggle('manual-dark',mode==='dark');document.body.classList.toggle('manual-light',mode==='light');localStorage.setItem('iomastavka_theme3',mode);const b=$('#themeToggleButton'),i=$('#themeIcon');if(i)i.textContent=mode==='dark'?'☾':'☀';if(b){b.title=mode==='dark'?tr('themeLight'):tr('themeDark');b.setAttribute('aria-label',b.title);}}
 let newsCache=[];
 let newsPrefetchPromise=null;
 function prefetchNews(){if(newsCache.length)return Promise.resolve(newsCache);if(newsPrefetchPromise)return newsPrefetchPromise;const fallback=[{title:'Китай — Россия: что проверить перед расчётом мультимодальной перевозки',link:'',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Incoterms, габариты, объёмный вес, терминальные расходы и документы.'},{title:'ТН ВЭД и импорт: какие данные собрать до запроса ставки',link:'',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Описание товара, код ТН ВЭД, инвойс, упаковка, разрешительные документы и базис поставки.'},{title:'ЖД, море или авиа: как выбрать транспорт из Китая',link:'',date:new Date().toISOString(),source:'IOMASTAVKA',description:'Сравнение сроков, расчётного веса и структуры стоимости.'}];newsPrefetchPromise=fetch('/api/news',{cache:'no-store',credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('news');return r.json()}).then(d=>{newsCache=Array.isArray(d.items)&&d.items.length?d.items:fallback;return newsCache}).catch(()=>{newsCache=fallback;return newsCache});return newsPrefetchPromise}

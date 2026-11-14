@@ -1,0 +1,166 @@
+/* IOMASTAVKA — оболочка «Белый, голубой и синий на стекле» (дизайн v3, ноябрь 2026).
+   Подключается последней. Меняет только цвет, шрифт и материал поверхностей — разметка и логика прежние.
+   Светлый вариант включён по умолчанию; тёмный остаётся по кнопке темы в шапке. */
+
+/* ---------- шрифт ---------- */
+html:root body.night,html:root body.night button,html:root body.night input,html:root body.night textarea,html:root body.night select{font-family:'Geologica','Inter',-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif!important}
+
+/* ---------- токены светлого варианта ---------- */
+html:root body.night.manual-light{
+  --sk-blue:#2B66F0;--sk-blue2:#5D95FF;--sk-blued:#1E4FCB;--sk-sky:#8CCBFF;--sk-ice:#DAEFFF;--sk-ink:#16202E;--sk-mut:#5A6678;--sk-sel:#68727F;
+  --sk-glass:linear-gradient(180deg,rgba(255,255,255,.82),rgba(255,255,255,.5));
+  --sk-shadow:inset 0 1px 0 rgba(255,255,255,.98),0 24px 46px -30px rgba(30,60,120,.5),0 2px 8px -3px rgba(30,60,120,.1);
+  --c-paper:#F7FAFE;--c-sand:#E6F1FF;
+  --v-bg:#F7FAFE;--v-ink:var(--sk-ink);--v-mut:var(--sk-mut);--v-card:#FFFFFF;--v-bd:rgba(22,32,46,.08);
+  --v-acc:var(--sk-blue);--v-accd:var(--sk-blued);--v-mint:#E6F1FF;--v-amber:var(--sk-blue);--v-amberd:var(--sk-blued);--v-field:#EEF4FB;
+  --v-shadow:0 24px 46px -30px rgba(30,60,120,.45),0 2px 8px -3px rgba(30,60,120,.1);--v-shadow-h:0 30px 56px -30px rgba(30,60,120,.6);
+  --n-btn:var(--sk-blue);--n-btn-h:var(--sk-blued);
+  color-scheme:light;
+}
+
+/* ---------- свет под стеклом: белый фон с полями голубого ---------- */
+html:root body.night.manual-light{
+  background:
+    radial-gradient(900px 700px at 100% -10%,rgba(185,220,255,.75),transparent 62%),
+    radial-gradient(760px 620px at -10% 38%,rgba(204,216,255,.6),transparent 62%),
+    radial-gradient(900px 760px at 105% 105%,rgba(218,239,255,.95),transparent 62%),
+    linear-gradient(180deg,#FFFFFF,#F3F8FE)!important;
+  background-attachment:fixed!important;
+}
+
+/* ---------- шапка: белое стекло вместо тёмной полосы ---------- */
+html:root body.night.manual-light .topbar{background:linear-gradient(180deg,rgba(255,255,255,.86),rgba(255,255,255,.62))!important;-webkit-backdrop-filter:blur(24px) saturate(1.8);backdrop-filter:blur(24px) saturate(1.8);border-bottom:1px solid rgba(22,32,46,.06)!important;box-shadow:0 12px 30px -24px rgba(30,60,120,.5)!important;color:var(--sk-ink)}
+html:root body.night.manual-light .brand,html:root body.night.manual-light .brand span{color:var(--sk-ink)!important}
+html:root body.night.manual-light .v3-nav{background:rgba(22,32,46,.045)!important}
+html:root body.night.manual-light .v3-nav button,html:root body.night.manual-light .v3-nav .sg-btn{color:var(--sk-mut)!important}
+html:root body.night.manual-light .v3-nav button.on{color:#fff!important}
+/* выбранное — серым, не чёрным и не акцентом */
+html:root body.night.manual-light .v3-pill{background:var(--sk-sel)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 8px 16px -10px rgba(60,72,90,.7)!important}
+html:root body.night.manual-light .v3-theme,html:root body.night.manual-light .v3-acc{background:rgba(22,32,46,.05)!important;color:var(--sk-ink)!important}
+html:root body.night.manual-light .v3-theme svg{stroke:var(--sk-ink)!important}
+html:root body.night.manual-light .lx-btn{color:var(--sk-ink)}
+html:root body.night.manual-light .sg-menu{background:rgba(255,255,255,.97);box-shadow:0 30px 60px -24px rgba(30,60,120,.45),0 0 0 1px rgba(22,32,46,.06)}
+html:root body.night.manual-light .sg-menu button{color:var(--sk-ink)}
+html:root body.night.manual-light .sg-menu button small{color:var(--sk-mut)}
+html:root body.night.manual-light .sg-solo .sg-menu button{color:var(--sk-mut)}
+html:root body.night.manual-light .lx-menu{background:#fff;box-shadow:0 20px 50px -20px rgba(30,60,120,.45),0 0 0 1px rgba(22,32,46,.06)}
+html:root body.night.manual-light .lx-menu .lang{color:var(--sk-ink)}
+html:root body.night.manual-light .lx-menu .lang small{color:var(--sk-mut)}
+html:root body.night.manual-light .lx-menu .lang.active{background:rgba(140,203,255,.3)}
+html:root body.night.manual-light .lx-menu .lang.active b{color:var(--sk-blued)}
+
+/* ---------- первый экран и глобус: белая суша, голубое море ---------- */
+html:root body.night.manual-light .hx{--hx-ink:#16202E;--hx-mut:#5A6678;--hx-line:rgba(22,32,46,.1);--hx-soft:rgba(22,32,46,.04);--hx-soft2:rgba(22,32,46,.07);--hx-say:#2A3648;--hx-chip:#1E4FCB;--hx-pop:#FFFFFF;
+  --hx-bgimg:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,0));
+  --rm-card:linear-gradient(180deg,rgba(255,255,255,.82),rgba(255,255,255,.5));--rm-land:#FFFFFF;--rm-land-bd:rgba(22,32,46,.18);--rm-near:#F1F6FC;--rm-near-bd:rgba(22,32,46,.08);--rm-bord:rgba(22,32,46,.14);
+  --rm-dot:rgba(22,32,46,.5);--rm-dot-ru:rgba(22,32,46,.4);--rm-txt:#16202E;--rm-halo:#FFFFFF;--rm-track:rgba(22,32,46,.1);--rm-gw:#1E4FCB;--rm-gw-bg:#FFFFFF;--rm-tab:rgba(22,32,46,.05);
+  --gl-sea1:#EFF7FF;--gl-sea2:#B9D9F7;--gl-far:#F1F5FA;--gl-near:#F7FAFD;--gl-land:#FFFFFF;--gl-focus:#DCEBFF;--gl-line:rgba(22,32,46,.2);--gl-grat:rgba(22,32,46,.06);--gl-glow:rgba(93,149,255,.22);--gl-lake:#CFE5FA;--gl-shade:rgba(30,60,120,.14);--gl-star:none;--gl-space1:rgba(140,203,255,.16);--gl-space2:rgba(255,255,255,0)}
+html:root body.night.manual-light .brand,html:root body.night.manual-light .brand span{-webkit-text-fill-color:var(--sk-ink)!important}
+html:root body.night.manual-light .hx-ind{background:var(--sk-sel)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 8px 16px -10px rgba(60,72,90,.7)!important}
+
+/* =====================================================================
+   v3.1 — единый светлый «жидкий стеклянный» слой для всех окон
+   Идея: тонкая графика, белое стекло с бликом по кромке, синий только
+   для действия. Изюминка — «нить маршрута»: светящаяся линия
+   Китай → Россия, которая проходит по кнопкам и активным элементам.
+   ===================================================================== */
+html:root body.night.manual-light{
+  --sk-rim:linear-gradient(135deg,rgba(255,255,255,1),rgba(255,255,255,.2) 38%,rgba(255,255,255,.05) 62%,rgba(190,220,255,.9));
+  --sk-thread:linear-gradient(90deg,#8CCBFF,#2B66F0 45%,#7B6CFF 75%,#8CCBFF);
+}
+html:root body.night.manual-light,html:root body.night.manual-light *{scrollbar-color:rgba(43,102,240,.25) transparent}
+html:root body.night.manual-light h1,html:root body.night.manual-light h2,html:root body.night.manual-light .v3c-title{letter-spacing:-.02em}
+html:root body.night.manual-light h1{font-weight:250!important}
+
+/* --- стекло для всех карточек и окон --- */
+html:root body.night.manual-light :is(.v3-card,.v3c-card,.v3p-form,.v3p-card,.cx-form,.cx-route,.customs-shell,.service-card,.calculator-card,.directory-panel,.assistant-shell,.v3c-res,.v3c-hero,.v3c-mapbox,.kb-card,.case-card,.svc,.nw-card,.ui-card,.cx-more,.cx-acc){
+  background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(255,255,255,.5))!important;
+  -webkit-backdrop-filter:blur(28px) saturate(1.8);backdrop-filter:blur(28px) saturate(1.8);
+  border:1px solid rgba(255,255,255,.9)!important;
+  box-shadow:inset 0 1px 0 #fff,inset 0 -18px 30px -26px rgba(140,203,255,.6),0 30px 60px -38px rgba(30,60,120,.45),0 2px 6px -2px rgba(30,60,120,.08)!important;
+  color:var(--sk-ink)!important;
+}
+
+/* --- окно маршрута калькулятора: больше не тёмное --- */
+html:root body.night.manual-light .cx-route{color:var(--sk-ink)!important}
+html:root body.night.manual-light .cx-route .v3c-title{color:var(--sk-ink)!important}
+html:root body.night.manual-light .cxr-tot{color:var(--sk-blue)}
+html:root body.night.manual-light .cxr-tot small,html:root body.night.manual-light .cxr-sub{color:var(--sk-mut)}
+html:root body.night.manual-light .cxr-od i{background:linear-gradient(90deg,rgba(43,102,240,.25),var(--sk-blue))}
+html:root body.night.manual-light .cxr-od i::after{border-color:var(--sk-blue)}
+html:root body.night.manual-light .cxr-map{background:linear-gradient(180deg,#F4F9FF,#E6F1FD)!important;border:1px solid rgba(43,102,240,.1)!important}
+html:root body.night.manual-light .cxr-hint{background:rgba(255,255,255,.82)!important;color:var(--sk-ink)!important;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:0 14px 30px -18px rgba(30,60,120,.5)}
+html:root body.night.manual-light .cxr-hint b{color:var(--sk-blue)}
+html:root body.night.manual-light .cxr-legs li{border-color:rgba(22,32,46,.07)}
+html:root body.night.manual-light .mc{--sea:#EAF4FF;--land:#FFFFFF;--land-live:#F2F8FF;--lake:#DCEBFA;--bd:rgba(43,102,240,.35);--pin:#2B66F0}
+html:root body.night.manual-light .mc-land{filter:drop-shadow(0 6px 10px rgba(30,60,120,.12))}
+html:root body.night.manual-light .mc-grid path{stroke:rgba(43,102,240,.07)}
+html:root body.night.manual-light .rmini .rmini-g{fill:#fff;stroke:var(--sk-blue)}
+html:root body.night.manual-light .rmini .rmini-t{fill:var(--sk-ink);stroke:#fff}
+html:root body.night.manual-light .rmini .rmini-t.gw{fill:var(--sk-mut)}
+html:root body.night.manual-light .rmini .rmini-t.msk{fill:var(--sk-blue)}
+html:root body.night.manual-light .rmini .rmini-a{fill:#fff}
+html:root body.night.manual-light .rmini .rmini-r{filter:drop-shadow(0 0 6px rgba(43,102,240,.45))}
+
+/* --- проверка ТН ВЭД: светлое стекло вместо тёмно-синей плиты --- */
+html:root body.night.manual-light .customs-shell,html:root body.night.manual-light .customs-shell.customs-shell{color:var(--sk-ink)!important}
+html:root body.night.manual-light .customs-shell :is(h1,h2,h3,p,label,span,small,strong,b){color:inherit}
+html:root body.night.manual-light .customs-shell p,html:root body.night.manual-light .customs-calc label{color:var(--sk-mut)!important}
+html:root body.night.manual-light .customs-head .eyebrow{color:var(--sk-blue)!important}
+html:root body.night.manual-light .customs-shell input,html:root body.night.manual-light .customs-shell .ui-sel{background:rgba(255,255,255,.9)!important;border:1px solid rgba(22,32,46,.08)!important;color:var(--sk-ink)!important;box-shadow:inset 0 1px 2px rgba(30,60,120,.06)}
+html:root body.night.manual-light .customs-shell .ui-sel .ui-sel-v{color:var(--sk-ink)}
+html:root body.night.manual-light .customs-shell .customs-calc input::placeholder,html:root body.night.manual-light .customs-shell input::placeholder{color:var(--sk-mut)!important;opacity:.7}
+
+/* --- поля ввода: одно поле, без «двойной рамки» и без серой заливки автозаполнения --- */
+html:root body.night.manual-light :is(.v3p-f,.field,.mc-row label,.v3c-f,.cx-f){background:rgba(255,255,255,.72)!important;border:1px solid rgba(22,32,46,.07)!important;border-radius:16px!important;box-shadow:inset 0 1px 0 #fff,0 10px 22px -18px rgba(30,60,120,.45)!important;transition:box-shadow .25s,border-color .25s}
+html:root body.night.manual-light :is(.v3p-f,.field,.v3c-f,.cx-f):focus-within{border-color:rgba(43,102,240,.45)!important;box-shadow:0 0 0 4px rgba(43,102,240,.1),0 12px 26px -18px rgba(43,102,240,.5)!important}
+html:root body.night.manual-light :is(.v3p-f,.field,.v3c-f,.cx-f) :is(input,textarea,select){background:transparent!important;border:0!important;box-shadow:none!important;outline:none!important;border-radius:0!important;color:var(--sk-ink)!important}
+html:root body.night.manual-light #workView .v3p-f{background:transparent!important;border:0!important;box-shadow:none!important}
+html:root body.night.manual-light #workView .v3p-f :is(input,select,textarea){background:rgba(255,255,255,.85)!important;border:1px solid rgba(22,32,46,.08)!important;border-radius:12px!important}
+html:root body.night.manual-light input:-webkit-autofill,html:root body.night.manual-light input:-webkit-autofill:hover,html:root body.night.manual-light input:-webkit-autofill:focus{-webkit-text-fill-color:var(--sk-ink)!important;-webkit-box-shadow:0 0 0 1000px transparent inset!important;transition:background-color 99999s 0s}
+html:root body.night.manual-light input::placeholder,html:root body.night.manual-light textarea::placeholder{color:#8B96A6!important}
+
+/* --- кнопки: жидкое стекло + «нить маршрута» --- */
+html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.v3-loginbtn,.nbtn.pri,.assistant-save,.v3-grid .go,.v3p-btn,.btn-primary){
+  position:relative;overflow:hidden;isolation:isolate;
+  background:linear-gradient(180deg,#5C93FF 0%,#2B66F0 55%,#2459DB 100%)!important;color:#fff!important;border:0!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -2px 6px rgba(15,45,140,.35),0 16px 30px -14px rgba(43,102,240,.8),0 0 0 1px rgba(43,102,240,.35)!important;
+}
+html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.v3-loginbtn,.nbtn.pri,.assistant-save,.v3p-btn,.btn-primary)::before{
+  content:"";position:absolute;left:10%;right:10%;top:1px;height:46%;border-radius:999px;z-index:-1;
+  background:linear-gradient(180deg,rgba(255,255,255,.45),rgba(255,255,255,0));pointer-events:none}
+html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.v3-loginbtn,.nbtn.pri,.assistant-save,.v3p-btn,.btn-primary)::after{
+  content:"";position:absolute;inset:auto 14% 0;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,#BFE3FF,transparent);
+  transform:translateX(-120%);animation:skThread 3.6s cubic-bezier(.4,0,.2,1) infinite;pointer-events:none}
+@keyframes skThread{0%{transform:translateX(-140%)}55%,100%{transform:translateX(140%)}}
+html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.v3-loginbtn,.nbtn.pri,.v3p-btn):hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),inset 0 -2px 6px rgba(15,45,140,.35),0 22px 36px -14px rgba(43,102,240,.9),0 0 0 1px rgba(43,102,240,.4)!important}
+html:root body.night.manual-light :is(.nbtn:not(.pri),.hx-btn-g,.btn-ghost,.v3p-btn2,.nbtn.ghost){background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.6))!important;color:var(--sk-ink)!important;border:1px solid rgba(255,255,255,.95)!important;-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:inset 0 1px 0 #fff,0 12px 24px -16px rgba(30,60,120,.5),0 0 0 1px rgba(22,32,46,.05)!important}
+
+/* --- чипы: стеклянные; выбранное — серым --- */
+html:root body.night.manual-light :is(.hx-flow li,.chip,.jm-chip,.cx-chip,.v3-chip,.mode-chip){background:rgba(255,255,255,.7)!important;border:1px solid rgba(255,255,255,.95)!important;color:#2A3A55!important;box-shadow:inset 0 1px 0 #fff,0 8px 16px -12px rgba(30,60,120,.5)!important}
+html:root body.night.manual-light :is(.chip,.cx-chip,.v3-chip,.mode-chip,.jm-chip,.seg button,.ui-seg button,.cx-modes button,.v3c-modes button,.tabs button):is(.on,.active,[aria-pressed="true"],[aria-selected="true"]){background:var(--sk-sel)!important;color:#fff!important;border-color:transparent!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 10px 18px -10px rgba(60,72,90,.7)!important}
+
+/* --- глобус: стеклянный ореол и мягкий «блик» сверху --- */
+html:root body.night.manual-light .jm-stage{background:radial-gradient(70% 60% at 50% 40%,rgba(140,203,255,.22),rgba(255,255,255,0) 70%)!important}
+html:root body.night.manual-light .jm-stage::after{content:"";position:absolute;left:18%;right:18%;top:4%;height:26%;border-radius:50%;background:radial-gradient(closest-side,rgba(255,255,255,.55),rgba(255,255,255,0));pointer-events:none;z-index:2}
+
+/* --- изюминка: на фоне тонкая «нить» Китай → Россия --- */
+html:root body.night.manual-light::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.55;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 900' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='1' y1='1' x2='0' y2='0'><stop offset='0' stop-color='%238CCBFF' stop-opacity='0'/><stop offset='.35' stop-color='%235D95FF' stop-opacity='.55'/><stop offset='1' stop-color='%232B66F0' stop-opacity='0'/></linearGradient></defs><path d='M1500 760 C 1180 600 980 330 640 300 S 120 360 -60 180' fill='none' stroke='url(%23g)' stroke-width='1.4'/><path d='M1500 820 C 1160 690 940 430 600 410 S 100 470 -60 300' fill='none' stroke='url(%23g)' stroke-width='.8' stroke-dasharray='2 7'/></svg>") center/cover no-repeat}
+
+/* --- окна (оверлеи): белое стекло, мягкий заголовок --- */
+html:root body.night.manual-light .view-layer{background:linear-gradient(180deg,rgba(247,250,254,.86),rgba(240,246,253,.9))!important;-webkit-backdrop-filter:blur(30px) saturate(1.6);backdrop-filter:blur(30px) saturate(1.6)}
+html:root body.night.manual-light .close-button,html:root body.night.manual-light .view-close{background:rgba(255,255,255,.85)!important;color:var(--sk-ink)!important;border:1px solid rgba(255,255,255,.95)!important;box-shadow:0 10px 20px -14px rgba(30,60,120,.6)!important}
+html:root body.night.manual-light .eyebrow,html:root body.night.manual-light .ney{color:var(--sk-blue)!important}
+
+/* --- рабочее место: стекло, а не плоские плашки --- */
+html:root body.night.manual-light #workView :is(.k-col,.kanban-col,.crm-col,.w-side,.crm-side,.wk-nav){background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,255,255,.45))!important;border:1px solid rgba(255,255,255,.9)!important;-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);box-shadow:inset 0 1px 0 #fff,0 24px 44px -32px rgba(30,60,120,.45)!important}
+
+@media (prefers-reduced-motion:reduce){html:root body.night.manual-light *::after{animation:none!important}}
+
+/* мини-карта маршрута в калькуляторе и окнах: белая суша */
+html:root body.night.manual-light :is(.cx-route,.cxr-map,.rmini,.view-layer){--rm-land:#FFFFFF;--rm-land-bd:rgba(43,102,240,.28);--rm-near:#F3F8FE;--rm-near-bd:rgba(22,32,46,.08);--rm-bord:rgba(43,102,240,.3);--rm-txt:#16202E;--rm-halo:#FFFFFF;--rm-dot:rgba(22,32,46,.45);--rm-dot-ru:rgba(22,32,46,.35);--rm-track:rgba(43,102,240,.12);--rm-gw:#1E4FCB;--rm-gw-bg:#FFFFFF}
+html:root body.night.manual-light .rmini .rm-land .hot{filter:drop-shadow(0 6px 10px rgba(30,60,120,.14))}
+html:root body.night.manual-light .customs-shell h2,html:root body.night.manual-light .customs-head h2{color:var(--sk-ink)!important;font-weight:300!important;letter-spacing:-.02em}
+html:root body.night.manual-light .customs-shell p{color:var(--sk-mut)!important}
+html:root body.night.manual-light .customs-shell .eyebrow{color:var(--sk-blue)!important}
