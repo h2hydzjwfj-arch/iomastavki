@@ -416,7 +416,13 @@
       if (!r || !r.ok || !r.data) {
         var msg = r && r.error ? r.error : 'Источник не вернул данные.';
         var hint = type === 'container' ? '<p class="tl-note">Попробуйте бесплатное определение линии через TraceContainer. Оно распознаёт перевозчика и открывает официальный трекинг, но не показывает историю событий внутри IOMASTAVKA.</p>' + providerButton('Определить линию · TraceContainer', 'https://www.tracecontainer.com/', number) : '<p class="tl-note">Для House B/L данные могут отсутствовать в системе морской линии. Проверьте, является ли номер Master B/L (MBL).</p>';
-        return '<h3 class="tl-sub">Морской трекинг</h3><p class="tl-note">' + esc(msg) + '</p>' + hint;
+        // бесплатный источник не ответил — открываем официальные трекинги в один клик, номер уже скопирован
+        var pref = String(number || '').toUpperCase().slice(0, 4), LINES = { HASL: ['Heung-A Line', 'https://ebiz.heungaline.com/'], SITC: ['SITC', 'https://api.sitcline.com/sitcline/query/cargoTrack'], COSU: ['COSCO', 'https://elines.coscoshipping.com/ebusiness/cargoTracking'], MEDU: ['MSC', 'https://www.msc.com/en/track-a-shipment'], FESO: ['FESCO', 'https://www.fesco.ru/ru/clients/tracking/'], ZIMU: ['ZIM', 'https://www.zim.com/tools/track-a-shipment'], EGLV: ['Evergreen', 'https://ct.shipmentlink.com/servlet/TDB1_CargoTracking.do'], ONEY: ['ONE', 'https://ecomm.one-line.com/one-ecom/manage-shipment/cargo-tracking'], OOLU: ['OOCL', 'https://www.oocl.com/eng/ourservices/eservices/cargotracking/'], SNKO: ['Sinokor', 'https://ebiz.sinokor.co.kr/Tracking'], KMTC: ['KMTC', 'https://www.ekmtc.com/index.html#/cargo-tracking'], HDMU: ['HMM', 'https://www.hmm21.com/e-service/general/trackNTrace/TrackNTrace.do'] };
+        var own = LINES[pref];
+        hint += (own ? providerButton('Открыть трекинг ' + own[0], own[1], number) : '')
+          + providerButton('Поиск по всем линиям · Track-Trace', type === 'container' ? 'https://www.track-trace.com/container' : 'https://www.track-trace.com/bol', number)
+          + providerButton('Поиск по всем линиям · SeaRates', 'https://www.searates.com/container/tracking/', number);
+        return '<h3 class="tl-sub">Морской трекинг</h3><p class="tl-note">' + esc(/HTTP 40[13]/.test(msg) ? 'Бесплатный морской источник сейчас закрыт ключом. Откройте трекинг линии — номер уже скопирован.' : msg) + '</p>' + hint;
       }
       var d = r.data, statuses = { in_transit: 'В пути', loaded: 'Погружен на судно', departed: 'Отправлен', arrived: 'Прибыл', discharged: 'Выгружен', available: 'Доступен к выдаче', delivered: 'Доставлен', returned_empty: 'Порожний контейнер возвращён' };
       var eta = d.eta ? new Date(d.eta).toLocaleString('ru-RU', { dateStyle: 'medium', timeStyle: 'short' }) : 'не опубликована';

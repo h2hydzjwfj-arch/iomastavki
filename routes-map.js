@@ -266,10 +266,16 @@
       });
       return out;
     }
-    function veh(pathD, kind, dur, delay) {
+    function veh(pathD, kind, dur, delay, part) {
       if (reduce) return '';
-      return '<g class="rm-veh rm-veh-' + kind + '"><animateMotion dur="' + dur + 's" repeatCount="indefinite" begin="' + delay + 's" path="' + pathD + '" calcMode="linear"/>'
-        + '<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.06;.92;1" dur="' + dur + 's" begin="' + delay + 's" repeatCount="indefinite"/>'
+      // part = [начало, конец] доли общего цикла: так море и суша идут цепочкой, а не одновременно
+      var mo, op;
+      if (part) { var a = part[0].toFixed(3), b = part[1].toFixed(3);
+        mo = '<animateMotion dur="' + dur + 's" repeatCount="indefinite" path="' + pathD + '" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;' + a + ';' + b + ';1"/>';
+        op = '<animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;' + a + ';' + b + '" dur="' + dur + 's" repeatCount="indefinite"/>'; }
+      else { mo = '<animateMotion dur="' + dur + 's" repeatCount="indefinite" begin="' + delay + 's" path="' + pathD + '" calcMode="linear"/>';
+        op = '<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.06;.92;1" dur="' + dur + 's" begin="' + delay + 's" repeatCount="indefinite"/>'; }
+      return '<g class="rm-veh rm-veh-' + kind + '">' + mo + op
         + '<g transform="scale(' + U.toFixed(3) + ')"><circle class="rm-veh-b" r="12.5"/><g transform="translate(-8.4 -8.4) scale(.7)" class="rm-veh-i">' + ICON[kind] + '</g></g></g>';
     }
     function draw() {
@@ -287,7 +293,7 @@
         var keys = r.path, vi = keys.indexOf('vvo'), seaSplit = r.mode === 'sea' && vi > 0 && vi < keys.length - 1;
         var full = r.mode === 'air' ? arc(keys[0], keys[keys.length - 1]) : smooth(keys);
         h += '<path class="rm-track" d="' + full + '"/>';
-        if (seaSplit) { var dSea = smooth(keys.slice(0, vi + 1)), dRail = smooth(keys.slice(vi)); h += '<path class="rm-route rm-sea" d="' + dSea + '" pathLength="1"/><path class="rm-route" d="' + dRail + '" pathLength="1" style="animation-delay:.5s"/>' + veh(dSea, 'sea', 6, 0) + veh(dRail, 'rail', 7.5, 1.5); }
+        if (seaSplit) { var dSea = smooth(keys.slice(0, vi + 1)), dRail = smooth(keys.slice(vi)); h += '<path class="rm-route rm-sea" d="' + dSea + '" pathLength="1"/><path class="rm-route" d="' + dRail + '" pathLength="1" style="animation-delay:.5s"/>' + veh(dSea, 'sea', 12, 0, [0, .55]) + veh(dRail, 'rail', 12, 0, [.55, 1]); }
         else { h += '<path class="rm-route' + (r.mode === 'sea' ? ' rm-sea' : '') + (r.mode === 'air' ? ' rm-air' : '') + '" d="' + full + '" pathLength="1"/>' + veh(full, ICON_I[r.mode], r.mode === 'air' ? 6 : 9, 0); }
         if (r.gw && GW_NAME[r.gw] && r.mode !== 'air') { var gk = GW_NAME[r.gw][0], gp2 = xy(gk); h += '<rect class="rm-gw" x="' + f(gp2[0] - 4.5 * U) + '" y="' + f(gp2[1] - 4.5 * U) + '" width="' + f(9 * U) + '" height="' + f(9 * U) + '" transform="rotate(45 ' + f(gp2[0]) + ' ' + f(gp2[1]) + ')"/>'; lbl.push({ k: gk, t: GW_NAME[r.gw].map(function (x) { return nm(x, l); }).join('\n'), cls: 'rm-l rm-l-gw', fs: 11.5, lines: GW_NAME[r.gw].length, prefer: ['r', 'b'] }); }
       }

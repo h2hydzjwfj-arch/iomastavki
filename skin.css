@@ -121,19 +121,19 @@ html:root body.night.manual-light input:-webkit-autofill,html:root body.night.ma
 html:root body.night.manual-light input::placeholder,html:root body.night.manual-light textarea::placeholder{color:#8B96A6!important}
 
 /* --- кнопки: жидкое стекло + «нить маршрута» --- */
-html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.v3-loginbtn,.nbtn.pri,.assistant-save,.v3-grid .go,.v3p-btn,.btn-primary){
+html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.nbtn.pri,.assistant-save,.v3-grid .go,.v3p-btn,.btn-primary){
   position:relative;overflow:hidden;isolation:isolate;
   background:linear-gradient(180deg,#5C93FF 0%,#2B66F0 55%,#2459DB 100%)!important;color:#fff!important;border:0!important;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -2px 6px rgba(15,45,140,.35),0 16px 30px -14px rgba(43,102,240,.8),0 0 0 1px rgba(43,102,240,.35)!important;
 }
-html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.v3-loginbtn,.nbtn.pri,.assistant-save,.v3p-btn,.btn-primary)::before{
+html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.nbtn.pri,.assistant-save,.v3p-btn,.btn-primary)::before{
   content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;
   background:radial-gradient(120% 90% at 50% -30%,rgba(255,255,255,.38),rgba(255,255,255,0) 60%);pointer-events:none}
-html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.v3-loginbtn,.nbtn.pri,.assistant-save,.v3p-btn,.btn-primary)::after{
+html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.nbtn.pri,.assistant-save,.v3p-btn,.btn-primary)::after{
   content:"";position:absolute;inset:auto 14% 0;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,#BFE3FF,transparent);
   transform:translateX(-120%);animation:skThread 3.6s cubic-bezier(.4,0,.2,1) infinite;pointer-events:none}
 @keyframes skThread{0%{transform:translateX(-140%)}55%,100%{transform:translateX(140%)}}
-html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.v3-loginbtn,.nbtn.pri,.v3p-btn):hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),inset 0 -2px 6px rgba(15,45,140,.35),0 22px 36px -14px rgba(43,102,240,.9),0 0 0 1px rgba(43,102,240,.4)!important}
+html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.nbtn.pri,.v3p-btn):hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),inset 0 -2px 6px rgba(15,45,140,.35),0 22px 36px -14px rgba(43,102,240,.9),0 0 0 1px rgba(43,102,240,.4)!important}
 html:root body.night.manual-light :is(.nbtn:not(.pri),.hx-btn-g,.btn-ghost,.v3p-btn2,.nbtn.ghost){background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.6))!important;color:var(--sk-ink)!important;border:1px solid rgba(255,255,255,.95)!important;-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:inset 0 1px 0 #fff,0 12px 24px -16px rgba(30,60,120,.5),0 0 0 1px rgba(22,32,46,.05)!important}
 
 /* --- чипы: стеклянные; выбранное — серым --- */
@@ -197,3 +197,103 @@ html:root body.night.manual-light .nw-lead .nw-go{color:var(--sk-blue)!important
 html:root body.night.manual-light .v3-drop{background:rgba(255,255,255,.55)!important;border:1.5px dashed rgba(43,102,240,.35)!important;color:var(--sk-ink)!important}
 html:root body.night.manual-light .v3-drop :is(b,strong,.ic){color:var(--sk-ink)!important}
 html:root body.night.manual-light .v3-drop :is(small,span:not(.ic)){color:var(--sk-mut)!important}
+
+/* =====================================================================
+   v3.2 — меньше цвета, больше стекла. Цвет живёт только в фоне окон
+   мягкими градиентами; кнопки, поля и карточки — матовое стекло.
+   ===================================================================== */
+/* главная без карты: карта осталась в «Расчёте ставок» */
+html:root body.night .hx-r,html:root body.night #hxMap{display:none!important}
+html:root body.night .hx{grid-template-columns:minmax(0,1fr)!important}
+html:root body.night .hx .hx-l{max-width:760px}
+
+/* цветные градиенты за окнами */
+html:root body.night.manual-light .view-layer{background:
+  radial-gradient(48vw 42vh at 92% 6%,rgba(150,196,255,.55),transparent 70%),
+  radial-gradient(42vw 40vh at 4% 40%,rgba(196,178,255,.38),transparent 70%),
+  radial-gradient(52vw 44vh at 70% 104%,rgba(160,232,236,.45),transparent 70%),
+  linear-gradient(180deg,#F8FAFE,#F1F6FD)!important}
+html:root body.night.manual-light{background:
+  radial-gradient(900px 640px at 96% -6%,rgba(150,196,255,.6),transparent 62%),
+  radial-gradient(760px 600px at -8% 42%,rgba(196,178,255,.36),transparent 62%),
+  radial-gradient(900px 700px at 100% 104%,rgba(160,232,236,.5),transparent 62%),
+  linear-gradient(180deg,#FFFFFF,#F3F8FE)!important;background-attachment:fixed!important}
+
+/* главная кнопка: матовое стекло, графитовый текст, цветное свечение снизу */
+html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.nbtn.pri,.assistant-save,.v3p-btn,.btn-primary){
+  background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.62))!important;color:#16202E!important;
+  -webkit-backdrop-filter:blur(20px) saturate(1.8);backdrop-filter:blur(20px) saturate(1.8);
+  box-shadow:inset 0 1px 0 #fff,inset 0 -1px 0 rgba(22,32,46,.05),0 18px 34px -16px rgba(43,102,240,.55),0 6px 18px -10px rgba(140,110,255,.45),0 0 0 1px rgba(255,255,255,.9)!important}
+html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.nbtn.pri,.assistant-save,.v3p-btn,.btn-primary)::before{background:radial-gradient(90% 120% at 50% 130%,rgba(120,170,255,.28),rgba(255,255,255,0) 60%)!important}
+html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.nbtn.pri,.v3p-btn):hover{box-shadow:inset 0 1px 0 #fff,0 22px 40px -16px rgba(43,102,240,.65),0 8px 22px -10px rgba(140,110,255,.55),0 0 0 1px #fff!important}
+html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.nbtn.pri,.v3p-btn)::after{background:linear-gradient(90deg,transparent,rgba(43,102,240,.55),transparent)!important}
+html:root body.night.manual-light .hx-btn-o svg,html:root body.night.manual-light .hx-btn-o i{color:#2B66F0!important}
+html:root body.night.manual-light .topbar .v3-loginbtn{background:rgba(255,255,255,.85)!important;color:#16202E!important;box-shadow:inset 0 1px 0 #fff,0 12px 24px -14px rgba(43,102,240,.6),0 0 0 1px rgba(255,255,255,.9)!important}
+
+/* помощник расчёта */
+.ca-dims{margin:4px 0 10px;padding:14px;border-radius:18px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.9);box-shadow:inset 0 1px 0 #fff}
+.ca-dims-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.ca-dims-h b{font-weight:500;font-size:14px}.ca-dims-h small{font-size:12.5px;color:#5A6678}
+.ca-dims .dimensions-head>span{display:none}
+.ca-dims .dimensions{margin:0;padding:0;background:none!important;border:0!important;box-shadow:none!important}
+.ca-dims .ca-strip{margin-top:10px}
+.ca-dims .ca-strip b{pointer-events:none;user-select:none}
+.ca-advice{display:flex;flex-direction:column;gap:6px;margin:8px 0 4px}
+.ca-advice p{margin:0;padding:10px 12px;border-radius:14px;font-size:13.5px;line-height:1.4;background:rgba(255,255,255,.7);box-shadow:inset 0 1px 0 #fff,0 8px 18px -14px rgba(30,60,120,.5)}
+.ca-advice .ca-tip b{font-weight:600;color:#1E4FCB}
+.ca-advice .ca-warn{background:rgba(255,236,200,.6);color:#6E4A08}
+.ca-advice .ca-stop{background:rgba(255,222,214,.7);color:#8A2E1C}
+.v3c-chips .chip.ca-rec{box-shadow:0 0 0 2px rgba(43,102,240,.55),0 8px 16px -10px rgba(43,102,240,.6)!important}
+.v3c-chips .chip.ca-no{opacity:.45;text-decoration:line-through}
+.mc-port{fill:#fff;stroke:#2B66F0;stroke-width:2}
+.mc-r-sea{stroke-dasharray:2 7}
+html:root body.night.manual-light .mc-comet{fill:#fff!important;stroke:#2B66F0;stroke-width:2;filter:drop-shadow(0 0 6px rgba(43,102,240,.6))!important}
+html:root body.night.manual-light .mc-comet-sea{stroke:#5BA7E8}
+html:root body.night.manual-light .suggestions{max-height:320px;overflow-y:auto;background:rgba(255,255,255,.96)!important;border-radius:16px;box-shadow:0 24px 50px -24px rgba(30,60,120,.5)}
+
+/* нижняя панель меню на телефоне */
+.ms-lock,.ms-lock body{overflow:hidden}
+.ms-sheet{position:fixed;inset:0;z-index:2147483000}
+.ms-back{position:absolute;inset:0;background:rgba(22,32,46,.18);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;transition:opacity .2s}
+.ms-panel{position:absolute;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));max-height:78vh;overflow:auto;border-radius:28px;padding:8px 10px 12px;
+  background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(250,252,255,.97));-webkit-backdrop-filter:blur(30px) saturate(1.8);backdrop-filter:blur(30px) saturate(1.8);
+  box-shadow:0 -10px 50px -20px rgba(30,60,120,.45),inset 0 1px 0 #fff;transform:translateY(105%);transition:transform .28s cubic-bezier(.2,.8,.2,1);color:#16202E;font-family:'Geologica','Inter',system-ui,sans-serif}
+.ms-sheet.on .ms-back{opacity:1}.ms-sheet.on .ms-panel{transform:none}
+.ms-grip{width:40px;height:5px;border-radius:3px;background:rgba(22,32,46,.15);margin:2px auto 6px}
+.ms-head{display:flex;align-items:center;justify-content:space-between;padding:4px 8px 8px}
+.ms-head b{font-weight:500;font-size:17px}
+.ms-x{width:36px;height:36px;border-radius:50%;border:0;background:rgba(22,32,46,.06);font-size:22px;line-height:1;color:#16202E}
+.ms-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;border:0;background:transparent;padding:13px 12px;border-radius:16px;font:inherit;color:#16202E;font-size:16px}
+.ms-item:active{background:rgba(43,102,240,.08)}
+.ms-item small{font-size:13px;color:#5A6678}
+.ms-item b,.ms-item strong{font-weight:500}
+html:root body.night.manual-dark ~ .ms-sheet .ms-panel{background:#17202c;color:#F1F4F8}
+@media (prefers-reduced-motion:reduce){.ms-panel,.ms-back{transition:none}}
+/* транспорт на карте: аккуратная стеклянная метка вместо крупной иконки */
+html:root body.night.manual-light .rm-veh-b{fill:rgba(255,255,255,.92)!important;stroke:rgba(43,102,240,.55)!important;stroke-width:1.2!important;filter:drop-shadow(0 3px 6px rgba(30,60,120,.25))}
+html:root body.night.manual-light .rm-veh-i,html:root body.night.manual-light .rm-veh-i *{stroke:#2B66F0!important;fill:none!important}
+html:root body.night.manual-light .rm-veh>g{transform-box:fill-box}
+/* ЭТрН — моя схема */
+.em-card{margin:6px 0 18px;padding:18px;border-radius:24px;background:linear-gradient(180deg,rgba(255,255,255,.82),rgba(255,255,255,.55));border:1px solid rgba(255,255,255,.95);box-shadow:inset 0 1px 0 #fff,0 26px 50px -34px rgba(30,60,120,.45);color:#16202E}
+.em-h{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:baseline;margin-bottom:12px}.em-h b{font-size:20px;font-weight:500}.em-h small{color:#5A6678;font-size:13.5px}
+.em-sc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.em-sc button{border:0;border-radius:999px;padding:9px 14px;font:inherit;font-size:14px;background:rgba(255,255,255,.75);color:#16202E;box-shadow:inset 0 1px 0 #fff,0 8px 16px -12px rgba(30,60,120,.5),0 0 0 1px rgba(22,32,46,.05);cursor:pointer}
+.em-sc button.on{background:#68727F;color:#fff}
+.em-f{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px}
+.em-f label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:#5A6678}
+.em-f input{height:44px;border-radius:14px;border:1px solid rgba(22,32,46,.08);background:rgba(255,255,255,.9);padding:0 12px;font:inherit;font-size:15px;color:#16202E}
+.em-rasp{display:flex;gap:8px;align-items:center;font-size:14px;margin-bottom:12px}
+.em-pre,.em-etrn{display:flex;align-items:stretch;gap:6px;flex-wrap:wrap}
+.em-node{flex:1 1 180px;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.85);box-shadow:inset 0 1px 0 #fff,0 10px 22px -18px rgba(30,60,120,.5);display:flex;flex-direction:column;gap:4px}
+.em-node.em-off{background:rgba(255,255,255,.45);color:#5A6678}
+.em-node em{font-style:normal;font-size:12px;color:#1E4FCB;font-weight:600}
+.em-node b{font-weight:500;font-size:15px}.em-node small{font-size:12.5px;color:#5A6678;line-height:1.35}
+.em-node.et-me{box-shadow:0 0 0 2px rgba(43,102,240,.55),0 14px 26px -16px rgba(43,102,240,.6)}
+.em-arr{flex:0 0 14px;align-self:center;height:2px;background:linear-gradient(90deg,rgba(43,102,240,.2),rgba(43,102,240,.7))}
+.em-line{margin:12px 0;display:flex;align-items:center;gap:10px;font-size:13px;color:#1E4FCB}.em-line::before,.em-line::after{content:"";flex:1;height:1px;background:rgba(43,102,240,.25)}
+.em-diadoc{margin-top:12px;padding:14px;border-radius:18px;background:rgba(214,234,255,.55)}
+.em-diadoc b{font-weight:600}.em-diadoc ol{margin:6px 0 6px 18px;padding:0;font-size:14px;line-height:1.5}.em-diadoc p{margin:0;font-size:13.5px;color:#2A3648}
+.em-caveat{margin:10px 0 0;font-size:12.5px;color:#5A6678}
+@media (max-width:700px){.em-f{grid-template-columns:1fr}.em-arr{flex-basis:100%;height:10px;width:2px;flex:0 0 10px;margin-left:20px}}
+.em-rasp[hidden]{display:none!important}
+.em-card .em-rasp input{width:18px!important;height:18px!important;min-height:0!important;flex:0 0 auto;margin:0;padding:0;accent-color:#2B66F0}
