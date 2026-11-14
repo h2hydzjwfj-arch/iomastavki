@@ -14,7 +14,8 @@
   menu.querySelectorAll(':scope > button').forEach(function(b){
    important(b,{display:'grid',width:'100%',minHeight:'50px',padding:'12px 14px',textAlign:'left',whiteSpace:'normal',border:'0',borderRadius:'11px',backgroundColor:'transparent',color:'inherit',font:'inherit',fontSize:'15px',lineHeight:'1.35',pointerEvents:'auto'});
   });
-  important(menu,{position:'static',inset:'auto',display:'grid',gridAutoRows:'min-content',gap:'5px',width:'100%',minWidth:'0',maxWidth:'none',maxHeight:'none',overflow:'visible',padding:'0',margin:'0',border:'0',borderRadius:'0',backgroundColor:'transparent',color:'inherit',boxShadow:'none',transform:'none',visibility:'visible',opacity:'1',pointerEvents:'auto'});\n  panel.appendChild(menu);overlay.appendChild(panel);document.documentElement.appendChild(overlay);
+  important(menu,{position:'static',inset:'auto',display:'grid',gridAutoRows:'min-content',gap:'5px',width:'100%',minWidth:'0',maxWidth:'none',maxHeight:'none',overflow:'visible',padding:'0',margin:'0',border:'0',borderRadius:'0',backgroundColor:'transparent',color:'inherit',boxShadow:'none',transform:'none',visibility:'visible',opacity:'1',pointerEvents:'auto'});
+  panel.appendChild(menu);overlay.appendChild(panel);document.documentElement.appendChild(overlay);
   overlay.addEventListener('click',function(e){if(e.target===overlay){var x=opened.find(function(v){return v.menu===menu;});if(x)close(x.item);}});
   return overlay;
  }
