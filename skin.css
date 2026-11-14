@@ -29,7 +29,7 @@ html:root body.night.manual-light{
 }
 
 /* ---------- шапка: белое стекло вместо тёмной полосы ---------- */
-html:root body.night.manual-light .topbar{background:linear-gradient(180deg,rgba(255,255,255,.86),rgba(255,255,255,.62))!important;-webkit-backdrop-filter:blur(24px) saturate(1.8);backdrop-filter:blur(24px) saturate(1.8);border-bottom:1px solid rgba(22,32,46,.06)!important;box-shadow:0 12px 30px -24px rgba(30,60,120,.5)!important;color:var(--sk-ink)}
+html:root body.night.manual-light .topbar{background:rgba(255,255,255,.9)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border-bottom:1px solid rgba(22,32,46,.06)!important;box-shadow:0 12px 30px -24px rgba(30,60,120,.5)!important;color:var(--sk-ink)}
 html:root body.night.manual-light .brand,html:root body.night.manual-light .brand span{color:var(--sk-ink)!important}
 html:root body.night.manual-light .v3-nav{background:rgba(22,32,46,.045)!important}
 html:root body.night.manual-light .v3-nav button,html:root body.night.manual-light .v3-nav .sg-btn{color:var(--sk-mut)!important}
@@ -39,7 +39,7 @@ html:root body.night.manual-light .v3-pill{background:var(--sk-sel)!important;bo
 html:root body.night.manual-light .v3-theme,html:root body.night.manual-light .v3-acc{background:rgba(22,32,46,.05)!important;color:var(--sk-ink)!important}
 html:root body.night.manual-light .v3-theme svg{stroke:var(--sk-ink)!important}
 html:root body.night.manual-light .lx-btn{color:var(--sk-ink)}
-html:root body.night.manual-light .sg-menu{background:rgba(255,255,255,.97);box-shadow:0 30px 60px -24px rgba(30,60,120,.45),0 0 0 1px rgba(22,32,46,.06)}
+html:root body.night.manual-light .sg-menu{background:#fff!important;box-shadow:0 30px 60px -24px rgba(30,60,120,.45),0 0 0 1px rgba(22,32,46,.06)}
 html:root body.night.manual-light .sg-menu button{color:var(--sk-ink)}
 html:root body.night.manual-light .sg-menu button small{color:var(--sk-mut)}
 html:root body.night.manual-light .sg-solo .sg-menu button{color:var(--sk-mut)}
@@ -127,8 +127,8 @@ html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.
   box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -2px 6px rgba(15,45,140,.35),0 16px 30px -14px rgba(43,102,240,.8),0 0 0 1px rgba(43,102,240,.35)!important;
 }
 html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.v3-loginbtn,.nbtn.pri,.assistant-save,.v3p-btn,.btn-primary)::before{
-  content:"";position:absolute;left:10%;right:10%;top:1px;height:46%;border-radius:999px;z-index:-1;
-  background:linear-gradient(180deg,rgba(255,255,255,.45),rgba(255,255,255,0));pointer-events:none}
+  content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;
+  background:radial-gradient(120% 90% at 50% -30%,rgba(255,255,255,.38),rgba(255,255,255,0) 60%);pointer-events:none}
 html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.v3-loginbtn,.nbtn.pri,.assistant-save,.v3p-btn,.btn-primary)::after{
   content:"";position:absolute;inset:auto 14% 0;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,#BFE3FF,transparent);
   transform:translateX(-120%);animation:skThread 3.6s cubic-bezier(.4,0,.2,1) infinite;pointer-events:none}
@@ -149,7 +149,7 @@ html:root body.night.manual-light::before{content:"";position:fixed;inset:0;z-in
   background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 900' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='1' y1='1' x2='0' y2='0'><stop offset='0' stop-color='%238CCBFF' stop-opacity='0'/><stop offset='.35' stop-color='%235D95FF' stop-opacity='.55'/><stop offset='1' stop-color='%232B66F0' stop-opacity='0'/></linearGradient></defs><path d='M1500 760 C 1180 600 980 330 640 300 S 120 360 -60 180' fill='none' stroke='url(%23g)' stroke-width='1.4'/><path d='M1500 820 C 1160 690 940 430 600 410 S 100 470 -60 300' fill='none' stroke='url(%23g)' stroke-width='.8' stroke-dasharray='2 7'/></svg>") center/cover no-repeat}
 
 /* --- окна (оверлеи): белое стекло, мягкий заголовок --- */
-html:root body.night.manual-light .view-layer{background:linear-gradient(180deg,rgba(247,250,254,.86),rgba(240,246,253,.9))!important;-webkit-backdrop-filter:blur(30px) saturate(1.6);backdrop-filter:blur(30px) saturate(1.6)}
+html:root body.night.manual-light .view-layer{background:linear-gradient(180deg,rgba(247,250,254,.97),rgba(240,246,253,.98))!important}
 html:root body.night.manual-light .close-button,html:root body.night.manual-light .view-close{background:rgba(255,255,255,.85)!important;color:var(--sk-ink)!important;border:1px solid rgba(255,255,255,.95)!important;box-shadow:0 10px 20px -14px rgba(30,60,120,.6)!important}
 html:root body.night.manual-light .eyebrow,html:root body.night.manual-light .ney{color:var(--sk-blue)!important}
 
@@ -168,3 +168,32 @@ html:root body.night.manual-light .customs-shell .eyebrow{color:var(--sk-blue)!i
 html:root body.night.manual-light [data-recm]{background:rgba(255,255,255,.85)!important;color:var(--sk-ink)!important;border:1px solid rgba(43,102,240,.18)!important;box-shadow:inset 0 1px 0 #fff,0 8px 16px -12px rgba(30,60,120,.5)!important}
 html:root body.night.manual-light [data-recm] small,html:root body.night.manual-light [data-recm] em{color:var(--sk-mut)!important;opacity:1!important}
 html:root body.night.manual-light [data-recm] b{color:var(--sk-blue)!important}
+
+/* выпадающие меню шапки («Инструменты ВЭД», язык) — всегда поверх всего */
+html:root body.night.manual-light .topbar{z-index:1000}
+html:root body.night.manual-light :is(.sg-menu,.lx-menu){z-index:1001}
+html:root body.night.manual-light .sg.open .sg-menu,html:root body.night.manual-light .sg-open .sg-menu,html:root body.night.manual-light [aria-expanded="true"]+.sg-menu{opacity:1}
+html:root body.night.manual-light .sg.open .sg-menu button,html:root body.night.manual-light .sg-open .sg-menu button,html:root body.night.manual-light [aria-expanded="true"]+.sg-menu button{opacity:1}
+
+/* гид по доставке: «Обстановка на маршрутах» — светлое стекло */
+html:root body.night.manual-light .kb-pulse{background:linear-gradient(180deg,rgba(255,255,255,.8),rgba(235,244,255,.6))!important;color:var(--sk-ink)!important;border:1px solid rgba(255,255,255,.95)!important;box-shadow:inset 0 1px 0 #fff,0 30px 60px -38px rgba(30,60,120,.45)!important}
+html:root body.night.manual-light .kb-pulse .kb-ph b,html:root body.night.manual-light .kb-pulse .kb-p b,html:root body.night.manual-light .kb-pulse .kb-p em{color:var(--sk-ink)!important}
+html:root body.night.manual-light .kb-pulse .kb-ph span,html:root body.night.manual-light .kb-pulse .kb-p small{color:var(--sk-mut)!important;opacity:1!important}
+html:root body.night.manual-light .kb-pulse .kb-p{background:rgba(255,255,255,.85)!important;border:1px solid rgba(22,32,46,.06)!important;box-shadow:inset 0 1px 0 #fff,0 10px 22px -18px rgba(30,60,120,.5)}
+html:root body.night.manual-light .kb-pulse .kb-p em{color:var(--sk-blue)!important;font-weight:600!important}
+html:root body.night.manual-light .kb-p.kb-ok .kb-st{background:rgba(43,102,240,.1);color:#1E4FCB}
+html:root body.night.manual-light .kb-p.kb-warn .kb-st{background:rgba(242,176,64,.18);color:#8A5A06}
+html:root body.night.manual-light .kb-p.kb-risk .kb-st{background:rgba(196,87,60,.14);color:#A8402A}
+html:root body.night.manual-light .kb-p.kb-risk{border-color:rgba(196,87,60,.3)!important}
+
+/* новости: главная новость — светлая с синей кромкой */
+html:root body.night.manual-light .news-list .nw-lead{background:linear-gradient(135deg,rgba(255,255,255,.9),rgba(222,236,255,.75))!important;border:1px solid rgba(43,102,240,.18)!important;box-shadow:inset 0 1px 0 #fff,0 30px 60px -38px rgba(30,60,120,.5)!important}
+html:root body.night.manual-light .nw-lead .nw-h strong{color:var(--sk-ink)!important}
+html:root body.night.manual-light .nw-lead :is(.nw-d,.nw-meta){color:var(--sk-mut)!important}
+html:root body.night.manual-light .nw-lead .nw-cat{background:rgba(43,102,240,.1)!important;color:var(--sk-blued)!important}
+html:root body.night.manual-light .nw-lead .nw-go{color:var(--sk-blue)!important}
+
+/* загрузка файлов (экспедиторы и др.) */
+html:root body.night.manual-light .v3-drop{background:rgba(255,255,255,.55)!important;border:1.5px dashed rgba(43,102,240,.35)!important;color:var(--sk-ink)!important}
+html:root body.night.manual-light .v3-drop :is(b,strong,.ic){color:var(--sk-ink)!important}
+html:root body.night.manual-light .v3-drop :is(small,span:not(.ic)){color:var(--sk-mut)!important}
