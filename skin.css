@@ -203,9 +203,7 @@ html:root body.night.manual-light .v3-drop :is(small,span:not(.ic)){color:var(--
    мягкими градиентами; кнопки, поля и карточки — матовое стекло.
    ===================================================================== */
 /* главная без карты: карта осталась в «Расчёте ставок» */
-html:root body.night .hx-r,html:root body.night #hxMap{display:none!important}
-html:root body.night .hx{grid-template-columns:minmax(0,1fr)!important}
-html:root body.night .hx .hx-l{max-width:760px}
+html:root body.night #hxMap{display:none!important}
 
 /* цветные градиенты за окнами */
 html:root body.night.manual-light .view-layer{background:
@@ -297,3 +295,58 @@ html:root body.night.manual-light .rm-veh>g{transform-box:fill-box}
 @media (max-width:700px){.em-f{grid-template-columns:1fr}.em-arr{flex-basis:100%;height:10px;width:2px;flex:0 0 10px;margin-left:20px}}
 .em-rasp[hidden]{display:none!important}
 .em-card .em-rasp input{width:18px!important;height:18px!important;min-height:0!important;flex:0 0 auto;margin:0;padding:0;accent-color:#2B66F0}
+
+/* =====================================================================
+   v3.3 — строгая версия: без цветных пятен, сплошная белая шапка,
+   единые поверхности, весь текст читаемый.
+   ===================================================================== */
+html:root body.night.manual-light{--ink:#16202E;--mut:#5A6678;--line:rgba(22,32,46,.08);--surf:#FFFFFF;--soft:#F4F6FA}
+html:root body.night.manual-light,html:root body.night.manual-light .view-layer{background:#F4F6FA!important}
+html:root body.night.manual-light::before{display:none!important}
+html:root body.night.manual-light .topbar{background:#FFFFFF!important;border-bottom:1px solid var(--line)!important;box-shadow:none!important}
+html:root body.night.manual-light :is(.v3-card,.v3c-card,.v3p-form,.v3p-card,.cx-form,.cx-route,.customs-shell,.service-card,.calculator-card,.directory-panel,.assistant-shell,.v3c-res,.v3c-hero,.v3c-mapbox,.kb-card,.case-card,.svc,.nw-card,.ui-card,.cx-more,.cx-acc,.k,.em-card,.kb-pulse,.tile){
+  background:#FFFFFF!important;border:1px solid var(--line)!important;box-shadow:0 1px 2px rgba(22,32,46,.04),0 12px 32px -24px rgba(22,32,46,.25)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border-radius:20px!important}
+html:root body.night.manual-light .calculator-card.v3-calc{background:transparent!important;border:0!important;box-shadow:none!important}
+/* результат расчёта и рекомендации — тёмный текст на белом */
+html:root body.night.manual-light :is(#result,#recommendation,.v3c-hero,.v3c-ring,[class*="v3a-"],[class*="cxa"],.result-kicker,.result-meta,.v3c-rub) :is(*,){color:var(--ink)}
+html:root body.night.manual-light :is(#result,#recommendation,.v3c-hero) *{color:var(--ink)!important;text-shadow:none!important}
+html:root body.night.manual-light :is(.result-kicker,.result-meta,.v3c-rub,.v3a-note,.v3a-why,.v3c-ring i,.v3c-empty small){color:var(--mut)!important}
+html:root body.night.manual-light :is(.result-price,.v3c-bigph,#v3days){color:var(--ink)!important;font-weight:300!important}
+html:root body.night.manual-light :is([class*="v3a-"],[class*="cxa"]){color:var(--ink)!important;background-color:transparent}
+html:root body.night.manual-light :is([class*="v3a-"],[class*="cxa"]) :is(em,strong,b,summary,span,p,i,s){color:var(--ink)!important;opacity:1!important}
+html:root body.night.manual-light :is([class*="v3a-"],[class*="cxa"]) em{color:#2B66F0!important;font-style:normal;font-weight:600}
+html:root body.night.manual-light :is([class*="v3a-"],[class*="cxa"]) :is(.v3a-why,.v3a-note,small){color:var(--mut)!important}
+html:root body.night.manual-light :is([class*="v3a-"],[class*="cxa"]) s{opacity:.3!important}
+html:root body.night.manual-light :is(.v3a-rec,.v3a-best,.cxa-rec,[class*="v3a-"][class*="on"]){background:#F4F7FD!important;border:1px solid rgba(43,102,240,.25)!important}
+html:root body.night.manual-light .terminal-warning{background:#FFF6E5!important;color:#6E4A08!important;border:1px solid #F2DDB0!important}
+html:root body.night.manual-light :is(.v3p-savebtn,.v3c-hero button){background:#FFFFFF!important;color:var(--ink)!important;border:1px solid var(--line)!important;box-shadow:0 1px 2px rgba(22,32,46,.06)!important}
+html:root body.night.manual-light .v3c-ring .rb{stroke:rgba(22,32,46,.08)!important}html:root body.night.manual-light .v3c-ring .rf{stroke:#2B66F0!important}
+html:root body.night.manual-light .cx-ph-t.in{opacity:1!important;color:var(--mut)!important}
+/* кнопки: одна основная — тёмная, остальные белые с рамкой */
+html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.nbtn.pri,.assistant-save,.v3p-btn,.btn-primary,.hq-go){background:#16202E!important;color:#fff!important;border:0!important;box-shadow:0 8px 20px -10px rgba(22,32,46,.6)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.nbtn.pri,.v3p-btn,.hq-go):hover{background:#2B66F0!important;transform:none}
+html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.nbtn.pri,.assistant-save,.v3p-btn,.btn-primary)::before,html:root body.night.manual-light :is(.calculate,#calculate,.hx-btn-o,.rmap-go,.nbtn.pri,.assistant-save,.v3p-btn,.btn-primary)::after{display:none!important}
+html:root body.night.manual-light .hx-btn-o svg,html:root body.night.manual-light .hx-btn-o i{color:#fff!important;background:rgba(255,255,255,.14)!important}
+html:root body.night.manual-light :is(.nbtn:not(.pri),.hx-btn-g,.btn-ghost,.v3p-btn2,.nbtn.ghost,.topbar .v3-loginbtn){background:#FFFFFF!important;color:var(--ink)!important;border:1px solid rgba(22,32,46,.12)!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html:root body.night.manual-light :is(.chip,.cx-chip,.v3-chip,.mode-chip,.jm-chip,.hx-flow li){background:#FFFFFF!important;border:1px solid rgba(22,32,46,.1)!important;box-shadow:none!important;color:var(--ink)!important}
+html:root body.night.manual-light :is(.v3p-f,.field,.v3c-f,.cx-f){background:#FFFFFF!important;border:1px solid rgba(22,32,46,.1)!important;box-shadow:none!important;border-radius:14px!important}
+html:root body.night.manual-light .ca-dims{background:#F7F9FC;border:1px solid var(--line);box-shadow:none}
+html:root body.night.manual-light .ca-advice p{box-shadow:none;background:#F4F7FD;border:1px solid rgba(43,102,240,.15)}
+/* быстрый расчёт на главной */
+.hx .hx-r{display:flex;align-items:flex-start;justify-content:center}
+.hq{width:100%;max-width:440px;padding:24px;border-radius:24px;background:#fff;border:1px solid rgba(22,32,46,.08);box-shadow:0 1px 2px rgba(22,32,46,.04),0 24px 48px -32px rgba(22,32,46,.35);display:flex;flex-direction:column;gap:12px;color:#16202E;font-family:'Geologica','Inter',system-ui,sans-serif}
+.hq-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}.hq-h b{font-size:20px;font-weight:500}.hq-h span{font-size:13px;color:#5A6678}
+.hq label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:#5A6678}
+.hq input{height:48px;border-radius:14px;border:1px solid rgba(22,32,46,.12);background:#fff;padding:0 14px;font:inherit;font-size:16px;color:#16202E;outline:none}
+.hq input:focus{border-color:#2B66F0;box-shadow:0 0 0 3px rgba(43,102,240,.12)}
+.hq-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hq-go{height:52px;border-radius:14px;font:inherit;font-size:16px;font-weight:500;cursor:pointer;margin-top:4px}
+.hq-facts{list-style:none;margin:8px 0 0;padding:12px 0 0;border-top:1px solid rgba(22,32,46,.08);display:flex;flex-direction:column;gap:8px}
+.hq-facts li{display:flex;justify-content:space-between;gap:12px;font-size:13.5px}.hq-facts b{font-weight:500}.hq-facts span{color:#5A6678;text-align:right}
+@media (max-width:900px){.hx .hx-r{margin-top:20px}.hq{max-width:none}}
+html:root body.night.manual-light .v3c-hero em,html:root body.night.manual-light .v3c-map em,html:root body.night.manual-light .calculator-card em{color:#5A6678!important}
+html:root body.night.manual-light .calculator-card summary,html:root body.night.manual-light .view-layer summary{color:#1E4FCB!important}
+html:root body.night.manual-light .hx,html:root body.night.manual-light .hx::before,html:root body.night.manual-light .hx::after,html:root body.night.manual-light main::before,html:root body.night.manual-light main::after{background-image:none!important}
+html:root body.night.manual-light .hq input{background:#fff!important;border:1px solid rgba(22,32,46,.12)!important;box-shadow:none!important}
+html:root body.night.manual-light .weather-scene,html:root body.night.manual-light .stars,html:root body.night.manual-light .sun,html:root body.night.manual-light [class*="weather-"]:not(body){display:none!important}
+html:root body.night.manual-light .hx-glow{display:none!important}
