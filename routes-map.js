@@ -274,7 +274,7 @@
     }
     function draw() {
       var l = lang(), r = route(), h = '';
-      h += '<defs><linearGradient id="rmG" x1="1" y1="0" x2="0" y2="0"><stop offset="0" style="stop-color:var(--ui-o1,#F28A3A)"/><stop offset="1" style="stop-color:var(--ui-o2,#E06A2C)"/></linearGradient></defs>';
+      h += '<defs><linearGradient id="rmG" x1="1" y1="0" x2="0" y2="0"><stop offset="0" style="stop-color:var(--ui-o1,#5D95FF)"/><stop offset="1" style="stop-color:var(--ui-o2,#2B66F0)"/></linearGradient></defs>';
       h += land();
       // все точки: Россия — куда, Китай — откуда. Зона нажатия не больше половины расстояния до соседа,
       // чтобы соседние города (Гуанчжоу и Шэньчжэнь, Шанхай и Ханчжоу) не перекрывали друг друга

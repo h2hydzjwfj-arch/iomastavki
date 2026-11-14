@@ -35,7 +35,7 @@ test('робот по правилам: агент, КП со ставками, 
   assert.deepEqual(R.rules('вместо "Расчёт ставки" напиши "Рассчитать доставку"')[0].data, { find: 'Расчёт ставки', replace: 'Рассчитать доставку' });
   assert.deepEqual(R.rules('Сделай акцентный цвет #d35400')[0].data, { accent: '#D35400' });
   assert.deepEqual(R.rules('верни цвета как было')[0].data, { reset: true });
-  assert.equal(R.rules('сделай цвет кнопок темнее')[0].data.accent, R.shade('#E06A2C', -0.18));
+  assert.equal(R.rules('сделай цвет кнопок темнее')[0].data.accent, R.shade('#2B66F0', -0.18));
   assert.deepEqual(R.rules('привет, как дела?'), []);
   // города в падежах и по-английски
   assert.deepEqual(R.route('из Гуанчжоу до Екатеринбурга'), { from: 'Гуанчжоу', to: 'Екатеринбург' });
